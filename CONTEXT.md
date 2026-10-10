@@ -72,6 +72,7 @@
 - **混合内容方向性**：`http://127.0.0.1` 页面可连 `ws://`（局域网房主）与 `wss://`（隧道房主）；`https://` 页面连 `ws://` 会被浏览器拦。本地壳页面必须是 http。
 - 环境事实：本机 Smart App Control = `On`（`VerifiedAndReputablePolicyState=1`），官方 `node.exe` 签名有效；node v24.19.0 / npm 11.17.0；registry 可达；无全局 `tsc`（走 `npx tsc -b`）；in-app Browser **无可见视口**，UI 类改动只能 `evaluate_script` + `take_snapshot` 核结构。
 - 测试写法：`node --test` 跑目录参数在 Windows 下不可靠，**必须用引号包住的 glob**（`node --test "packages/*/test/*.test.mjs"`），并带 `--test-timeout`，否则未决的 await 会让整轮挂死。测试里"等一条消息"要用 predicate 等**符合条件的那一帧**，在途的旧快照会先到。
+- **版本管理**：本目录已 `git init`（本地仓库，提交 `a606f33`，**无远程、未 push**）。P7 引入 `.bat` 双击入口时要一并加 `.gitattributes`——`.bat` 必须 CRLF，否则双击行为异常且 diff 一片红。
 - 收工跑 `bash /d/agent_workspace/tools/check-docs.sh`（**不加管道**，`[链]`/`[期]` 是失败项），exit 0 才算收尾。
 
 ## 变更记录
