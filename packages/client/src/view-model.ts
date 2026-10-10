@@ -128,11 +128,19 @@ export function startBlockers(state: ViewModel): { ok: boolean; unready: string[
   return { ok: unready.length === 0 && players >= min, unready, tooFew: players < min };
 }
 
+const ROLE_TEXT: Record<SeatView['role'], string> = {
+  host: '房主',
+  player: '玩家',
+  spectator: '观战',
+  ai: '电脑',
+};
+
+/** 只给人看的悬浮说明；界面上的身份符号改用图标字体，不再往文案里塞 emoji。 */
 export function seatLabel(seat: SeatView): string {
-  const role = seat.role === 'host' ? '👑' : seat.role === 'ai' ? '🤖' : seat.role === 'spectator' ? '👁' : '';
-  const ready = seat.role === 'spectator' || seat.role === 'ai' ? '' : seat.ready ? ' ✓' : '';
-  const offline = seat.connected ? '' : '（离线）';
-  return `${role ? `${role} ` : ''}${seat.name}${ready}${offline}`;
+  const bits = [ROLE_TEXT[seat.role]];
+  if (seat.role === 'player' || seat.role === 'host') bits.push(seat.ready ? '已准备' : '未准备');
+  if (!seat.connected) bits.push('离线');
+  return `${seat.name}（${bits.join(' · ')}）`;
 }
 
 export function emptySlots(state: ViewModel): number[] {

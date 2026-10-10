@@ -86,11 +86,29 @@ test('页面、客户端模块与协议包都能取到，且 MIME 是对的', as
   assert.match(css.headers.get('content-type'), /text\/css/);
 });
 
+test('底座样式与图标字体同源可达（离线双击不依赖 CDN）', async () => {
+  const core = await get('/vendor/tabler/tabler.min.css');
+  assert.equal(core.status, 200);
+  assert.match(core.headers.get('content-type'), /text\/css/);
+  assert.ok(core.body.includes('--tblr-primary'), '要真的是 Tabler 的变量层');
+
+  const icons = await get('/vendor/tabler-icons/tabler-icons.min.css');
+  assert.equal(icons.status, 200);
+  assert.match(icons.body, /\.ti-crown:before/);
+
+  const font = await get('/vendor/tabler-icons/fonts/tabler-icons.woff2');
+  assert.equal(font.status, 200, '图标 css 里的相对字体路径必须一起挂出来');
+
+  const ours = await get('/style.css');
+  assert.match(ours.body, /BP Display/);
+});
+
 test('路径穿越：../ 编码变形一律 404', async () => {
   for (const attempt of [
     '/app/../../../package.json',
     '/app/%2e%2e%2f%2e%2e%2fpackage.json',
     '/vendor/protocol/../../package.json',
+    '/vendor/tabler/../../../package.json',
     '/games/echo/../../package.json',
   ]) {
     const { status } = await get(attempt);

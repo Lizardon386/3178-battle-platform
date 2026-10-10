@@ -401,10 +401,13 @@ export class PlatformApp {
     if (!grid) return;
     grid.replaceChildren();
     // 一律 createElement + textContent：昵称是别人机器上打的字，不能进 innerHTML
-    const pushRow = (className: string, slot: number | null, name: string, state: string, tooltip: string) => {
+    const pushRow = (className: string, slot: number | null, name: string, state: string, tooltip: string, icon: string | null) => {
       const row = this.doc.createElement('div');
       row.className = className;
       if (tooltip) row.title = tooltip;
+      const iconCell = this.doc.createElement('i');
+      iconCell.className = icon ? `seat-icon ti ${icon}` : 'seat-icon';
+      iconCell.setAttribute('aria-hidden', 'true');
       const slotCell = this.doc.createElement('span');
       slotCell.className = 'seat-slot';
       slotCell.textContent = slot === null ? '—' : String(slot);
@@ -414,7 +417,7 @@ export class PlatformApp {
       const stateCell = this.doc.createElement('span');
       stateCell.className = 'seat-state';
       stateCell.textContent = state;
-      row.append(slotCell, nameCell, stateCell);
+      row.append(iconCell, slotCell, nameCell, stateCell);
       grid.append(row);
     };
     for (const seat of this.view.seats) {
@@ -423,10 +426,11 @@ export class PlatformApp {
       if (seat.ready && seat.role !== 'spectator' && seat.role !== 'ai') classes.push('is-ready');
       if (me) classes.push('is-me');
       if (!seat.connected && seat.role !== 'ai') classes.push('is-offline');
-      pushRow(classes.join(' '), seat.slot, seat.name, this.seatStateText(seat), seatLabel(seat));
+      const icon = seat.role === 'host' ? 'ti-crown' : seat.role === 'ai' ? 'ti-robot' : seat.role === 'spectator' ? 'ti-eye' : seat.ready ? 'ti-circle-check' : 'ti-user';
+      pushRow(classes.join(' '), seat.slot, seat.name, this.seatStateText(seat), seatLabel(seat), icon);
     }
     for (const slot of emptySlots(this.view)) {
-      pushRow('seat seat-empty', slot, '空位', '等待加入', `${slot} 号位空着`);
+      pushRow('seat seat-empty', slot, '空位', '等待加入', `${slot} 号位空着`, 'ti-plug');
     }
     const invite = el(this.doc, 'invite-url') as HTMLInputElement | null;
     if (invite && !invite.value) invite.value = this.inviteUrl();

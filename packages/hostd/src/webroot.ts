@@ -22,7 +22,6 @@ export interface WebRootOptions {
   getRooms?: () => DiscoveryRoom[];
   onBadPath?: (path: string) => void;
 }
-
 const CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -88,6 +87,12 @@ export function createWebServer(opts: WebRootOptions): Server {
   const clientDist = join(opts.root, 'packages', 'client', 'dist');
   const protocolDist = join(opts.root, 'packages', 'protocol', 'dist');
   const gamesDir = join(opts.root, 'games');
+  // 第三方样式从 node_modules 直接挂出去：不把 635KB 产物复制进仓库，
+  // 版本与 MIT 许可跟着包走，便携包本来也要带 node_modules。
+  const vendorDist: Array<[string, string]> = [
+    ['/vendor/tabler/', join(opts.root, 'node_modules', '@tabler', 'core', 'dist', 'css')],
+    ['/vendor/tabler-icons/', join(opts.root, 'node_modules', '@tabler', 'icons-webfont', 'dist')],
+  ];
 
   return createServer((req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
@@ -104,6 +109,13 @@ export function createWebServer(opts: WebRootOptions): Server {
     if (path === '/health') {
       sendJson(res, { ok: true, games: opts.modules.map((m) => m.id), serverNow: Date.now() });
       return;
+    }
+
+    for (const [prefix, dir] of vendorDist) {
+      if (!path.startsWith(prefix)) continue;
+      const absolute = safeJoin(dir, path.slice(prefix.length));
+      if (!absolute || !existsSync(absolute) || !isFile(absolute)) return notFound(res, opts, path);
+      return sendFile(res, absolute, false);
     }
 
     if (path.startsWith('/app/')) {

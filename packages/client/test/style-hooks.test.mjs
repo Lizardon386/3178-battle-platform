@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SEAT_ROLES } from '@bp/protocol';
 
@@ -12,10 +12,18 @@ import { SEAT_ROLES } from '@bp/protocol';
  */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(HERE, '..', '..', '..');
 const appSource = readFileSync(join(HERE, '..', 'src', 'app.ts'), 'utf8');
 const css = readFileSync(join(HERE, '..', 'public', 'style.css'), 'utf8');
 // 断言"不许出现 @layer / url()"时要先剥掉注释，否则注释里提一句就把检查判红（上界就这么误报过）
 const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+/** 底座框架的样式（同源挂在 /vendor/ 下），类名允许来自这里而不必在我们自己的 css 里重复。 */
+const VENDOR = [
+  join(ROOT, 'node_modules', '@tabler', 'core', 'dist', 'css', 'tabler.min.css'),
+  join(ROOT, 'node_modules', '@tabler', 'icons-webfont', 'dist', 'tabler-icons.min.css'),
+];
+const vendorCss = VENDOR.filter((p) => existsSync(p)).map((p) => readFileSync(p, 'utf8')).join('\n');
 
 function emittedClasses(source) {
   const found = new Set();
@@ -35,9 +43,15 @@ function hasRule(selector) {
   return css.includes(`.${selector}`);
 }
 
-test('app.ts 发出的每个类名在 style.css 里都有对应规则', () => {
-  const missing = emittedClasses(appSource).filter((name) => !hasRule(name));
-  assert.deepEqual(missing, [], `这些类名 DOM 会发出去但样式里没有：${missing.join('、')}`);
+test('Tabler 底座在 node_modules 里可得（同源路由要有东西可挂）', () => {
+  for (const path of VENDOR) {
+    assert.ok(existsSync(path), `缺底座样式文件：${path}`);
+  }
+});
+
+test('app.ts 发出的每个类名都要有规则（我们的 css 或 Tabler 底座）', () => {
+  const missing = emittedClasses(appSource).filter((name) => !hasRule(name) && !vendorCss.includes(`.${name}`));
+  assert.deepEqual(missing, [], `这些类名 DOM 会发出去但没有任何样式：${missing.join('、')}`);
 });
 
 test('状态类必须命中实际发名字：is-ready / is-me / is-offline', () => {
@@ -66,7 +80,8 @@ test('字体必须同源分发，且 CSS 引用的文件真的在盘上', () => 
   assert.equal(/@layer\b/.test(cssCode), false, '老 Chromium/Edge 会把未知 at-rule 整块跳过，等于整站裸奔');
   const faces = [...cssCode.matchAll(/font-family:\s*"([^"]+)";/g)].map((m) => m[1]);
   assert.deepEqual([...new Set(faces)], ['BP Display', 'BP Mono'], '展示体与 HUD 数字体成对出现');
-  assert.ok(/--font-cn:/.test(css) && /--font-mono:/.test(css), '字阶要成对：中文正文 + 等宽数字');
+  assert.ok(/--bp-font-display:/.test(css) && /--bp-font-mono:/.test(css), '字体令牌要成对：展示体 + HUD 等宽');
+  assert.ok(/\.hidden\s*\{[^}]*display:\s*none\s*!important/.test(cssCode), 'app.ts 靠 .hidden 切屏，Bootstrap 5 不再提供这个类');
 });
 
 test('减动效偏好必须能关掉全部动画', () => {

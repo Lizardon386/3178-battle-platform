@@ -206,8 +206,8 @@ test('开局按钮的文案要把"还差谁"讲出来', () => {
   assert.equal(blockers.ok, false);
   assert.equal(blockers.tooFew, false);
   assert.deepEqual(emptySlots(view), [4], '观战不占玩家槽');
-  assert.equal(seatLabel(view.seats[0]), '👑 房主');
-  assert.equal(seatLabel(view.seats[3]), '👁 看客');
+  assert.equal(seatLabel(view.seats[0]), '房主（房主 · 未准备）');
+  assert.equal(seatLabel(view.seats[3]), '看客（观战）');
 });
 
 test('邀请链接带上房主地址、房号与游戏', () => {

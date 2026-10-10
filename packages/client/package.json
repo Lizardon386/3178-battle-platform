@@ -12,7 +12,13 @@
     "./*": "./dist/*"
   },
   "dependencies": {
-    "@bp/protocol": "*"
+    "@bp/protocol": "*",
+    "@tabler/core": "^1.6.1",
+    "@tabler/icons": "^3.49.0",
+    "@tabler/icons-webfont": "^3.49.0"
   },
-  "files": ["dist", "public"]
+  "files": [
+    "dist",
+    "public"
+  ]
 }

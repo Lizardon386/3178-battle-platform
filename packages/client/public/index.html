@@ -1,9 +1,11 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-bs-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>3178 对战平台 · 房间大厅</title>
+    <link rel="stylesheet" href="/vendor/tabler/tabler.min.css" />
+    <link rel="stylesheet" href="/vendor/tabler-icons/tabler-icons.min.css" />
     <link rel="stylesheet" href="/style.css" />
     <script type="importmap">
       {
@@ -15,136 +17,209 @@
     </script>
   </head>
   <body>
-    <div class="vignette" aria-hidden="true"></div>
-    <div class="hud-bootscan" aria-hidden="true"></div>
-    <div id="app">
-      <header class="brand">
-        <div class="brand-mark">3178</div>
-        <div class="brand-text">
-          <strong>对战平台</strong>
-          <span>房主建房即服务器 · 类 war3 房间</span>
-        </div>
-        <label class="nick-field">
-          昵称
-          <input id="nick" maxlength="32" placeholder="填个名字" autocomplete="off" />
-        </label>
-      </header>
-
-      <section id="screen-lobby" class="screen">
-        <div class="lobby-grid">
-          <article class="panel">
-            <h2>创建房间（我当房主）</h2>
-            <label>
-              游戏
-              <select id="game-select"><option value="echo">本机壳未提供清单</option></select>
-            </label>
-            <label>
-              房间名
-              <input id="room-name" maxlength="48" placeholder="周末一局" />
-            </label>
-            <div class="row">
-              <label>
-                座位数
-                <input id="seat-slots" type="number" min="2" max="8" value="4" />
-              </label>
-              <label>
-                房间密码（可留空）
-                <input id="room-password" maxlength="32" placeholder="留空即公开" />
+    <div class="page">
+      <div class="page-wrapper">
+        <header class="navbar navbar-expand-lg bp-topbar">
+          <div class="container-xl">
+            <div class="navbar-brand d-flex align-items-center gap-3">
+              <span class="brand-mark">3178</span>
+              <span class="brand-text">
+                <strong>对战平台</strong>
+                <small class="d-block">房主建房即服务器 · 类 war3 房间</small>
+              </span>
+            </div>
+            <div class="ms-auto d-flex align-items-center gap-3">
+              <label class="nick-field mb-0">
+                <span class="form-label">昵称</span>
+                <input id="nick" class="form-control form-control-lg" maxlength="32" placeholder="填个名字" autocomplete="off" />
               </label>
             </div>
-            <div class="checks">
-              <label><input id="chk-spectate" type="checkbox" checked /> 允许观战</label>
-              <label><input id="chk-hidden" type="checkbox" /> 隐藏房（不上局域网列表，只发邀请链接）</label>
-            </div>
-            <button id="btn-create" class="primary">建房并坐 1 号位</button>
-            <p class="hint">房主权限只在你这个进程里：开局、踢人、关房、移交都得你点。</p>
-          </article>
+          </div>
+        </header>
 
-          <article class="panel">
-            <h2>加入房间</h2>
-            <label>
-              房主地址
-              <input id="host-address" placeholder="192.168.1.20:3000 或 https://xxx.trycloudflare.com" autocomplete="off" />
-            </label>
-            <div class="row">
-              <label>
-                房号
-                <input id="room-code" maxlength="12" placeholder="AB3D" autocomplete="off" />
-              </label>
-              <label>
-                密码（可留空）
-                <input id="join-password" maxlength="32" />
-              </label>
-            </div>
-            <button id="btn-join" class="primary">进房</button>
+        <div class="page-body py-6">
+          <div class="container-xl">
+            <!-- ================= 大厅 ================= -->
+            <section id="screen-lobby" class="screen">
+              <div class="row row-cards">
+                <div class="col-lg-6">
+                  <div class="card bp-panel">
+                    <div class="card-header">
+                      <h3 class="card-title"><i class="ti ti-crown ti-fw me-2" aria-hidden="true"></i>创建房间 · 我当房主</h3>
+                    </div>
+                    <div class="card-body">
+                      <label class="form-label">游戏</label>
+                      <select id="game-select" class="form-select form-select-lg mb-4">
+                        <option value="echo">本机壳未提供清单</option>
+                      </select>
 
-            <h3>地址簿（你去过的房主）</h3>
-            <div class="row">
-              <select id="address-book"></select>
-              <button id="btn-use-book">填入</button>
-              <button id="btn-forget">忘掉</button>
-            </div>
+                      <label class="form-label" for="room-name">房间名</label>
+                      <input id="room-name" class="form-control form-control-lg mb-4" maxlength="48" placeholder="周末一局" />
 
-            <h3>局域网房间</h3>
-            <div id="lan-list" class="lan-list"></div>
-          </article>
+                      <div class="row g-4 mb-4">
+                        <div class="col-6">
+                          <label class="form-label" for="seat-slots">座位数</label>
+                          <input id="seat-slots" class="form-control form-control-lg" type="number" min="2" max="8" value="4" />
+                        </div>
+                        <div class="col-6">
+                          <label class="form-label" for="room-password">房间密码</label>
+                          <input id="room-password" class="form-control form-control-lg" maxlength="32" placeholder="留空即公开" />
+                        </div>
+                      </div>
+
+                      <div class="form-check form-switch mb-2">
+                        <input id="chk-spectate" class="form-check-input" type="checkbox" checked />
+                        <label class="form-check-label" for="chk-spectate">允许观战</label>
+                      </div>
+                      <div class="form-check form-switch mb-4">
+                        <input id="chk-hidden" class="form-check-input" type="checkbox" />
+                        <label class="form-check-label" for="chk-hidden">隐藏房（不上局域网列表，只发邀请链接）</label>
+                      </div>
+
+                      <button id="btn-create" class="btn btn-primary btn-lg w-100 bp-primary">
+                        <i class="ti ti-flag-2 me-2" aria-hidden="true"></i>建房并坐 1 号位
+                      </button>
+                      <p class="hint mt-3">房主权限只在你这个进程里：开局、踢人、关房、移交都得你点。</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-lg-6">
+                  <div class="card bp-panel">
+                    <div class="card-header">
+                      <h3 class="card-title"><i class="ti ti-login ti-fw me-2" aria-hidden="true"></i>加入房间</h3>
+                    </div>
+                    <div class="card-body">
+                      <label class="form-label" for="host-address">房主地址</label>
+                      <input id="host-address" class="form-control form-control-lg mb-4" placeholder="192.168.1.20:3000 或 https://xxx.trycloudflare.com" autocomplete="off" />
+
+                      <div class="row g-4 mb-4">
+                        <div class="col-6">
+                          <label class="form-label" for="room-code">房号</label>
+                          <input id="room-code" class="form-control form-control-lg bp-code-input" maxlength="12" placeholder="AB3D" autocomplete="off" />
+                        </div>
+                        <div class="col-6">
+                          <label class="form-label" for="join-password">密码</label>
+                          <input id="join-password" class="form-control form-control-lg" maxlength="32" placeholder="可留空" />
+                        </div>
+                      </div>
+
+                      <button id="btn-join" class="btn btn-primary btn-lg w-100 bp-primary mb-4">
+                        <i class="ti ti-plug me-2" aria-hidden="true"></i>进房
+                      </button>
+
+                      <h4 class="bp-subtitle">地址簿 · 你去过的房主</h4>
+                      <div class="row g-2 align-items-center mb-4">
+                        <div class="col">
+                          <select id="address-book" class="form-select"></select>
+                        </div>
+                        <div class="col-auto"><button id="btn-use-book" class="btn btn-outline-secondary">填入</button></div>
+                        <div class="col-auto"><button id="btn-forget" class="btn btn-ghost-secondary">忘掉</button></div>
+                      </div>
+
+                      <h4 class="bp-subtitle">局域网房间</h4>
+                      <div id="lan-list" class="lan-list"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p id="lobby-status" class="status mt-4" role="status"></p>
+            </section>
+
+            <!-- ================= 房间内 ================= -->
+            <section id="screen-room" class="screen hidden">
+              <div class="room-head mb-4">
+                <div class="flex-grow-1">
+                  <h2 id="room-title">房间</h2>
+                  <p id="connection-bar" class="connection-bar mb-0" role="status"></p>
+                </div>
+                <div class="text-end">
+                  <div class="hud-code-label">房号</div>
+                  <div id="room-code-hud" class="hud-code"></div>
+                </div>
+                <div class="text-end ms-4">
+                  <div class="hud-code-label">剩余</div>
+                  <div id="turn-countdown" class="countdown"></div>
+                </div>
+              </div>
+
+              <div class="row row-cards">
+                <div class="col-lg-6">
+                  <div class="card bp-panel">
+                    <div class="card-header">
+                      <h3 class="card-title"><i class="ti ti-users ti-fw me-2" aria-hidden="true"></i>席位</h3>
+                      <div class="card-actions">
+                        <button id="btn-ready" class="btn btn-sm btn-outline-success">准备</button>
+                        <button id="btn-reconnect" class="btn btn-sm btn-ghost-secondary">重连</button>
+                        <button id="btn-leave" class="btn btn-sm btn-ghost-danger">离开</button>
+                      </div>
+                    </div>
+                    <div id="seat-grid" class="seat-grid list-group list-group-flush"></div>
+                    <div id="game-host" class="card-body game-host hidden"></div>
+                  </div>
+                </div>
+
+                <div class="col-lg-3">
+                  <div class="card bp-panel">
+                    <div class="card-header">
+                      <h3 class="card-title"><i class="ti ti-message-circle ti-fw me-2" aria-hidden="true"></i>房间聊天</h3>
+                    </div>
+                    <div id="chat-log" class="chat-log"></div>
+                    <div class="card-footer">
+                      <div class="input-group">
+                        <input id="chat-input" class="form-control" maxlength="300" placeholder="说点什么" autocomplete="off" />
+                        <button id="btn-send" class="btn btn-primary"><i class="ti ti-send" aria-hidden="true"></i></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-lg-3">
+                  <div id="host-panel" class="card bp-panel">
+                    <div class="card-header">
+                      <h3 class="card-title"><i class="ti ti-shield-star ti-fw me-2" aria-hidden="true"></i>房主面板</h3>
+                    </div>
+                    <div class="card-body d-grid gap-3">
+                      <button id="btn-start" class="btn btn-primary btn-lg bp-primary">开始对局</button>
+                      <button id="btn-add-ai" class="btn btn-outline-secondary"><i class="ti ti-robot me-2" aria-hidden="true"></i>加一个电脑位</button>
+
+                      <div>
+                        <label class="form-label" for="transfer-target">移交房主</label>
+                        <div class="input-group">
+                          <select id="transfer-target" class="form-select"></select>
+                          <button id="btn-transfer" class="btn btn-outline-secondary">移交</button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label class="form-label" for="kick-target">请出座位</label>
+                        <div class="input-group">
+                          <select id="kick-target" class="form-select"></select>
+                          <button id="btn-kick" class="btn btn-outline-danger">请出</button>
+                        </div>
+                      </div>
+
+                      <div class="pt-2">
+                        <label class="form-label" for="invite-url">邀请链接</label>
+                        <div class="input-group">
+                          <input id="invite-url" class="form-control" readonly placeholder="点下面按钮生成" />
+                          <button id="btn-copy-invite" class="btn btn-outline-secondary"><i class="ti ti-copy" aria-hidden="true"></i></button>
+                        </div>
+                      </div>
+
+                      <button id="btn-close" class="btn btn-ghost-danger mt-2"><i class="ti ti-power me-2" aria-hidden="true"></i>关闭房间</button>
+                      <p class="hint">移交只转移权限，进程还在你这台机器上；你一关窗，这桌就散了。</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
-        <p id="lobby-status" class="status" role="status"></p>
-      </section>
-
-      <section id="screen-room" class="screen hidden">
-        <div class="room-head">
-          <h2 id="room-title">房间</h2>
-          <span id="room-code-hud" class="hud-code" aria-label="房号"></span>
-          <span id="turn-countdown" class="countdown"></span>
-        </div>
-        <p id="connection-bar" class="status" role="status"></p>
-
-        <div class="room-grid">
-          <main class="panel">
-            <h3>座位</h3>
-            <div id="seat-grid" class="seat-grid"></div>
-            <div class="actions">
-              <button id="btn-ready">准备</button>
-              <button id="btn-leave">离开房间</button>
-              <button id="btn-reconnect">重连</button>
-            </div>
-            <div id="game-host" class="game-host hidden"></div>
-          </main>
-
-          <aside class="panel">
-            <h3>房间聊天</h3>
-            <div id="chat-log" class="chat-log"></div>
-            <div class="row">
-              <input id="chat-input" maxlength="300" placeholder="说点什么" autocomplete="off" />
-              <button id="btn-send">发</button>
-            </div>
-          </aside>
-
-          <aside id="host-panel" class="panel">
-            <h3>房主面板</h3>
-            <button id="btn-start" class="primary">开始对局</button>
-            <button id="btn-add-ai">加一个电脑位</button>
-            <div class="row">
-              <select id="transfer-target"></select>
-              <button id="btn-transfer">移交房主</button>
-            </div>
-            <div class="row">
-              <select id="kick-target"></select>
-              <button id="btn-kick">请出座位</button>
-            </div>
-            <label>
-              邀请链接
-              <input id="invite-url" readonly placeholder="点下面按钮生成" />
-            </label>
-            <button id="btn-copy-invite">复制邀请链接</button>
-            <button id="btn-close" class="danger">关闭房间</button>
-            <p class="hint">移交只转移权限，进程还在你这台机器上；你一关窗，这桌就散了。</p>
-          </aside>
-        </div>
-      </section>
+      </div>
     </div>
 
+    <div class="hud-bootscan" aria-hidden="true"></div>
     <script type="module">
       import { PlatformApp } from '/app/app.js';
 
