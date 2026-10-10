@@ -1,0 +1,95 @@
+:root {
+  --bg: #141a21;
+  --panel: #1c2530;
+  --panel-2: #223040;
+  --line: #2f4054;
+  --text: #e6eef7;
+  --dim: #91a5bb;
+  --gold: #e8b64c;
+  --green: #3f9d6b;
+  --danger: #b8433f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at 30% -10%, #223245 0%, var(--bg) 60%);
+  color: var(--text);
+  font: 15px/1.5 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+#app { max-width: 1180px; margin: 0 auto; padding: 18px; }
+
+.brand { display: flex; align-items: center; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.brand-mark {
+  width: 46px; height: 46px; display: grid; place-items: center;
+  border-radius: 10px; background: linear-gradient(160deg, var(--gold), #a97b1f);
+  color: #1b1405; font-weight: 800; letter-spacing: 1px;
+}
+.brand-text { display: flex; flex-direction: column; }
+.brand-text span { color: var(--dim); font-size: 12px; }
+.nick-field { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 13px; }
+
+.screen { margin-top: 16px; }
+.hidden { display: none !important; }
+
+.lobby-grid, .room-grid { display: grid; gap: 14px; }
+.lobby-grid { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.room-grid { grid-template-columns: 2fr 1fr 1fr; align-items: start; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.panel h2, .panel h3 { margin: 0 0 10px; font-size: 15px; }
+.panel h3 { color: var(--dim); font-size: 13px; margin-top: 16px; }
+
+label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; color: var(--dim); font-size: 13px; }
+input, select, button {
+  font: inherit; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+}
+input::placeholder { color: #6d8096; }
+button { cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--gold); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.primary { background: linear-gradient(160deg, #2f7fbf, #1d5a8c); border-color: #1d5a8c; font-weight: 600; }
+button.danger { background: var(--danger); border-color: #8d322f; }
+
+.row { display: flex; gap: 8px; align-items: end; }
+.row label { flex: 1; margin-bottom: 0; }
+.checks { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.checks label { flex-direction: row; align-items: center; gap: 8px; margin: 0; }
+.hint { color: var(--dim); font-size: 12px; margin: 10px 0 0; }
+.status { min-height: 20px; color: var(--gold); font-size: 13px; margin: 12px 0 0; }
+
+.room-head { display: flex; align-items: baseline; gap: 12px; }
+.room-head h2 { margin: 0; font-size: 17px; }
+.countdown { color: var(--gold); font-variant-numeric: tabular-nums; }
+
+.seat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.seat { padding: 10px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+.seat-host { border-color: var(--gold); box-shadow: inset 0 0 0 1px rgba(232, 182, 76, 0.35); }
+.seat-ready { border-color: var(--green); }
+.seat-me { outline: 1px dashed var(--gold); outline-offset: 2px; }
+.seat-empty, .seat-offline { opacity: 0.55; }
+.seat-ai { border-style: dotted; }
+.actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+.game-host { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 12px; }
+.game-placeholder pre {
+  background: #101720; border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px; max-height: 320px; overflow: auto; font-size: 12px;
+}
+.placeholder-actions { display: flex; gap: 8px; }
+
+.chat-log { display: flex; flex-direction: column; gap: 6px; height: 320px; overflow-y: auto; font-size: 13px; }
+.chat-line { word-break: break-word; }
+.chat-system { color: var(--dim); font-style: italic; }
+
+.lan-list { display: flex; flex-direction: column; gap: 6px; }
+.lan-room { text-align: left; }
+.lan-empty { color: var(--dim); font-size: 12px; margin: 0; }
+
+@media (max-width: 900px) {
+  .room-grid { grid-template-columns: 1fr; }
+}

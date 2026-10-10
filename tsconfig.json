@@ -3,6 +3,8 @@
   "references": [
     { "path": "packages/protocol" },
     { "path": "packages/server" },
+    { "path": "packages/client" },
+    { "path": "packages/hostd" },
     { "path": "games/echo" },
     { "path": "games/turncount" }
   ]

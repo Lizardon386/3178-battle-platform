@@ -1,0 +1,15 @@
+{
+  "name": "@bp/hostd",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "hostd": "dist/cli.js"
+  },
+  "dependencies": {
+    "@bp/client": "*",
+    "@bp/protocol": "*",
+    "@bp/server": "*"
+  },
+  "files": ["dist"]
+}

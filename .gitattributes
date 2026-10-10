@@ -1,0 +1,13 @@
+# .bat 必须 CRLF：LF 结尾的批处理在 cmd 里会跳标签、丢行，而且用户是双击运行的人
+*.[Bb][Aa][Tt] eol=crlf
+*.cmd eol=crlf
+*.sh eol=lf
+*.ps1 eol=crlf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.mjs text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.md text eol=lf

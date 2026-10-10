@@ -1,0 +1,540 @@
+import type { ClientMessage, GameManifest, ServerMessage } from '@bp/protocol';
+import { NOTICE_MESSAGES } from '@bp/protocol';
+import { PlatformConnection, browserSocketFactory, type ConnectionHandlers, type ConnectionOptions, type SocketFactory, type Timers, type ConnectionState } from './connection.js';
+import { AddressBook, NickName, SessionVault, type KeyValueStore } from './local-store.js';
+import { ServerClock } from './clock.js';
+import { parseHostAddress, parseInviteLink, wouldBeBlocked, type Endpoint } from './endpoint.js';
+import { emptyViewModel, inviteLink, isHost, mySeat, reduce, seatLabel, startBlockers, emptySlots, type ViewModel } from './view-model.js';
+import { fetchGameList, loadGameClient, placeholderClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
+
+/**
+ * 客户端外壳：大厅 → 房间内（槽位 + 聊天 + 房主面板）→ 对局挂载点。
+ * DOM 只在 ui 层出现，状态归约全在 view-model.ts，逻辑可测。
+ */
+
+export interface AppDeps {
+  doc: Document;
+  storage: KeyValueStore;
+  factory?: SocketFactory;
+  timers?: Timers;
+  fetchImpl?: FetchImpl;
+  now?: () => number;
+  /** 本机壳自己的来源：/api/games、/discovery/rooms 都从这里取。 */
+  selfOrigin?: string;
+  search?: string;
+}
+
+const el = <T extends HTMLElement>(doc: Document, id: string): T | null => doc.getElementById(id) as T | null;
+const value = (node: HTMLElement | null): string => (node as HTMLInputElement | null)?.value?.trim() ?? '';
+
+export class PlatformApp {
+  private readonly doc: Document;
+  private readonly book: AddressBook;
+  private readonly nick: NickName;
+  private readonly vault: SessionVault;
+  private readonly clock: ServerClock;
+  private readonly fetchImpl: FetchImpl;
+  private readonly selfOrigin: string;
+  private view: ViewModel = emptyViewModel();
+  private conn: PlatformConnection | null = null;
+  private endpoint: Endpoint | null = null;
+  private connState: ConnectionState = { status: 'idle', attempts: 0, lastError: null, wsUrl: null };
+  private client: GameClientContract | null = null;
+  private pendingManifest: GameManifest | null = null;
+  private localGames: GameManifest[] = [];
+  private mode: 'host' | 'join' = 'join';
+  private renderHandle: unknown = null;
+  private deadlineAt: number | null = null;
+  private resumeAttempted = false;
+
+  constructor(private readonly deps: AppDeps) {
+    this.doc = deps.doc;
+    this.book = new AddressBook(deps.storage);
+    this.nick = new NickName(deps.storage);
+    this.vault = new SessionVault(deps.storage);
+    this.clock = new ServerClock();
+    // 不能写 deps.fetchImpl ?? fetch 直接存起来：那样 this.fetchImpl(...) 会把 fetch 的
+    // 接收者变成 app，浏览器里直接 Illegal invocation。用箭头包一层保持裸调用。
+    const injected = deps.fetchImpl;
+    this.fetchImpl = injected ? (input, init) => injected(input, init) : (input, init) => fetch(input, init);
+    this.selfOrigin = deps.selfOrigin ?? 'http://127.0.0.1:3178';
+  }
+
+  start(): void {
+    const search = this.deps.search ?? this.doc.defaultView?.location.search ?? '';
+    const invite = search ? parseInviteLink(`${this.selfOrigin}${search}`, this.selfOrigin) : { endpoint: null, code: null, gameId: null };
+    this.bindUi();
+    const nickField = el(this.doc, 'nick');
+    if (nickField) (nickField as HTMLInputElement).value = this.nick.get();
+    void this.refreshLobbySources(invite);
+    this.startRenderLoop();
+    this.render();
+  }
+
+  /** 倒计时要自己走，不然对局里的时间戳会冻在上一帧。 */
+  private startRenderLoop(): void {
+    const timers = this.deps.timers;
+    const set = timers?.setTimeout ?? ((handler: () => void, ms: number) => setTimeout(handler, ms) as unknown);
+    set(() => {
+      this.render();
+      this.startRenderLoop();
+    }, 500);
+  }
+
+  // ---------------- 连接 ----------------
+
+  private async refreshLobbySources(invite: { endpoint: Endpoint | null; code: string | null; gameId: string | null }): Promise<void> {
+    const address = el(this.doc, 'host-address') as HTMLInputElement | null;
+    if (invite.endpoint && !address?.value) {
+      address!.value = invite.endpoint.httpOrigin;
+      const code = el(this.doc, 'room-code') as HTMLInputElement | null;
+      if (code && invite.code) code.value = invite.code;
+    }
+    try {
+      const games = await fetchGameList(this.selfOrigin, this.fetchImpl);
+      this.localGames = games;
+      const select = el(this.doc, 'game-select') as HTMLSelectElement | null;
+      if (select && games.length > 0) {
+        select.replaceChildren(
+          ...games.map((g) => {
+            const option = this.doc.createElement('option');
+            option.value = g.id;
+            option.textContent = `${g.name} ${g.version}`;
+            return option;
+          }),
+        );
+        if (invite.gameId) select.value = invite.gameId;
+      }
+    } catch {
+      this.setStatus('本机壳没提供游戏清单——创建房间会失败，但加入别人的房不受影响。');
+    }
+    try {
+      const response = await this.fetchImpl(`${this.selfOrigin}/discovery/rooms`, { mode: 'cors' });
+      if (response.ok) {
+        const data = (await response.json()) as { rooms?: Array<{ code: string; name: string; gameName: string; occupied: number; seatSlots: number; lanUrl: string; hostName: string }> };
+        this.renderLanList(data.rooms ?? []);
+      }
+    } catch (error) {
+      // 没装本地壳就没有局域网列表；地址簿 + 邀请链接仍然可用（A 档）。要说清原因，别静默留白。
+      const list = el(this.doc, 'lan-list');
+      if (list) {
+        const note = this.doc.createElement('p');
+        note.className = 'lan-empty';
+        note.textContent = `拿不到局域网房间列表：${String(error instanceof Error ? error.message : error)}。纯浏览器打开时这是预期的——组播要由本地壳代收。`;
+        list.replaceChildren(note);
+      }
+    }
+    this.renderAddressBook();
+  }
+
+  private connectTo(endpoint: Endpoint, code: string | null): void {
+    this.endpoint = endpoint;
+    this.resumeAttempted = false;
+    const nickValue = value(el(this.doc, 'nick')) || '无名玩家';
+    this.nick.set(nickValue);
+    const wantedGameId = this.pendingManifest?.id ?? (el(this.doc, 'game-select') as HTMLSelectElement | null)?.value ?? '';
+    const handlers: ConnectionHandlers = {
+      hello: () => {
+        // 只声明版本号让房主做版本闸；房规由房主选，本机不该拿自己的 hash 去比。
+        const installed = this.localGames.find((g) => g.id === wantedGameId);
+        return {
+          type: 'hello',
+          protocol: 1,
+          nick: value(el(this.doc, 'nick')) || '无名玩家',
+          gameId: installed?.id,
+          version: installed?.version,
+        };
+      },
+      onMessage: (message) => this.onServerMessage(message, endpoint),
+      onState: (state) => {
+        this.connState = state;
+        this.render();
+      },
+      onProtocolError: (reason) => this.setStatus(`协议不对：${reason}`),
+    };
+    const options: ConnectionOptions = {
+      factory: this.deps.factory ?? browserSocketFactory(),
+      timers: this.deps.timers,
+    };
+    this.conn?.close();
+    this.conn = new PlatformConnection(handlers, options);
+    this.conn.connect(endpoint.wsUrl);
+    this.book.touch(endpoint.httpOrigin, nickValue, code, Date.now());
+    this.renderAddressBook();
+    const session = code ? this.vault.load(endpoint.httpOrigin, code) : null;
+    if (session) this.setStatus(`本机存有过这个房的票据，连上后先尝试坐回原位（座位 ${session.seatId}）`);
+  }
+
+  private onServerMessage(message: ServerMessage, endpoint: Endpoint): void {
+    if ('serverNow' in message && typeof message.serverNow === 'number') this.clock.sync(message.serverNow);
+    if (message.type === 'pong') this.clock.sync(message.serverNow);
+    this.view = reduce(this.view, message, Date.now());
+    if (message.type === 'welcome') {
+      this.view = { ...this.view, availableGames: message.availableGames };
+      const session = this.mode === 'join' ? this.sessionFor(endpoint) : null;
+      if (session) {
+        this.conn?.send({ type: 'seatResume', code: session.roomCode, seatId: session.seatId, ticket: session.ticket });
+        this.resumeAttempted = true;
+      } else if (this.pendingJoin) {
+        this.conn?.send(this.pendingJoin);
+        this.pendingJoin = null;
+      }
+    }
+    if (message.type === 'seatGranted') {
+      this.vault.save(endpoint.httpOrigin, { roomCode: message.code, seatId: message.seatId, ticket: message.ticket, gameId: message.manifest.id }, Date.now());
+      this.pendingManifest = message.manifest;
+      void this.attachGameClient(message.manifest, endpoint);
+    }
+    if (message.type === 'snapshot') {
+      const state = message.game as { deadlineInMs?: number | null } | null;
+      // 相对毫秒 + 本地单调钟：绝对时间戳跨机器会失真。
+      this.deadlineAt = state && typeof state.deadlineInMs === 'number' ? this.clock.now() + state.deadlineInMs : null;
+    }
+    if (message.type === 'error' && (message.code === 'NOROOM' || message.code === 'NOSEAT') && this.view.room === null) {
+      const staleCode = this.sessionFor(endpoint)?.roomCode;
+      if (staleCode) this.vault.clear(endpoint.httpOrigin, staleCode);
+      if (this.resumeAttempted) this.setStatus('上次那个房已经不在了，需要重新入座。');
+      this.resumeAttempted = false;
+    }
+    if (message.type === 'notice' && (message.code === 'HOSTLEFT' || message.code === 'ROOM_CLOSED')) {
+      this.leaveToLobby();
+    }
+    if (message.type === 'event') this.client?.onEvent?.({ name: message.name, payload: message.payload }, this.gameActions());
+    this.render();
+  }
+
+  private pendingJoin: ClientMessage | null = null;
+
+  private sessionFor(endpoint: Endpoint) {
+    const code = value(el(this.doc, 'room-code'));
+    return code ? this.vault.load(endpoint.httpOrigin, code) : null;
+  }
+
+  private async attachGameClient(manifest: GameManifest, endpoint: Endpoint): Promise<void> {
+    const host = el(this.doc, 'game-host');
+    if (!host) return;
+    const result = await loadGameClient(manifest, endpoint.httpOrigin, this.fetchImpl);
+    if (result.ok && result.client) {
+      this.client = result.client;
+      this.setStatus(result.verified ? `已挂载 ${manifest.name}（哈希校验通过）` : `已挂载 ${manifest.name}（房主未声明哈希，未校验）`);
+    } else {
+      this.client = placeholderClient(manifest);
+      this.setStatus(result.reason ?? '用占位界面显示原始状态');
+    }
+    this.renderGame();
+  }
+
+  private gameActions(): GameActions {
+    return {
+      send: (name, payload) => this.conn?.send({ type: 'gameAction', name, payload }),
+      seatId: () => this.view.mySeatId,
+    };
+  }
+
+  private leaveToLobby(): void {
+    this.conn?.close();
+    this.conn = null;
+    this.view = emptyViewModel();
+    this.client = null;
+    this.endpoint = null;
+    this.render();
+  }
+
+  // ---------------- UI 绑定 ----------------
+
+  private bindUi(): void {
+    const on = (id: string, event: string, handler: () => void) => {
+      const node = el(this.doc, id);
+      node?.addEventListener(event, handler);
+    };
+
+    on('btn-create', 'click', () => {
+      const gameSelect = el(this.doc, 'game-select') as HTMLSelectElement | null;
+      const gameId = gameSelect?.value || 'echo';
+      const manifest = this.view.availableGames.find((g) => g.id === gameId) ?? null;
+      this.pendingManifest = manifest;
+      this.pendingJoin = null;
+      const endpoint = parseHostAddress(this.selfOrigin);
+      if (!endpoint.ok) return this.setStatus(endpoint.message);
+      this.connCreateFrom(endpoint.endpoint, {
+        gameId,
+        roomName: value(el(this.doc, 'room-name')) || '未命名房间',
+        seatSlots: Number(value(el(this.doc, 'seat-slots')) || 4),
+        password: value(el(this.doc, 'room-password')) || undefined,
+        allowSpectate: (el(this.doc, 'chk-spectate') as HTMLInputElement | null)?.checked ?? true,
+        hidden: (el(this.doc, 'chk-hidden') as HTMLInputElement | null)?.checked ?? false,
+      });
+      return undefined;
+    });
+
+    on('btn-join', 'click', () => {
+      const raw = value(el(this.doc, 'host-address'));
+      const parsed = parseHostAddress(raw);
+      if (!parsed.ok) return this.setStatus(parsed.message);
+      if (wouldBeBlocked(this.doc.defaultView?.location.protocol ?? 'http:', parsed.endpoint)) {
+        return this.setStatus('这个页面是 https，连明文 ws 会被浏览器拦。要么用房主的 https 地址，要么用本机壳打开。');
+      }
+      const code = (value(el(this.doc, 'room-code')) || '').toUpperCase();
+      if (!code) return this.setStatus('房号呢？房主那边能看到四位码。');
+      this.pendingJoin = { type: 'roomJoin', code, password: value(el(this.doc, 'join-password')) || undefined };
+      this.mode = 'join';
+      this.connectTo(parsed.endpoint, code);
+      return undefined;
+    });
+
+    on('btn-ready', 'click', () => {
+      const seat = mySeat(this.view);
+      this.conn?.send({ type: 'ready', ready: !(seat?.ready ?? false) });
+    });
+    on('btn-send', 'click', () => this.sendChat());
+    on('btn-leave', 'click', () => {
+      if (isHost(this.view)) return this.setStatus('你是房主：要么移交房主，要么关闭房间，不能直接走。');
+      this.conn?.send({ type: 'seatLeave' });
+      this.leaveToLobby();
+    });
+    on('btn-start', 'click', () => this.conn?.send({ type: 'hostStart' }));
+    on('btn-close', 'click', () => this.conn?.send({ type: 'hostClose', reason: '房主关房' }));
+    on('btn-transfer', 'click', () => {
+      const select = el(this.doc, 'transfer-target') as HTMLSelectElement | null;
+      if (select?.value) this.conn?.send({ type: 'hostTransfer', seatId: select.value });
+    });
+    on('btn-kick', 'click', () => {
+      const select = el(this.doc, 'kick-target') as HTMLSelectElement | null;
+      if (select?.value) this.conn?.send({ type: 'hostKick', seatId: select.value });
+    });
+    on('btn-add-ai', 'click', () => this.conn?.send({ type: 'hostSeat', op: 'addAi' }));
+    on('btn-copy-invite', 'click', () => this.copyInvite());
+    on('btn-reconnect', 'click', () => this.conn?.retryNow());
+    on('btn-use-book', 'click', () => {
+      const select = el(this.doc, 'address-book') as HTMLSelectElement | null;
+      if (!select?.value) return;
+      const entry = this.book.list().find((e) => e.origin === select.value);
+      if (!entry) return;
+      const address = el(this.doc, 'host-address') as HTMLInputElement | null;
+      const code = el(this.doc, 'room-code') as HTMLInputElement | null;
+      if (address) address.value = entry.origin;
+      if (code && entry.lastCode) code.value = entry.lastCode;
+      return undefined;
+    });
+    on('btn-forget', 'click', () => this.forgetOrigin(value(el(this.doc, 'address-book'))));
+    const chatInput = el(this.doc, 'chat-input');
+    chatInput?.addEventListener('keydown', (event) => {
+      if ((event as KeyboardEvent).key === 'Enter') this.sendChat();
+    });
+  }
+
+  private connCreateFrom(endpoint: Endpoint, input: { gameId: string; roomName: string; seatSlots: number; password?: string; allowSpectate: boolean; hidden: boolean }): void {
+    this.mode = 'host';
+    this.connectTo(endpoint, null);
+    this.pendingJoin = {
+      type: 'roomCreate',
+      gameId: input.gameId,
+      roomName: input.roomName,
+      seatSlots: input.seatSlots,
+      password: input.password,
+      allowSpectate: input.allowSpectate,
+      hidden: input.hidden,
+      config: {},
+    };
+  }
+
+  private forgetOrigin(origin: string): void {
+    if (!origin) return;
+    this.book.forget(origin);
+    this.renderAddressBook();
+    this.setStatus(`已从地址簿忘掉 ${origin}`);
+  }
+
+  private sendChat(): void {
+    const input = el(this.doc, 'chat-input') as HTMLInputElement | null;
+    const text = input?.value.trim() ?? '';
+    if (!text) return;
+    this.conn?.send({ type: 'chat', text });
+    input!.value = '';
+  }
+
+  private copyInvite(): void {
+    const link = this.inviteUrl();
+    const node = el(this.doc, 'invite-url') as HTMLInputElement | null;
+    if (node) node.value = link;
+    void this.doc.defaultView?.navigator.clipboard?.writeText(link).then(
+      () => this.setStatus('邀请链接已复制，发给朋友点开就填好地址和房号'),
+      () => this.setStatus(`复制失败，手动拷这条：${link}`),
+    );
+  }
+
+  private inviteUrl(): string {
+    if (!this.view.room || !this.endpoint) return '';
+    return inviteLink(this.endpoint.httpOrigin, this.view.room.code, this.view.room.gameId, pathOf(this.endpoint.wsUrl));
+  }
+
+  private setStatus(text: string): void {
+    const node = el(this.doc, 'lobby-status');
+    if (node) node.textContent = text;
+    const bar = el(this.doc, 'connection-bar');
+    if (bar && this.view.room) bar.textContent = text;
+  }
+
+  // ---------------- 渲染 ----------------
+
+  private render(): void {
+    const inRoom = this.view.room !== null;
+    el(this.doc, 'screen-lobby')?.classList.toggle('hidden', inRoom);
+    el(this.doc, 'screen-room')?.classList.toggle('hidden', !inRoom);
+    if (!inRoom) return;
+    this.renderRoom();
+    this.renderChat();
+    this.renderHostPanel();
+    this.renderGame();
+  }
+
+  private renderRoom(): void {
+    const title = el(this.doc, 'room-title');
+    if (title && this.view.room) {
+      const room = this.view.room;
+      title.textContent = `${room.name} · 房号 ${room.code} · ${room.gameName} · ${room.phase === 'lobby' ? '等待入座' : room.phase === 'playing' ? '对局中' : '已结束'}`;
+    }
+    const grid = el(this.doc, 'seat-grid');
+    if (!grid) return;
+    grid.replaceChildren();
+    for (const seat of this.view.seats) {
+      const cell = this.doc.createElement('div');
+      cell.className = `seat seat-${seat.role}${seat.ready ? ' is-ready' : ''}${seat.seatId === this.view.mySeatId ? ' is-me' : ''}${seat.connected ? '' : ' is-offline'}`;
+      cell.textContent = `${seat.slot} 号位 · ${seatLabel(seat)}`;
+      grid.append(cell);
+    }
+    for (const slot of emptySlots(this.view)) {
+      const cell = this.doc.createElement('div');
+      cell.className = 'seat seat-empty';
+      cell.textContent = `${slot} 号位 · 空`;
+      grid.append(cell);
+    }
+    const invite = el(this.doc, 'invite-url') as HTMLInputElement | null;
+    if (invite && !invite.value) invite.value = this.inviteUrl();
+    const countdown = el(this.doc, 'turn-countdown');
+    if (countdown) {
+      countdown.textContent =
+        this.deadlineAt === null ? '' : `剩 ${Math.max(0, Math.round((this.deadlineAt - this.clock.now()) / 1000))} 秒`;
+    }
+    const bar = el(this.doc, 'connection-bar');
+    if (bar) {
+      const status = this.connState.status;
+      const notice = this.view.lastNotice ? ` · ${this.view.lastNotice.text || NOTICE_MESSAGES[this.view.lastNotice.code]}` : '';
+      const error = this.view.lastError ? ` · ${this.view.lastError.message}` : '';
+      bar.textContent = `${status === 'open' ? '已连房主' : `连接：${status}`}${notice}${error}${this.connState.lastError ? ` · ${this.connState.lastError}` : ''}`;
+    }
+  }
+
+  private renderChat(): void {
+    const log = el(this.doc, 'chat-log');
+    if (!log) return;
+    log.replaceChildren(
+      ...this.view.chat.slice(-60).map((line) => {
+        const row = this.doc.createElement('div');
+        row.className = `chat-line chat-${line.kind}`;
+        row.textContent = line.kind === 'system' ? line.text : `${line.name}：${line.text}`;
+        return row;
+      }),
+    );
+    log.scrollTop = log.scrollHeight;
+  }
+
+  private renderHostPanel(): void {
+    const panel = el(this.doc, 'host-panel');
+    if (!panel) return;
+    panel.classList.toggle('hidden', !isHost(this.view));
+    const blockers = startBlockers(this.view);
+    const startButton = el(this.doc, 'btn-start') as HTMLButtonElement | null;
+    if (startButton) {
+      startButton.disabled = this.view.phase !== 'lobby' || !blockers.ok;
+      startButton.textContent = blockers.tooFew
+        ? '人还不够'
+        : blockers.unready.length > 0
+          ? `等准备：${blockers.unready.join('、')}`
+          : '开始对局';
+    }
+    const readyButton = el(this.doc, 'btn-ready') as HTMLButtonElement | null;
+    const seat = mySeat(this.view);
+    if (readyButton && seat && seat.role !== 'host') {
+      readyButton.textContent = seat.ready ? '取消准备' : '准备';
+      readyButton.disabled = this.view.phase !== 'lobby';
+    }
+    for (const id of ['transfer-target', 'kick-target']) {
+      const select = el(this.doc, id) as HTMLSelectElement | null;
+      if (!select) continue;
+      const candidates = this.view.seats.filter((s) => s.seatId !== this.view.mySeatId && (id === 'kick-target' ? s.role !== 'host' : s.role === 'player'));
+      const previous = select.value;
+      select.replaceChildren(
+        ...candidates.map((s) => {
+          const option = this.doc.createElement('option');
+          option.value = s.seatId;
+          option.textContent = `${s.slot} 号 · ${s.name}`;
+          return option;
+        }),
+      );
+      if (candidates.some((s) => s.seatId === previous)) select.value = previous;
+    }
+  }
+
+  private renderGame(): void {
+    const host = el(this.doc, 'game-host');
+    if (!host) return;
+    const playing = this.view.phase === 'playing' || this.view.phase === 'ended';
+    host.classList.toggle('hidden', !playing);
+    if (playing && this.client) this.client.mount(host, this.view.game, this.gameActions());
+  }
+
+  private renderAddressBook(): void {
+    const select = el(this.doc, 'address-book') as HTMLSelectElement | null;
+    if (!select) return;
+    const entries = this.book.list();
+    select.replaceChildren(
+      ...(entries.length === 0
+        ? [this.option('', '（还没有去过任何房主）')]
+        : entries.map((e) => this.option(e.origin, `${e.label} · ${e.origin}${e.lastCode ? ` · 上次房号 ${e.lastCode}` : ''}`))),
+    );
+  }
+
+  private renderLanList(rooms: Array<{ code: string; name: string; gameName: string; occupied: number; seatSlots: number; lanUrl: string; hostName: string }>): void {
+    const list = el(this.doc, 'lan-list');
+    if (!list) return;
+    list.replaceChildren();
+    if (rooms.length === 0) {
+      const empty = this.doc.createElement('p');
+      empty.className = 'lan-empty';
+      empty.textContent = '局域网里暂时没有房间。房主也要装本地壳，且首次绑定时要在 Windows 弹窗里点"允许"。';
+      list.append(empty);
+      return;
+    }
+    for (const room of rooms) {
+      const row = this.doc.createElement('button');
+      row.type = 'button';
+      row.className = 'lan-room';
+      row.textContent = `${room.name} · ${room.gameName} · ${room.occupied}/${room.seatSlots} · 房主 ${room.hostName}`;
+      row.addEventListener('click', () => {
+        const parsed = parseHostAddress(room.lanUrl);
+        if (!parsed.ok) return this.setStatus(parsed.message);
+        const address = el(this.doc, 'host-address') as HTMLInputElement | null;
+        const code = el(this.doc, 'room-code') as HTMLInputElement | null;
+        if (address) address.value = parsed.endpoint.httpOrigin;
+        if (code) code.value = room.code;
+        this.pendingJoin = { type: 'roomJoin', code: room.code };
+        this.connectTo(parsed.endpoint, room.code);
+        return undefined;
+      });
+      list.append(row);
+    }
+  }
+
+  private option(valueText: string, text: string): HTMLOptionElement {
+    const option = this.doc.createElement('option');
+    option.value = valueText;
+    option.textContent = text;
+    return option;
+  }
+}
+
+function pathOf(wsUrl: string): string {
+  const match = /^wss?:\/\/[^/]+(\/.*)$/.exec(wsUrl);
+  return match?.[1] ?? '/ws';
+}

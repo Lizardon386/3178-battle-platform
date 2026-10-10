@@ -18,7 +18,9 @@
 
 ## 当前状态
 
-**P0–P5 完成，`npm test` 57/57 全绿；`tools/check-seam.sh` 零命中；P6/P7/P8.5/R1 未开始。** 代码全部在本目录，`uno-online` 工作树未动一行（HEAD 仍是 `e9ad2cc`）。
+**P0–P7 完成（P8.5 通道已通、游戏自带界面未做），`npm test` 77/77 全绿；`tools/check-seam.sh` 零命中；界面在 in-app Browser 里真点过一遍。** 代码全部在本目录，`uno-online` 的代码未动一行（HEAD 仍是 `e9ad2cc`，只有两档文档因改名被授权修改，仍是未提交状态）。
+
+浏览器实测（`hostd host --port 3289 --no-lan`，页面内 `evaluate_script` 驱动，in-app Browser 无可见视口所以不截图）走过的路径：大厅取到 `/api/games` 两个游戏 → 建房坐 1 号位 → 客人 ws 入座 2 号、观战入 901 → 加电脑位 → 未准备时开局按钮写"等准备：客人乙"且 `disabled` → 客人准备后变"开始对局" → 开局后牌桌区渲染按视角裁剪的状态、倒计时 `剩 58 秒 → 剩 56 秒`（服务端时间轴生效）→ 房主点"离开房间"被中文提示挡住 → 踢观战生效 → 移交后 👑 跳到 2 号位、房主面板自动隐藏、通知条"房主已移交给 客人乙" → 此后离席成功回到大厅。
 
 | 已交付 | 位置 | 凭据 |
 |---|---|---|
@@ -26,8 +28,9 @@
 | 座位模型 + 房主权限 + 票据 + Ready 闸 | [room.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/room.ts) / [authority.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/authority.ts) | [room-authority.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/server/test/room-authority.test.mjs) 14 例 |
 | `GameModule` 契约 + `echo`/`turncount` + 同一断言集跑两游戏 | [module-api.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/module-api.ts) / [engine.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/engine.ts) | [contract.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/server/test/contract.test.mjs) 19 例 |
 | ws 传输、限流、Origin 策略、心跳、真 socket 双游戏 | [transport.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/transport.ts) | [ws-live.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/server/test/ws-live.test.mjs) 4 例 |
-| 房主侧落盘/恢复（原子写、版本闸、票据幸存、坏文件不挡启动） | [store.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/store.ts) | [store-discovery.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/server/test/store-discovery.test.mjs) |
-| 局域网组播信标（编解码 + 过期表；真网卡未实测） | [discovery.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/discovery.ts) | 同上 |
+| 房主侧落盘/恢复（原子写、版本闸、票据幸存、坏文件不挡启动）+ 局域网组播信标（编解码/过期表；真网卡未实测） | [store.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/store.ts) / [discovery.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/discovery.ts) | [store-discovery.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/server/test/store-discovery.test.mjs) 11 例 |
+| 客户端 SDK + 房间界面（地址可配、地址簿、票据、退避、校时、槽位、聊天、房主面板、邀请链接） | [packages/client/src/app.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/app.ts) | [client-logic.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/client/test/client-logic.test.mjs) 12 例 + 上面的浏览器实测 |
+| 宿主壳 host/join/diagnose/stop + 静态路由 + 双击入口 | [packages/hostd/src/cli.ts](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/src/cli.ts) | [hostd-http.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/hostd-http.test.mjs) 6 例（含路径穿越与真 ws） |
 
 本会话读码核实的旧代码事实（决定切割面的位置，行号对 `uno-online` HEAD `e9ad2cc`）：
 
@@ -50,11 +53,14 @@
 - [x] P3 `GameModule` 契约 + 两个合成游戏 + 契约测试
 - [x] P4 传输 / 房间聊天 / 局域网信标（信标本身仍需双机实测）
 - [x] P5 房主侧落盘与恢复
-- [ ] **P6 客户端 SDK 与房间界面骨架**：连接地址可配（替掉 `location.host`）、localStorage 地址簿 + 会话票据、指数退避重连、单调钟外推（配合 `serverNow`）、错误码→UI、四个屏幕（局域网房间列表 / 加入页 / 房间内槽位+聊天 / 对局挂载点）、邀请链接 `?h=&g=&r=` 解析
-- [ ] **P7 `hostd` 宿主壳**：`host` 模式（起平台 + 可选 cloudflared + 打印邀请链接）、`join`/`shell` 模式（本机 http 页面 + 组播浏览 + 代理 `GET /discovery/rooms` 带 CORS）、`diagnose`、`stop`；只读 `node.exe` 自己，绝不写防火墙规则
-- [ ] P8.5 游戏模块从房主下发：客户端缺模块时拉 bundle + 哈希校验后挂载（war3 的"地图自动下载"位）
+- [x] P6 客户端 SDK 与房间界面骨架：地址可配、地址簿、票据、指数退避、`serverNow` 校时、错误码→UI、四个屏幕、邀请链接解析
+- [x] P7 `hostd` 宿主壳：`host`（引擎 + ws + 静态 + 组播广播 + 可选隧道 + 邀请链接）、`join`（本地壳：静态页 + 组播监听 + `/discovery/rooms`）、`diagnose`、`stop`；不写防火墙规则
+- [~] P8.5 游戏模块下发：`/api/games`、`/games/<id>/*`(CORS)、客户端 sha256 校验 + blob 导入已通；**游戏自带界面还没有**，两个合成游戏走占位渲染
 - [ ] P8 把 uno 接成第一个真游戏（`uno.js` 规则包成 `GameModule`，**不动 uno-online**）
+- [ ] 给真游戏写沙箱挂载：`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`，否则房主能读玩家本机票据
 - [ ] 双机实测组播发现：同 WiFi 下两台机器能否互相看见；首次绑定的防火墙弹窗行为
+- [ ] 双机实测隧道：`--tunnel` 需要本机装了 cloudflared，本会话未验证过一条真隧道
+- [ ] R1 绿色便携包：官方签名 `node.exe` + `dist/` + `games/` + 快捷方式，干净目录双击开局
 - [ ] R1 绿色便携包：官方签名 `node.exe` + `dist/` + `games/` + 快捷方式，干净目录双击开局
 - [ ] 待做实验（做单文件 exe 之前必须跑）：Node SEA 打一个 hello-world，看这台机器的 SAC 拦不拦。**别在未跑实验前投入打包链路**
 - [ ] 未做且刻意不做：目录服务器 / 账号 / 好友 / 段位 / 匹配 / 反作弊仲裁 / 自动写防火墙规则
@@ -70,7 +76,11 @@
 - **`HostStore.fileFor` 卡死房号字符集**：文件名来自磁盘内容，不做校验就是路径注入面。
 - **不可逆 / 高危动作清单**（任何实现细节都不许顺带触发）：① 写 Windows 防火墙入站规则；② 建议用户关闭 Smart App Control（关掉后不重装系统无法再开）；③ `force push`。
 - **混合内容方向性**：`http://127.0.0.1` 页面可连 `ws://`（局域网房主）与 `wss://`（隧道房主）；`https://` 页面连 `ws://` 会被浏览器拦。本地壳页面必须是 http。
-- 环境事实：本机 Smart App Control = `On`（`VerifiedAndReputablePolicyState=1`），官方 `node.exe` 签名有效；node v24.19.0 / npm 11.17.0；registry 可达；无全局 `tsc`（走 `npx tsc -b`）；in-app Browser **无可见视口**，UI 类改动只能 `evaluate_script` + `take_snapshot` 核结构。
+- **`fetch` 不能存成字段再 `this.fetchImpl(...)` 调用**：浏览器里接收者变成 app 对象，直接 `Illegal invocation`，而且如果外面包了静默 `catch` 就表现为"局域网列表永远空白"。要么裸调用，要么箭头包一层（见 `app.ts` 构造函数注释）。同类坑：任何注入的宿主方法都别指望 `this.x()` 保留接收者。
+- **Windows 上 `child.kill('SIGTERM')` 是硬杀（TerminateProcess），不走信号处理器**：所以房主端优雅收尾只在真人按 Ctrl+C / `hostd stop` 的路径上成立。测试里不能靠 kill 断言 `run.json` 被删，要断言"`run.json` 留下了、`stop` 子命令把它收掉"。
+- **`server.close()` 在有 keep-alive/WS 连接时回调不触发**：收尾要 `closeAllConnections()` + 超时竞速，否则停服流程挂在半路（`transport.close()` 同样必须先 `terminate()` 再 `close()`）。
+- **UI 验证方式**：in-app Browser 无可见视口，不能截图/像素点击；用 `navigate_page` + `evaluate_script` 驱动 DOM（`.click()`、原生 `WebSocket` 当第二个玩家），观感仍需人工确认。
+- 环境事实：本机 Smart App Control = `On`（`VerifiedAndReputablePolicyState=1`），官方 `node.exe` 签名有效；node v24.19.0 / npm 11.17.0；registry 可达；无全局 `tsc`（走 `npx tsc -b`）。
 - 测试写法：`node --test` 跑目录参数在 Windows 下不可靠，**必须用引号包住的 glob**（`node --test "packages/*/test/*.test.mjs"`），并带 `--test-timeout`，否则未决的 await 会让整轮挂死。测试里"等一条消息"要用 predicate 等**符合条件的那一帧**，在途的旧快照会先到。
 - **版本管理**：本目录已 `git init`（本地仓库，提交 `a606f33`，**无远程、未 push**）。P7 引入 `.bat` 双击入口时要一并加 `.gitattributes`——`.bat` 必须 CRLF，否则双击行为异常且 diff 一片红。
 - 收工跑 `bash /d/agent_workspace/tools/check-docs.sh`（**不加管道**，`[链]`/`[期]` 是失败项），exit 0 才算收尾。
@@ -79,9 +89,11 @@
 
 - 2026-10-10 Qoder：**目录改名 `game-host-platform` → `3178-battle-platform`，并由评估档转为实施档**（用户指令：本会话就在本目录继续开发对战平台）。同时改判两项：计划 D2「代码落新目录 battle-platform」作废，代码就落本目录；D6「房间列表/大厅」用户不接受"只做地址簿 + 邀请链接"，要求**尽量贴合 war3 的房间设计**，发现层级改为 B+A（见 README「房间形态」）。顺带修掉本档 4 处 `[链]` 违规。
 - 2026-10-10 Qoder：**开工 P0–P5，交付平台内核第一版**（用户"选 B+A，其他默认，直接开工"）。新建 npm workspaces + TS 工程（`tsc -b` 项目引用、`node --test`），`packages/protocol`（消息目录/错误码/握手/稳定摘要/形状闸门）、`packages/server`（`Engine` 引擎、`Room` 座位与 revision 不变式、`authority` 权限集中处、`HostStore` 房主侧落盘、`WsTransport`、`discovery` 组播信标、`loader` 运行时动态加载）、`games/echo` + `games/turncount` 两个形状不同的合成游戏。测试 57 例全绿：19 例契约套件用**同一组断言**跑两个游戏，4 例真 socket 端到端跨游戏换房，含落盘重启后旧票据回座。**修掉两个实现缺陷**：① 出站按房间寻址会在 `hostClose`/`shutdown` 清空会话表后丢掉最后一条通知 → 改为创建时即解析 connIds；② 入座/连接/聊天不推进 revision → 按版本号去重的客户端会把新状态当重复帧丢弃。新增 `tools/check-seam.sh`（平台包禁玩法词与 `games/` import）。改名遗留：本档与 [uno-online/CONTEXT.md](file:///D:/agent_workspace/uno-online/CONTEXT.md)、[uno-online/README.md](file:///D:/agent_workspace/uno-online/README.md) 内引用已全部替换为新名（uno-online 那两处经用户授权后修改，其工作树现为未提交状态）。
+- 2026-10-10 Qoder：**P6 客户端 + P7 宿主壳，界面在浏览器里跑通**。`packages/client`（地址解析 / 地址簿+票据 / 指数退避 / 服务端时间轴 / 帧归约 / 模块下发与 sha256 校验 / 大厅+房间内+对局三层界面）与 `packages/hostd`（host/join/diagnose/stop、静态与接口路由、cloudflared 解析、`房主建房.bat` + `玩家本机壳.bat` 双击入口 + `.gitattributes` 锁 CRLF）。测试从 57 涨到 **77 例全绿**（新增 12 例客户端逻辑 + 6 例宿主壳集成，含路径穿越与真 ws）。**修掉四个真实缺陷**：① `this.fetchImpl(...)` 丢接收者 → 浏览器 `Illegal invocation`，表现为局域网列表永远空白，且被静默 `catch` 吞掉（现在把原因写进提示）；② `safeJoin` 用正斜杠比前缀，Windows 上 `resolve` 给反斜杠 → `/app/`、`/games/` 全部误判越界 404；③ `server.close()`/`wss.close()` 在有 keep-alive 与 WS 连接时回调不触发 → 收尾挂死，改 `closeAllConnections()` + 超时竞速、`terminate()` 先行；④ 客户端 `until('snapshot')` 拿到的是在途旧帧 → 测试助手改成带 predicate 等"符合条件的那一帧"。**验证方式**：in-app Browser 无可见视口，用 `evaluate_script` 真点：建房→客人入座→观战入座→加电脑位→未准备时开局按钮写明"等准备：客人乙"并 `disabled`→准备后变亮→开局后倒计时 58→56 秒（服务端时间轴生效）→房主离席被中文提示挡住→踢观战→移交后 👑 换位、房主面板隐藏、通知条正确→离席回大厅。
 
 ## 给下一个 agent 的追加区
 
 （后续会话请在此追加一行 `- YYYY-MM-DD <来源>：<结论/改动/遗留问题>`，或直接更新上面各节）
 
-**开工顺序建议**：先 P6 客户端 SDK（`packages/client`，地址可配 + 票据 + 地址簿 + 屏幕骨架），因为 P7 `hostd` 与 P8.5 模块下发都要挂在它身上；P6 完成后立刻做一次"本机两个浏览器页面对打"的联调，再谈 R1 打包。**组播发现必须双机实测**，单机仓库里只能证伪编解码。参考入口：README 的阶段表 → 本档案「关键约束」→ [engine.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/engine.ts)。
+**下一步顺序建议**：① **P8 把 uno 接成真游戏**——这是唯一能证伪"契约够不够宽"的检验（No Mercy 规则有碰/接龙/质疑/弃牌阶段，比两个合成游戏刁钻得多），做完 `tools/check-seam.sh` 必须仍然零命中；② 接真游戏前先把**沙箱挂载**补上（`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`），否则房主可向玩家浏览器注入可读票据的代码；③ **双机实测**组播发现与隧道，本会话只在一台机器上证伪了编解码与 HTTP 路由；④ R1 绿色便携包（官方 `node.exe` 随包走）。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
+参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/engine.ts) 与 [app.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家本机壳.bat`，改它们要记得 CRLF。

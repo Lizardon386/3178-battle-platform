@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>3178 对战平台 · 房间大厅</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "@bp/protocol": "/vendor/protocol/index.js",
+          "@bp/client": "/app/index.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app">
+      <header class="brand">
+        <div class="brand-mark">3178</div>
+        <div class="brand-text">
+          <strong>对战平台</strong>
+          <span>房主建房即服务器 · 类 war3 房间</span>
+        </div>
+        <label class="nick-field">
+          昵称
+          <input id="nick" maxlength="32" placeholder="填个名字" autocomplete="off" />
+        </label>
+      </header>
+
+      <section id="screen-lobby" class="screen">
+        <div class="lobby-grid">
+          <article class="panel">
+            <h2>创建房间（我当房主）</h2>
+            <label>
+              游戏
+              <select id="game-select"><option value="echo">本机壳未提供清单</option></select>
+            </label>
+            <label>
+              房间名
+              <input id="room-name" maxlength="48" placeholder="周末一局" />
+            </label>
+            <div class="row">
+              <label>
+                座位数
+                <input id="seat-slots" type="number" min="2" max="8" value="4" />
+              </label>
+              <label>
+                房间密码（可留空）
+                <input id="room-password" maxlength="32" placeholder="留空即公开" />
+              </label>
+            </div>
+            <div class="checks">
+              <label><input id="chk-spectate" type="checkbox" checked /> 允许观战</label>
+              <label><input id="chk-hidden" type="checkbox" /> 隐藏房（不上局域网列表，只发邀请链接）</label>
+            </div>
+            <button id="btn-create" class="primary">建房并坐 1 号位</button>
+            <p class="hint">房主权限只在你这个进程里：开局、踢人、关房、移交都得你点。</p>
+          </article>
+
+          <article class="panel">
+            <h2>加入房间</h2>
+            <label>
+              房主地址
+              <input id="host-address" placeholder="192.168.1.20:3000 或 https://xxx.trycloudflare.com" autocomplete="off" />
+            </label>
+            <div class="row">
+              <label>
+                房号
+                <input id="room-code" maxlength="12" placeholder="AB3D" autocomplete="off" />
+              </label>
+              <label>
+                密码（可留空）
+                <input id="join-password" maxlength="32" />
+              </label>
+            </div>
+            <button id="btn-join" class="primary">进房</button>
+
+            <h3>地址簿（你去过的房主）</h3>
+            <div class="row">
+              <select id="address-book"></select>
+              <button id="btn-use-book">填入</button>
+              <button id="btn-forget">忘掉</button>
+            </div>
+
+            <h3>局域网房间</h3>
+            <div id="lan-list" class="lan-list"></div>
+          </article>
+        </div>
+        <p id="lobby-status" class="status" role="status"></p>
+      </section>
+
+      <section id="screen-room" class="screen hidden">
+        <div class="room-head">
+          <h2 id="room-title">房间</h2>
+          <span id="turn-countdown" class="countdown"></span>
+        </div>
+        <p id="connection-bar" class="status" role="status"></p>
+
+        <div class="room-grid">
+          <main class="panel">
+            <h3>座位</h3>
+            <div id="seat-grid" class="seat-grid"></div>
+            <div class="actions">
+              <button id="btn-ready">准备</button>
+              <button id="btn-leave">离开房间</button>
+              <button id="btn-reconnect">重连</button>
+            </div>
+            <div id="game-host" class="game-host hidden"></div>
+          </main>
+
+          <aside class="panel">
+            <h3>房间聊天</h3>
+            <div id="chat-log" class="chat-log"></div>
+            <div class="row">
+              <input id="chat-input" maxlength="300" placeholder="说点什么" autocomplete="off" />
+              <button id="btn-send">发</button>
+            </div>
+          </aside>
+
+          <aside id="host-panel" class="panel">
+            <h3>房主面板</h3>
+            <button id="btn-start" class="primary">开始对局</button>
+            <button id="btn-add-ai">加一个电脑位</button>
+            <div class="row">
+              <select id="transfer-target"></select>
+              <button id="btn-transfer">移交房主</button>
+            </div>
+            <div class="row">
+              <select id="kick-target"></select>
+              <button id="btn-kick">请出座位</button>
+            </div>
+            <label>
+              邀请链接
+              <input id="invite-url" readonly placeholder="点下面按钮生成" />
+            </label>
+            <button id="btn-copy-invite">复制邀请链接</button>
+            <button id="btn-close" class="danger">关闭房间</button>
+            <p class="hint">移交只转移权限，进程还在你这台机器上；你一关窗，这桌就散了。</p>
+          </aside>
+        </div>
+      </section>
+    </div>
+
+    <script type="module">
+      import { PlatformApp } from '/app/app.js';
+
+      const app = new PlatformApp({ doc: document, storage: window.localStorage, selfOrigin: window.location.origin });
+      app.start();
+    </script>
+  </body>
+</html>

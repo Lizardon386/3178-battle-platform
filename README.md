@@ -30,15 +30,30 @@
 
 ## 快速开始
 
+双击（推荐给日常使用）：
+
+| 双击 | 干什么 |
+|---|---|
+| [房主建房.bat](file:///D:/agent_workspace/3178-battle-platform/房主建房.bat) | 本机起房主端，监听 3000，控制台打印局域网地址与隧道状态；浏览器打开 `http://localhost:3000` 建房 |
+| [玩家本机壳.bat](file:///D:/agent_workspace/3178-battle-platform/玩家本机壳.bat) | 起本地壳（3178）并自动打开页面：能看局域网房间列表，也能填地址进别人的房 |
+
+两个脚本只检查 `node` 在不在 PATH、依赖与编译产物在不在，缺了就停下告诉你跑哪条命令，不静默装东西、不碰防火墙。
+
+命令行（开发用）：
+
 ```bash
 cd /d/agent_workspace/3178-battle-platform
-npm install          # 只装 typescript / @types/node / @types/ws / ws
-npm test             # 编译 + 57 个用例（含真 socket 端到端）
-bash tools/check-seam.sh           # 平台包与玩法零耦合
-bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform   # 双档合规
+npm install          # typescript / @types/node / @types/ws / ws，没别的
+npm run build
+npm test             # 77 个用例（含真 socket 与宿主壳 HTTP 集成）
+bash tools/check-seam.sh
+node packages/hostd/dist/cli.js host --port 3000 [--tunnel] [--no-lan] [--game echo]
+node packages/hostd/dist/cli.js join --port 3178
+node packages/hostd/dist/cli.js diagnose     # 打环境事实：node 版本、已装游戏、cloudflared、网卡
+node packages/hostd/dist/cli.js stop         # 按 data/run.json 精确收尾，不按镜像名杀 node
+bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 ```
 
-当前**还不能双击开局**：`packages/client`（浏览器 SDK 与房间界面）与 `packages/hostd`（宿主壳）在待办里，见 [CONTEXT.md](file:///D:/agent_workspace/3178-battle-platform/CONTEXT.md) 的阶段表。
 
 ## 使用说明
 
@@ -50,12 +65,22 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform   # 双档合�
 | P1 | 协议包：消息目录、错误码、握手、`rulesHash` 稳定摘要 | 已完成 | [protocol.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/protocol/test/protocol.test.mjs) 9 例 |
 | P2 | 座位模型与房主权限：`hostId`、票据、Ready 闸、kick/transfer/close | 已完成 | [room-authority.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/server/test/room-authority.test.mjs) 14 例 |
 | P3 | `GameModule` 契约 + 两个合成游戏 + 契约测试 | 已完成 | [contract.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/server/test/contract.test.mjs) 19 例（同一断言集跑两个游戏） |
-| P4 | 传输（ws/限流/Origin/心跳）、房间聊天、局域网信标 | 已完成（信标未实测） | [ws-live.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/server/test/ws-live.test.mjs) 4 例；[store-discovery.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/server/test/store-discovery.test.mjs) |
+| P4 | 传输（ws/限流/Origin/心跳）、房间聊天、局域网信标 | 已完成（信标未双机实测） | [ws-live.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/server/test/ws-live.test.mjs) 4 例；[store-discovery.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/server/test/store-discovery.test.mjs) |
 | P5 | 房主侧落盘与恢复：原子写、版本闸、票据幸存 | 已完成 | 同上：重启→恢复→旧票据回座；坏文件不挡启动 |
-| P6 | 客户端 SDK 与房间界面骨架（地址可配、地址簿、槽位/聊天/列表） | **未开始** | — |
-| P7 | `hostd` 宿主壳（host/join/组播浏览/邀请链接/诊断） | **未开始** | — |
-| P8.5 | 游戏模块从房主下发（缺模块时拉 bundle + 哈希校验） | 未开始 | — |
+| P6 | 客户端 SDK 与房间界面骨架（地址可配、地址簿、票据、退避、校时、槽位/聊天/房主面板） | 已完成 | [client-logic.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/client/test/client-logic.test.mjs) 12 例 + 浏览器实测（记录见 CONTEXT） |
+| P7 | `hostd` 宿主壳：host/join/diagnose/stop + 静态路由 + 邀请链接 + 双击入口 | 已完成（隧道未实测） | [hostd-http.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/hostd-http.test.mjs) 6 例 |
+| P8.5 | 游戏模块下发通道：`/api/games` + `/games/<id>/*`(CORS) + 客户端哈希校验 + blob 导入；缺入口时占位渲染 | 通道已通，**游戏自带界面还没有** | 同上：产物可跨源取、穿越被挡 |
 | R1 | 绿色便携包（官方 `node.exe` + 代码 + 快捷方式） | 未开始 | — |
+
+### 房间界面能做什么
+
+| 位置 | 房主 | 玩家 | 观战 |
+|---|---|---|---|
+| 大厅 | 选游戏、房名、座位数、密码、允许观战、隐藏房 → 建房坐 1 号位 | 填房主地址 + 房号进房；地址簿填/忘；局域网列表点一下即进 | 同一入口，勾"以观战身份进" |
+| 房间内 | 开局（按钮会写明"等准备：谁"）、加电脑位、移交房主、请出座位、复制邀请链接、关房 | 准备 / 离开 | 只看桌，不能动作 |
+| 对局中 | 同上（房主面板一直开着） | 游戏自己的界面挂在牌桌位置 | 同玩家的公开视角 |
+
+房主点"离开房间"会被挡住并提示"要么移交要么关房"——这是 war3 式房主语义，不是防误操作的兜底。
 
 ### 接一个新游戏要写什么
 
@@ -111,6 +136,22 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform   # 双档合�
 | [packages/server/src/registry.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/registry.ts) | 房号分配与房间表 |
 | [packages/server/src/ids.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/ids.ts) | 房号/座位 id/票据与摘要比对 |
 | [games/echo/src/index.ts](file:///D:/agent_workspace/3178-battle-platform/games/echo/src/index.ts) | 合成游戏 A：回合制 + 隐私 |
+| [packages/client/src/endpoint.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/endpoint.ts) | 房主地址解析与邀请链接（含 https 连明文 ws 的拦截提示） |
+| [packages/client/src/connection.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/connection.ts) | ws 连接层：指数退避重连、心跳、协议帧校验 |
+| [packages/client/src/clock.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/clock.ts) | 服务端时间轴：`serverNow` + 单调钟外推 + 半个 RTT 补偿 |
+| [packages/client/src/local-store.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/local-store.ts) | 地址簿、昵称、座位票据保管（按房主 + 房号隔离） |
+| [packages/client/src/view-model.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/view-model.ts) | 帧流 → UI 状态归约（revision 去重、聊天环形缓冲、开局阻碍清单） |
+| [packages/client/src/module-loader.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/module-loader.ts) | 游戏模块拉取 + sha256 校验 + blob 导入；缺入口时占位渲染 |
+| [packages/client/src/app.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/app.ts) | 界面装配：大厅 / 房间内 / 对局挂载点 |
+| [packages/client/public/index.html](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/index.html) | 页面骨架与 import map（浏览器原生 ESM，无打包步骤） |
+| [packages/client/public/style.css](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/style.css) | 深色大厅样式 |
+| [packages/hostd/src/cli.ts](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/src/cli.ts) | 宿主壳：host / join / diagnose / stop 四个模式 |
+| [packages/hostd/src/webroot.ts](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/src/webroot.ts) | 静态与接口路由（`/app/`、`/vendor/protocol/`、`/games/`、`/api/games`、`/discovery/rooms`） |
+| [packages/hostd/src/tunnel.ts](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/src/tunnel.ts) | cloudflared 查找与隧道网址解析（找不到就退回本地地址，不下载） |
+| [房主建房.bat](file:///D:/agent_workspace/3178-battle-platform/房主建房.bat) / [玩家本机壳.bat](file:///D:/agent_workspace/3178-battle-platform/玩家本机壳.bat) | 双击入口（CRLF，由 [.gitattributes](file:///D:/agent_workspace/3178-battle-platform/.gitattributes) 锁住） |
+| [packages/client/test/client-logic.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/client/test/client-logic.test.mjs) | 客户端无 DOM 逻辑测试 |
+| [packages/hostd/test/hostd-http.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/hostd-http.test.mjs) | 宿主壳集成测试（真起子进程、真 WS 连接、路径穿越） |
+
 | [games/turncount/src/index.ts](file:///D:/agent_workspace/3178-battle-platform/games/turncount/src/index.ts) | 合成游戏 B：无游标 + 无隐私 |
 | [packages/protocol/test/protocol.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/protocol/test/protocol.test.mjs) | 协议与摘要测试 |
 | [packages/server/test/room-authority.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/server/test/room-authority.test.mjs) | 房主权限/票据/座位模型测试 |
@@ -120,9 +161,11 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform   # 双档合�
 
 ## 限制与注意事项
 
-- **还不是可用的桌面客户端**：缺 P6 浏览器 SDK/界面与 P7 `hostd` 宿主壳。现在能跑的是"引擎 + 传输 + 游戏"，靠测试驱动。
+- **游戏自带界面还没有**：模块下发通道（清单、CORS、哈希校验、blob 导入）已通，但两个合成游戏没有客户端入口，对局区目前走占位渲染（把房主发来的状态原样摊开 + 通用动作按钮）。真游戏的牌桌 UI 属于游戏侧工作。
+- **双击能建房，但还不是"发给朋友的那份包"**：R1 绿色便携包（官方 `node.exe` 随包走、对方不装 Node）没做。现在两台机器都要自己装 Node + `npm install` + `npm run build`。
 - **组播发现未实测**：本工作区只有一台机器，`discovery.ts` 的编解码与过期表有测试，但真网卡上的收发、以及"首次绑定触发 Windows 防火墙弹窗后用户点允许"这条路径**没有验证过**。
-- **房主可作弊是宿主制固有代价**，不是 bug；要真防得引入仲裁/relay，那是另一个任务。
+- **从房主拉游戏模块 = 在你浏览器里执行房主给的代码**。哈希校验只保证"传过来的字节和房主声明的一致"，不保证"房主写的代码无害"。今天两个合成游戏没有客户端入口，实际跑的是内置占位渲染器，所以这条风险还没落地；**接真游戏前要把它关进沙箱 iframe（`sandbox=allow-scripts`，不给 `allow-same-origin`）**，否则房主能读你本机的座位票据与地址簿。
+- **宿主制天然放弃一部分防作弊**：权威进程在房主机上，房主可改自己的秘密与判定；"按视角裁剪"只防透视，不防房主。
 - **移交只移权限、不迁进程**：原房主断电时不存在"已移交的房主"。
 - **禁止**：写 Windows 防火墙入站规则、建议关闭 Smart App Control（关掉后不重装系统无法再开）、`force push`。
 - **混合内容方向性**：`http://127.0.0.1` 页面可以连 `ws://`（局域网房主）也可以连 `wss://`（隧道房主）；反过来 `https://` 页面连 `ws://` 会被浏览器拦。本地壳页面必须走 http。
