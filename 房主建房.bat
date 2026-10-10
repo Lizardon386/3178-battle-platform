@@ -1,8 +1,24 @@
 @echo off
-setlocal
-cd /d %~dp0
-where node >/dev/null 2>/dev/null || (echo 没找到 node，先装 Node LTS 或解压绿色便携包 & pause & exit /b 1)
-if not exist node_modulesws (echo 第一次用，先跑一次 npm install & pause & exit /b 1)
-if not exist packageshostddistcli.js (echo 还没编译，先跑一次 npm run build & pause & exit /b 1)
-node packageshostddistcli.js host --port 3000
+>nul chcp 65001
+setlocal EnableExtensions
+cd /d "%~dp0"
+
+where node >nul 2>&1
+if errorlevel 1 (
+  echo [x] 没找到 node。请先装 Node LTS，或用绿色便携包那份（R1 还在做）。
+  pause
+  exit /b 1
+)
+if not exist node_modules\ws (
+  echo [x] 缺依赖。先在这个目录跑一次：npm install
+  pause
+  exit /b 1
+)
+if not exist packages\hostd\dist\cli.js (
+  echo [x] 还没编译。先在这个目录跑一次：npm run build
+  pause
+  exit /b 1
+)
+echo 房主端启动中：本机 http://localhost:3000    Ctrl+C 结束对局并落盘
+node packages\hostd\dist\cli.js host --port 3000 %*
 pause
