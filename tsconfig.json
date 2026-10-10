@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/protocol" },
+    { "path": "packages/server" },
+    { "path": "games/echo" },
+    { "path": "games/turncount" }
+  ]
+}

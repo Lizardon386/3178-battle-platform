@@ -1,0 +1,23 @@
+{
+  "name": "@bp/server",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@bp/protocol": "*",
+    "ws": "^8.18.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@types/ws": "^8.18.2"
+  }
+}

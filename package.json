@@ -1,0 +1,21 @@
+{
+  "name": "battle-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "游戏无关的宿主制联机对战平台内核（war3 式房间）",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "games/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "seam": "bash tools/check-seam.sh",
+    "test": "npm run build && node --test --test-timeout=20000 \"packages/*/test/*.test.mjs\" \"games/*/test/*.test.mjs\""
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
