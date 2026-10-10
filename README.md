@@ -27,7 +27,7 @@
 | **房间发现走 B+A 两档**：同网段 UDP 组播信标（要本地壳）+ 地址簿/邀请链接（纯浏览器也能用） | 房间列表在 war3 里由战网中央目录提供；没有常开公网节点就没有"随时上线逛房间"。组播是唯一不需要公共服务器的实时列表 | 组播只限同网段，且首次绑定会让 Windows 弹窗（由用户亲手点允许，脚本绝不写防火墙规则）；跨网只能靠房主发链接 |
 | **落盘只发生在房主机**，玩家端不写 `data/` | 每个客户端都有自己的快照目录时，"谁是权威"就说不清了 | 房主机器关机=这局没了，这是宿主制而不是分布式 |
 | **同时做两个合成游戏，而不是先接一个真游戏** | "平台无关玩法"是不可证的口号，除非有第二个形状不同的游戏。`turncount` 连回合游标都没有 | 多写约 300 行测试用游戏代码，但这是本轮最便宜的证据 |
-| **视觉走「冰封指挥台」**：深冰蓝黑为唯一主色，强调只用一处黄铜（房主身份 + 关键动作），就绪翡翠、风险铁锈；房号/槽位/倒计时交给等宽数字；**不引外网字体、不用 `@layer`、零图片** | 用户否掉了"按 agent 自己的审美随便排"，改用官方 skill `frontend-design` 的规范定方向；war3/战网的识别度来自"冷底 + 金属描边"，强调色一多就退回通用 SaaS 味。离线是硬前提：便携包要在没网的内网双击可用，外链字体会当场退化；`@layer` 在老 Chromium/Edge 上会让整张样式表被跳过 | 没有中文黑体以外的字面依赖，观感靠字阶与字距撑，换机器字面会略变；**像素级观感本会话无法确认**（in-app Browser 无可见视口），要你亲眼看一眼 |
+| **视觉走「冰封指挥台」**：主色只用深冰蓝黑，热色只有一处黄铜（身份 + 关键动作），就绪翡翠 / 危险铁锈；房号与倒计时交给展示体和等宽数字做**字号巨大反差**（铭牌 34px vs 标签 10px）；字体是 `ui-styling` skill 自带的 OFL 字体，**拷进 `public/fonts/` 同源分发** | 用户两次否掉"按 agent 审美随便排"，所以方向分别由官方 `frontend-design` 与社区 `nextlevelbuilder/ui-ux-pro-max-skill@ui-styling` 的规范给出（前者定"有没有依据地做设计"，后者提供 CSS 变量主题层、视觉构成原则与本地字体资产）。war3/战网的识别度来自"冷底 + 金属描边 + 刻度纪律"，强调色一多就退回通用 SaaS 味；离线是硬前提：便携包要在没网的内网双击可用，外链字体会当场退化 | `frontend-design` 是官方 skill，`ui-styling` 是第三方 GitHub 源（装前 skills.sh 报了 Safe / 0 alerts，它的 python 脚本我们一个都没跑）；它的 shadcn/Tailwind 组件层与"无 React、无打包"冲突，只取了主题层与字体；不用 `@layer`（老 Chromium/Edge 会把未知 at-rule 整块跳过 = 整站裸奔）、不用 `oklch`（比 `@layer` 还新）；字体 372KB 计入包体，OFL 许可文本必须随包 |
 
 ## 快速开始
 
@@ -145,7 +145,8 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 | [packages/client/src/module-loader.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/module-loader.ts) | 游戏模块拉取 + sha256 校验 + blob 导入；缺入口时占位渲染 |
 | [packages/client/src/app.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/app.ts) | 界面装配：大厅 / 房间内 / 对局挂载点 |
 | [packages/client/public/index.html](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/index.html) | 页面骨架与 import map（浏览器原生 ESM，无打包步骤） |
-| [packages/client/public/style.css](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/style.css) | 深色大厅样式 |
+| [packages/client/public/style.css](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/style.css) | 「冰封指挥台」表现层：@font-face 同源字体、5 色语义板、席位名册轨道与刻度、三处动效 |
+| [packages/client/public/fonts/](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/fonts/BigShoulders-Bold.ttf) | 同源分发的 OFL 字体（BigShoulders 展示体 + Geist Mono 数字体）与许可文本 |
 | [packages/hostd/src/cli.ts](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/src/cli.ts) | 宿主壳：host / join / diagnose / stop 四个模式 |
 | [packages/hostd/src/webroot.ts](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/src/webroot.ts) | 静态与接口路由（`/app/`、`/vendor/protocol/`、`/games/`、`/api/games`、`/discovery/rooms`） |
 | [packages/hostd/src/tunnel.ts](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/src/tunnel.ts) | cloudflared 查找与隧道网址解析（找不到就退回本地地址，不下载） |
@@ -162,6 +163,8 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 
 ## 限制与注意事项
 
+- **字体随包分发，许可文本不能丢**：`public/fonts/` 里的 BigShoulders 与 Geist Mono 来自 `ui-styling` skill 的 `canvas-fonts/`，OFL 许可；打包（R1）时必须连 `.ttf` 带 `*-OFL.txt` 一起拷，测试里已经钉住"CSS 引用的字体文件必须存在于盘上"。没有中文字体随包（体积与授权都不划算），中文仍走系统黑体。
+- **观感只能由你确认**：in-app Browser 无可见视口（`innerWidth` 报 0），我能证明"字体加载成功、规则命中、DOM 结构对了"，不能证明"好看"。
 - **游戏自带界面还没有**：模块下发通道（清单、CORS、哈希校验、blob 导入）已通，但两个合成游戏没有客户端入口，对局区目前走占位渲染（把房主发来的状态原样摊开 + 通用动作按钮）。真游戏的牌桌 UI 属于游戏侧工作。
 - **双击能建房，但还不是"发给朋友的那份包"**：R1 绿色便携包（官方 `node.exe` 随包走、对方不装 Node）没做。现在两台机器都要自己装 Node + `npm install` + `npm run build`。
 - **组播发现未实测**：本工作区只有一台机器，`discovery.ts` 的编解码与过期表有测试，但真网卡上的收发、以及"首次绑定触发 Windows 防火墙弹窗后用户点允许"这条路径**没有验证过**。

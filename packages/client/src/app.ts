@@ -1,4 +1,4 @@
-import type { ClientMessage, GameManifest, ServerMessage } from '@bp/protocol';
+import type { ClientMessage, GameManifest, SeatView, ServerMessage } from '@bp/protocol';
 import { NOTICE_MESSAGES } from '@bp/protocol';
 import { PlatformConnection, browserSocketFactory, type ConnectionHandlers, type ConnectionOptions, type SocketFactory, type Timers, type ConnectionState } from './connection.js';
 import { AddressBook, NickName, SessionVault, type KeyValueStore } from './local-store.js';
@@ -390,24 +390,43 @@ export class PlatformApp {
 
   private renderRoom(): void {
     const title = el(this.doc, 'room-title');
+    const codeChip = el(this.doc, 'room-code-hud');
     if (title && this.view.room) {
       const room = this.view.room;
-      title.textContent = `${room.name} · 房号 ${room.code} · ${room.gameName} · ${room.phase === 'lobby' ? '等待入座' : room.phase === 'playing' ? '对局中' : '已结束'}`;
+      const phase = room.phase === 'lobby' ? '等待入座' : room.phase === 'playing' ? '对局中' : '已结束';
+      title.textContent = `${room.name} · ${room.gameName} · ${phase}`;
     }
+    if (codeChip && this.view.room) codeChip.textContent = this.view.room.code;
     const grid = el(this.doc, 'seat-grid');
     if (!grid) return;
     grid.replaceChildren();
+    // 一律 createElement + textContent：昵称是别人机器上打的字，不能进 innerHTML
+    const pushRow = (className: string, slot: number | null, name: string, state: string, tooltip: string) => {
+      const row = this.doc.createElement('div');
+      row.className = className;
+      if (tooltip) row.title = tooltip;
+      const slotCell = this.doc.createElement('span');
+      slotCell.className = 'seat-slot';
+      slotCell.textContent = slot === null ? '—' : String(slot);
+      const nameCell = this.doc.createElement('span');
+      nameCell.className = 'seat-name';
+      nameCell.textContent = name;
+      const stateCell = this.doc.createElement('span');
+      stateCell.className = 'seat-state';
+      stateCell.textContent = state;
+      row.append(slotCell, nameCell, stateCell);
+      grid.append(row);
+    };
     for (const seat of this.view.seats) {
-      const cell = this.doc.createElement('div');
-      cell.className = `seat seat-${seat.role}${seat.ready ? ' is-ready' : ''}${seat.seatId === this.view.mySeatId ? ' is-me' : ''}${seat.connected ? '' : ' is-offline'}`;
-      cell.textContent = `${seat.slot} 号位 · ${seatLabel(seat)}`;
-      grid.append(cell);
+      const me = seat.seatId === this.view.mySeatId;
+      const classes = ['seat', `seat-${seat.role}`];
+      if (seat.ready && seat.role !== 'spectator' && seat.role !== 'ai') classes.push('is-ready');
+      if (me) classes.push('is-me');
+      if (!seat.connected && seat.role !== 'ai') classes.push('is-offline');
+      pushRow(classes.join(' '), seat.slot, seat.name, this.seatStateText(seat), seatLabel(seat));
     }
     for (const slot of emptySlots(this.view)) {
-      const cell = this.doc.createElement('div');
-      cell.className = 'seat seat-empty';
-      cell.textContent = `${slot} 号位 · 空`;
-      grid.append(cell);
+      pushRow('seat seat-empty', slot, '空位', '等待加入', `${slot} 号位空着`);
     }
     const invite = el(this.doc, 'invite-url') as HTMLInputElement | null;
     if (invite && !invite.value) invite.value = this.inviteUrl();
@@ -423,6 +442,14 @@ export class PlatformApp {
       const error = this.view.lastError ? ` · ${this.view.lastError.message}` : '';
       bar.textContent = `${status === 'open' ? '已连房主' : `连接：${status}`}${notice}${error}${this.connState.lastError ? ` · ${this.connState.lastError}` : ''}`;
     }
+  }
+
+  private seatStateText(seat: SeatView): string {
+    if (seat.role === 'spectator') return '观战';
+    if (seat.role === 'ai') return '电脑';
+    if (!seat.connected) return '离线';
+    if (seat.role === 'host') return '房主';
+    return seat.ready ? '已准备' : '未准备';
   }
 
   private renderChat(): void {

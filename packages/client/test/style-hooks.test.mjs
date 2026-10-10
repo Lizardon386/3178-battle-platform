@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SEAT_ROLES } from '@bp/protocol';
@@ -53,10 +53,19 @@ test('四种席位角色都要有各自的样式（房主/玩家/观战/电脑�
   }
 });
 
-test('样式表不许依赖外网字体、外链图片或 @layer', () => {
-  assert.equal(/@import\s+url\(/i.test(cssCode), false, '内网双击运行时取不到外网资源');
+test('字体必须同源分发，且 CSS 引用的文件真的在盘上', () => {
+  // 便携包要在没网的内网双击可用：外链字体/图片当场退化，所以只准同源 /fonts/。
+  const urls = [...cssCode.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map((m) => m[1]);
+  assert.ok(urls.length > 0, '展示了本地字体就该有 @font-face 的 url()');
+  for (const url of urls) {
+    assert.match(url, /^\/fonts\//, `字体必须同源：${url}`);
+    assert.ok(existsSync(join(HERE, '..', 'public', url.replace(/^\//, ''))), `CSS 引用了不存在的字体文件：${url}`);
+  }
+  assert.equal(/@import\s+url\(/i.test(cssCode), false, '不许用 @import 拉外部资源');
+  assert.equal(/url\(\s*["']?https?:/i.test(cssCode), false, '不许引外网字体或图片');
   assert.equal(/@layer\b/.test(cssCode), false, '老 Chromium/Edge 会把未知 at-rule 整块跳过，等于整站裸奔');
-  assert.equal(/url\((?!["']?data:)/i.test(cssCode), false, '表现层不许引外部图片');
+  const faces = [...cssCode.matchAll(/font-family:\s*"([^"]+)";/g)].map((m) => m[1]);
+  assert.deepEqual([...new Set(faces)], ['BP Display', 'BP Mono'], '展示体与 HUD 数字体成对出现');
   assert.ok(/--font-cn:/.test(css) && /--font-mono:/.test(css), '字阶要成对：中文正文 + 等宽数字');
 });
 
