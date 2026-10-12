@@ -1,4 +1,4 @@
-import type { GameManifest, NoticeCode, RoomPhase, RoomView, SeatView, ServerMessage } from '@bp/protocol';
+import type { ClientMessage, GameManifest, NoticeCode, RoomPhase, RoomView, SeatView, ServerMessage } from '@bp/protocol';
 
 /**
  * 视图模型：把服务端帧流归约成 UI 能直接渲染的一份状态。
@@ -116,6 +116,23 @@ export function mySeat(state: ViewModel): SeatView | null {
 export function isHost(state: ViewModel): boolean {
   const seat = mySeat(state);
   return seat?.role === 'host' || (state.room?.hostSeatId != null && state.room.hostSeatId === state.mySeatId);
+}
+
+/**
+ * 重连之后该按哪个房号去翻本机票据。
+ * 房号优先取"人正在待的那个房"（`state.room.code`），而不是大厅的房号输入框：
+ * 自己建房的人输入框是空的，于是永远坐不回去——新连接没座位，`mySeatId` 却还留着，
+ * 界面上席位行照旧标"你"、准备按钮照旧能点，点下去只得到服务端一句"你还没有座位"。
+ */
+export function resumeCodeFor(
+  state: ViewModel,
+  pending: ClientMessage | null,
+  lobbyCode: string | null,
+): string | null {
+  if (pending?.type === 'roomCreate') return null;
+  if (state.room?.code) return state.room.code;
+  if (pending?.type === 'roomJoin') return pending.code;
+  return lobbyCode;
 }
 
 /** 房主面板的"开局"按钮要不要亮：还要看谁没准备。 */

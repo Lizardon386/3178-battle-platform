@@ -12,6 +12,7 @@ import {
   emptySlots,
   seatLabel,
   inviteLink,
+  resumeCodeFor,
 } from '@bp/client/view-model.js';
 import { PlatformConnection } from '@bp/client/connection.js';
 
@@ -289,4 +290,39 @@ test('重连退避：指数增长、封顶、加抖动，且手动重连不等�
   conn.retryNow();
   assert.equal(conn.currentState.status, 'retrying', '点重连要立刻再试，不等退避计时');
   assert.equal(queue.at(-1).cancelled, true, '手动重连应当把刚排上的自动重连取消掉，否则一次点击连发两遍');
+});
+
+/**
+ * 断线重连后"坐回哪个房"的决定。
+ * 用户实测：自己建房的人在席位行上标着"你"，点准备却得到服务端一句"你还没有座位"——
+ * 因为重连时翻票据用的是大厅那个房号输入框，而建房的人根本没往里填过东西，
+ * 于是新连接上没座位，视图里的 mySeatId 却还留着。
+ */
+test('重连坐回原位：房号取"人正在待的房"，不取大厅输入框（建房的人输入框是空的）', () => {
+  const inRoom = { ...emptyViewModel(), room: { code: 'ABCD' } };
+  assert.equal(resumeCodeFor(inRoom, null, null), 'ABCD', '自己建房后重连也要能翻出票据');
+  assert.equal(resumeCodeFor(inRoom, null, 'ZZZZ'), 'ABCD', '输入框里留着别人的房号也不能带错地方');
+});
+
+test('重连坐回原位：正要开新房时不翻旧票据，免得拿上一个房的位置占掉这次', () => {
+  const create = { type: 'roomCreate', gameId: 'echo', roomName: '', seatSlots: 2, config: {} };
+  assert.equal(resumeCodeFor({ ...emptyViewModel(), room: { code: 'ABCD' } }, create, 'ABCD'), null);
+});
+
+test('重连坐回原位：点了加入但还没连上时按要加入的那个房翻；纯在大厅则退回输入框', () => {
+  const join = { type: 'roomJoin', code: 'WXYZ' };
+  assert.equal(resumeCodeFor(emptyViewModel(), join, null), 'WXYZ', '房号只在输入框里时也要能命中票据');
+  assert.equal(resumeCodeFor(emptyViewModel(), null, 'QRST'), 'QRST');
+  assert.equal(resumeCodeFor(emptyViewModel(), null, null), null, '什么都没填就不该去翻票据');
+});
+
+test('票据真的存得下、也翻得出：seatGranted 存一次，重连按同一个房号 load 到', () => {
+  const vault = new SessionVault(fakeStorage());
+  const granted = { type: 'seatGranted', code: 'ABCD', seatId: 's1', ticket: 't-abc', manifest: null, serverNow: 0 };
+  const view = reduce(emptyViewModel(), granted, 0);
+  vault.save('http://127.0.0.1:3178', { roomCode: granted.code, seatId: granted.seatId, ticket: granted.ticket, gameId: 'echo' }, 1);
+  const code = resumeCodeFor({ ...view, room: { code: granted.code } }, null, null);
+  const record = vault.load('http://127.0.0.1:3178', code);
+  assert.ok(record, '重连时必须拿得到刚才那张票据');
+  assert.deepEqual([record.roomCode, record.seatId, record.ticket], ['ABCD', 's1', 't-abc']);
 });

@@ -1,10 +1,10 @@
 import type { ClientMessage, GameManifest, SeatView, ServerMessage } from '@bp/protocol';
 import { NOTICE_MESSAGES } from '@bp/protocol';
 import { PlatformConnection, browserSocketFactory, type ConnectionHandlers, type ConnectionOptions, type SocketFactory, type Timers, type ConnectionState } from './connection.js';
-import { AddressBook, NickName, SessionVault, type KeyValueStore } from './local-store.js';
+import { AddressBook, NickName, SessionVault, type KeyValueStore, type SessionRecord } from './local-store.js';
 import { ServerClock } from './clock.js';
 import { parseHostAddress, parseInviteLink, wouldBeBlocked, type Endpoint } from './endpoint.js';
-import { emptyViewModel, inviteLink, isHost, mySeat, reduce, seatLabel, startBlockers, emptySlots, type ViewModel } from './view-model.js';
+import { emptyViewModel, inviteLink, isHost, mySeat, reduce, resumeCodeFor, seatLabel, startBlockers, emptySlots, type ViewModel } from './view-model.js';
 import { fetchGameList, loadGameClient, placeholderClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
 
 /**
@@ -42,7 +42,6 @@ export class PlatformApp {
   private client: GameClientContract | null = null;
   private pendingManifest: GameManifest | null = null;
   private localGames: GameManifest[] = [];
-  private mode: 'host' | 'join' = 'join';
   private renderHandle: unknown = null;
   private deadlineAt: number | null = null;
   private resumeAttempted = false;
@@ -172,7 +171,7 @@ export class PlatformApp {
     this.view = reduce(this.view, message, Date.now());
     if (message.type === 'welcome') {
       this.view = { ...this.view, availableGames: message.availableGames };
-      const session = this.mode === 'join' ? this.sessionFor(endpoint) : null;
+      const session = this.resumeRecord(endpoint);
       if (session) {
         this.conn?.send({ type: 'seatResume', code: session.roomCode, seatId: session.seatId, ticket: session.ticket });
         this.resumeAttempted = true;
@@ -191,11 +190,21 @@ export class PlatformApp {
       // 相对毫秒 + 本地单调钟：绝对时间戳跨机器会失真。
       this.deadlineAt = state && typeof state.deadlineInMs === 'number' ? this.clock.now() + state.deadlineInMs : null;
     }
-    if (message.type === 'error' && (message.code === 'NOROOM' || message.code === 'NOSEAT') && this.view.room === null) {
-      const staleCode = this.sessionFor(endpoint)?.roomCode;
-      if (staleCode) this.vault.clear(endpoint.httpOrigin, staleCode);
-      if (this.resumeAttempted) this.setStatus('上次那个房已经不在了，需要重新入座。');
+    if (message.type === 'error' && (message.code === 'NOROOM' || message.code === 'NOSEAT') && this.resumeAttempted) {
       this.resumeAttempted = false;
+      const stale = this.resumeRecord(endpoint);
+      if (stale) this.vault.clear(endpoint.httpOrigin, stale.roomCode);
+      if (this.pendingJoin) {
+        // 票据作废不代表你那一下不算数：按你原本点的（加入这个房）再走一次，别把请求吞了
+        this.conn?.send(this.pendingJoin);
+        this.pendingJoin = null;
+      } else if (this.view.room) {
+        // 还挂在房间界面上却没座位，席位行的"你"就是假招牌——先把它摘掉再说人话
+        this.view = { ...this.view, mySeatId: null, ticket: null };
+        this.setStatus('座位没了（多半是断线期间被电脑位或超时清掉，或别的设备顶了你）。重新入座才能继续操作。');
+      } else {
+        this.setStatus('上次那个房已经不在了，需要重新入座。');
+      }
     }
     if (message.type === 'notice' && (message.code === 'HOSTLEFT' || message.code === 'ROOM_CLOSED')) {
       this.leaveToLobby();
@@ -206,8 +215,10 @@ export class PlatformApp {
 
   private pendingJoin: ClientMessage | null = null;
 
-  private sessionFor(endpoint: Endpoint) {
-    const code = value(el(this.doc, 'room-code'));
+  /** 这一页有没有可以坐回去的位置：按当前所在房（其次大厅输入的房号）翻本机票据。 */
+  private resumeRecord(endpoint: Endpoint): SessionRecord | null {
+    const lobbyCode = (value(el(this.doc, 'room-code')) || '').toUpperCase() || null;
+    const code = resumeCodeFor(this.view, this.pendingJoin, lobbyCode);
     return code ? this.vault.load(endpoint.httpOrigin, code) : null;
   }
 
@@ -278,7 +289,6 @@ export class PlatformApp {
       const code = (value(el(this.doc, 'room-code')) || '').toUpperCase();
       if (!code) return this.setStatus('房号呢？房主那边能看到四位码。');
       this.pendingJoin = { type: 'roomJoin', code, password: value(el(this.doc, 'join-password')) || undefined };
-      this.mode = 'join';
       this.connectTo(parsed.endpoint, code);
       return undefined;
     });
@@ -325,7 +335,6 @@ export class PlatformApp {
   }
 
   private connCreateFrom(endpoint: Endpoint, input: { gameId: string; roomName: string; seatSlots: number; password?: string; allowSpectate: boolean; hidden: boolean }): void {
-    this.mode = 'host';
     this.connectTo(endpoint, null);
     this.pendingJoin = {
       type: 'roomCreate',

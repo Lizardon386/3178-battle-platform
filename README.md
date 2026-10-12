@@ -50,7 +50,7 @@
 cd /d/agent_workspace/3178-battle-platform
 npm install          # typescript / @types/node / @types/ws / ws，没别的
 npm run build
-npm test             # 95 个用例（含真 socket、宿主壳 HTTP 集成与 SIGINT 收尾）
+npm test             # 99 个用例（含真 socket、宿主壳 HTTP 集成与 SIGINT 收尾）
 bash tools/check-seam.sh
 node packages/hostd/dist/cli.js host --port 3000 [--tunnel] [--no-lan] [--game echo]
 node packages/hostd/dist/cli.js join --port 3178   # 本地壳：也能建房，但只绑 127.0.0.1（别人连不进来）
@@ -112,6 +112,7 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 | 房主进程退出/崩溃 | 无法弹窗 → 广播 `HOSTLEFT` 并删局 |
 | 玩家主动离座 | 立刻离座，不触发终局 |
 | 掉线 | 对局中保留座位 30 分钟（可配），超时收回；**房主**掉线过久直接终局 |
+| 断线重连坐回原位 | 按**人正在待的那个房**的房号去翻本机票据（不是大厅的房号输入框——自己建房的人那格是空的），房主与玩家一视同仁。票据已作废时：清掉本机票据、摘掉席位行的"你"，并把你原本点的那一下（加入）补发出去，不静默吞掉 |
 | 加入方式 | 4 位房号（去掉易混字符）+ 房主地址；版本/房规不符报 `VERSION` / `RULES` 挡在门外 |
 | 房间列表 | 局域网组播实时列表（需本地壳）+ 地址簿 + 邀请链接；不做目录服务器 |
 
@@ -145,7 +146,7 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 | [packages/client/src/connection.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/connection.ts) | ws 连接层：指数退避重连、心跳、协议帧校验 |
 | [packages/client/src/clock.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/clock.ts) | 服务端时间轴：`serverNow` + 单调钟外推 + 半个 RTT 补偿 |
 | [packages/client/src/local-store.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/local-store.ts) | 地址簿、昵称、座位票据保管（按房主 + 房号隔离） |
-| [packages/client/src/view-model.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/view-model.ts) | 帧流 → UI 状态归约（revision 去重、聊天环形缓冲、开局阻碍清单） |
+| [packages/client/src/view-model.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/view-model.ts) | 帧流 → UI 状态归约（revision 去重、聊天环形缓冲、开局阻碍清单、重连房号 `resumeCodeFor`） |
 | [packages/client/src/module-loader.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/module-loader.ts) | 游戏模块拉取 + sha256 校验 + blob 导入；缺入口时占位渲染 |
 | [packages/client/src/app.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/app.ts) | 界面装配：大厅 / 房间内 / 对局挂载点 |
 | [packages/client/public/index.html](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/index.html) | 页面骨架与 import map（浏览器原生 ESM，无打包步骤） |
@@ -158,7 +159,7 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 | [房主建房.bat](file:///D:/agent_workspace/3178-battle-platform/房主建房.bat) / [玩家本机壳.bat](file:///D:/agent_workspace/3178-battle-platform/玩家本机壳.bat) | 双击入口（CRLF，由 [.gitattributes](file:///D:/agent_workspace/3178-battle-platform/.gitattributes) 锁住） |
 | [tools/gen-bat.mjs](file:///D:/agent_workspace/3178-battle-platform/tools/gen-bat.mjs) | 生成上面两个 .bat，保证编码不变式（UTF-8 无 BOM / CRLF / chcp 先于中文） |
 | [packages/hostd/test/bat-entries.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/bat-entries.test.mjs) | 双击入口的编码与结构防呆 |
-| [packages/client/test/client-logic.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/client/test/client-logic.test.mjs) | 客户端无 DOM 逻辑测试 |
+| [packages/client/test/client-logic.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/client/test/client-logic.test.mjs) | 客户端无 DOM 逻辑测试（含"重连该按哪个房号翻票据"四条） |
 | [packages/hostd/test/hostd-http.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/hostd-http.test.mjs) | 宿主壳集成测试（真起子进程、真 WS 连接、路径穿越） |
 | [packages/hostd/test/sigint-shutdown.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/sigint-shutdown.test.mjs) | Ctrl+C 收尾：SIGINT 后落盘、删 run 记录、退出码 0、端口释放 |
 | [packages/hostd/test/shell-join.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/shell-join.test.mjs) | 本地壳也带 WS：建房→加电脑→开局，并按端口各留一份记录 |
