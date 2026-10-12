@@ -15,6 +15,7 @@ import {
   resumeCodeFor,
 } from '@bp/client/view-model.js';
 import { PlatformConnection } from '@bp/client/connection.js';
+import { nextIndex, rowsOf, signatureOf } from '@bp/client/listbox.js';
 
 /** 客户端里"不碰 DOM 也能错"的那几块：地址解析、时钟、地址簿、视图归约、退避重连。 */
 
@@ -371,4 +372,20 @@ test('房主地址：连不成网址的输入要在解析层挡掉，不能让 n
   }
   // 引号不在禁列里（URL 规范如此），所以放行：它不会抛异常，只会连不上，走"连不上"那句提示
   assert.equal(parseHostAddress('x".bad').ok, true);
+});
+
+test('自绘下拉的纯逻辑：键盘高亮算得对、选项签名能认出变化', () => {
+  assert.equal(nextIndex(0, 2, 'ArrowDown'), 1);
+  assert.equal(nextIndex(1, 2, 'ArrowDown'), 0, '到底要绕回第一行，跟原生一致');
+  assert.equal(nextIndex(0, 2, 'ArrowUp'), 1, '顶上去要绕到最后一行');
+  assert.equal(nextIndex(-1, 3, 'ArrowDown'), 0, '还没高亮时按下键从第一行开始');
+  assert.equal(nextIndex(1, 3, 'Home'), 0);
+  assert.equal(nextIndex(1, 3, 'End'), 2);
+  assert.equal(nextIndex(1, 3, 'x'), 1, '无关按键不许动');
+  assert.equal(nextIndex(0, 0, 'ArrowDown'), -1, '空列表不能给出下标');
+
+  const rows = rowsOf([{ value: 'a', textContent: ' 甲 ', disabled: false }, { value: 'b', textContent: '乙', disabled: true }]);
+  assert.deepEqual(rows, [{ value: 'a', label: '甲', disabled: false }, { value: 'b', label: '乙', disabled: true }]);
+  assert.notEqual(signatureOf(rows), signatureOf(rows.slice(0, 1)), '少了一行必须能被签名认出来');
+  assert.equal(signatureOf(rows), signatureOf(rows.map((r) => ({ ...r }))), '内容没变时签名要稳定，否则每帧都在重建 DOM');
 });

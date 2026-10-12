@@ -6,6 +6,7 @@ import { ServerClock } from './clock.js';
 import { parseHostAddress, parseInviteLink, wouldBeBlocked, type Endpoint } from './endpoint.js';
 import { emptyViewModel, inviteLink, isHost, mySeat, reduce, resumeCodeFor, seatLabel, startBlockers, emptySlots, type ViewModel } from './view-model.js';
 import { fetchGameList, loadGameClient, placeholderClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
+import { SelectListboxes } from './listbox.js';
 
 /**
  * 客户端外壳：大厅 → 房间内（槽位 + 聊天 + 房主面板）→ 对局挂载点。
@@ -45,9 +46,11 @@ export class PlatformApp {
   private renderHandle: unknown = null;
   private deadlineAt: number | null = null;
   private resumeAttempted = false;
+  private readonly listboxes: SelectListboxes;
 
   constructor(private readonly deps: AppDeps) {
     this.doc = deps.doc;
+    this.listboxes = new SelectListboxes(deps.doc);
     this.book = new AddressBook(deps.storage);
     this.nick = new NickName(deps.storage);
     this.vault = new SessionVault(deps.storage);
@@ -104,6 +107,7 @@ export class PlatformApp {
         );
         if (invite.gameId) select.value = invite.gameId;
       }
+      this.listboxes.syncAll();
     } catch {
       this.setStatus('本机壳没提供游戏清单——创建房间会失败，但加入别人的房不受影响。');
     }
@@ -332,6 +336,7 @@ export class PlatformApp {
     chatInput?.addEventListener('keydown', (event) => {
       if ((event as KeyboardEvent).key === 'Enter') this.sendChat();
     });
+    this.listboxes.attachAll();
   }
 
   private connCreateFrom(endpoint: Endpoint, input: { gameId: string; roomName: string; seatSlots: number; password?: string; allowSpectate: boolean; hidden: boolean }): void {
@@ -396,6 +401,8 @@ export class PlatformApp {
     this.renderChat();
     this.renderHostPanel();
     this.renderGame();
+    // 必须在重建选项之后同步：放开头会让自绘下拉的标签比 select 慢一帧（最长一个渲染周期是空的）
+    this.listboxes.syncAll();
   }
 
   private renderRoom(): void {
@@ -546,6 +553,7 @@ export class PlatformApp {
         ? [this.option('', '（还没有去过任何房主）')]
         : entries.map((e) => this.option(e.origin, `${e.label} · ${e.origin}${e.lastCode ? ` · 上次房号 ${e.lastCode}` : ''}`))),
     );
+    this.listboxes.syncAll();
   }
 
   private renderLanList(rooms: Array<{ code: string; name: string; gameName: string; occupied: number; seatSlots: number; lanUrl: string; hostName: string }>): void {

@@ -192,8 +192,28 @@ async function bpUiMonkey(opts) {
     // G "静默丢失"类：这些属性没了不会报错、也不会留痕，只有算一遍才发现（下拉箭头就是这么消失的）
     const gcs = (n) => u.win.getComputedStyle(n);
     for (const s of d.querySelectorAll('select.form-select')) {
-      if (gcs(s).backgroundImage === 'none') {
-        note('下拉箭头不见了', u.id, `#${s.id} 的 background-image 是 none（多半是哪里又用了 background 简写把它清了）`);
+      // 换成自绘下拉后，原生 select 是 display:none 的数据源，可见箭头在 .bp-listbox-caret 上
+      const box = s.closest('.bp-listbox');
+      if (!box) {
+        note('下拉没被自绘组件接管', u.id, `#${s.id} 外面没有 .bp-listbox`);
+        continue;
+      }
+      const trigger = box.querySelector('.bp-listbox-trigger');
+      const caret = box.querySelector('.bp-listbox-caret');
+      const listEl = box.querySelector('.bp-listbox-list');
+      if (!trigger || !caret || gcs(caret).backgroundImage === 'none') {
+        note('下拉箭头不见了', u.id, `#${s.id} 的 .bp-listbox-caret 没有背景图`);
+      }
+      if (s.options.length && !trigger.textContent.trim()) {
+        note('下拉按钮是空的', u.id, `#${s.id} 有 ${s.options.length} 个选项但触发器没文案`);
+      }
+      const expanded = trigger.getAttribute('aria-expanded') === 'true';
+      const visible = !listEl.classList.contains('hidden');
+      if (expanded !== visible) {
+        note('aria-expanded 与列表可见性不一致', u.id, `#${s.id} expanded=${expanded} visible=${visible}`);
+      }
+      if (visible && gcs(listEl).boxShadow !== 'none') {
+        note('弹层加了阴影，违反扁平约定', u.id, `#${s.id} box-shadow=${gcs(listEl).boxShadow}`);
       }
     }
     for (const s of d.querySelectorAll('.form-switch .form-check-input')) {

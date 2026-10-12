@@ -413,6 +413,75 @@ option:disabled {
 .placeholder-actions { display: flex; gap: 12px; margin-top: 16px; }
 .placeholder-actions button { min-width: 120px; }
 
+/* ---------- 自绘下拉（listbox）----------
+   原生 <select> 的展开层在 Windows Chrome 里是系统控件：CSS 管得到每行底色和选中行，
+   管不到"鼠标划过"那条，会落回系统浅蓝。所以列表整个自己画；
+   原生 select 留在 DOM 里当数据源（app.ts 照旧读写它的 value / 重建选项）。 */
+.bp-listbox { position: relative; }
+.bp-native-select {
+  /* 只当数据源，不参与渲染：opacity:0 + 绝对定位仍会留下一个 58px 的盒子（select 有内在宽度），
+     所以直接 display:none —— value/options 读写与布局无关，app.ts 照旧。 */
+  display: none;
+}
+.bp-listbox-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  /* 抄了 form-select 的类，所以要把那份箭头关掉——我们用下面的 caret 元素 */
+  background-image: none;
+}
+.bp-listbox-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bp-listbox-caret {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%238b8b9e' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
+}
+.bp-listbox-list {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: var(--bp-panel);
+  border: 1px solid var(--bp-line);
+  border-radius: 6px;
+}
+.bp-listbox-option {
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 16px;
+  color: var(--bp-text);
+  cursor: pointer;
+  transition: background-color var(--bp-tap), color var(--bp-tap);
+}
+.bp-listbox-option:hover, .bp-listbox-option.is-active { background-color: var(--bp-raised); }
+/* 选中行用参考站徽标那套半透明紫 + 亮紫字，比实心靛紫轻，也不会和划过条打成一坨 */
+.bp-listbox-option[aria-selected="true"] {
+  background-color: rgba(99, 102, 241, 0.15);
+  color: var(--bp-accent-hi);
+}
+.bp-listbox-option.is-disabled {
+  color: var(--bp-dim-2);
+  cursor: not-allowed;
+}
+
 /* 仍然不写关键帧；这一条是给"只放开 0.2s 过渡"再往外扩时兜底的。 */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; }

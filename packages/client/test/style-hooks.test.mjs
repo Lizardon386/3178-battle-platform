@@ -54,6 +54,23 @@ test('app.ts 发出的每个类名都要有规则（我们的 css 或 Tabler 底
   assert.deepEqual(missing, [], `这些类名 DOM 会发出去但没有任何样式：${missing.join('、')}`);
 });
 
+test('listbox.ts 发出的类名同样要有规则（新组件最容易漏样式）', () => {
+  const src = readFileSync(join(HERE, '..', 'src', 'listbox.ts'), 'utf8');
+  const missing = emittedClasses(src).filter((name) => !hasRule(name) && !vendorCss.includes(`.${name}`));
+  assert.deepEqual(missing, [], `自绘下拉发了这些类名但没有任何样式：${missing.join('、')}`);
+});
+
+test('自绘下拉：可见箭头在 caret 元素上，原生 select 只当数据源', () => {
+  assert.match(cssCode, /\.bp-native-select\s*\{[^}]*display:\s*none/, '原生 select 必须彻底不占位（它只当数据源）');
+  const caret = cssCode.match(/(?:^|\n)\.bp-listbox-caret\s*\{([^}]*)\}/);
+  assert.ok(caret && /background-image:\s*url\(/.test(caret[1]), '可见箭头得挂在 .bp-listbox-caret 上');
+  assert.match(cssCode, /\.bp-listbox-trigger\s*\{[^}]*background-image:\s*none/, '按钮抄了 form-select 的类，必须把那份箭头关掉，否则两个箭头');
+  const popup = cssCode.match(/(?:^|\n)\.bp-listbox-list\s*\{([^}]*)\}/);
+  assert.ok(popup, '缺少弹层规则');
+  assert.match(popup[1], /background-color:\s*var\(--bp-panel\)/, '弹层底色要走主题变量，这是换自绘下拉的全部理由');
+  assert.equal(/box-shadow/.test(popup[1]), false, '弹层不许加阴影（扁平约定仍然有效）');
+});
+
 test('状态类必须命中实际发名字：is-ready / is-me / is-offline', () => {
   for (const name of ['is-ready', 'is-me', 'is-offline']) {
     assert.ok(appSource.includes(name), `app.ts 应该还在发 ${name}`);

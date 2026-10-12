@@ -28,6 +28,7 @@
 | **落盘只发生在房主机**，玩家端不写 `data/` | 每个客户端都有自己的快照目录时，"谁是权威"就说不清了 | 房主机器关机=这局没了，这是宿主制而不是分布式 |
 | **同时做两个合成游戏，而不是先接一个真游戏** | "平台无关玩法"是不可证的口号，除非有第二个形状不同的游戏。`turncount` 连回合游标都没有 | 多写约 300 行测试用游戏代码，但这是本轮最便宜的证据 |
 | **表现层底座用成熟开源框架 `@tabler/core`（MIT），上面只盖一层主题**：尺度整体放大一档（正文 16.5px、控件 52px、席位行 68px、房号 58px 展示体）；字体是 **Tektur（展示）+ Outfit（拉丁正文）+ Geist Mono（数字/标签）**，身份符号用同源图标字体 `@tabler/icons-webfont`（皇冠/机器人/眼睛/圆勾，不再堆 emoji），logo 是内联 SVG 几何徽记（菱形套菱形 + 两翼，不再是色块里塞"3178"） | 用户三轮否掉手写 CSS 的观感（"排版小气"、"颜色也丑"），继续手搓只会第四轮返工；方向 C 由效果图选定。Tabler 是成熟面板风，卡片/表单/按钮/徽章/栅格都是别人打磨过的，且它自带 Bootstrap 5、纯 CSS 文件、样式不需要 JS，"无构建 + 离线双击"仍然成立 | **Tabler 的颜色用 oklch → 浏览器底线抬到 Chrome/Edge 111+**（因此我们自己的 CSS 仍不写 oklch，也不写 `@layer`）；`tabler.min.css` 635KB + 图标字体 520KB 从 `node_modules` 挂 `/vendor/` 同源路由（不把产物复制进仓库），**便携包必须带 node_modules 或预拷这两个 dist 目录**；`.hidden` 要自己留着（Bootstrap 5 不再提供）——这条和"左轨靠特异度而不是书写顺序"都由 `style-hooks.test.mjs` 钉住；三套字体约 290KB（Tektur 152KB + Outfit 110KB + Geist Mono 157KB 里取三个文件），中文没有随包（体积与授权都不划算），仍走系统黑体 |
+| **下拉框换成自绘 listbox，但保留原生 `<select>` 当唯一数据源**：`packages/client/src/listbox.js` 给每个 `select.form-select` 套一个按钮 + 自画弹层，选择时写回 `select.value` 并派发 `change`，app.ts 的读写与 `replaceChildren` 重建一行没改 | Windows Chrome 的 `<select>` 展开层是**系统控件**：CSS 管得到每行底色与选中行，管不到"鼠标划过"那条，会落回系统浅蓝（用户两次截图问"这个颜色怎么这个样子"）。用户在三档选择里点了"换自绘下拉（彻底治）" | 代价是**自己实现交互**：上下键/`Home`/`End`/`Enter`/`Esc`/`Tab`、点外面收起、`aria-expanded`/`role=listbox`/`aria-selected`。**没实现 typeahead**（原生 select 支持"按字母跳到该项"，这里不支持）；焦点仍在触发按钮上，用 `aria-expanded` 表达状态。同步时机是个坑：`syncAll()` 必须排在**重建选项之后**（原来放在 `render()` 开头，导致 `kick-target` 的按钮标签比 select 慢一帧、最长 500ms 是空的——UI 猴测抓出 26 条才暴露）。原生 select 用 `display:none` 藏起来（`opacity:0` + 绝对定位仍会留下一个 58px 的盒子，select 有内在最小宽度） |
 | **底色与动效照抄 `apigoto.com` 的实测值（紫底靛强调）**：底色五阶 `#0a0a0f / #111118 / #16161f / #1c1c28 / #23233a`（近黑带紫，不是明显的紫），强调 `#6366f1`（hover 抬到 `#818cf8`），紫 `#8b5cf6` 管电脑位、粉 `#ec4899` 管观战、琥珀 `#f59e0b` 管房主、绿 `#22c55e` 管已准备；动效**只放开 0.2~0.3s 过渡**——参考站实测 0 个 `@keyframes`，只有 hover 换描边 + `translateY(-2px)`，所以我们也不写关键帧、不写渐变、不写发光 | 用户给了参考站并三选一点定："近黑带紫照抄 / 只放开 0.2s 过渡 / 字体不动"。参考站自己用 11 处渐变和 `0 0 20px rgba(99,102,241,.15)` 发光，但上一轮"不要动画渐变"的约定仍然有效，所以那两档**没跟**（要跟得改防回归测试，等用户点头）。字体保持本地三套（Tektur/Outfit/Geist Mono，OFL 同源分发）：参考站的 Inter/JetBrains Mono 是外链 CDN，离线便携包会当场退化 | 全站过渡时长被测试钉成"≤0.3s 且不许 `all`"（`style-hooks.test.mjs`）；`.btn-primary` 静止态填色从参考站的 `#6366f1` 降到 `#4f46e5`——白字压在 `#6366f1` 上是 4.47:1 不到 AA（参考站自己也没过），降一档后 6.29:1，hover 才回到 `#6366f1`（瞬时态 4.47 已知）；状态行与房号铭牌改用抬亮的 `#818cf8`（6.02:1）而不是实心靛紫（4.02:1）；下拉框的箭头必须自己画——`.form-select` 用 `background:` 简写会把 Tabler 的 `background-image` 清成 `none`，`appearance:none` 之后原生箭头也没了，所以守卫测试同时钉"有箭头"和"这两条规则里不许出现 background 简写"；展开列表要显式给 `option` / `option:checked` 上色，否则选中条是系统浅灰 |
 
 ## 快速开始
@@ -155,6 +156,7 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 | [packages/client/src/local-store.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/local-store.ts) | 地址簿、昵称、座位票据保管（按房主 + 房号隔离） |
 | [packages/client/src/view-model.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/view-model.ts) | 帧流 → UI 状态归约（revision 去重、聊天环形缓冲、开局阻碍清单、重连房号 `resumeCodeFor`） |
 | [packages/client/src/module-loader.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/module-loader.ts) | 游戏模块拉取 + sha256 校验 + blob 导入；缺入口时占位渲染 |
+| [packages/client/src/listbox.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/listbox.ts) | 自绘下拉：原生 select 当数据源，按钮+弹层自己画（含键盘与点外关闭） |
 | [packages/client/src/app.ts](file:///D:/agent_workspace/3178-battle-platform/packages/client/src/app.ts) | 界面装配：大厅 / 房间内 / 对局挂载点 |
 | [packages/client/public/index.html](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/index.html) | 页面骨架与 import map（浏览器原生 ESM，无打包步骤） |
 | [packages/client/public/style.css](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/style.css) | 主题层：覆盖 Tabler 变量 + 大气尺度 + 席位名册/HUD/动效（不重写框架组件） |
@@ -190,6 +192,7 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 - **游戏自带界面还没有**：模块下发通道（清单、CORS、哈希校验、blob 导入）已通，但两个合成游戏没有客户端入口，对局区目前走占位渲染（把房主发来的状态原样摊开 + 通用动作按钮）。真游戏的牌桌 UI 属于游戏侧工作。
 - **双击能建房，但还不是"发给朋友的那份包"**：R1 绿色便携包（官方 `node.exe` 随包走、对方不装 Node）没做。现在两台机器都要自己装 Node + `npm install` + `npm run build`。
 - **组播发现未实测**：本工作区只有一台机器，`discovery.ts` 的编解码与过期表有测试，但真网卡上的收发、以及"首次绑定触发 Windows 防火墙弹窗后用户点允许"这条路径**没有验证过**。
+- **下拉的鼠标划过高亮**：已换成自绘 listbox，弹层颜色完全跟主题；但**没有 typeahead**（原生 select 那种"按字母跳到该项"），长列表（地址簿很多条）要靠滚动。
 - **从房主拉游戏模块 = 在你浏览器里执行房主给的代码**。哈希校验只保证"传过来的字节和房主声明的一致"，不保证"房主写的代码无害"。今天两个合成游戏没有客户端入口，实际跑的是内置占位渲染器，所以这条风险还没落地；**接真游戏前要把它关进沙箱 iframe（`sandbox=allow-scripts`，不给 `allow-same-origin`）**，否则房主能读你本机的座位票据与地址簿。
 - **宿主制天然放弃一部分防作弊**：权威进程在房主机上，房主可改自己的秘密与判定；"按视角裁剪"只防透视，不防房主。
 - **移交只移权限、不迁进程**：原房主断电时不存在"已移交的房主"。
