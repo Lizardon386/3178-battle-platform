@@ -42,7 +42,10 @@ export interface ConnectionHandlers {
   hello(): Extract<ClientMessage, { type: 'hello' }>;
   onMessage(message: ServerMessage): void;
   onState?(state: ConnectionState): void;
+  /** 帧解析失败：真的是协议问题。 */
   onProtocolError?(reason: string): void;
+  /** 连不上/对端没有 WS 服务：跟"协议不对"必须分开报，否则用户不知道该去开哪个程序。 */
+  onConnectError?(cause: string): void;
 }
 
 export interface ConnectionOptions {
@@ -151,8 +154,8 @@ export class PlatformConnection {
         });
         this.retryHandle = this.timers.setTimeout(() => this.open(wsUrl), delay);
       },
-      error: () => {
-        this.handlers.onProtocolError?.('socket error');
+      error: (cause) => {
+        this.handlers.onConnectError?.(String(cause ?? 'socket error'));
       },
     });
     this.socket = binding.socket;

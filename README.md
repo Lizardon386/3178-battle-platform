@@ -36,7 +36,7 @@
 | 双击 | 干什么 |
 |---|---|
 | [房主建房.bat](file:///D:/agent_workspace/3178-battle-platform/房主建房.bat) | 本机起房主端，监听 3000，控制台打印局域网地址与隧道状态；浏览器打开 `http://localhost:3000` 建房 |
-| [玩家本机壳.bat](file:///D:/agent_workspace/3178-battle-platform/玩家本机壳.bat) | 起本地壳（3178）并自动打开页面：能看局域网房间列表，也能填地址进别人的房 |
+| [玩家本机壳.bat](file:///D:/agent_workspace/3178-battle-platform/玩家本机壳.bat) | 起本地壳（3178）并自动打开页面：能看局域网房间列表，也能填地址进别人的房；**自己开房玩也可以**，但只绑 127.0.0.1，别人连不进来——要当房主请用左边那个 |
 
 两个脚本只检查 `node` 在不在 PATH、依赖与编译产物在不在，缺了就停下告诉你跑哪条命令，不静默装东西、不碰防火墙。
 
@@ -51,9 +51,9 @@ npm run build
 npm test             # 77 个用例（含真 socket 与宿主壳 HTTP 集成）
 bash tools/check-seam.sh
 node packages/hostd/dist/cli.js host --port 3000 [--tunnel] [--no-lan] [--game echo]
-node packages/hostd/dist/cli.js join --port 3178
-node packages/hostd/dist/cli.js diagnose     # 打环境事实：node 版本、已装游戏、cloudflared、网卡
-node packages/hostd/dist/cli.js stop         # 按 data/run.json 精确收尾，不按镜像名杀 node
+node packages/hostd/dist/cli.js join --port 3178   # 本地壳：也能建房，但只绑 127.0.0.1（别人连不进来）
+node packages/hostd/dist/cli.js diagnose     # 打环境事实：node 版本、已装游戏、cloudflared、网卡、在跑的壳
+node packages/hostd/dist/cli.js stop [--port N]   # 按 data/run-<端口>.json 精确收尾，不按镜像名杀 node；不带 --port 收掉本机所有壳
 bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 ```
 

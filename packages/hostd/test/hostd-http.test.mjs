@@ -144,8 +144,8 @@ test('真 WebSocket 经宿主壳连上并拿到 welcome', async () => {
   ws.close();
 });
 
-test('hostd 写了 run.json，供 stop 精确收尾', async () => {
-  const file = join(ROOT, 'data', 'run.json');
+test('hostd 按端口写 run-<port>.json，供 stop 精确收尾', async () => {
+  const file = join(ROOT, 'data', `run-${PORT}.json`);
   assert.ok(existsSync(file), '应该记录 pid 与端口');
   const record = JSON.parse(readFileSync(file, 'utf8'));
   assert.equal(record.mode, 'host');
@@ -153,8 +153,8 @@ test('hostd 写了 run.json，供 stop 精确收尾', async () => {
   assert.equal(typeof record.httpPid, 'number');
 });
 
-test('hostd stop 能把 run.json 收掉（Windows 上 kill 不走信号处理器，所以靠 stop 子命令）', async () => {
-  const file = join(ROOT, 'data', 'run.json');
+test('hostd stop --port 能收掉对应记录（Windows 上 kill 是硬杀，不走信号处理器）', async () => {
+  const file = join(ROOT, 'data', `run-${PORT}.json`);
   const pid = child?.pid;
   child?.kill('SIGTERM');
   await new Promise((r) => (child?.once('close', r) ?? r()));
@@ -162,9 +162,10 @@ test('hostd stop 能把 run.json 收掉（Windows 上 kill 不走信号处理器
   assert.equal(existsSync(file), true, '进程被硬杀时记录要留在盘上，这正是 stop 子命令存在的理由');
 
   await new Promise((resolveStop) => {
-    const stop = spawn(process.execPath, [join(ROOT, 'packages', 'hostd', 'dist', 'cli.js'), 'stop'], { cwd: ROOT, stdio: 'ignore' });
+    // 只收自己这个端口：另一个测试文件正在跑 join 壳，全停会把它打断
+    const stop = spawn(process.execPath, [join(ROOT, 'packages', 'hostd', 'dist', 'cli.js'), 'stop', '--port', String(PORT)], { cwd: ROOT, stdio: 'ignore' });
     stop.once('close', () => resolveStop());
   });
-  assert.equal(existsSync(file), false, 'stop 之后不该再留 run.json');
+  assert.equal(existsSync(file), false, 'stop 之后不该再留这个端口的记录');
   assert.ok(typeof pid === 'number');
 });

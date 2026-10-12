@@ -151,6 +151,7 @@ export class PlatformApp {
         this.render();
       },
       onProtocolError: (reason) => this.setStatus(`协议不对：${reason}`),
+      onConnectError: () => this.setStatus(`连不上 ${endpoint.httpOrigin}：那边没有房主端在听，检查地址与端口（房主要先跑「房主建房.bat」）`),
     };
     const options: ConnectionOptions = {
       factory: this.deps.factory ?? browserSocketFactory(),
@@ -441,10 +442,11 @@ export class PlatformApp {
     }
     const bar = el(this.doc, 'connection-bar');
     if (bar) {
-      const status = this.connState.status;
+      const link = isHost(this.view) ? '你就是房主（已连本机壳）' : '已连房主';
+      const status = this.connState.status === 'open' ? link : `连接：${this.connState.status}`;
       const notice = this.view.lastNotice ? ` · ${this.view.lastNotice.text || NOTICE_MESSAGES[this.view.lastNotice.code]}` : '';
       const error = this.view.lastError ? ` · ${this.view.lastError.message}` : '';
-      bar.textContent = `${status === 'open' ? '已连房主' : `连接：${status}`}${notice}${error}${this.connState.lastError ? ` · ${this.connState.lastError}` : ''}`;
+      bar.textContent = `${status}${notice}${error}${this.connState.lastError ? ` · ${this.connState.lastError}` : ''}`;
     }
   }
 

@@ -528,7 +528,7 @@ export class Engine {
 
   private seatOp(room: Room, msg: Extract<ClientMessage, { type: 'hostSeat' }>): Outbound[] {
     if (msg.op === 'addAi') {
-      const added = room.addSeat({ name: String(msg.seatId ?? '电脑'), role: 'ai', isAi: true });
+      const added = room.addSeat({ name: String(msg.seatId ?? `电脑 ${room.occupied()}`), role: 'ai', isAi: true });
       if (!added.ok) {
         return [this.toSeat(room, room.hostSeatId ?? '', { type: 'error', code: 'FULL', message: '加不了电脑位（槽满或该游戏不支持填充）' })];
       }
