@@ -326,3 +326,49 @@ test('票据真的存得下、也翻得出：seatGranted 存一次，重连按�
   assert.ok(record, '重连时必须拿得到刚才那张票据');
   assert.deepEqual([record.roomCode, record.seatId, record.ticket], ['ABCD', 's1', 't-abc']);
 });
+
+test('没连上就发消息：不许抛 InvalidStateError，也不许静默丢掉，连上后按原顺序补发', () => {
+  const sent = [];
+  let open = false;
+  let handlers = null;
+  const binding = {
+    socket: {
+      // 真浏览器在 CONNECTING 状态 send() 就是抛异常，这里照抄，逼实现先判状态
+      send(raw) {
+        if (!open) throw new Error("InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state");
+        sent.push(JSON.parse(raw));
+      },
+      close() {},
+    },
+    bind(h) {
+      handlers = h;
+    },
+  };
+  const conn = new PlatformConnection(
+    { hello: () => ({ type: 'hello', protocol: 1, nick: '甲' }), onMessage: () => {} },
+    { factory: () => binding, pingEveryMs: 0 },
+  );
+  conn.connect('ws://x/ws');
+  assert.equal(conn.send({ type: 'ready', ready: true }), true, '排进队列就算接受，别让调用方以为这一下丢了');
+  assert.equal(conn.send({ type: 'chat', text: '第二句' }), true);
+  assert.deepEqual(sent, [], '还没连上，一条都不该发出去');
+  open = true;
+  handlers.open();
+  assert.deepEqual(sent.map((m) => m.type), ['hello', 'ready', 'chat'], 'hello 必须打头，其余按玩家点击的原顺序补发');
+});
+
+test('房主地址：连不成网址的输入要在解析层挡掉，不能让 new WebSocket 抛异常', () => {
+  // 挡掉的是 WHATWG "forbidden host code point" 里的字符：< > 空格 等——new WebSocket 遇到它们当场抛 SyntaxError
+  for (const raw of ['<script>x</script>', 'a b.com', 'http://exa mple.com', '127.0.0.1:3178 /ws']) {
+    const r = parseHostAddress(raw);
+    assert.equal(r.ok, false, `${JSON.stringify(raw)} 居然被接受了`);
+    assert.equal(r.code, 'BAD_HOST');
+    assert.ok(typeof r.message === 'string' && r.message.length > 4, '得给一句人话，不然点加入的人只看到没反应');
+  }
+  // 正常写法不能被误伤
+  for (const raw of ['127.0.0.1:3178', 'http://192.168.1.20:3000', 'ws://10.0.0.5:3000', '[::1]:3000', 'abc.trycloudflare.com']) {
+    assert.equal(parseHostAddress(raw).ok, true, `${raw} 应当能连`);
+  }
+  // 引号不在禁列里（URL 规范如此），所以放行：它不会抛异常，只会连不上，走"连不上"那句提示
+  assert.equal(parseHostAddress('x".bad').ok, true);
+});

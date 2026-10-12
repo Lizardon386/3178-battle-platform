@@ -98,6 +98,9 @@ export class PlatformConnection {
   private pingHandle: unknown = null;
   private intentional = false;
   private nonceSeq = 0;
+  /** 没连上时攒下的出站消息，上限是为了别让一个死掉的连接吃掉无限内存。 */
+  private static readonly PENDING_MAX = 16;
+  private readonly pending: ClientMessage[] = [];
 
   constructor(
     private readonly handlers: ConnectionHandlers,
@@ -128,7 +131,8 @@ export class PlatformConnection {
     binding.bind({
       open: () => {
         this.setState({ status: 'open', attempts: 0, wsUrl, lastError: null });
-        this.sendRaw(this.handlers.hello());
+        this.sendRaw(this.handlers.hello(), false);
+        this.flushPending();
         this.schedulePing();
       },
       message: (raw) => {
@@ -143,6 +147,7 @@ export class PlatformConnection {
         this.cancelPing();
         this.socket = null;
         if (this.intentional) {
+          this.pending.length = 0;
           this.setState({ status: 'closed', lastError: null, wsUrl });
           return;
         }
@@ -173,7 +178,7 @@ export class PlatformConnection {
     this.cancelPing();
     if (this.pingEveryMs <= 0) return;
     this.pingHandle = this.timers.setTimeout(() => {
-      this.sendRaw({ type: 'ping', nonce: `n${(this.nonceSeq += 1)}-${this.now()}` });
+      this.sendRaw({ type: 'ping', nonce: `n${(this.nonceSeq += 1)}-${this.now()}` }, false);
       this.schedulePing();
     }, this.pingEveryMs);
   }
@@ -192,10 +197,24 @@ export class PlatformConnection {
     return this.sendRaw(message);
   }
 
-  private sendRaw(message: ClientMessage): boolean {
+  /**
+   * 没到 OPEN 就 send 会当场抛 InvalidStateError（浏览器行为），所以未就绪时先排队，
+   * 连上后按原顺序补发：玩家点"准备"时正好在重连，不该把这一下静默丢掉，也不该抛异常。
+   * queueWhenConnecting=false 给心跳用——过期的 ping 排到连上再发没有意义。
+   */
+  private sendRaw(message: ClientMessage, queueWhenConnecting = true): boolean {
     if (!this.socket) return false;
+    if (this.state.status !== 'open') {
+      if (!queueWhenConnecting || this.pending.length >= PlatformConnection.PENDING_MAX) return false;
+      this.pending.push(message);
+      return true;
+    }
     this.socket.send(JSON.stringify(message));
     return true;
+  }
+
+  private flushPending(): void {
+    for (const message of this.pending.splice(0)) this.sendRaw(message, false);
   }
 
   /** 玩家点"重新连接"时立刻重试，不等退避计时。 */

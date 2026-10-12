@@ -80,6 +80,8 @@ export class Engine {
   private readonly ttl: TtlConfig;
   private readonly ratePerSec: number;
   private readonly burst: number;
+  /** 上次落盘的内容原文。用来跳过没变的房——这样同步可以很勤，而不会把磁盘写爆。 */
+  private readonly lastSynced = new Map<string, string>();
 
   constructor(opts: EngineOptions) {
     this.clock = opts.now ?? (() => Date.now());
@@ -177,19 +179,34 @@ export class Engine {
     return out;
   }
 
-  /** 显式同步，而不是在每个变更点偷偷写盘：hostd 定时调 + 退出前调一次。 */
+  /**
+   * 显式同步，而不是在每个变更点偷偷写盘：hostd 定时调 + 退出前调一次。
+   * 内容没变的房直接跳过，所以"定时"可以做到很勤（跟着心跳 250ms）——
+   * 否则刚建房就被硬杀（用户直接点控制台窗口的 X 就是 TerminateProcess，不走收尾）
+   * 会丢掉最多一个同步周期的房，而朋友手里已经拿到了邀请链接。
+   */
   syncStore(store: HostStore): { saved: number; removed: string[] } {
     const alive = new Set<string>();
     let saved = 0;
     for (const entry of this.persistable()) {
-      alive.add(entry.room.code);
-      if (store.save(entry)) saved += 1;
+      const code = entry.room.code;
+      alive.add(code);
+      const raw = JSON.stringify(entry);
+      if (this.lastSynced.get(code) === raw) continue;
+      if (store.writeFile(code, raw)) {
+        this.lastSynced.set(code, raw);
+        saved += 1;
+      }
     }
     const removed: string[] = [];
     for (const entry of store.readAll().entries) {
       if (alive.has(entry.room.code)) continue;
       store.remove(entry.room.code);
+      this.lastSynced.delete(entry.room.code);
       removed.push(entry.room.code);
+    }
+    for (const code of [...this.lastSynced.keys()]) {
+      if (!alive.has(code)) this.lastSynced.delete(code);
     }
     return { saved, removed };
   }

@@ -35,6 +35,14 @@ function build(scheme: 'http' | 'https' | 'ws' | 'wss', hostPort: string, path =
   const wsScheme = secure ? 'wss' : 'ws';
   const httpScheme = secure ? 'https' : 'http';
   const hostPart = port === null ? host : `${host}:${port}`;
+  // 让 URL 构造器自己判合法性：`<`、`>`、空格、引号这些在 authority 里都不许出现。
+  // 不先判的话，后面 new WebSocket(wsUrl) 会当场抛 SyntaxError（点"加入"的人只会看到没反应）。
+  try {
+    new URL(`${wsScheme}://${hostPart}/ws`);
+    new URL(`${httpScheme}://${hostPart}`);
+  } catch {
+    return bad('BAD_HOST', '这个地址连不成网址：填 IP 或域名，可以带端口（如 192.168.1.20:3000）');
+  }
   return {
     ok: true,
     endpoint: {

@@ -497,9 +497,20 @@ export class PlatformApp {
     }
     const readyButton = el(this.doc, 'btn-ready') as HTMLButtonElement | null;
     const seat = mySeat(this.view);
-    if (readyButton && seat && seat.role !== 'host') {
-      readyButton.textContent = seat.ready ? '取消准备' : '准备';
-      readyButton.disabled = this.view.phase !== 'lobby';
+    if (readyButton) {
+      // 原来只在"有座位且不是房主"时才更新，于是座位一消失，按钮就停在上一次的可点状态：
+      // 点下去服务端回一句"你还没有座位"，看着像界面在骗人。这里三种不可点的身份各给一句原因。
+      const role = seat?.role;
+      readyButton.disabled = role !== 'player' || this.view.phase !== 'lobby';
+      readyButton.textContent = !seat
+        ? '先入座'
+        : role === 'host'
+          ? '房主不用准备'
+          : role === 'spectator'
+            ? '观战不能准备'
+            : seat.ready
+              ? '取消准备'
+              : '准备';
     }
     for (const id of ['transfer-target', 'kick-target']) {
       const select = el(this.doc, id) as HTMLSelectElement | null;

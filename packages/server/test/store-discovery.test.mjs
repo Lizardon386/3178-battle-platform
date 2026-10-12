@@ -194,3 +194,21 @@ test('浏览端的过期表按注入时钟剔除', () => {
   now += 1;
   assert.equal(browser.list().length, 0);
 });
+
+test('落盘跳过没变的房：所以同步可以跟着心跳勤调，而不把磁盘写爆', () => {
+  const dir = storeDir();
+  const { engine } = makeEngine();
+  const transport = { sent: [], send(raw) { this.sent.push(JSON.parse(raw)); }, close() {} };
+  const id = engine.openConn(transport);
+  engine.publish(engine.dispatch(id, { type: 'hello', protocol: 1, nick: '房主', gameId: 'echo', version: echoModule.version }));
+  engine.publish(engine.dispatch(id, { type: 'roomCreate', gameId: 'echo', roomName: '勤同步', seatSlots: 2, config: {} }));
+  const store = new HostStore(dir);
+
+  assert.equal(engine.syncStore(store).saved, 1, '新建的房要当场落盘，别等下一个周期');
+  assert.equal(engine.syncStore(store).saved, 0, '内容没变就不该再写一次');
+  assert.equal(engine.syncStore(store).saved, 0, '连着调也不写——这是把间隔从 2 秒压到 250ms 的前提');
+
+  engine.publish(engine.dispatch(id, { type: 'hostSeat', op: 'addAi' }));
+  assert.equal(engine.syncStore(store).saved, 1, '座位一变就要落，否则硬杀后朋友的邀请链接进不来');
+  assert.equal(engine.syncStore(store).saved, 0, '落过之后 again 不重复写');
+});

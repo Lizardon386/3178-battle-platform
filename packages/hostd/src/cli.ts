@@ -155,7 +155,9 @@ async function startShell(options: Options, role: 'host' | 'join'): Promise<void
   const tunnel = options.tunnel ? await startTunnel(options.port, (line) => console.log(`  tunnel| ${line}`)) : null;
 
   const tick = setInterval(() => transport.tick(), 250);
-  const sync = setInterval(() => engine.syncStore(store), 2_000);
+  // 落盘跟着心跳走：syncStore 会跳过内容没变的房，所以勤调不写爆磁盘。
+  // 差的就是"刚建房就被硬杀（点控制台 X 就是 TerminateProcess）"那一段——那时朋友已经拿到邀请链接了。
+  const sync = setInterval(() => engine.syncStore(store), 250);
   writeRun({ mode: role, port: options.port, httpPid: process.pid, tunnelPid: tunnel?.pid ?? null, startedAt: Date.now() });
 
   const lines = role === 'host'
