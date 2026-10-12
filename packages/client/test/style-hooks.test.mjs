@@ -79,9 +79,22 @@ test('字体必须同源分发，且 CSS 引用的文件真的在盘上', () => 
   assert.equal(/url\(\s*["']?https?:/i.test(cssCode), false, '不许引外网字体或图片');
   assert.equal(/@layer\b/.test(cssCode), false, '老 Chromium/Edge 会把未知 at-rule 整块跳过，等于整站裸奔');
   const faces = [...cssCode.matchAll(/font-family:\s*"([^"]+)";/g)].map((m) => m[1]);
-  assert.deepEqual([...new Set(faces)], ['BP Display', 'BP Mono'], '展示体与 HUD 数字体成对出现');
+  assert.deepEqual(
+    [...new Set(faces)].sort(),
+    ['BP Display', 'BP Mono', 'BP UI'],
+    '字体令牌要成套：展示体 + 拉丁正文 + HUD 等宽',
+  );
   assert.ok(/--bp-font-display:/.test(css) && /--bp-font-mono:/.test(css), '字体令牌要成对：展示体 + HUD 等宽');
   assert.ok(/\.hidden\s*\{[^}]*display:\s*none\s*!important/.test(cssCode), 'app.ts 靠 .hidden 切屏，Bootstrap 5 不再提供这个类');
+});
+
+test('扁平版不许有渐变、关键帧动画和发光阴影', () => {
+  // 用户明确要求：不要动画与渐变。这三条是"扁平"的可验证定义，不是口味之争。
+  assert.equal(/gradient\(/i.test(cssCode), false, '出现渐变就不是扁平了');
+  assert.equal(/@keyframes/.test(cssCode), false, '主题层不该再有关键帧');
+  assert.equal(/text-shadow:\s*[^n]/i.test(cssCode.replace(/text-shadow:\s*none/g, '')), false, '不要发光');
+  assert.match(cssCode, /\*,\s*\*::before,\s*\*::after\s*\{[^}]*animation:\s*none\s*!important/, '要把 Tabler 自带的动效一起压掉');
+  assert.match(cssCode, /animation:\s*none\s*!important;\s*transition:\s*none\s*!important/, '动画与过渡都要归零');
 });
 
 test('减动效偏好必须能关掉全部动画', () => {

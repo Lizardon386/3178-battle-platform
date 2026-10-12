@@ -27,7 +27,7 @@
 | **房间发现走 B+A 两档**：同网段 UDP 组播信标（要本地壳）+ 地址簿/邀请链接（纯浏览器也能用） | 房间列表在 war3 里由战网中央目录提供；没有常开公网节点就没有"随时上线逛房间"。组播是唯一不需要公共服务器的实时列表 | 组播只限同网段，且首次绑定会让 Windows 弹窗（由用户亲手点允许，脚本绝不写防火墙规则）；跨网只能靠房主发链接 |
 | **落盘只发生在房主机**，玩家端不写 `data/` | 每个客户端都有自己的快照目录时，"谁是权威"就说不清了 | 房主机器关机=这局没了，这是宿主制而不是分布式 |
 | **同时做两个合成游戏，而不是先接一个真游戏** | "平台无关玩法"是不可证的口号，除非有第二个形状不同的游戏。`turncount` 连回合游标都没有 | 多写约 300 行测试用游戏代码，但这是本轮最便宜的证据 |
-| **表现层底座直接用成熟开源框架 `@tabler/core`（MIT）**，我们只写一层主题变量 + 席位名册 + HUD；尺度整体放大一档（正文 16.5px、控件 52px、席位行 66px、房号 56px 展示体），身份符号换成同源图标字体 `@tabler/icons-webfont`（皇冠/机器人/眼睛/盾牌，不再靠 emoji 堆） | 用户三轮否掉手写 CSS 的观感（"排版小气"、"颜色也丑"），继续手搓只会第四轮返工；方向 C 由效果图选定。Tabler 是成熟面板风，卡片/表单/按钮/徽章/栅格都是别人打磨过的，且它自带 Bootstrap 5、纯 CSS 文件、样式不需要 JS，"无构建 + 离线双击"仍然成立 | **Tabler 的颜色用 oklch → 浏览器底线抬到 Chrome/Edge 111+**（因此我们自己的 CSS 仍不写 oklch，也不写 `@layer`）；`tabler.min.css` 635KB + 图标字体 520KB 从 `node_modules` 挂 `/vendor/` 同源路由（不把产物复制进仓库），**便携包必须带 node_modules 或预拷这两个 dist 目录**；`.hidden` 要自己留着（Bootstrap 5 不再提供）——这条和"左轨靠特异度而不是书写顺序"都由 `style-hooks.test.mjs` 钉住 |
+| **表现层底座用成熟开源框架 `@tabler/core`（MIT），上面只盖一层纯色扁平主题**：无渐变、无阴影、无动画（框架自带的 transition 也一并归零）；尺度整体放大一档（正文 16.5px、控件 52px、席位行 68px、房号 58px 展示体）；字体换成 **Tektur（展示）+ Outfit（拉丁正文）+ Geist Mono（数字/标签）**，身份符号用同源图标字体 `@tabler/icons-webfont`（皇冠/机器人/眼睛/圆勾，不再堆 emoji），logo 是内联 SVG 几何徽记（菱形套菱形 + 两翼，不再是色块里塞"3178"） | 用户三轮否掉手写 CSS 的观感（"排版小气"、"颜色也丑"），继续手搓只会第四轮返工；方向 C 由效果图选定。Tabler 是成熟面板风，卡片/表单/按钮/徽章/栅格都是别人打磨过的，且它自带 Bootstrap 5、纯 CSS 文件、样式不需要 JS，"无构建 + 离线双击"仍然成立 | **Tabler 的颜色用 oklch → 浏览器底线抬到 Chrome/Edge 111+**（因此我们自己的 CSS 仍不写 oklch，也不写 `@layer`）；`tabler.min.css` 635KB + 图标字体 520KB 从 `node_modules` 挂 `/vendor/` 同源路由（不把产物复制进仓库），**便携包必须带 node_modules 或预拷这两个 dist 目录**；`.hidden` 要自己留着（Bootstrap 5 不再提供）——这条和"左轨靠特异度而不是书写顺序"都由 `style-hooks.test.mjs` 钉住；三套字体约 290KB（Tektur 152KB + Outfit 110KB + Geist Mono 157KB 里取三个文件），中文没有随包（体积与授权都不划算），仍走系统黑体；扁平意味着反馈只靠换色，没有位移/淡入这类动效 |
 
 ## 快速开始
 
@@ -149,7 +149,7 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 | [packages/client/public/index.html](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/index.html) | 页面骨架与 import map（浏览器原生 ESM，无打包步骤） |
 | [packages/client/public/style.css](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/style.css) | 主题层：覆盖 Tabler 变量 + 大气尺度 + 席位名册/HUD/动效（不重写框架组件） |
 | [design-refs/](file:///D:/agent_workspace/3178-battle-platform/design-refs/E-cyber-minimal.png) | 八张方向效果图（A–H），选定的是 [C-tabler-dashboard.png](file:///D:/agent_workspace/3178-battle-platform/design-refs/C-tabler-dashboard.png) |
-| [packages/client/public/fonts/](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/fonts/BigShoulders-Bold.ttf) | 同源分发的 OFL 字体（BigShoulders 展示体 + Geist Mono 数字体）与许可文本 |
+| [packages/client/public/fonts/](file:///D:/agent_workspace/3178-battle-platform/packages/client/public/fonts/Tektur-Medium.ttf) | 同源分发的 OFL 字体：Tektur 展示体 + Outfit 拉丁正文 + Geist Mono 数字，含各自许可文本 |
 | [packages/hostd/src/cli.ts](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/src/cli.ts) | 宿主壳：host / join / diagnose / stop 四个模式 |
 | [packages/hostd/src/webroot.ts](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/src/webroot.ts) | 静态与接口路由（`/app/`、`/vendor/protocol/`、`/games/`、`/api/games`、`/discovery/rooms`） |
 | [packages/hostd/src/tunnel.ts](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/src/tunnel.ts) | cloudflared 查找与隧道网址解析（找不到就退回本地地址，不下载） |
@@ -170,7 +170,7 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 
 - **浏览器底线被 Tabler 抬到 Chrome/Edge 111+**：Tabler 的颜色变量用 `oklch()`，更老的内核算不出颜色（表现为按钮发灰、边框消失）。我们自己的 CSS 因此仍不写 `oklch` 与 `@layer`。给旧机器装包之前先确认浏览器版本。
 - **底座体积**：`tabler.min.css` 635KB + 图标字体 520KB，从 `node_modules` 挂 `/vendor/` 同源路由（不复制进仓库）。R1 便携包要么带 `node_modules`，要么在打包脚本里预拷 `@tabler/core/dist/css` 与 `@tabler/icons-webfont/dist`。
-- **字体随包分发，许可文本不能丢**：`public/fonts/` 里的 BigShoulders 与 Geist Mono 来自 `ui-styling` skill 的 `canvas-fonts/`，OFL 许可；打包（R1）时必须连 `.ttf` 带 `*-OFL.txt` 一起拷，测试里已经钉住"CSS 引用的字体文件必须存在于盘上"。没有中文字体随包（体积与授权都不划算），中文仍走系统黑体。
+- **字体随包分发，许可文本不能丢**：`public/fonts/` 里的 Tektur、Outfit、Geist Mono 来自 `ui-styling` skill 的 `canvas-fonts/`，OFL 许可；打包（R1）时必须连 `.ttf` 带 `*-OFL.txt` 一起拷，测试里已经钉住"CSS 引用的字体文件必须存在于盘上"。没有中文字体随包（体积与授权都不划算），中文仍走系统黑体。
 - **`.bat` 的编码是硬约束，不是风格问题**：必须 UTF-8 无 BOM + CRLF + 第二行 `chcp 65001`，且中文只能出现在 chcp 之后。否则 cmd 按 cp936 解析 UTF-8 字节，第二个字节落进 GBK trail 区（里面有个 `|`），**中文会被拼成命令分隔符**——表现为平白一句"系统找不到指定的路径"加一行乱码。另一个坑：在 Git Bash 里用 `node -e '...'` 写批处理，argv 里的 `nul` 会被 MSYS 路径转换改成 `/dev/null`，直接写坏文件；所以走 `tools/gen-bat.mjs`，并由 [bat-entries.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/bat-entries.test.mjs) 钉住这些不变式。
 - **观感只能由你确认**：in-app Browser 无可见视口（`innerWidth` 报 0），我能证明"字体加载成功、规则命中、DOM 结构对了"，不能证明"好看"。
 - **游戏自带界面还没有**：模块下发通道（清单、CORS、哈希校验、blob 导入）已通，但两个合成游戏没有客户端入口，对局区目前走占位渲染（把房主发来的状态原样摊开 + 通用动作按钮）。真游戏的牌桌 UI 属于游戏侧工作。
