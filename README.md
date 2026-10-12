@@ -56,6 +56,8 @@ node packages/hostd/dist/cli.js host --port 3000 [--tunnel] [--no-lan] [--game e
 node packages/hostd/dist/cli.js join --port 3178   # 本地壳：也能建房，但只绑 127.0.0.1（别人连不进来）
 node packages/hostd/dist/cli.js diagnose     # 打环境事实：node 版本、已装游戏、cloudflared、网卡、在跑的壳
 node packages/hostd/dist/cli.js stop [--port N]   # 按 data/run-<端口>.json 精确收尾，不按镜像名杀 node；不带 --port 收掉本机所有壳
+node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测（自己起房主端，违规打印可复现 seed）
+node tools/repro-persist.mjs 3521                # 量"建房 → 落盘"的窗口（现在约 200ms）
 bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 ```
 
@@ -125,6 +127,10 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 | [package.json](file:///D:/agent_workspace/3178-battle-platform/package.json) | npm workspaces 与 `build/test/seam` 脚本 |
 | [tsconfig.json](file:///D:/agent_workspace/3178-battle-platform/tsconfig.json) / [tsconfig.base.json](file:///D:/agent_workspace/3178-battle-platform/tsconfig.base.json) | 项目引用（`tsc -b`）与共享编译选项 |
 | [tools/check-seam.sh](file:///D:/agent_workspace/3178-battle-platform/tools/check-seam.sh) | 接缝闸门：平台包内不得出现玩法词或 `games/` import |
+| [tools/monkey.mjs](file:///D:/agent_workspace/3178-battle-platform/tools/monkey.mjs) | 协议层猴测：多开模拟用户随机发帧（含 6 类故意非法）+ 随机重启房主端，每帧跑 10 条不变式，违规带 seed 可复现 |
+| [tools/monkey-ui.page.js](file:///D:/agent_workspace/3178-battle-platform/tools/monkey-ui.page.js) | UI 层猴测脚本：真实页面里开同源 iframe 当并发真人，随机点击 + 6 条界面不变式（注入 `evaluate_script` 用） |
+| [tools/repro-persist.mjs](file:///D:/agent_workspace/3178-battle-platform/tools/repro-persist.mjs) | 量"建房成功 → 盘上出现房文件"的延迟，即硬杀会丢房的窗口 |
+| [dogfood-output/猴测报告.md](file:///D:/agent_workspace/3178-battle-platform/dogfood-output/猴测报告.md) | 探索性 QA 报告：5 条问题（2 High / 2 Medium / 1 观察项）、修法、实测证据与未覆盖范围 |
 | [packages/protocol/src/wire.ts](file:///D:/agent_workspace/3178-battle-platform/packages/protocol/src/wire.ts) | 消息目录与房主命令表（含中文说明的 `MESSAGE_CATALOG`） |
 | [packages/protocol/src/codes.ts](file:///D:/agent_workspace/3178-battle-platform/packages/protocol/src/codes.ts) | 平台错误码与通知码文案 |
 | [packages/protocol/src/hash.ts](file:///D:/agent_workspace/3178-battle-platform/packages/protocol/src/hash.ts) | 稳定摘要（房规/版本闸） |
