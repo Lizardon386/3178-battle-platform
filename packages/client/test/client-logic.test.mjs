@@ -13,6 +13,7 @@ import {
   seatLabel,
   inviteLink,
   resumeCodeFor,
+  aiFillBlocker,
 } from '@bp/client/view-model.js';
 import { PlatformConnection } from '@bp/client/connection.js';
 import { nextIndex, rowsOf, signatureOf } from '@bp/client/listbox.js';
@@ -388,4 +389,16 @@ test('自绘下拉的纯逻辑：键盘高亮算得对、选项签名能认出�
   assert.deepEqual(rows, [{ value: 'a', label: '甲', disabled: false }, { value: 'b', label: '乙', disabled: true }]);
   assert.notEqual(signatureOf(rows), signatureOf(rows.slice(0, 1)), '少了一行必须能被签名认出来');
   assert.equal(signatureOf(rows), signatureOf(rows.map((r) => ({ ...r }))), '内容没变时签名要稳定，否则每帧都在重建 DOM');
+});
+
+test('"加电脑位"不亮时必须给原因：游戏不支持填充 vs 槽位已满', () => {
+  const noFill = { ...emptyViewModel(), manifest: { soloFill: false }, room: { occupied: 1, seatSlots: 4 } };
+  assert.equal(aiFillBlocker(noFill), '这个游戏不支持电脑位', '一起数到就是这种：平台拒绝得对，但按钮不该照样端给人点');
+
+  const full = { ...emptyViewModel(), manifest: { soloFill: true }, room: { occupied: 4, seatSlots: 4 } };
+  assert.equal(aiFillBlocker(full), '槽位已满');
+
+  const ok = { ...emptyViewModel(), manifest: { soloFill: true }, room: { occupied: 1, seatSlots: 4 } };
+  assert.equal(aiFillBlocker(ok), null, '能加的时候不许挡人');
+  assert.equal(aiFillBlocker(emptyViewModel()), null, '还没进房时不该凭空报原因');
 });

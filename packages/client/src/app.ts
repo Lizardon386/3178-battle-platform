@@ -4,7 +4,7 @@ import { PlatformConnection, browserSocketFactory, type ConnectionHandlers, type
 import { AddressBook, NickName, SessionVault, type KeyValueStore, type SessionRecord } from './local-store.js';
 import { ServerClock } from './clock.js';
 import { parseHostAddress, parseInviteLink, wouldBeBlocked, type Endpoint } from './endpoint.js';
-import { emptyViewModel, inviteLink, isHost, mySeat, reduce, resumeCodeFor, seatLabel, startBlockers, emptySlots, type ViewModel } from './view-model.js';
+import { aiFillBlocker, emptyViewModel, inviteLink, isHost, mySeat, reduce, resumeCodeFor, seatLabel, startBlockers, emptySlots, type ViewModel } from './view-model.js';
 import { fetchGameList, loadGameClient, placeholderClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
 import { SelectListboxes } from './listbox.js';
 
@@ -518,6 +518,14 @@ export class PlatformApp {
             : seat.ready
               ? '取消准备'
               : '准备';
+    }
+    // 加电脑位：游戏不支持填充或槽位已满时直接变灰并写明原因，别让人点了去找那行小字
+    const aiButton = el(this.doc, 'btn-add-ai') as HTMLButtonElement | null;
+    if (aiButton) {
+      const blocker = aiFillBlocker(this.view);
+      aiButton.disabled = blocker !== null;
+      const label = [...aiButton.childNodes].find((n) => n.nodeType === 3);
+      if (label) label.nodeValue = blocker ?? '加一个电脑位';
     }
     for (const id of ['transfer-target', 'kick-target']) {
       const select = el(this.doc, id) as HTMLSelectElement | null;

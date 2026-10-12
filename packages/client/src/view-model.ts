@@ -135,6 +135,17 @@ export function resumeCodeFor(
   return lobbyCode;
 }
 
+/**
+ * "加电脑位"该不该亮。不亮的时候必须给一句原因——原来它永远可点，
+ * 玩家点了之后只在标题下那行小字里冒出一句服务端原文，看起来就是"点了没反应"。
+ */
+export function aiFillBlocker(state: ViewModel): string | null {
+  if (state.manifest && !state.manifest.soloFill) return '这个游戏不支持电脑位';
+  const room = state.room;
+  if (room && room.occupied >= room.seatSlots) return '槽位已满';
+  return null;
+}
+
 /** 房主面板的"开局"按钮要不要亮：还要看谁没准备。 */
 export function startBlockers(state: ViewModel): { ok: boolean; unready: string[]; tooFew: boolean } {
   const unready = state.seats
