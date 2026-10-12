@@ -35,10 +35,12 @@
 
 | 双击 | 干什么 |
 |---|---|
-| [房主建房.bat](file:///D:/agent_workspace/3178-battle-platform/房主建房.bat) | 本机起房主端，监听 3000，控制台打印局域网地址与隧道状态；浏览器打开 `http://localhost:3000` 建房 |
-| [玩家本机壳.bat](file:///D:/agent_workspace/3178-battle-platform/玩家本机壳.bat) | 起本地壳（3178）并自动打开页面：能看局域网房间列表，也能填地址进别人的房；**自己开房玩也可以**，但只绑 127.0.0.1，别人连不进来——要当房主请用左边那个 |
+| [房主建房.bat](file:///D:/agent_workspace/3178-battle-platform/房主建房.bat) | 弹出一个「3178 房主端」控制台窗口跑房主端，监听 3000，窗口里打印局域网地址与隧道状态；浏览器打开 `http://localhost:3000` 建房 |
+| [玩家本机壳.bat](file:///D:/agent_workspace/3178-battle-platform/玩家本机壳.bat) | 弹出一个「3178 本地壳」控制台窗口起本地壳（3178）并自动打开页面：能看局域网房间列表，也能填地址进别人的房；**自己开房玩也可以**，但只绑 127.0.0.1，别人连不进来——要当房主请用左边那个 |
 
-两个脚本只检查 `node` 在不在 PATH、依赖与编译产物在不在，缺了就停下告诉你跑哪条命令，不静默装东西、不碰防火墙。
+双击的那个窗口**只是启动器**：把 node 开进它自己的控制台窗口后立刻退出，所以你会看到它一闪就没，对局跑在新开的那个窗口里。要停就在**新窗口**里按 Ctrl+C——信号直接给 node，落盘收尾后进程退出，那个窗口自己关闭，**不会问你"终止批处理操作吗(Y/N)"**。反过来，如果 .bat 自己留在前台等 node，Ctrl+C 打断的是批处理，就会多出那句 Y/N。两头都有测试钉着：末行必须是 `exit /b 0`（[bat-entries.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/bat-entries.test.mjs)），SIGINT 之后必须落盘、删掉 `data/run-<端口>.json` 并以 0 退出（[sigint-shutdown.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/sigint-shutdown.test.mjs)）。
+
+缺环境时启动器不会一闪而过：检查 `node` 在不在 PATH、依赖与编译产物在不在，缺了就打印该跑哪条命令并**停在那儿等你看**（这种分支留着 `pause`），不静默装东西、不碰防火墙。
 
 脚本本身由 [tools/gen-bat.mjs](file:///D:/agent_workspace/3178-battle-platform/tools/gen-bat.mjs) 生成（`node tools/gen-bat.mjs`）：批处理对编码极敏感，手写容易踩下面「限制」里那两条坑，所以文案与结构改在生成器里，改完重跑一次。
 
@@ -48,7 +50,7 @@
 cd /d/agent_workspace/3178-battle-platform
 npm install          # typescript / @types/node / @types/ws / ws，没别的
 npm run build
-npm test             # 77 个用例（含真 socket 与宿主壳 HTTP 集成）
+npm test             # 95 个用例（含真 socket、宿主壳 HTTP 集成与 SIGINT 收尾）
 bash tools/check-seam.sh
 node packages/hostd/dist/cli.js host --port 3000 [--tunnel] [--no-lan] [--game echo]
 node packages/hostd/dist/cli.js join --port 3178   # 本地壳：也能建房，但只绑 127.0.0.1（别人连不进来）
@@ -158,6 +160,7 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 | [packages/hostd/test/bat-entries.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/bat-entries.test.mjs) | 双击入口的编码与结构防呆 |
 | [packages/client/test/client-logic.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/client/test/client-logic.test.mjs) | 客户端无 DOM 逻辑测试 |
 | [packages/hostd/test/hostd-http.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/hostd-http.test.mjs) | 宿主壳集成测试（真起子进程、真 WS 连接、路径穿越） |
+| [packages/hostd/test/sigint-shutdown.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/sigint-shutdown.test.mjs) | Ctrl+C 收尾：SIGINT 后落盘、删 run 记录、退出码 0、端口释放 |
 
 | [games/turncount/src/index.ts](file:///D:/agent_workspace/3178-battle-platform/games/turncount/src/index.ts) | 合成游戏 B：无游标 + 无隐私 |
 | [packages/protocol/test/protocol.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/protocol/test/protocol.test.mjs) | 协议与摘要测试 |
@@ -172,6 +175,8 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 - **底座体积**：`tabler.min.css` 635KB + 图标字体 520KB，从 `node_modules` 挂 `/vendor/` 同源路由（不复制进仓库）。R1 便携包要么带 `node_modules`，要么在打包脚本里预拷 `@tabler/core/dist/css` 与 `@tabler/icons-webfont/dist`。
 - **字体随包分发，许可文本不能丢**：`public/fonts/` 里的 Tektur、Outfit、Geist Mono 来自 `ui-styling` skill 的 `canvas-fonts/`，OFL 许可；打包（R1）时必须连 `.ttf` 带 `*-OFL.txt` 一起拷，测试里已经钉住"CSS 引用的字体文件必须存在于盘上"。没有中文字体随包（体积与授权都不划算），中文仍走系统黑体。
 - **`.bat` 的编码是硬约束，不是风格问题**：必须 UTF-8 无 BOM + CRLF + 第二行 `chcp 65001`，且中文只能出现在 chcp 之后。否则 cmd 按 cp936 解析 UTF-8 字节，第二个字节落进 GBK trail 区（里面有个 `|`），**中文会被拼成命令分隔符**——表现为平白一句"系统找不到指定的路径"加一行乱码。另一个坑：在 Git Bash 里用 `node -e '...'` 写批处理，argv 里的 `nul` 会被 MSYS 路径转换改成 `/dev/null`，直接写坏文件；所以走 `tools/gen-bat.mjs`，并由 [bat-entries.test.mjs](file:///D:/agent_workspace/3178-battle-platform/packages/hostd/test/bat-entries.test.mjs) 钉住这些不变式。
+- **`.bat` 只做启动器，不留在前台**：`start "标题" node …` 之后立刻 `exit /b 0`，所以双击的窗口一闪就没，进程跑在它自己的控制台窗口里。好处是 Ctrl+C 直接送给 node——落盘收尾后进程退出，窗口自己关，**不问"终止批处理操作吗(Y/N)"**（那句话只在批处理本身被 Ctrl+C 打断时出现）。代价是启动器拿不到 node 的退出码，环境缺失只靠那三条 `if not exist` 拦；失败分支特意留着 `pause`，双击的人看得见原因。
+- **"按下 Ctrl+C 会收尾"验证到哪一步**：收尾处理器本身有测试（在壳自己的进程里 `process.emit('SIGINT')`，走同一个监听器：落盘 → 删 run 记录 → 退出码 0 → 端口释放）。但**"Windows 把控制台里的 Ctrl+C 投递成 SIGINT"这一步没法从外部模拟**——本机既不能向别人的控制台发 CTRL_C_EVENT，MSYS 的 `kill -INT` 也只认自己生的进程。那一跳靠的是 Node/libuv 自身的控制台控制处理器（装了 Node 就一直如此工作），不是我写的代码。
 - **观感只能由你确认**：in-app Browser 无可见视口（`innerWidth` 报 0），我能证明"字体加载成功、规则命中、DOM 结构对了"，不能证明"好看"。
 - **游戏自带界面还没有**：模块下发通道（清单、CORS、哈希校验、blob 导入）已通，但两个合成游戏没有客户端入口，对局区目前走占位渲染（把房主发来的状态原样摊开 + 通用动作按钮）。真游戏的牌桌 UI 属于游戏侧工作。
 - **双击能建房，但还不是"发给朋友的那份包"**：R1 绿色便携包（官方 `node.exe` 随包走、对方不装 Node）没做。现在两台机器都要自己装 Node + `npm install` + `npm run build`。

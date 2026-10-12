@@ -19,6 +19,5 @@ if not exist packages\hostd\dist\cli.js (
   pause
   exit /b 1
 )
-echo 房主端启动中：本机 http://localhost:3000    Ctrl+C 结束对局并落盘
-node packages\hostd\dist\cli.js host --port 3000 %*
-pause
+start "3178 房主端" node packages\hostd\dist\cli.js host --port 3000 %*
+exit /b 0

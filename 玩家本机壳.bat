@@ -14,7 +14,8 @@ if not exist packages\hostd\dist\cli.js (
   pause
   exit /b 1
 )
-echo 本地壳启动中：http://127.0.0.1:3178    （Ctrl+C 退出）
+start "3178 本地壳" node packages\hostd\dist\cli.js join --port 3178 %*
+rem 给壳两秒起服务，再开浏览器（ping 当睡眠用，timeout 在输入被重定向时会失败）
+ping -n 3 127.0.0.1 >nul
 start "" http://127.0.0.1:3178/
-node packages\hostd\dist\cli.js join --port 3178 %*
-pause
+exit /b 0

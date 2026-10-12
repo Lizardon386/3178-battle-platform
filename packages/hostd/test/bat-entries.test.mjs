@@ -42,4 +42,10 @@ for (const name of bats) {
     assert.match(text, /where node/, '要先确认 node 在 PATH 里，否则用户只会看到一句天书');
     assert.match(text, /packages\\hostd\\dist\\cli\.js/, '要真的指向宿主壳入口');
   });
+
+  test(`${name}：只做启动器，最后一行必须 exit /b 0（不然后台跑着批处理，Ctrl+C 会问 Y/N）`, () => {
+    const lines = readFileSync(join(ROOT, name), 'utf8').split('\r\n').filter((l) => l.trim() !== '');
+    assert.equal(lines.at(-1), 'exit /b 0', '结尾不能是 pause：双击的人只是想关掉窗口');
+    assert.match(readFileSync(join(ROOT, name), 'utf8'), /start "[^"]+" node /, '要把 node 开进自己的控制台窗口');
+  });
 }

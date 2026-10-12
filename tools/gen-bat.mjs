@@ -1,8 +1,12 @@
 import { writeFileSync, readFileSync } from 'node:fs';
 
-// 生成两个双击入口。要点：UTF-8 无 BOM + CRLF + 第二行 chcp 65001，
-// 中文只允许出现在 chcp 之后——否则 cmd 按 cp936 解析 UTF-8 字节，
-// 第二个字节会落在 GBK trail 区（含 '|'），把命令行拼断。
+// 生成两个双击入口。两条硬规矩：
+//  1) UTF-8 无 BOM + CRLF + 第二行 chcp 65001，中文只允许出现在 chcp 之后——
+//     否则 cmd 按 cp936 解析 UTF-8 字节，第二个字节落在 GBK trail 区（含 '|'），把命令行拼断。
+//  2) 脚本只当"启动器"：用 start 把 node 开进它自己的控制台窗口，然后立刻 exit /b 0。
+//     这样 Ctrl+C 落在 node 那个窗口上——那里没有批处理在跑，cmd 不会再问
+//     "终止批处理操作吗(Y/N)?"，node 收尾退出后窗口自己关。
+//     失败分支仍然 pause，否则双击的人看不到错误原因。
 const NUL = '>nul';
 const HEAD = [
   '@echo off',
@@ -28,9 +32,8 @@ const HOST = [
   ...guard('缺依赖。先在这个目录跑一次：npm install'),
   'if not exist packages\\hostd\\dist\\cli.js (',
   ...guard('还没编译。先在这个目录跑一次：npm run build'),
-  'echo 房主端启动中：本机 http://localhost:3000    Ctrl+C 结束对局并落盘',
-  'node packages\\hostd\\dist\\cli.js host --port 3000 %*',
-  'pause',
+  'start "3178 房主端" node packages\\hostd\\dist\\cli.js host --port 3000 %*',
+  'exit /b 0',
   '',
 ].join('\r\n');
 
@@ -41,10 +44,11 @@ const JOIN = [
   ...guard('没找到 node。请先装 Node LTS，或用绿色便携包那份（R1 还在做）。'),
   'if not exist packages\\hostd\\dist\\cli.js (',
   ...guard('还没编译。先在这个目录跑一次：npm run build'),
-  'echo 本地壳启动中：http://127.0.0.1:3178    （Ctrl+C 退出）',
+  'start "3178 本地壳" node packages\\hostd\\dist\\cli.js join --port 3178 %*',
+  'rem 给壳两秒起服务，再开浏览器（ping 当睡眠用，timeout 在输入被重定向时会失败）',
+  `ping -n 3 127.0.0.1 ${NUL}`,
   'start "" http://127.0.0.1:3178/',
-  'node packages\\hostd\\dist\\cli.js join --port 3178 %*',
-  'pause',
+  'exit /b 0',
   '',
 ].join('\r\n');
 
