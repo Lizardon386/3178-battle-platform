@@ -200,6 +200,8 @@ body {
   font-size: 16px;
 }
 .form-select {
+  /* 静止态就给主题紫边（用户要求"下拉框也加同颜色紫边"），聚焦再亮一档 */
+  border-color: var(--bp-accent);
   /* 下拉标志自己画：appearance:none 之后原生箭头也没了，不补就等于"看不出能点"。
      用 sRGB 的 #8b8b9e 描边，不跟 Tabler 的 oklch 版本，省得依赖新语法。 */
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%238b8b9e' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
@@ -207,6 +209,9 @@ body {
   background-position: right 14px center;
   background-size: 14px 14px;
   padding-right: 42px;
+}
+.form-select:hover {
+  border-color: var(--bp-accent-hi);
 }
 /* 展开后的列表：option 不给背景色时，选中条会用系统那个浅灰，跟紫底完全不搭。 */
 option {
@@ -226,6 +231,56 @@ option:disabled {
   background-color: var(--bp-panel-alt);
   border-color: var(--bp-accent);
   box-shadow: none;
+  color: var(--bp-text);
+}
+/* 静止态已经是紫边了，聚焦就得再亮一档，否则"有没有聚焦"看不出来（写在上面那条之后才压得住） */
+.form-select:focus {
+  border-color: var(--bp-accent-hi);
+}
+
+/* ---------- 开关：Bootstrap 默认那枚太小，整块放大 ----------
+   旋钮必须自己画：框架那枚 SVG 是固定 1em，轨道放大后旋钮会缩在左边。
+   两态各一张图 + 换 background-position，才不会出现"开关变长但旋钮不动"。 */
+.form-switch {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 34px;
+  padding-left: 0;
+}
+.form-switch .form-check-input {
+  flex: none;
+  order: -1;
+  float: none;
+  width: 66px;
+  height: 34px;
+  margin: 0;
+  background-color: var(--bp-panel-alt);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3.2' fill='%235c5c72'/%3e%3c/svg%3e");
+  background-position: left 6px center;
+  background-size: 22px 22px;
+  background-repeat: no-repeat;
+  border: 1px solid var(--bp-line);
+  border-radius: 100px;
+  transition: background-color var(--bp-tap), border-color var(--bp-tap), background-position var(--bp-tap);
+}
+.form-switch .form-check-input:hover {
+  border-color: var(--bp-dim);
+}
+.form-switch .form-check-input:checked {
+  background-color: var(--bp-accent);
+  border-color: var(--bp-accent);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3.2' fill='%23ffffff'/%3e%3c/svg%3e");
+  background-position: right 6px center;
+}
+.form-switch .form-check-input:focus {
+  border-color: var(--bp-accent-hi);
+  box-shadow: none;
+}
+.form-switch .form-check-label {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 34px;
   color: var(--bp-text);
 }
 .bp-code-input { font: 700 22px/1 var(--bp-font-mono); letter-spacing: 0.42em; text-transform: uppercase; }

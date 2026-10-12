@@ -117,6 +117,26 @@ test('减动效偏好必须能关掉全部动画', () => {
   assert.match(block.slice(0, 200), /animation:\s*none\s*!important/);
 });
 
+test('开关要自己定尺寸，且选中时旋钮真的会移动', () => {
+  // 框架默认那枚开关很小，"做大一些"必须落到 width/height 上；
+  // 更阴的坑是只放大轨道不换 background-position——开关变长了旋钮却卡在左边。
+  const sw = cssCode.match(/(?:^|\n)\.form-switch \.form-check-input\s*\{([^}]*)\}/);
+  assert.ok(sw, '找不到 .form-switch .form-check-input 规则');
+  assert.match(sw[1], /width:\s*\d+px/, '开关轨道要显式给宽度');
+  assert.match(sw[1], /height:\s*\d+px/, '开关轨道要显式给高度');
+  assert.match(sw[1], /background-image:\s*url\(/, '旋钮得自己画：框架那枚是固定 1em，放大轨道后会缩在一边');
+  const on = cssCode.match(/\.form-switch \.form-check-input:checked\s*\{([^}]*)\}/);
+  assert.ok(on, '缺少选中态规则');
+  assert.match(on[1], /background-position:\s*right/, '选中态必须把旋钮移到右边，否则开关看着没反应');
+  assert.match(on[1], /background-image:\s*url\(/, '旋钮两态各要一张图（颜色不同）');
+});
+
+test('下拉框静止态就有紫边（不能只在聚焦时才有）', () => {
+  const sel = cssCode.match(/(?:^|\n)\.form-select\s*\{([^}]*)\}/);
+  assert.ok(sel, '找不到 .form-select 规则');
+  assert.match(sel[1], /border-color:\s*var\(--bp-accent/, '静止态就得是主题紫边');
+});
+
 test('下拉控件必须有箭头，且展开列表跟着主题色', () => {
   // 用户截图指出的两件事：① 看不出这是下拉（没标志）；② 点开是系统浅灰，跟紫底不搭。
   // ①的根因是我们用 background 简写把 Tabler 的 background-image 清成了 none，所以这里既查"有箭头"也查"没人再用简写"。
