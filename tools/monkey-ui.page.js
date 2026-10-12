@@ -119,6 +119,90 @@ async function bpUiMonkey(opts) {
     mouse('click');
   }
 
+  // ---- 两条通用规则：亮着的按钮点下去必须"有反应"，且不该被服务端拒绝 ----
+  // 这两条是用户连着三次点出同类 bug 之后加的：以前只查"界面有没有进入不可能的状态"，
+  // 没查"这一下点出去到底有没有效果"，所以「加电脑位」那种"不崩不抛、只是被拒"的漏了。
+  const AUDIT_ROOM = ['btn-ready', 'btn-reconnect', 'btn-start', 'btn-add-ai', 'btn-transfer', 'btn-kick'];
+  const AUDIT_LOBBY = ['btn-use-book', 'btn-forget'];
+  const REJECT_WORDS = ['加不了', '不能', '还没', '没有', '不允许', '已被', '满了', '不在', '过期', '不对', '失败', '先移交', '关掉'];
+
+  function observables(u) {
+    const d = u.doc;
+    const t = (id) => (d.getElementById(id)?.textContent || '').trim();
+    return {
+      status: t('lobby-status'),
+      // 房间界面里连接状态那一行是 connection-bar：它变了说明这一下确实动到了局面，算"有反应"
+      bar: t('connection-bar'),
+      head: (d.querySelector('.room-head')?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 300),
+      seats: [...d.querySelectorAll('.seat')].map((s) => s.className + '|' + s.textContent.replace(/\s+/g, ' ').trim()).join('~'),
+      chat: d.querySelectorAll('.chat-line').length,
+      cd: t('turn-countdown'),
+      btnState: [...d.querySelectorAll('button')].map((b) => `${b.id}${b.disabled ? 'D' : 'E'}${b.textContent.trim()}`).join('~'),
+      // 输入框的值与下拉的选项数也是"反应"：漏了它们会把 btn-use-book / btn-forget 误判成没反应
+      fields: [...d.querySelectorAll('input, textarea')]
+        .map((n) => `${n.id || n.name || '?'}=${n.type === 'checkbox' ? n.checked : n.value}`).join('~'),
+      selects: [...d.querySelectorAll('select')]
+        .map((s) => `${s.id}:${s.options.length}=${s.value}`).join('~'),
+    };
+  }
+
+  /** 点一个亮着的按钮，要求它至少改变一项可观察状态；只换来一句拒绝文案 = 这个按钮此刻不该亮。 */
+  async function auditButton(u, id) {
+    const b = u.doc.getElementById(id);
+    if (!b || b.disabled || !b.getClientRects().length) return null;
+    const before = observables(u);
+    // 先把两行提示都清空再点：否则上一轮留下的同一句话会让"其实有反馈"的点击被误判成没反应
+    for (const id of ['lobby-status', 'connection-bar']) {
+      const node = u.doc.getElementById(id);
+      if (node) node.textContent = '';
+    }
+    realClick(u, b);
+    await new Promise((r) => setTimeout(r, 480));
+    const after = observables(u);
+    const structural = after.seats !== before.seats || after.chat !== before.chat
+      || after.btnState !== before.btnState || after.cd !== before.cd || after.head !== before.head
+      || after.fields !== before.fields || after.selects !== before.selects || after.bar !== before.bar;
+    if (structural) return null;
+    if (after.status) {
+      if (REJECT_WORDS.some((word) => after.status.includes(word))) {
+        return { id, kind: '按钮亮着却被拒', why: `${after.status.slice(0, 70)}（点的时候：${after.selects.slice(0, 100)}）` };
+      }
+      return null; // 有反馈
+    }
+    return { id, kind: '点了没反应', why: `既没改变任何状态，也没留下一句话（点的时候：${JSON.stringify(after.selects).slice(0, 140)}｜按钮${b.disabled ? '灰' : '亮'}）` };
+  }
+
+  /** 静态合法性：下拉里一个都选不出来（空或只剩占位空值），旁边的按钮却还亮着。 */
+  function checkLegality(u) {
+    const d = u.doc;
+    const hits = [];
+    for (const [selId, btnId] of [
+      ['transfer-target', 'btn-transfer'],
+      ['kick-target', 'btn-kick'],
+      ['address-book', 'btn-use-book'],
+      ['address-book', 'btn-forget'],
+    ]) {
+      const s = d.getElementById(selId);
+      const b = d.getElementById(btnId);
+      if (!s || !b || !b.getClientRects().length) continue;
+      if ((!s.value || s.options.length === 0) && !b.disabled) {
+        hits.push({ id: btnId, kind: '没得选却可点', why: `${selId} 选不出值（${s.options.length} 项 / value=${JSON.stringify(s.value)}），${btnId} 还亮着` });
+      }
+    }
+    return hits;
+  }
+
+  async function sweep(u) {
+    const inRoom = !u.doc.getElementById('screen-room')?.classList.contains('hidden');
+    const hits = [];
+    for (const problem of checkLegality(u)) hits.push(problem);
+    for (const id of inRoom ? AUDIT_ROOM : AUDIT_LOBBY) {
+      const problem = await auditButton(u, id);
+      if (problem) hits.push(problem);
+    }
+    return hits;
+  }
+
   /**
    * 自包含探针：自己开一个下拉，再用真实鼠标序列点一个"和当前值不同"的选项。
    * 不能写成"正好有列表开着时才探"——列表绝大多数时间是关着的，那样探针等于没跑。
@@ -355,6 +439,12 @@ async function bpUiMonkey(opts) {
   await new Promise((r) => setTimeout(r, 1200));
   for (const u of frames) {
     check(u);
+    for (const e of u.errors.splice(0)) note('页面抛异常', u.id, e);
+  }
+  // 收尾做一次系统扫描：每个亮着的按钮都点一遍，查"有没有反应"
+  for (const u of frames) {
+    if (!u.doc || !u.win) continue;
+    for (const problem of await sweep(u)) note(problem.kind, u.id, `#${problem.id} ${problem.why}`);
     for (const e of u.errors.splice(0)) note('页面抛异常', u.id, e);
   }
 

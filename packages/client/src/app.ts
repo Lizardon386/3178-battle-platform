@@ -68,6 +68,10 @@ export class PlatformApp {
     this.bindUi();
     const nickField = el(this.doc, 'nick');
     if (nickField) (nickField as HTMLInputElement).value = this.nick.get();
+    // 地址簿是同源共享的：另一个标签页"忘掉"一条，本标签页的下拉里还留着那条假的，点下去只能说"不在了"。
+    // storage 事件只在**别的**文档写同一 key 时触发（自己写不触发），所以这里不会自己转圈；
+    // 不按 key 过滤是因为重建一次下拉本来就这么点成本，多一个魔法字符串反而多一处会过期的耦合。
+    this.doc.defaultView?.addEventListener('storage', () => this.renderAddressBook());
     void this.refreshLobbySources(invite);
     this.startRenderLoop();
     this.render();
@@ -242,9 +246,22 @@ export class PlatformApp {
 
   private gameActions(): GameActions {
     return {
-      send: (name, payload) => this.conn?.send({ type: 'gameAction', name, payload }),
+      send: (name, payload) => this.command({ type: 'gameAction', name, payload }),
       seatId: () => this.view.mySeatId,
     };
+  }
+
+  /**
+   * 房间里所有"改变局面"的命令都走这一条。
+   * 不直接 send 是因为链路断了时 conn 会把消息攒进待发队列，等重连成功那一刻突然生效——
+   * 玩家点了"开始对局"却什么都没发生，过一会儿对局自己开了。猴测就是在这个形状上抓到"点了没反应"的。
+   */
+  private command(message: ClientMessage): void {
+    if (!this.conn || this.connState.status !== 'open') {
+      this.setStatus('和房主的连接断了，这条没有发出去。先点「重新连接」，修好再点一次。');
+      return;
+    }
+    this.conn.send(message);
   }
 
   private leaveToLobby(): void {
@@ -299,36 +316,46 @@ export class PlatformApp {
 
     on('btn-ready', 'click', () => {
       const seat = mySeat(this.view);
-      this.conn?.send({ type: 'ready', ready: !(seat?.ready ?? false) });
+      this.command({ type: 'ready', ready: !(seat?.ready ?? false) });
     });
     on('btn-send', 'click', () => this.sendChat());
     on('btn-leave', 'click', () => {
       if (isHost(this.view)) return this.setStatus('你是房主：要么移交房主，要么关闭房间，不能直接走。');
-      this.conn?.send({ type: 'seatLeave' });
+      this.command({ type: 'seatLeave' });
       this.leaveToLobby();
     });
-    on('btn-start', 'click', () => this.conn?.send({ type: 'hostStart' }));
-    on('btn-close', 'click', () => this.conn?.send({ type: 'hostClose', reason: '房主关房' }));
+    on('btn-start', 'click', () => this.command({ type: 'hostStart' }));
+    on('btn-close', 'click', () => this.command({ type: 'hostClose', reason: '房主关房' }));
     on('btn-transfer', 'click', () => {
       const select = el(this.doc, 'transfer-target') as HTMLSelectElement | null;
-      if (select?.value) this.conn?.send({ type: 'hostTransfer', seatId: select.value });
+      if (select?.value) this.command({ type: 'hostTransfer', seatId: select.value });
     });
     on('btn-kick', 'click', () => {
       const select = el(this.doc, 'kick-target') as HTMLSelectElement | null;
-      if (select?.value) this.conn?.send({ type: 'hostKick', seatId: select.value });
+      if (select?.value) this.command({ type: 'hostKick', seatId: select.value });
     });
-    on('btn-add-ai', 'click', () => this.conn?.send({ type: 'hostSeat', op: 'addAi' }));
+    on('btn-add-ai', 'click', () => this.command({ type: 'hostSeat', op: 'addAi' }));
     on('btn-copy-invite', 'click', () => this.copyInvite());
-    on('btn-reconnect', 'click', () => this.conn?.retryNow());
+    on('btn-reconnect', 'click', () => {
+      // 猴测报"点了没反应"：它确实重连了，但界面一点反馈都没有，玩家以为按钮坏了
+      this.setStatus('正在重连房主…');
+      this.conn?.retryNow();
+    });
     on('btn-use-book', 'click', () => {
+      // 猴测报"点了没反应"：地址本来就和簿子里那条一样时，填完什么也没变，玩家看不出点没点上
       const select = el(this.doc, 'address-book') as HTMLSelectElement | null;
       if (!select?.value) return;
       const entry = this.book.list().find((e) => e.origin === select.value);
-      if (!entry) return;
+      if (!entry) {
+        this.setStatus('这条地址已经不在簿子里了');
+        this.renderAddressBook();
+        return;
+      }
       const address = el(this.doc, 'host-address') as HTMLInputElement | null;
       const code = el(this.doc, 'room-code') as HTMLInputElement | null;
       if (address) address.value = entry.origin;
       if (code && entry.lastCode) code.value = entry.lastCode;
+      this.setStatus(entry.lastCode ? `已填入 ${entry.origin} 和房号 ${entry.lastCode}` : `已填入 ${entry.origin}，这条没记房号`);
       return undefined;
     });
     on('btn-forget', 'click', () => this.forgetOrigin(value(el(this.doc, 'address-book'))));
@@ -396,13 +423,34 @@ export class PlatformApp {
     const inRoom = this.view.room !== null;
     el(this.doc, 'screen-lobby')?.classList.toggle('hidden', inRoom);
     el(this.doc, 'screen-room')?.classList.toggle('hidden', !inRoom);
-    if (!inRoom) return;
-    this.renderRoom();
-    this.renderChat();
-    this.renderHostPanel();
-    this.renderGame();
-    // 必须在重建选项之后同步：放开头会让自绘下拉的标签比 select 慢一帧（最长一个渲染周期是空的）
+    if (inRoom) {
+      this.renderRoom();
+      this.renderChat();
+      this.renderHostPanel();
+      this.renderGame();
+    }
+    // 这两个必须在重建选项之后跑，否则读到的是上一帧的候选数（自绘下拉就栽过这个顺序）
     this.listboxes.syncAll();
+    this.syncActionAvailability();
+  }
+
+  /**
+   * 每个动作按钮在渲染时都要问一句"此刻这个动作合法吗"，不合法就变灰。
+   * 猴测抓出来的三类死点击（加电脑位 / 移交 / 请出 / 用地址簿）全是这个形状：
+   * 不崩、不抛异常，只是点了被静默丢掉，玩家只能自己去猜。
+   */
+  private syncActionAvailability(): void {
+    const setDisabled = (id: string, blocked: boolean) => {
+      const node = el(this.doc, id) as HTMLButtonElement | null;
+      if (node) node.disabled = blocked;
+    };
+    // 统一按"这个下拉当下有没有可选中的值"判，而不是各查各的：
+    // 光看 options.length 会漏掉"只有占位空值"的情况，按钮亮着但点下去静默丢掉。
+    const hasTarget = (selectId: string) => Boolean((el(this.doc, selectId) as HTMLSelectElement | null)?.value);
+    setDisabled('btn-use-book', !hasTarget('address-book'));
+    setDisabled('btn-forget', !hasTarget('address-book'));
+    setDisabled('btn-transfer', !hasTarget('transfer-target'));
+    setDisabled('btn-kick', !hasTarget('kick-target'));
   }
 
   private renderRoom(): void {
@@ -562,6 +610,9 @@ export class PlatformApp {
         : entries.map((e) => this.option(e.origin, `${e.label} · ${e.origin}${e.lastCode ? ` · 上次房号 ${e.lastCode}` : ''}`))),
     );
     this.listboxes.syncAll();
+    // 这里不走 render()，所以要自己补一次可用性同步：地址簿一被换成"（还没有去过任何房主）"，
+    // 那两个按钮会停在上一帧的亮着状态——猴测的"点了没反应"就是这么来的。
+    this.syncActionAvailability();
   }
 
   private renderLanList(rooms: Array<{ code: string; name: string; gameName: string; occupied: number; seatSlots: number; lanUrl: string; hostName: string }>): void {

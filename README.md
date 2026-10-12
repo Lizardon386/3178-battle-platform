@@ -106,7 +106,7 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 
 完整字段与中文错误码文案在 [wire.ts](file:///D:/agent_workspace/3178-battle-platform/packages/protocol/src/wire.ts) 与 [codes.ts](file:///D:/agent_workspace/3178-battle-platform/packages/protocol/src/codes.ts)。
 
-### 已定语义（沿用上一轮拍板，未改）
+### 已定语义
 
 | 事项 | 结论 |
 |---|---|
@@ -119,6 +119,9 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 | 断线重连坐回原位 | 按**人正在待的那个房**的房号去翻本机票据（不是大厅的房号输入框——自己建房的人那格是空的），房主与玩家一视同仁。票据已作废时：清掉本机票据、摘掉席位行的"你"，并把你原本点的那一下（加入）补发出去，不静默吞掉 |
 | 加入方式 | 4 位房号（去掉易混字符）+ 房主地址；版本/房规不符报 `VERSION` / `RULES` 挡在门外 |
 | 房间列表 | 局域网组播实时列表（需本地壳）+ 地址簿 + 邀请链接；不做目录服务器 |
+| **链路断开时的房间命令**（本轮新增，猴测规则抓出来的） | 一律**本地拒绝并说清楚**："和房主的连接断了，这条没有发出去。先点「重新连接」，修好再点一次。" 不再悄悄塞进待发队列——否则玩家点的"开始对局"会在重连成功那一刻突然生效。待发队列只留给拨号中的握手（`roomJoin` / `seatResume`），那正是"断线重连坐回原位"需要的 |
+| **地址簿是同源共享的**（本轮新增） | 地址簿每次读都走共享存储，所以另一个标签页"忘掉"一条时，本标签页的下拉里可能还留着那条假的。两条一起治：收到 `storage` 事件就重建下拉；点了已经不在簿子里的旧条目不再静默，报"这条地址已经不在簿子里了"并当场重建 |
+| **"按钮亮着"就等于"这一下真有效果"**（本轮新增，定为规矩） | 房主面板与大厅里每个动作按钮在渲染时都要问一句"此刻这个动作合法吗"：`startBlockers`（人不够/有人没准备）、`aiFillBlocker`（游戏不支持电脑位/槽满）、下拉有没有可选值（`transfer-target` / `kick-target` / `address-book`）。不合法就变灰并把原因写进按钮文案，**绝不让玩家从提示里自己发现**。UI 猴测把这条当规则在扫（`tools/monkey-ui.page.js` 的 `auditButton` + `checkLegality`） |
 
 ## 产物与目录
 
@@ -130,9 +133,10 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 | [tsconfig.json](file:///D:/agent_workspace/3178-battle-platform/tsconfig.json) / [tsconfig.base.json](file:///D:/agent_workspace/3178-battle-platform/tsconfig.base.json) | 项目引用（`tsc -b`）与共享编译选项 |
 | [tools/check-seam.sh](file:///D:/agent_workspace/3178-battle-platform/tools/check-seam.sh) | 接缝闸门：平台包内不得出现玩法词或 `games/` import |
 | [tools/monkey.mjs](file:///D:/agent_workspace/3178-battle-platform/tools/monkey.mjs) | 协议层猴测：多开模拟用户随机发帧（含 6 类故意非法）+ 随机重启房主端，每帧跑 10 条不变式，违规带 seed 可复现 |
-| [tools/monkey-ui.page.js](file:///D:/agent_workspace/3178-battle-platform/tools/monkey-ui.page.js) | UI 层猴测脚本：真实页面里开同源 iframe 当并发真人，随机点击 + 6 条界面不变式（注入 `evaluate_script` 用） |
+| [tools/monkey-ui.page.js](file:///D:/agent_workspace/3178-battle-platform/tools/monkey-ui.page.js) | UI 层猴测脚本：真实页面里开同源 iframe 当并发真人，随机点击 + 6 条界面不变式，再加两条"死点击"规矩（`auditButton` 要求亮着的按钮点下去必须留下反应、`checkLegality` 要求下拉选不出值时旁边的按钮不许亮）（注入 `evaluate_script` 用） |
 | [tools/repro-persist.mjs](file:///D:/agent_workspace/3178-battle-platform/tools/repro-persist.mjs) | 量"建房成功 → 盘上出现房文件"的延迟，即硬杀会丢房的窗口 |
-| [dogfood-output/猴测报告.md](file:///D:/agent_workspace/3178-battle-platform/dogfood-output/猴测报告.md) | 探索性 QA 报告：5 条问题（2 High / 2 Medium / 1 观察项）、修法、实测证据与未覆盖范围 |
+| [tools/repro-resume.mjs](file:///D:/agent_workspace/3178-battle-platform/tools/repro-resume.mjs) | 房主+玩家同房 → 硬杀 → 各自拿真票据重连，最坏情况"加入后 0ms 就杀"，用来验"票据离开进程前座位必须已在盘上" |
+| [dogfood-output/猴测报告.md](file:///D:/agent_workspace/3178-battle-platform/dogfood-output/猴测报告.md) | 探索性 QA 报告：**10 条问题（4 High / 5 Medium / 1 Low）**、修法、实测证据、复跑计数、猴测器自己的 7 个缺陷与未覆盖范围 |
 | [packages/protocol/src/wire.ts](file:///D:/agent_workspace/3178-battle-platform/packages/protocol/src/wire.ts) | 消息目录与房主命令表（含中文说明的 `MESSAGE_CATALOG`） |
 | [packages/protocol/src/codes.ts](file:///D:/agent_workspace/3178-battle-platform/packages/protocol/src/codes.ts) | 平台错误码与通知码文案 |
 | [packages/protocol/src/hash.ts](file:///D:/agent_workspace/3178-battle-platform/packages/protocol/src/hash.ts) | 稳定摘要（房规/版本闸） |
