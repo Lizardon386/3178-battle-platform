@@ -1,10 +1,14 @@
 /* ==========================================================================
-   3178 对战平台 · 方向 C「成熟面板」扁平版
-   用户要求：不要动画、不要渐变，扁平；尺度大气；logo 是几何徽记不是色块塞字。
+   3178 对战平台 · 方向 C「成熟面板」· 紫底靛强调版
+   基调与动效照抄 https://apigoto.com 的实测值（不是凭印象）：
+     底色五阶 #0a0a0f / #111118 / #16161f / #1c1c28 / #23233a（近黑带紫），
+     强调 #6366f1（hover 抬到 #818cf8），紫 #8b5cf6、粉 #ec4899 各管一种席位，
+     语义色 绿 #22c55e / 琥珀 #f59e0b / 红 #ef4444。
+   动效尺度（用户点定"只放开 0.2s 过渡"）：参考站本身 0 个 @keyframes，
+   只有 0.2~0.3s 的 hover/focus 过渡 + 卡片 translateY(-2px)。所以这里：
+     有过渡、有浮起；无关键帧、无循环动画、无渐变、无发光（沿用上一轮扁平约定）。
    底座 @tabler/core（MIT，同源挂 /vendor/tabler/），本层只做三件事：
-     1) 覆盖 --tblr-* 变量，定一套纯色扁平调色板；
-     2) 关掉框架自带的动效（transition/animation 一律归零，含 Tabler 自己的）；
-     3) 补自己的席位名册、HUD 与尺度。
+     1) 覆盖 --tblr-* 变量；2) 把框架动效换成上面这套有界过渡；3) 补席位名册、HUD 与尺度。
    字体：Tektur（展示体）+ Outfit（拉丁正文）+ Geist Mono（数字与标签），
    全部 OFL、同源分发在 /fonts/，离线可用；中文走系统黑体。
    ========================================================================== */
@@ -53,29 +57,35 @@
 }
 
 :root {
-  /* 纯色扁平：一个强调 + 三个语义色，没有渐变、没有阴影、没有发光 */
-  --bp-bg: #0b1220;
-  --bp-panel: #131f2e;
-  --bp-panel-alt: #0e1826;
-  --bp-line: #263a51;
-  --bp-accent: #2f9bd8;
-  --bp-accent-dim: #1c6d9c;
-  --bp-ok: #35c17f;
-  --bp-warn: #e0a94b;
-  --bp-bad: #d9534a;
-  --bp-text: #e4edf7;
-  --bp-dim: #8ba3bd;
+  /* 近黑带紫五阶 + 一个靛紫强调 + 三个语义色；无渐变、无发光 */
+  --bp-bg: #0a0a0f;
+  --bp-panel: #16161f;
+  --bp-panel-alt: #111118;
+  --bp-raised: #1c1c28;
+  --bp-line: #23233a;
+  --bp-accent: #6366f1;
+  --bp-accent-hi: #818cf8;
+  --bp-accent-dim: #4f46e5;
+  --bp-violet: #8b5cf6;
+  --bp-magenta: #ec4899;
+  --bp-ok: #22c55e;
+  --bp-warn: #f59e0b;
+  --bp-bad: #ef4444;
+  --bp-text: #e8e8ed;
+  --bp-dim: #8b8b9e;
+  --bp-dim-2: #5c5c72;
 
-  --tblr-primary: #2f9bd8;
-  --tblr-body-bg: #0b1220;
-  --tblr-card-bg: #131f2e;
-  --tblr-body-color: #e4edf7;
-  --tblr-border-color: #263a51;
-  --tblr-secondary: #8ba3bd;
-  --tblr-success: #35c17f;
-  --tblr-danger: #d9534a;
-  --tblr-warning: #e0a94b;
-  --tblr-border-radius: 4px;
+  --tblr-primary: #6366f1;
+  --tblr-body-bg: #0a0a0f;
+  --tblr-card-bg: #16161f;
+  --tblr-body-color: #e8e8ed;
+  --tblr-border-color: #23233a;
+  --tblr-secondary: #8b8b9e;
+  --tblr-success: #22c55e;
+  --tblr-danger: #ef4444;
+  --tblr-warning: #f59e0b;
+  --tblr-link-color: #818cf8;
+  --tblr-border-radius: 6px;
   --tblr-font-sans-serif: "BP UI", "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
 
   --bp-font-display: "BP Display", "BP UI", sans-serif;
@@ -89,12 +99,25 @@
   --bp-row: 68px;
   --bp-control: 52px;
   --bp-pad: 28px;
+  /* 动效预算：全站只有这一档时长，最长 0.3 秒（style-hooks.test.mjs 会钉住） */
+  --bp-tap: 0.2s;
+  --bp-lift: 0.3s;
 }
 
-/* 扁平 = 全站零动效。Tabler 自带 transition，这里一次性压掉。 */
+/* 循环动画一律禁止（关键帧一个都不写）；过渡只给下面这些属性，别放开 all。 */
 *, *::before, *::after {
   animation: none !important;
-  transition: none !important;
+}
+.btn, .form-control, .form-select, .seat, .lan-room, .chat-line, .badge, .nav-link {
+  transition: background-color var(--bp-tap), border-color var(--bp-tap), color var(--bp-tap);
+}
+/* 卡片浮起是参考站同款：hover 换靛紫描边 + translateY(-2px) */
+.bp-panel, .room-head {
+  transition: border-color var(--bp-lift), transform var(--bp-lift), background-color var(--bp-lift);
+}
+.bp-panel:hover, .room-head:hover {
+  border-color: var(--bp-accent);
+  transform: translateY(-2px);
 }
 
 body {
@@ -193,18 +216,20 @@ body {
   border-color: var(--bp-line);
   color: var(--bp-text);
 }
-.btn:hover, .btn:focus { background: #16273a; border-color: var(--bp-accent); color: #fff; box-shadow: none; }
-.btn:disabled { background: var(--bp-panel-alt); border-color: var(--bp-line); color: #5c7186; opacity: 1; }
+.btn:hover, .btn:focus { background: var(--bp-raised); border-color: var(--bp-accent); color: var(--bp-text); box-shadow: none; }
+.btn:disabled { background: var(--bp-panel-alt); border-color: var(--bp-line); color: var(--bp-dim-2); opacity: 1; }
 .btn-lg { height: var(--bp-control); padding: 0 22px; font-size: 17px; }
 .btn-sm { height: 40px; padding: 0 14px; font-size: 14px; }
-.btn-primary, .btn-primary:disabled { background: var(--bp-accent); border-color: var(--bp-accent); color: #04131f; }
-.btn-primary:hover, .btn-primary:focus { background: var(--bp-accent-dim); border-color: var(--bp-accent-dim); color: #fff; }
+/* 白字压在 #6366f1 上是 4.47:1，差一点不到 AA（按钮字号不算"大字"）；参考站自己也没过。
+   所以静止态降一档到 #4f46e5，hover 才抬到参考站那个 #6366f1/#818cf8。 */
+.btn-primary, .btn-primary:disabled { background: var(--bp-accent-dim); border-color: var(--bp-accent-dim); color: #fff; }
+.btn-primary:hover, .btn-primary:focus { background: var(--bp-accent); border-color: var(--bp-accent); color: #fff; }
 .btn-outline-success { color: var(--bp-ok); border-color: var(--bp-ok); }
-.btn-outline-success:hover { background: var(--bp-ok); color: #04140c; }
+.btn-outline-success:hover { background: var(--bp-ok); color: var(--bp-bg); }
 .btn-outline-danger { color: var(--bp-bad); border-color: var(--bp-bad); }
-.btn-outline-danger:hover { background: var(--bp-bad); color: #1a0705; }
+.btn-outline-danger:hover { background: var(--bp-bad); color: var(--bp-bg); }
 .btn-ghost-danger { color: var(--bp-bad); border-color: transparent; background: transparent; }
-.btn-ghost-danger:hover { background: rgba(217, 83, 74, 0.14); border-color: var(--bp-bad); color: #ff8f87; }
+.btn-ghost-danger:hover { background: rgba(239, 68, 68, 0.14); border-color: var(--bp-bad); color: #fca5a5; }
 
 .bp-subtitle {
   margin: 0 0 12px;
@@ -213,7 +238,9 @@ body {
   color: var(--bp-dim);
 }
 .hint { margin: 14px 0 0; font-size: 13px; line-height: 1.7; color: var(--bp-dim); }
-.status { min-height: 26px; margin: 16px 0 0; font: 14px/1.6 var(--bp-font-mono); color: var(--bp-accent); }
+/* 状态行与房号铭牌是"必须读得清"的那两类字：实心 #6366f1 在 #16161f 上只有 3.6:1，
+   所以文字一律用抬亮一档的 --bp-accent-hi（≈5.2:1），实心靛紫留给描边与填充。 */
+.status { min-height: 26px; margin: 16px 0 0; font: 14px/1.6 var(--bp-font-mono); color: var(--bp-accent-hi); }
 .status:empty { display: none; }
 
 /* ---------- 房间内 HUD 头 ---------- */
@@ -233,7 +260,7 @@ body {
   margin-top: 8px;
   font: 500 var(--bp-code)/0.9 var(--bp-font-display);
   letter-spacing: 0.1em;
-  color: var(--bp-accent);
+  color: var(--bp-accent-hi);
   text-shadow: none;
 }
 .hud-code:empty { display: none; }
@@ -258,7 +285,7 @@ body {
   border-bottom: 1px solid var(--bp-line);
   border-left: 4px solid transparent;
 }
-.seat:hover { background: #17263a; }
+.seat:hover { background: var(--bp-raised); }
 .seat-icon { width: 22px; font-size: 18px; color: var(--bp-dim); text-align: center; }
 .seat-slot {
   display: grid;
@@ -275,12 +302,12 @@ body {
 .seat-state { font: 12px/1 var(--bp-font-mono); letter-spacing: 0.14em; color: var(--bp-dim); }
 /* 左轨优先级：身份（房主）> 状态（已准备）> 角色默认。靠特异度，不靠书写顺序。 */
 .seat-player { border-left-color: var(--bp-accent); }
-.seat-ai { border-left-color: var(--bp-dim); border-left-style: dashed; }
-.seat-spectator { border-left-color: #3c5f7d; }
+.seat-ai { border-left-color: var(--bp-violet); border-left-style: dashed; }
+.seat-spectator { border-left-color: var(--bp-magenta); }
 .seat.is-ready { border-left-color: var(--bp-ok); }
 .seat.is-ready .seat-state, .seat.is-ready .seat-icon { color: var(--bp-ok); }
-.seat.seat-host { border-left-color: var(--bp-warn); background: #17242f; }
-.seat.seat-host .seat-slot { color: #17110a; background: var(--bp-warn); border-color: var(--bp-warn); }
+.seat.seat-host { border-left-color: var(--bp-warn); background: var(--bp-raised); }
+.seat.seat-host .seat-slot { color: var(--bp-bg); background: var(--bp-warn); border-color: var(--bp-warn); }
 .seat.seat-host .seat-icon { color: var(--bp-warn); }
 .is-me { font-weight: 700; color: #fff; }
 .is-me .seat-name::after {
@@ -288,18 +315,18 @@ body {
   margin-left: 10px;
   padding: 2px 8px;
   font: 11px/1.4 var(--bp-font-mono);
-  color: #04131f;
-  background: var(--bp-accent);
-  border-radius: 3px;
+  color: var(--bp-bg);
+  background: var(--bp-accent-hi);
+  border-radius: 100px;
 }
 .is-offline { color: var(--bp-dim); }
 .is-offline .seat-state { color: var(--bp-bad); }
 .seat-empty {
   min-height: 58px;
-  color: #5c7186;
+  color: var(--bp-dim);
   background: var(--bp-panel-alt);
 }
-.seat-empty .seat-icon { color: #33485f; }
+.seat-empty .seat-icon { color: #4a4a63; }
 
 /* ---------- 聊天 ---------- */
 .chat-log {
@@ -313,7 +340,7 @@ body {
   line-height: 1.65;
   background: var(--bp-panel-alt);
 }
-.chat-line { padding: 6px 0; border-bottom: 1px dotted #21344a; word-break: break-word; }
+.chat-line { padding: 6px 0; border-bottom: 1px dotted var(--bp-line); word-break: break-word; }
 .chat-line:last-child { border-bottom: none; }
 .chat-say { color: var(--bp-text); }
 .chat-system { font: 13px/1.6 var(--bp-font-mono); color: var(--bp-dim); }
@@ -335,7 +362,7 @@ body {
   border-radius: 4px;
   color: var(--bp-text);
 }
-.lan-room:hover:not(:disabled) { background: #16273a; border-left-color: var(--bp-warn); }
+.lan-room:hover:not(:disabled) { background: var(--bp-raised); border-left-color: var(--bp-warn); }
 .lan-empty {
   padding: 16px 18px;
   font-size: 13.5px;
@@ -354,7 +381,7 @@ body {
   padding: 16px 18px;
   overflow: auto;
   font: 14px/1.65 var(--bp-font-mono);
-  color: #b6d6ee;
+  color: #c7c9e8;
   background: var(--bp-bg);
   border: 1px solid var(--bp-line);
   border-radius: 4px;
@@ -362,7 +389,7 @@ body {
 .placeholder-actions { display: flex; gap: 12px; margin-top: 16px; }
 .placeholder-actions button { min-width: 120px; }
 
-/* 扁平版不留任何关键帧；这条仍然保留，供将来引入动效时兜底。 */
+/* 仍然不写关键帧；这一条是给"只放开 0.2s 过渡"再往外扩时兜底的。 */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; }
 }

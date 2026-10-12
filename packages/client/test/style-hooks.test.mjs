@@ -88,13 +88,27 @@ test('字体必须同源分发，且 CSS 引用的文件真的在盘上', () => 
   assert.ok(/\.hidden\s*\{[^}]*display:\s*none\s*!important/.test(cssCode), 'app.ts 靠 .hidden 切屏，Bootstrap 5 不再提供这个类');
 });
 
-test('扁平版不许有渐变、关键帧动画和发光阴影', () => {
-  // 用户明确要求：不要动画与渐变。这三条是"扁平"的可验证定义，不是口味之争。
-  assert.equal(/gradient\(/i.test(cssCode), false, '出现渐变就不是扁平了');
-  assert.equal(/@keyframes/.test(cssCode), false, '主题层不该再有关键帧');
+test('紫底版仍然不许有渐变、关键帧动画和发光阴影', () => {
+  // 上一轮用户否掉渐变与动画；这一轮他给了参考站并只批"放开 0.2s 过渡"。
+  // 所以契约变成：允许短过渡，仍然无关键帧、无渐变、无发光。三条都是可判定的，不是口味之争。
+  assert.equal(/gradient\(/i.test(cssCode), false, '出现渐变就超出批准范围（参考站有渐变，但用户没批）');
+  assert.equal(/@keyframes/.test(cssCode), false, '参考站本身 0 个关键帧，我们也不写');
   assert.equal(/text-shadow:\s*[^n]/i.test(cssCode.replace(/text-shadow:\s*none/g, '')), false, '不要发光');
-  assert.match(cssCode, /\*,\s*\*::before,\s*\*::after\s*\{[^}]*animation:\s*none\s*!important/, '要把 Tabler 自带的动效一起压掉');
-  assert.match(cssCode, /animation:\s*none\s*!important;\s*transition:\s*none\s*!important/, '动画与过渡都要归零');
+  assert.equal(/box-shadow:\s*0 0 \d+/i.test(cssCode), false, '参考站的 hover 发光是 rgba(99,102,241,.15)，用户没批这一档');
+  assert.match(cssCode, /\*,\s*\*::before,\s*\*::after\s*\{[^}]*animation:\s*none\s*!important/, '要把 Tabler 自带的循环动画一起压掉');
+});
+
+test('过渡必须有界：最长 0.3 秒，且不许用 all', () => {
+  // 参考站实测只有 0.2s / 0.3s 两档。放成 all 或拉长到 1s 就不是"同款"而是另一套东西了。
+  const decls = [...cssCode.matchAll(/transition:\s*([^;]+);/g)].map((m) => m[1]);
+  assert.ok(decls.length >= 2, '至少要有控件与卡片两档过渡');
+  for (const d of decls) {
+    assert.equal(/\ball\b/.test(d), false, `不许 transition: all（会把框架的位移/缩放一起带进来）：${d}`);
+    for (const raw of [...d.matchAll(/(\d*\.?\d+)(ms|s)\b/g)]) {
+      const sec = raw[2] === 'ms' ? Number(raw[1]) / 1000 : Number(raw[1]);
+      assert.ok(sec <= 0.3, `过渡超过 0.3 秒：${d}`);
+    }
+  }
 });
 
 test('减动效偏好必须能关掉全部动画', () => {
