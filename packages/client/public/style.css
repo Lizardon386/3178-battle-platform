@@ -190,16 +190,40 @@ body {
   color: var(--bp-dim);
 }
 .form-control, .form-select {
-  background: var(--bp-panel-alt);
+  /* 只用 background-color：以前写的是 background 简写，会把 Tabler 给 select 的箭头
+     （--tblr-form-select-bg-img 那条 background-image）一起清成 none。 */
+  background-color: var(--bp-panel-alt);
   border: 1px solid var(--bp-line);
   border-radius: 4px;
   color: var(--bp-text);
   padding: 12px 14px;
   font-size: 16px;
 }
+.form-select {
+  /* 下拉标志自己画：appearance:none 之后原生箭头也没了，不补就等于"看不出能点"。
+     用 sRGB 的 #8b8b9e 描边，不跟 Tabler 的 oklch 版本，省得依赖新语法。 */
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%238b8b9e' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px 14px;
+  padding-right: 42px;
+}
+/* 展开后的列表：option 不给背景色时，选中条会用系统那个浅灰，跟紫底完全不搭。 */
+option {
+  background-color: var(--bp-panel);
+  color: var(--bp-text);
+}
+option:checked, option:focus {
+  background-color: var(--bp-accent-dim);
+  color: #fff;
+}
+option:disabled {
+  color: var(--bp-dim-2);
+}
 .form-control-lg, .form-select-lg { height: var(--bp-control); font-size: 17px; }
 .form-control:focus, .form-select:focus {
-  background: var(--bp-panel-alt);
+  /* 这里同样不能用 background 简写，否则一聚焦箭头又没了 */
+  background-color: var(--bp-panel-alt);
   border-color: var(--bp-accent);
   box-shadow: none;
   color: var(--bp-text);

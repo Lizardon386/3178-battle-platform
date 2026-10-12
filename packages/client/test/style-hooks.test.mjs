@@ -116,3 +116,22 @@ test('减动效偏好必须能关掉全部动画', () => {
   const block = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
   assert.match(block.slice(0, 200), /animation:\s*none\s*!important/);
 });
+
+test('下拉控件必须有箭头，且展开列表跟着主题色', () => {
+  // 用户截图指出的两件事：① 看不出这是下拉（没标志）；② 点开是系统浅灰，跟紫底不搭。
+  // ①的根因是我们用 background 简写把 Tabler 的 background-image 清成了 none，所以这里既查"有箭头"也查"没人再用简写"。
+  const selectRule = cssCode.match(/(?:^|\n)\.form-select\s*\{([^}]*)\}/);
+  assert.ok(selectRule, '找不到 .form-select 规则');
+  assert.match(selectRule[1], /background-image:\s*url\(/, '下拉标志没了：appearance:none 之后必须自己画箭头');
+  assert.match(selectRule[1], /background-position:\s*right/, '箭头要钉在右侧，否则和文字叠在一起');
+  assert.match(selectRule[1], /padding-right:\s*\d+px/, '要给箭头让出内边距');
+
+  for (const m of cssCode.matchAll(/\.[a-z-]*(form-control|form-select)[^{]*\{([^}]*)\}/gi)) {
+    assert.equal(/(^|[;\s])background:\s*[^-]/.test(m[2]), false, `${m[0].slice(0, 28)} 用了 background 简写，会把箭头清成 none`);
+  }
+
+  const optionRule = cssCode.match(/(?:^|[^-\w])option\s*\{([^}]*)\}/);
+  assert.ok(optionRule, '没给 option 上色，展开列表就会用系统浅灰');
+  assert.match(optionRule[1], /background-color:/, 'option 要有自己的底色');
+  assert.match(cssCode, /option:checked[^{]*\{[^}]*background-color:/, '选中条要跟着主题色，不然还是系统灰');
+});
