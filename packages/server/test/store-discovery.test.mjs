@@ -195,6 +195,31 @@ test('浏览端的过期表按注入时钟剔除', () => {
   assert.equal(browser.list().length, 0);
 });
 
+test('票据离开进程前，座位必须已经在盘上（挂 onTicketIssued，不手动同步）', () => {
+  // 只靠 250ms 轮询的话，"刚加入不到一个周期就被硬杀"会让恢复后的房里没有这个座位，
+  // 玩家拿真票据重连只能得到 NOSEAT（房还在、座位没了）。这条钉住那一次写盘是必须的。
+  const dir = storeDir();
+  const store = new HostStore(dir);
+  const engine = new Engine({ modules: [echoModule], onTicketIssued: () => engine.syncStore(store) });
+  const hostT = { sent: [], send(raw) { this.sent.push(JSON.parse(raw)); }, close() {} };
+  const guestT = { sent: [], send(raw) { this.sent.push(JSON.parse(raw)); }, close() {} };
+  const hostId = engine.openConn(hostT);
+  engine.publish(engine.dispatch(hostId, { type: 'hello', protocol: 1, nick: '房主', gameId: 'echo', version: echoModule.version }));
+  engine.publish(engine.dispatch(hostId, { type: 'roomCreate', gameId: 'echo', roomName: '票据前落盘', seatSlots: 2, config: {} }));
+  const code = hostT.sent.map((m) => m.code).find(Boolean);
+  assert.ok(existsSync(join(dir, `room-${code}.json`)), '房主拿到票据时，房里就该已经有它的座位文件');
+
+  const guestId = engine.openConn(guestT);
+  engine.publish(engine.dispatch(guestId, { type: 'hello', protocol: 1, nick: '客人', gameId: 'echo', version: echoModule.version }));
+  engine.publish(engine.dispatch(guestId, { type: 'roomJoin', code }));
+  const granted = guestT.sent.find((m) => m.type === 'seatGranted');
+  assert.ok(granted, '客人没坐上');
+  const onDisk = JSON.parse(readFileSync(join(dir, `room-${code}.json`), 'utf8'));
+  const seat = onDisk.room.seats.find((s) => s.seatId === granted.seatId);
+  assert.ok(seat, '客人拿到了票据，但盘上的房里没有他这个座位——重连必然 NOSEAT');
+  assert.ok(typeof seat.secretHash === 'string' && seat.secretHash.length > 8, '座位要带着票据摘要，重启后才验得回');
+});
+
 test('落盘跳过没变的房：所以同步可以跟着心跳勤调，而不把磁盘写爆', () => {
   const dir = storeDir();
   const { engine } = makeEngine();

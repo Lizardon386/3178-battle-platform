@@ -33,6 +33,13 @@ export interface EngineOptions {
   ttl?: Partial<TtlConfig>;
   ratePerSec?: number;
   burst?: number;
+  /**
+   * 即将给某个座位下发票据时调用（宿主壳用它立刻落盘）。
+   * 要守的不变式只有一句：**票据离开进程之前，存着它摘要的那个座位必须已经在盘上**。
+   * 否则"刚加入不到一个同步周期就被硬杀"会让恢复后的房里没有这个座位，
+   * 玩家拿真票据重连只能得到 NOSEAT（房还在、座位没了），比 NOROOM 更难解释。
+   */
+  onTicketIssued?: (code: string) => void;
 }
 
 /** 出站目标在创建时就解析成具体连接，避免"先清了会话再投递"把通知丢掉。 */
@@ -80,6 +87,8 @@ export class Engine {
   private readonly ttl: TtlConfig;
   private readonly ratePerSec: number;
   private readonly burst: number;
+  /** 见 EngineOptions.onTicketIssued。公开是为了让宿主壳在 store 建好之后再挂上。 */
+  onTicketIssued: ((code: string) => void) | null;
   /** 上次落盘的内容原文。用来跳过没变的房——这样同步可以很勤，而不会把磁盘写爆。 */
   private readonly lastSynced = new Map<string, string>();
 
@@ -88,6 +97,7 @@ export class Engine {
     this.rng = opts.random ?? Math.random;
     this.ttl = { ...DEFAULT_TTL, ...opts.ttl };
     this.ratePerSec = opts.ratePerSec ?? 20;
+    this.onTicketIssued = opts.onTicketIssued ?? null;
     this.burst = opts.burst ?? 40;
     this.registry = new RoomRegistry(this.clock);
     for (const module of opts.modules) {
@@ -400,6 +410,8 @@ export class Engine {
   }
 
   private granted(room: Room, seat: SeatRecord, ticket: string): Outbound {
+    // 先落盘再发票据：见 EngineOptions.onTicketIssued 的注释
+    this.onTicketIssued?.(room.code);
     return this.toSeat(room, seat.seatId, {
       type: 'seatGranted',
       code: room.code,

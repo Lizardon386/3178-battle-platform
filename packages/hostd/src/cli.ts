@@ -137,6 +137,8 @@ async function startShell(options: Options, role: 'host' | 'join'): Promise<void
   }
   const engine = new Engine({ modules });
   const store = new HostStore(join(ROOT, 'data'));
+  // 票据发出前先落盘：syncStore 会跳过内容没变的房，所以这一刀只在"有人入座/重连坐回"时真的写盘
+  engine.onTicketIssued = () => engine.syncStore(store);
   store.purgeOrphans();
   const restored = engine.restoreFrom(store.readAll().entries);
   const transport = new WsTransport(engine, {});

@@ -188,6 +188,37 @@ async function bpUiMonkey(opts) {
     if (cd && cd.textContent.trim() && !/^剩 \d+ 秒$/.test(cd.textContent.trim())) {
       note('倒计时文案不合格式', u.id, JSON.stringify(cd.textContent.trim().slice(0, 40)));
     }
+
+    // G "静默丢失"类：这些属性没了不会报错、也不会留痕，只有算一遍才发现（下拉箭头就是这么消失的）
+    const gcs = (n) => u.win.getComputedStyle(n);
+    for (const s of d.querySelectorAll('select.form-select')) {
+      if (gcs(s).backgroundImage === 'none') {
+        note('下拉箭头不见了', u.id, `#${s.id} 的 background-image 是 none（多半是哪里又用了 background 简写把它清了）`);
+      }
+    }
+    for (const s of d.querySelectorAll('.form-switch .form-check-input')) {
+      // Tabler 1.6 的旋钮是 ::before 伪元素画的，不是 input 的 background-image。
+      // 拿 background-image 判会得到 4050 条全响的假阳性——本轮就这么误报过一次。
+      const knob = u.win.getComputedStyle(s, '::before');
+      const kw = parseFloat(knob.width) || 0;
+      const kh = parseFloat(knob.height) || 0;
+      if (kw <= 0 || kh <= 0) {
+        note('开关旋钮不见了', u.id, `#${s.id} 的 ::before 尺寸 ${knob.width}×${knob.height}`);
+      } else if (knob.backgroundColor === 'rgba(0, 0, 0, 0)') {
+        note('开关旋钮是透明的', u.id, `#${s.id} 的 ::before background-color 透明`);
+      }
+    }
+    const gs = d.getElementById('game-select');
+    if (gs && gs.options.length) {
+      const picked = [...gs.options].find((o) => o.selected);
+      if (picked && gcs(picked).backgroundColor === 'rgba(0, 0, 0, 0)') {
+        note('选中项没上色，展开列表会落回系统灰', u.id, `#${gs.id} 选中项 background-color 透明`);
+      }
+    }
+    // H 横向溢出 = 布局被压坏（零视口时整页会挤成 8px 宽）
+    if (u.win.innerWidth > 600 && d.documentElement.scrollWidth > u.win.innerWidth + 4) {
+      note('页面横向溢出', u.id, `scrollWidth ${d.documentElement.scrollWidth} > 视口 ${u.win.innerWidth}`);
+    }
   }
 
   const t0 = Date.now();

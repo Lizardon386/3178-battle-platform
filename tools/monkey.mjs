@@ -127,14 +127,26 @@ class User {
   }
 
   connect() {
-    this.ws = new WebSocket(WS_URL, { maxPayload: 1 << 20 });
-    this.ws.on('open', () => {
+    // 先掐掉上一条：不关的话一个"用户"会同时挂好几条活连接抢同一个座位，
+    // 服务端要走完"旧连接关闭 → 座位归属判定"这套时序，台子却把它当一个人。
+    try {
+      this.ws?.close();
+    } catch {
+      /* 已经关了 */
+    }
+    const my = new WebSocket(WS_URL, { maxPayload: 1 << 20 });
+    this.ws = my;
+    my.on('open', () => {
+      if (this.ws !== my) return; // 已经换下一代连接了
       this.raw(
         { type: 'hello', protocol: 1, nick: this.nick, gameId: 'echo', version: '0.1.0' },
         'hello',
       );
     });
-    this.ws.on('message', (buf) => {
+    my.on('message', (buf) => {
+      // 分代守卫：旧连接的回信不能算到当前状态头上——否则重启前那发"假票据"的 NOSEAT
+      // 会晚到一步，正好落在真票据 resume 之后，被误判成"真票据被拒"。
+      if (this.ws !== my) return;
       let msg;
       try {
         msg = JSON.parse(buf.toString());
@@ -144,7 +156,7 @@ class User {
       }
       this.onFrame(msg);
     });
-    this.ws.on('error', () => { /* 断线由 restart 触发，忽略 */ });
+    my.on('error', () => { /* 断线由 restart 触发，忽略 */ });
   }
 
   raw(payload, label, intent = 'valid') {
