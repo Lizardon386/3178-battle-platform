@@ -68,8 +68,20 @@ before(async () => {
   }
 });
 
-after(() => {
-  child?.kill('SIGTERM');
+after(async () => {
+  if (!child) return;
+  const gone = new Promise((r) => child.once('close', r));
+  // Windows 上这是硬杀，不走信号处理器，于是 data/run-3212.json 会被留在盘上，
+  // diagnose 之后就一直谎报"在跑的壳"。测试自己收干净，残骸留给 stop 的专门用例去证明。
+  child.kill('SIGTERM');
+  await gone;
+  const stop = spawn(
+    process.execPath,
+    [join(ROOT, 'packages', 'hostd', 'dist', 'cli.js'), 'stop', '--port', String(PORT)],
+    { cwd: ROOT, stdio: 'ignore' },
+  );
+  await new Promise((r) => stop.once('close', r));
+  assert.equal(existsSync(join(ROOT, 'data', `run-${PORT}.json`)), false, 'stop 之后不该留这个端口的记录');
 });
 
 test('本地壳也带 WS 服务：hello 能拿到 welcome 与游戏清单', async () => {
