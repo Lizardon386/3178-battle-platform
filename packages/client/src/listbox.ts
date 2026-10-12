@@ -97,10 +97,9 @@ export class SelectListboxes {
 
     button.addEventListener('click', () => (bound.open ? this.close(bound) : this.open(bound)));
     button.addEventListener('keydown', (event) => this.onKey(bound, event));
-    button.addEventListener('blur', () => {
-      // 焦点跑出去了就收起：Esc 之外还要挡"Tab 走人但列表还挂着"
-      if (bound.open && !bound.root.contains(this.doc.activeElement)) this.close(bound);
-    });
+    // 故意不挂 blur→close：真实鼠标按在选项上时，焦点会先从按钮移走，blur 会在那一瞬间
+    // 把列表 display:none 掉，于是 mouseup 落在隐藏元素上，click 永远不会触发——选项点不动。
+    // 收起交给三条：点外面（下面的 pointerdown 捕获）、Esc、Tab（onKey 里按选中处理）。
     return bound;
   }
 

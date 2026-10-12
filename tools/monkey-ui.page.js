@@ -99,11 +99,99 @@ async function bpUiMonkey(opts) {
     return true;
   }
 
-  function act(u) {
+  /**
+   * 真实鼠标序列：pointerdown → mousedown →（焦点从原焦点元素移走）→ pointerup → mouseup → click。
+   * 只发 click 会漏掉一整类 bug：自绘下拉曾经挂 blur→close，真鼠标按在选项上时焦点先跑掉、
+   * 列表被 display:none，于是 click 根本不触发——合成 click 却"测试通过"。
+   */
+  function realClick(u, el) {
+    const w = u.win;
+    const prev = u.doc.activeElement;
+    const mouse = (type) => el.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, view: w }));
+    const pointer = (type) => el.dispatchEvent(new w.Event(type, { bubbles: true, cancelable: true }));
+    pointer(el, 'pointerover');
+    el.dispatchEvent(new w.MouseEvent('mousemove', { bubbles: true, view: w }));
+    pointer(el, 'pointerdown');
+    mouse('mousedown');
+    if (prev && prev !== el && typeof prev.blur === 'function') prev.blur();
+    pointer(el, 'pointerup');
+    mouse('mouseup');
+    mouse('click');
+  }
+
+  /**
+   * 自包含探针：自己开一个下拉，再用真实鼠标序列点一个"和当前值不同"的选项。
+   * 不能写成"正好有列表开着时才探"——列表绝大多数时间是关着的，那样探针等于没跑。
+   */
+  async function probeOptionClick(u) {
+    const selects = [...u.doc.querySelectorAll('select.form-select')].filter((s) => s.options.length >= 2);
+    if (selects.length === 0) return false;
+    const sel = pick(selects);
+    const box = sel.closest('.bp-listbox');
+    const listEl = box.querySelector('.bp-listbox-list');
+    const trigger = box.querySelector('.bp-listbox-trigger');
+    if (!listEl.classList.contains('hidden')) realClick(u, trigger); // 先关掉，保证状态已知
+    await new Promise((r) => setTimeout(r, 30));
+    realClick(u, trigger);
+    await new Promise((r) => setTimeout(r, 60));
+    if (listEl.classList.contains('hidden')) {
+      note('点开下拉失败', u.id, `#${sel.id} 真点触发器后列表仍是 hidden`);
+      return true;
+    }
+    const rows = [...listEl.querySelectorAll('.bp-listbox-option')];
+    const idx = rows.findIndex((r) => r.getAttribute('aria-selected') !== 'true' && !r.classList.contains('is-disabled'));
+    if (idx < 0) return true;
+    const target = rows[idx];
+    const want = sel.options[idx]?.value;
+    const before = sel.value;
+    const w = u.win;
+    const prev = u.doc.activeElement;
+    const mouse = (type) => target.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, view: w }));
+    const pointer = (type) => target.dispatchEvent(new w.Event(type, { bubbles: true, cancelable: true }));
+    pointer('pointerover');
+    target.dispatchEvent(new w.MouseEvent('mousemove', { bubbles: true, view: w }));
+    pointer('pointerdown');
+    mouse('mousedown');
+    // 必须**派发 blur 事件**而不是调 prev.blur()：未聚焦的文档里 .blur() 不会真的派发事件，
+    // 于是"按下瞬间焦点跑掉"这个真实条件在隐藏页里根本复现不出来（本轮在这里白测了三次）。
+    if (prev && prev !== target && prev !== u.doc.body) prev.dispatchEvent(new w.Event('blur'));
+    // 关键断言：真浏览器在元素被 display:none 之后就不会把 click 送给它，
+    // 而 dispatchEvent 是无条件送达的——所以只能在这里查"中途有没有被藏起来"。
+    if (listEl.classList.contains('hidden')) {
+      note('点选项时列表在 mousedown 与 mouseup 之间被藏起来', u.id, `#${sel.id} 真鼠标下 click 不会触发，选项点不动`);
+      return true;
+    }
+    pointer('pointerup');
+    mouse('mouseup');
+    mouse('click');
+    if (want && sel.value === before) {
+      note('自绘下拉点不动', u.id, `#${sel.id} 真点选项后 value 仍是 ${before}（期望 ${want}）`);
+    }
+    return true;
+  }
+
+  async function act(u) {
     const roll = rnd();
-    if (roll < 0.5) {
+    if (roll < 0.42) {
       click(u, pick(BUTTONS));
-    } else if (roll < 0.72) {
+    } else if (roll < 0.5) {
+      const t = u.doc.querySelector('.bp-listbox-trigger');
+      if (t) realClick(u, t);
+    } else if (roll < 0.58) {
+      // 真点一个选项并断言值被改掉；没有展开着的列表时改为开一个
+      if (!(await probeOptionClick(u))) {
+        const t = u.doc.querySelector('.bp-listbox-trigger');
+        if (t) realClick(u, t);
+      }
+    } else if (roll < 0.64) {
+      const t = u.doc.querySelector('.bp-listbox-trigger');
+      if (t) {
+        t.focus();
+        ['ArrowDown', 'ArrowUp', 'End', 'Home', 'Enter', 'Escape'].forEach((k) => {
+          t.dispatchEvent(new u.win.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+        });
+      }
+    } else if (roll < 0.78) {
       const id = pick(INPUTS);
       const n = u.doc.getElementById(id);
       if (n) {
@@ -251,7 +339,7 @@ async function bpUiMonkey(opts) {
     done++;
     prog();
     if (!u.doc || !u.win) continue;
-    act(u);
+    await act(u);
     await pace();
     check(u);
     if (u.errors.length) {

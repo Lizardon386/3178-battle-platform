@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -15,7 +16,21 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
  */
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-const PORT = 3477;
+
+/**
+ * 端口不能写死：上一次跑留下的壳如果还占着那个口，本次子进程会 EADDRINUSE 立刻退出，
+ * 于是这条测试在 400ms 内报"退出码不是 0"——看着像收尾坏了，其实是端口撞车。
+ */
+function freePort() {
+  return new Promise((res, rej) => {
+    const srv = createServer();
+    srv.once('error', rej);
+    srv.listen(0, '127.0.0.1', () => {
+      const port = srv.address().port;
+      srv.close(() => res(port));
+    });
+  });
+}
 
 async function waitHealth(port, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
@@ -32,6 +47,7 @@ async function waitHealth(port, timeoutMs) {
 }
 
 test('SIGINT 收尾：落盘、删掉 run 记录、退出码 0（窗口才会自己关）', async () => {
+  const PORT = await freePort();
   const runFile = join(ROOT, 'data', `run-${PORT}.json`);
   if (existsSync(runFile)) rmSync(runFile);
 
@@ -49,7 +65,7 @@ test('SIGINT 收尾：落盘、删掉 run 记录、退出码 0（窗口才会自
   child.stderr.on('data', (b) => (out += b.toString()));
 
   assert.ok(await waitHealth(PORT, 12_000), `壳没起来：${out}`);
-  assert.ok(existsSync(runFile), '起来后应该有 data/run-3477.json，否则收尾时无所谓删不删');
+  assert.ok(existsSync(runFile), `起来后应该有 data/run-${PORT}.json，否则收尾时无所谓删不删`);
 
   const exitCode = await new Promise((resolveExit) => {
     child.once('exit', (code) => resolveExit(code));

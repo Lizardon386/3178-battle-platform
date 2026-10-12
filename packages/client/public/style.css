@@ -62,6 +62,8 @@
   --bp-panel: #16161f;
   --bp-panel-alt: #111118;
   --bp-raised: #1c1c28;
+  /* 划过/键盘光标的底色：不能用 --bp-raised（#1c1c28 与弹层 #16161f 差得太小，肉眼看不出光标在动） */
+  --bp-hover: #2a2a42;
   --bp-line: #23233a;
   --bp-accent: #6366f1;
   --bp-accent-hi: #818cf8;
@@ -471,7 +473,11 @@ option:disabled {
   cursor: pointer;
   transition: background-color var(--bp-tap), color var(--bp-tap);
 }
-.bp-listbox-option:hover, .bp-listbox-option.is-active { background-color: var(--bp-raised); }
+.bp-listbox-option:hover, .bp-listbox-option.is-active { background-color: var(--bp-hover); }
+/* 选中行 + 同时划过：两层叠起来仍然看得出是不同含义 */
+.bp-listbox-option[aria-selected="true"]:hover, .bp-listbox-option[aria-selected="true"].is-active {
+  background-color: rgba(99, 102, 241, 0.28);
+}
 /* 选中行用参考站徽标那套半透明紫 + 亮紫字，比实心靛紫轻，也不会和划过条打成一坨 */
 .bp-listbox-option[aria-selected="true"] {
   background-color: rgba(99, 102, 241, 0.15);
