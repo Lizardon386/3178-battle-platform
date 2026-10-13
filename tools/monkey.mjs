@@ -8,7 +8,7 @@
  * 任何违规都会打印 seed + 那个用户的完整动作/帧轨迹，照 seed 重跑即可复现。
  */
 import { spawn } from 'node:child_process';
-import { readFileSync, existsSync, readdirSync, rmSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, rmSync, statSync, unlinkSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
@@ -28,6 +28,7 @@ const USERS = Number(arg('users', '6'));
 const STEPS = Number(arg('steps', '600'));
 const RESTARTS = Number(arg('restarts', '2'));
 const PORT = Number(arg('port', '3500'));
+const RUN_STARTED_AT = Date.now(); // 收尾只删这次运行写过的盘上文件，用户更早的房一个都不碰
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const WS_URL = `ws://127.0.0.1:${PORT}/ws`;
 
@@ -463,6 +464,21 @@ async function main() {
     }
   }
   await new Promise((r) => setTimeout(r, 300));
+
+  // 收尾把自己在盘上留的痕迹收掉（绿红两条路都要走到，所以放在打印结果之前）：
+  // 残留的 room-*.json 会被下一次启动的壳整批"恢复"出来，污染用户真实用过的目录；
+  // run-<port>.json 留着则让 diagnose 谎报"在跑的壳"。只删本次运行写过的。
+  for (const f of existsSync(dataDir) ? readdirSync(dataDir) : []) {
+    const p = join(dataDir, f);
+    const 是我这次造的 = f === `run-${PORT}.json` || (/^room-.*\.json$/.test(f) && statSync(p).mtimeMs >= RUN_STARTED_AT);
+    if (是我这次造的) {
+      try {
+        unlinkSync(p);
+      } catch {
+        /* 删不动就算了，别把跑测本身搞挂 */
+      }
+    }
+  }
 
   console.log(
     `\nseed=${SEED} users=${USERS} steps=${STEPS} 发${stats.sent}/收${stats.frames} 重启${stats.restarts} 重连入座${stats.resumes}`,
