@@ -153,14 +153,27 @@ async function startShell(options: Options, role: 'host' | 'join'): Promise<void
   announcer?.start();
 
   const host = role === 'host' ? '0.0.0.0' : '127.0.0.1';
-  await new Promise<void>((r) => server.listen(options.port, host, () => r()));
+  // 记录必须**在端口开始应答之前**写好：/health 一响应，`diagnose` 与 `stop` 就该看得见这个壳。
+  // 反过来（先听后写）会留一个窗口——health 已经 200、盘上还没有记录，`stop` 找不到它，
+  // 于是出现"没记录但活着"的遗留壳（本会话真遇到一个，只能靠 PID 收拾）；并行测试也撞过这个窗口。
+  const record: RunRecord = { mode: role, port: options.port, httpPid: process.pid, tunnelPid: null, startedAt: Date.now() };
+  writeRun(record);
+  try {
+    await new Promise<void>((resolveListen, rejectListen) => {
+      server.once('error', rejectListen);
+      server.listen(options.port, host, () => resolveListen());
+    });
+  } catch (error) {
+    removeRun(options.port); // 端口没起来就别留记录，否则 diagnose 会谎报"在跑的壳"
+    throw error;
+  }
   const tunnel = options.tunnel ? await startTunnel(options.port, (line) => console.log(`  tunnel| ${line}`)) : null;
+  if (tunnel) writeRun({ ...record, tunnelPid: tunnel.pid });
 
   const tick = setInterval(() => transport.tick(), 250);
   // 落盘跟着心跳走：syncStore 会跳过内容没变的房，所以勤调不写爆磁盘。
   // 差的就是"刚建房就被硬杀（点控制台 X 就是 TerminateProcess）"那一段——那时朋友已经拿到邀请链接了。
   const sync = setInterval(() => engine.syncStore(store), 250);
-  writeRun({ mode: role, port: options.port, httpPid: process.pid, tunnelPid: tunnel?.pid ?? null, startedAt: Date.now() });
 
   const lines = role === 'host'
     ? [

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -46,6 +46,42 @@ async function waitHealth(port, timeoutMs) {
   return false;
 }
 
+/**
+ * 等到 /health 应答，并在**应答的那一刻**同步检查 run 记录在不在。
+ * 注意这条只能证明"health 应答之后记录总得在"这个**终态**：先听后写留下的窗口只有微秒级，
+ * 60ms 的轮询基本撞不进去（把 dist 改回旧顺序，这条照样通过，实测过）。
+ * 真正的**顺序**由下面那条源码守卫钉住，别把这条当顺序证明。
+ */
+async function waitHealthWithRunRecord(port, runFile, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(400) });
+      if (res.ok) return existsSync(runFile);
+    } catch {
+      // 还没起，继续等
+    }
+    await new Promise((r) => setTimeout(r, 60));
+  }
+  return null;
+}
+
+/**
+ * 顺序守卫（确定性）：壳必须**先写 run 记录、再 listen**，且 listen 失败时把记录收回去。
+ * 为什么用读源码而不是跑时序：那个窗口是微秒级，靠赛跑抓不住（试过，改回旧顺序这条测试仍绿）。
+ * 顺序错了的实际代价：/health 已经应答、盘上却还没有记录，此时 `stop`/`diagnose` 看不见这个壳
+ * ——本会话真遇到一个"没记录但活着"的遗留壳，只能靠 PID 收拾。
+ */
+test('启动顺序：先写 run 记录再 listen，listen 失败要收回记录', () => {
+  const src = readFileSync(join(ROOT, 'packages/hostd/src/cli.ts'), 'utf8');
+  const shell = src.slice(src.indexOf('async function startShell'));
+  const write = shell.indexOf('writeRun(record)');
+  const listen = shell.indexOf('server.listen(options.port');
+  assert.ok(write > 0 && listen > 0, `没找到 writeRun/listen（write=${write} listen=${listen}），这条守卫要跟着源码改名`);
+  assert.ok(write < listen, 'run 记录必须在 server.listen 之前写好，否则 health 应答与记录落盘之间有个看不见的窗口');
+  assert.ok(shell.indexOf('removeRun(options.port)') > listen, 'listen 失败必须删掉刚写的记录，别让 diagnose 谎报"在跑的壳"');
+});
+
 test('SIGINT 收尾：落盘、删掉 run 记录、退出码 0（窗口才会自己关）', async () => {
   const PORT = await freePort();
   const runFile = join(ROOT, 'data', `run-${PORT}.json`);
@@ -64,8 +100,9 @@ test('SIGINT 收尾：落盘、删掉 run 记录、退出码 0（窗口才会自
   child.stdout.on('data', (b) => (out += b.toString()));
   child.stderr.on('data', (b) => (out += b.toString()));
 
-  assert.ok(await waitHealth(PORT, 12_000), `壳没起来：${out}`);
-  assert.ok(existsSync(runFile), `起来后应该有 data/run-${PORT}.json，否则收尾时无所谓删不删`);
+  const 应答时记录在不在 = await waitHealthWithRunRecord(PORT, runFile, 12_000);
+  assert.notEqual(应答时记录在不在, null, `壳没起来：${out}`);
+  assert.equal(应答时记录在不在, true, `health 应答的那一刻 data/run-${PORT}.json 就该已经在盘上（先写记录再 listen），否则收尾时无所谓删不删`);
 
   const exitCode = await new Promise((resolveExit) => {
     child.once('exit', (code) => resolveExit(code));

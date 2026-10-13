@@ -75,6 +75,9 @@
   --bp-bad: #ef4444;
   --bp-text: #e8e8ed;
   --bp-dim: #8b8b9e;
+  /* 小字（标签/说明/副标题）专用：#8b8b9e 在 #16161f 上是 5.38:1，抬亮这一档到 6.68:1，
+     字号再小也还读得清。实心靛紫仍然只给描边与填充。 */
+  --bp-dim-hi: #9c9cb2;
   --bp-dim-2: #5c5c72;
 
   --tblr-primary: #6366f1;
@@ -91,7 +94,10 @@
   --tblr-font-sans-serif: "BP UI", "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
 
   --bp-font-display: "BP Display", "BP UI", sans-serif;
-  --bp-font-mono: "BP Mono", Consolas, monospace;
+  /* 中文必须有明确的黑体回退：BP Mono(Geist Mono) 与 Consolas 都**没有中文字形**，
+     原来只写到 monospace 为止，中文就掉进系统对 generic monospace 的默认中文字体
+     （Windows 上一般是中易宋体），小字号又瘦又散。补一档 UI 黑体，拉丁与数字仍走 Geist Mono。 */
+  --bp-font-mono: "BP Mono", Consolas, "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", monospace;
 
   /* 尺度：大气一档，别缩着 */
   --bp-step: 16.5px;
@@ -147,12 +153,12 @@ body {
   color: var(--bp-text);
 }
 .brand-text small {
-  font: 12px/1.4 var(--bp-font-mono);
-  letter-spacing: 0.16em;
-  color: var(--bp-dim);
+  font: 13px/1.4 var(--bp-font-mono);
+  letter-spacing: 0.18em;
+  color: var(--bp-dim-hi);
 }
 .nick-field { display: flex; align-items: center; gap: 12px; }
-.nick-field .form-label { margin: 0; font-size: 12px; letter-spacing: 0.2em; color: var(--bp-dim); }
+.nick-field .form-label { margin: 0; font-size: 13.5px; letter-spacing: 0.08em; color: var(--bp-dim-hi); }
 .nick-field .form-control { width: 220px; }
 
 /* ---------- 卡片：纯色 + 1px 描边，无阴影 ---------- */
@@ -191,10 +197,15 @@ body {
 /* ---------- 表单与按钮：纯色块 ---------- */
 .form-label {
   margin-bottom: 8px;
-  font: 12px/1.4 var(--bp-font-mono);
-  letter-spacing: 0.2em;
-  color: var(--bp-dim);
+  font: 13.5px/1.4 var(--bp-font-mono);
+  letter-spacing: 0.08em;
+  color: var(--bp-dim-hi);
 }
+/* 开关：高度 20px 与旋钮 15px 都不动，只把轨道加长（用户："大小不变，长度稍微长一些"）。
+   Tabler 的旋钮是按 inset-inline-start: calc(100% − 旋钮 − 偏移) 定位的，所以轨道一加长白点自动走到位，
+   不用手写位移；但标签的留白要一起加——原来是 32px 轨道 + 8px 间隙 = 40px，只改宽度会让白点压住文字。 */
+.form-switch { padding-inline-start: 52px; }
+.form-switch .form-check-input { width: 44px; margin-inline-start: -52px; }
 .form-control, .form-select {
   /* 只用 background-color：以前写的是 background 简写，会把 Tabler 给 select 的箭头
      （--tblr-form-select-bg-img 那条 background-image）一起清成 none。 */
@@ -263,14 +274,14 @@ option:disabled {
 
 .bp-subtitle {
   margin: 0 0 12px;
-  font: 12px/1.4 var(--bp-font-mono);
-  letter-spacing: 0.2em;
-  color: var(--bp-dim);
+  font: 13.5px/1.4 var(--bp-font-mono);
+  letter-spacing: 0.08em;
+  color: var(--bp-dim-hi);
 }
-.hint { margin: 14px 0 0; font-size: 13px; line-height: 1.7; color: var(--bp-dim); }
-/* 状态行与房号铭牌是"必须读得清"的那两类字：实心 #6366f1 在 #16161f 上只有 3.6:1，
-   所以文字一律用抬亮一档的 --bp-accent-hi（≈5.2:1），实心靛紫留给描边与填充。 */
-.status { min-height: 26px; margin: 16px 0 0; font: 14px/1.6 var(--bp-font-mono); color: var(--bp-accent-hi); }
+.hint { margin: 14px 0 0; font-size: 14.5px; line-height: 1.75; color: var(--bp-dim-hi); }
+/* 状态行与房号铭牌是"必须读得清"的那两类字：实心 #6366f1 在 #16161f 上只有 4.02:1，
+   所以文字一律用抬亮一档的 --bp-accent-hi（实测 6.02:1），实心靛紫留给描边与填充。 */
+.status { min-height: 26px; margin: 16px 0 0; font: 15px/1.6 var(--bp-font-mono); color: var(--bp-accent-hi); }
 .status:empty { display: none; }
 
 /* ---------- 房间内 HUD 头 ---------- */
@@ -398,9 +409,9 @@ option:disabled {
 .lan-room:hover:not(:disabled) { background: var(--bp-raised); border-left-color: var(--bp-warn); }
 .lan-empty {
   padding: 16px 18px;
-  font-size: 13.5px;
-  line-height: 1.7;
-  color: var(--bp-dim);
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--bp-dim-hi);
   background: var(--bp-panel-alt);
   border: 1px dashed var(--bp-line);
   border-radius: 4px;
