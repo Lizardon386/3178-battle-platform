@@ -128,8 +128,13 @@ export class SelectListboxes {
       });
       b.list.replaceChildren(...nodes);
     }
-    const selected = rows.findIndex((r) => r.value === b.select.value);
+    // 占位说明行（value 为空且 disabled）不算"选中"：否则它会吃到选中行那层半透明紫，
+    // 一格"没得选"的理由看起来就像"已经选好了某个候选"。
+    const selected = rows.findIndex((r) => r.value === b.select.value && !r.disabled);
     b.labelNode.textContent = selected >= 0 ? rows[selected]?.label ?? '' : rows[0]?.label ?? '';
+    // 整格里只剩不可选项（"房里没有别人"这类占位）时给按钮一个标记：
+    // 那行字是说明，不是候选，别让它看起来像"已经选中了什么"。
+    b.button.classList.toggle('is-placeholder', rows.length > 0 && rows.every((r) => r.disabled));
     [...b.list.children].forEach((node, index) => {
       const li = node as HTMLElement;
       li.setAttribute('aria-selected', String(index === selected));
@@ -140,7 +145,9 @@ export class SelectListboxes {
   private open(b: Bound): void {
     this.closeOthers(b);
     b.open = true;
-    b.active = Math.max(0, b.rows.findIndex((r) => r.value === b.select.value));
+    // 键盘光标落在"第一个能选的"那行；整格都是占位说明时不设光标（-1）
+    const current = b.rows.findIndex((r) => r.value === b.select.value && !r.disabled);
+    b.active = current >= 0 ? current : b.rows.findIndex((r) => !r.disabled);
     b.list.classList.remove('hidden');
     b.button.setAttribute('aria-expanded', 'true');
     b.button.focus();

@@ -146,6 +146,25 @@ export function aiFillBlocker(state: ViewModel): string | null {
   return null;
 }
 
+/** 移交/请出下拉的候选名单。app.ts 重建选项与下面的"为什么是空的"共用这一条判断，免得两处规则飘掉。 */
+export function seatPickerCandidates(state: ViewModel, kind: 'transfer' | 'kick'): SeatView[] {
+  return state.seats.filter((s) => s.seatId !== state.mySeatId && (kind === 'kick' ? s.role !== 'host' : s.role === 'player'));
+}
+
+/**
+ * 名单空着时格子里要写清为什么没有。留白就是让玩家自己猜——这条是"亮着的按钮必须有效果"那套规矩的延伸：
+ * 空下拉本来就会被置灰、旁边的按钮也被挡住，唯独看不出"为什么没得选"。
+ */
+export function seatPickerBlocker(state: ViewModel, kind: 'transfer' | 'kick'): string | null {
+  if (seatPickerCandidates(state, kind).length > 0) return null;
+  const others = state.seats.filter((s) => s.seatId !== state.mySeatId);
+  if (others.length === 0) return '房里没有别人';
+  if (kind === 'transfer') {
+    return others.every((s) => s.role === 'ai') ? '无法移交电脑位' : '没有可移交的真人玩家（电脑位和观战位都不算）';
+  }
+  return '没有可请出的座位';
+}
+
 /** 房主面板的"开局"按钮要不要亮：还要看谁没准备。 */
 export function startBlockers(state: ViewModel): { ok: boolean; unready: string[]; tooFew: boolean } {
   const unready = state.seats

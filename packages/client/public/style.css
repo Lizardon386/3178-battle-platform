@@ -489,7 +489,8 @@ option:disabled {
   cursor: pointer;
   transition: background-color var(--bp-tap), color var(--bp-tap);
 }
-.bp-listbox-option:hover, .bp-listbox-option.is-active { background-color: var(--bp-hover); }
+/* 占位那行（"房里没有别人"这类说明）划过/键盘高亮都不该亮起来——亮了就像"可以选它" */
+.bp-listbox-option:hover:not(.is-disabled), .bp-listbox-option.is-active:not(.is-disabled) { background-color: var(--bp-hover); }
 /* 选中行 + 同时划过：两层叠起来仍然看得出是不同含义 */
 .bp-listbox-option[aria-selected="true"]:hover, .bp-listbox-option[aria-selected="true"].is-active {
   background-color: rgba(99, 102, 241, 0.28);
@@ -503,6 +504,9 @@ option:disabled {
   color: var(--bp-dim-2);
   cursor: not-allowed;
 }
+/* 整格只剩占位说明时，把触发器也置灰：那行字不是"已选中的候选" */
+.bp-listbox-trigger.is-placeholder { color: var(--bp-dim-2); cursor: not-allowed; }
+.bp-listbox-trigger.is-placeholder .bp-listbox-caret { opacity: 0.5; }
 
 /* 仍然不写关键帧；这一条是给"只放开 0.2s 过渡"再往外扩时兜底的。 */
 @media (prefers-reduced-motion: reduce) {

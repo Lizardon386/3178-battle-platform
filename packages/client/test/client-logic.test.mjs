@@ -14,6 +14,8 @@ import {
   inviteLink,
   resumeCodeFor,
   aiFillBlocker,
+  seatPickerCandidates,
+  seatPickerBlocker,
 } from '@bp/client/view-model.js';
 import { PlatformConnection } from '@bp/client/connection.js';
 import { nextIndex, rowsOf, signatureOf } from '@bp/client/listbox.js';
@@ -401,4 +403,43 @@ test('"加电脑位"不亮时必须给原因：游戏不支持填充 vs 槽位�
   const ok = { ...emptyViewModel(), manifest: { soloFill: true }, room: { occupied: 1, seatSlots: 4 } };
   assert.equal(aiFillBlocker(ok), null, '能加的时候不许挡人');
   assert.equal(aiFillBlocker(emptyViewModel()), null, '还没进房时不该凭空报原因');
+});
+
+test('移交/请出的候选名单：自己永远不算，移交只认真人，请出连电脑位和观战都能请', () => {
+  const view = {
+    ...emptyViewModel(),
+    mySeatId: 'h1',
+    seats: [
+      seat({ seatId: 'h1', slot: 1, name: '我', role: 'host' }),
+      seat({ seatId: 'p1', slot: 2, name: '客人' }),
+      seat({ seatId: 'a1', slot: 3, name: '电脑', role: 'ai' }),
+      seat({ seatId: 's1', slot: 4, name: '看客', role: 'spectator' }),
+    ],
+  };
+  assert.deepEqual(seatPickerCandidates(view, 'transfer').map((s) => s.seatId), ['p1'], '移交只列真人玩家');
+  assert.deepEqual(seatPickerCandidates(view, 'kick').map((s) => s.seatId), ['p1', 'a1', 's1'], '请出列除房主外的所有座位');
+  assert.equal(seatPickerBlocker(view, 'transfer'), null, '有可移交的人时不该报原因');
+  assert.equal(seatPickerBlocker(view, 'kick'), null);
+});
+
+test('下拉空着要写清为什么空着，而不是留一个白格子', () => {
+  const me = seat({ seatId: 'h1', slot: 1, name: '我', role: 'host' });
+  const alone = { ...emptyViewModel(), mySeatId: 'h1', seats: [me] };
+  assert.equal(seatPickerBlocker(alone, 'transfer'), '房里没有别人');
+  assert.equal(seatPickerBlocker(alone, 'kick'), '房里没有别人');
+
+  const withAi = { ...emptyViewModel(), mySeatId: 'h1', seats: [me, seat({ seatId: 'a1', slot: 2, name: '电脑', role: 'ai' })] };
+  assert.equal(seatPickerBlocker(withAi, 'transfer'), '无法移交电脑位', '用户点名要的那句');
+  assert.equal(seatPickerBlocker(withAi, 'kick'), null, '电脑位是可以请出的');
+
+  const withSpectator = { ...emptyViewModel(), mySeatId: 'h1', seats: [me, seat({ seatId: 's1', slot: 2, name: '看客', role: 'spectator' })] };
+  assert.equal(seatPickerBlocker(withSpectator, 'transfer'), '没有可移交的真人玩家（电脑位和观战位都不算）', '只剩观战时不该说"无法移交电脑位"');
+  assert.equal(seatPickerBlocker(withSpectator, 'kick'), null, '观战也可以请出');
+
+  const mixed = {
+    ...emptyViewModel(),
+    mySeatId: 'h1',
+    seats: [me, seat({ seatId: 'a1', slot: 2, name: '电脑', role: 'ai' }), seat({ seatId: 's1', slot: 3, name: '看客', role: 'spectator' })],
+  };
+  assert.match(seatPickerBlocker(mixed, 'transfer'), /没有可移交的真人玩家/);
 });

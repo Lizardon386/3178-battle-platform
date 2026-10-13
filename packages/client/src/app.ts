@@ -4,7 +4,7 @@ import { PlatformConnection, browserSocketFactory, type ConnectionHandlers, type
 import { AddressBook, NickName, SessionVault, type KeyValueStore, type SessionRecord } from './local-store.js';
 import { ServerClock } from './clock.js';
 import { parseHostAddress, parseInviteLink, wouldBeBlocked, type Endpoint } from './endpoint.js';
-import { aiFillBlocker, emptyViewModel, inviteLink, isHost, mySeat, reduce, resumeCodeFor, seatLabel, startBlockers, emptySlots, type ViewModel } from './view-model.js';
+import { aiFillBlocker, emptyViewModel, inviteLink, isHost, mySeat, reduce, resumeCodeFor, seatLabel, seatPickerBlocker, seatPickerCandidates, startBlockers, emptySlots, type ViewModel } from './view-model.js';
 import { fetchGameList, loadGameClient, placeholderClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
 import { SelectListboxes } from './listbox.js';
 
@@ -578,10 +578,11 @@ export class PlatformApp {
       const label = [...aiButton.childNodes].find((n) => n.nodeType === 3);
       if (label) label.nodeValue = blocker ?? '加一个电脑位';
     }
-    for (const id of ['transfer-target', 'kick-target']) {
+    for (const [id, kind] of [['transfer-target', 'transfer'], ['kick-target', 'kick']] as const) {
       const select = el(this.doc, id) as HTMLSelectElement | null;
       if (!select) continue;
-      const candidates = this.view.seats.filter((s) => s.seatId !== this.view.mySeatId && (id === 'kick-target' ? s.role !== 'host' : s.role === 'player'));
+      const candidates = seatPickerCandidates(this.view, kind);
+      const blocker = seatPickerBlocker(this.view, kind);
       const previous = select.value;
       select.replaceChildren(
         ...candidates.map((s) => {
@@ -590,6 +591,9 @@ export class PlatformApp {
           option.textContent = `${s.slot} 号 · ${s.name}`;
           return option;
         }),
+        // 没得选的时候别留白：把原因当成一条不可选的占位项放进格子里。
+        // value 是空串，所以 syncActionAvailability 依旧会把旁边的按钮挡住。
+        ...(blocker ? [this.placeholderOption(blocker)] : []),
       );
       if (candidates.some((s) => s.seatId === previous)) select.value = previous;
     }
@@ -653,6 +657,13 @@ export class PlatformApp {
     const option = this.doc.createElement('option');
     option.value = valueText;
     option.textContent = text;
+    return option;
+  }
+
+  /** 空下拉里的"为什么是空的"：不可选、value 留空，所以旁边的按钮照样会被挡住。 */
+  private placeholderOption(text: string): HTMLOptionElement {
+    const option = this.option('', text);
+    option.disabled = true;
     return option;
   }
 }
