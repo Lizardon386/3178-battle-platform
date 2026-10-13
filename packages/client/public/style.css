@@ -178,6 +178,9 @@ body {
 .bp-panel .card-title .ti { color: var(--bp-accent); font-size: 21px; }
 .bp-panel .card-actions { display: flex; gap: 10px; }
 .bp-panel > .card-body { padding: var(--bp-pad); }
+/* 大厅左右两张卡（创建房间 / 加入房间）内容长短不一样，各自按内容长高就底边不齐（实测差 29.6px）。
+   .row 本来就会把列拉平到整行高，卡跟着撑满即可。列的类名是 col-lg-6 这种，别写成 .col。 */
+#screen-lobby .row > [class^="col"] > .bp-panel { height: 100%; }
 .bp-panel > .card-footer {
   padding: 16px 20px;
   background: var(--bp-panel-alt);
@@ -434,6 +437,19 @@ option:disabled {
   text-align: left;
   /* 抄了 form-select 的类，所以要把那份箭头关掉——我们用下面的 caret 元素 */
   background-image: none;
+}
+/* 房主面板里"下拉 + 按钮"是同一组（.input-group）。空下拉里没有文字，flex 的内容高度只剩 14px 那枚箭头，
+   于是它 40px、旁边按 padding 撑出来的按钮 46.1px，底边差 6.1px；而且包装层不是表单控件，
+   拿不到 .form-select 原本的伸展，下拉只剩 64px 宽。让它参与本行的拉伸，两件事一起解决（实测 46.1/167.8）。 */
+.input-group > .bp-listbox {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.input-group > .bp-listbox > .bp-listbox-trigger {
+  /* 与后面的按钮拼成一段：相接那侧的圆角去掉，免得"圆角贴圆角"露出一道缝 */
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
 }
 .bp-listbox-label {
   min-width: 0;

@@ -270,6 +270,9 @@ export class PlatformApp {
     this.view = emptyViewModel();
     this.client = null;
     this.endpoint = null;
+    // 状态行不清的话，房里留下的最后一句（挂载结果、被拒的原因）会一直挂在大厅上，
+    // 看着像大厅出了错——用户就是拿着这句"房主没有提供 …（404）"来问的。
+    this.setStatus('');
     this.render();
   }
 

@@ -388,6 +388,27 @@ async function bpUiMonkey(opts) {
         note('弹层加了阴影，违反扁平约定', u.id, `#${s.id} box-shadow=${gcs(listEl).boxShadow}`);
       }
     }
+    // G2 同一行里"下拉 + 按钮"必须等高、底边齐（用户截图报的就是这里：Tabler 给 .form-select
+    //    写死 40px，旁边的 .btn 按 padding 撑到 46.1px，底边差 6.1px；这类差只有量矩形才发现）
+    for (const ig of d.querySelectorAll('.input-group')) {
+      const box = ig.querySelector('.bp-listbox');
+      // 注意：触发器自己也带 .btn 类（它抄的是 select 的类 + btn），直接 querySelector('.btn')
+      // 会拿到它自己，于是"等高"那条变成跟自己比、永远不响——反向验证就是这么发现台子 bug 的。
+      const peers = [...ig.querySelectorAll('.btn')].filter((b) => !b.closest('.bp-listbox'));
+      const btn = peers[0];
+      if (!box || !btn || !box.getClientRects().length || !btn.getClientRects().length) continue;
+      const t = box.querySelector('.bp-listbox-trigger').getBoundingClientRect();
+      const b = btn.getBoundingClientRect();
+      if (Math.abs(t.height - b.height) > 0.6 || Math.abs(t.bottom - b.bottom) > 0.6) {
+        note('同一行下拉与按钮不等高', u.id, `高 ${t.height.toFixed(1)} vs ${b.height.toFixed(1)}，底边差 ${(t.bottom - b.bottom).toFixed(1)}px`);
+      }
+      // 宽度也用同一行的账来算，不用"小于 60 就算窄"这种魔法数：包装层该把按钮之外的剩余宽度吃掉
+      const usedByButtons = peers.reduce((a, b2) => a + b2.getBoundingClientRect().width, 0);
+      const wantWidth = ig.getBoundingClientRect().width - usedByButtons - 4;
+      if (t.width < wantWidth - 2) {
+        note('下拉没占满同一行的剩余宽度', u.id, `宽 ${t.width.toFixed(1)}px，本行还能给 ${(wantWidth).toFixed(1)}px`);
+      }
+    }
     for (const s of d.querySelectorAll('.form-switch .form-check-input')) {
       // Tabler 1.6 的旋钮是 ::before 伪元素画的，不是 input 的 background-image。
       // 拿 background-image 判会得到 4050 条全响的假阳性——本轮就这么误报过一次。
@@ -464,7 +485,7 @@ async function bpUiMonkey(opts) {
       };
     }),
     违规数: bad.length,
-    违规: bad.slice(0, 40),
+    违规: bad.slice(0, 120),
   };
   host.remove();
   return JSON.stringify(summary, null, 1);

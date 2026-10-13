@@ -74,7 +74,9 @@ export async function loadGameClient(
   try {
     const response = await fetchImpl(entryUrl, { mode: 'cors' });
     if (!response.ok) {
-      return { ok: false, client: null, verified: false, reason: `房主没有提供 ${manifest.id} 的客户端入口（${response.status}）` };
+      // 这句会直接显示给玩家，别写成报错口气：没有专属界面是平台的正常降级路径（占位面板），
+      // 括号里留状态码是给接真游戏的人调试用的。
+      return { ok: false, client: null, verified: false, reason: `${manifest.name} 没带自己的界面，先用平台自带的状态面板显示（拿入口得到 ${response.status}）` };
     }
     source = await response.text();
   } catch (error) {
