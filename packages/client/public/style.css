@@ -158,8 +158,11 @@ body {
   color: var(--bp-dim-hi);
 }
 .nick-field { display: flex; align-items: center; gap: 12px; }
-.nick-field .form-label { margin: 0; font-size: 13.5px; letter-spacing: 0.08em; color: var(--bp-dim-hi); }
-.nick-field .form-control { width: 220px; }
+/* 昵称是"这台机器上你是谁"，放在右上角最容易被忽略，所以它比大厅标签大一档。
+   white-space 只是防挤压保险（真 900px / 700px 视口实测标签都是单行；
+   我一度以为它竖排成两行，那是在 in-app Browser 的零视口页面上量出来的假象）。 */
+.nick-field .form-label { margin: 0; font-size: 16px; letter-spacing: 0.08em; color: var(--bp-dim-hi); white-space: nowrap; }
+.nick-field .form-control { width: 280px; height: 58px; font-size: 20px; }
 
 /* ---------- 卡片：纯色 + 1px 描边，无阴影 ---------- */
 .bp-panel {
@@ -536,5 +539,5 @@ option:disabled {
 }
 @media (max-width: 992px) {
   .chat-log { min-height: 260px; }
-  .nick-field .form-control { width: 160px; }
+  .nick-field .form-control { width: 200px; }
 }
