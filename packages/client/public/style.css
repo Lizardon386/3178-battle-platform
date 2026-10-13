@@ -178,9 +178,10 @@ body {
 .bp-panel .card-title .ti { color: var(--bp-accent); font-size: 21px; }
 .bp-panel .card-actions { display: flex; gap: 10px; }
 .bp-panel > .card-body { padding: var(--bp-pad); }
-/* 大厅左右两张卡（创建房间 / 加入房间）内容长短不一样，各自按内容长高就底边不齐（实测差 29.6px）。
-   .row 本来就会把列拉平到整行高，卡跟着撑满即可。列的类名是 col-lg-6 这种，别写成 .col。 */
-#screen-lobby .row > [class^="col"] > .bp-panel { height: 100%; }
+/* 同一行里的面板卡默认底边对齐：Bootstrap 只把列拉平，卡本身还是按内容长高，
+   于是一排卡一高一矮（大厅两张差 29.6px；房间内席位卡比聊天/房主面板矮一大截）。
+   写成通用一条，大厅与房间内以及以后新增的 .row 面板都自动跟着对齐。列类名是 col-lg-6 这种，别写成 .col。 */
+.row > [class^="col"] > .bp-panel { height: 100%; }
 .bp-panel > .card-footer {
   padding: 16px 20px;
   background: var(--bp-panel-alt);
@@ -362,7 +363,10 @@ option:disabled {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  height: 460px;
+  /* 原来写死 height:460px：整排卡对齐之后（卡被拉到 650+），记录区与输入条之间会空出 44px。
+     改成"至少 460，能长就多长"，输入条才贴得住底。 */
+  flex: 1 1 auto;
+  min-height: 460px;
   padding: 18px 20px;
   overflow-y: auto;
   font-size: 15px;
@@ -518,6 +522,6 @@ option:disabled {
   .room-head { gap: 26px; }
 }
 @media (max-width: 992px) {
-  .chat-log { height: 260px; }
+  .chat-log { min-height: 260px; }
   .nick-field .form-control { width: 160px; }
 }

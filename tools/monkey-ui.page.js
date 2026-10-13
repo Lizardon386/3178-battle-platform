@@ -428,7 +428,27 @@ async function bpUiMonkey(opts) {
         note('选中项没上色，展开列表会落回系统灰', u.id, `#${gs.id} 选中项 background-color 透明`);
       }
     }
-    // H 横向溢出 = 布局被压坏（零视口时整页会挤成 8px 宽）
+    // H 同一行里的面板卡默认要底边对齐（用户三次截图都在指这个：大厅两张差 29.6px、
+    //    房间内席位卡比聊天/房主面板矮一大截）。只比"同一行、都可见"的卡，堆叠时不比。
+    for (const row of d.querySelectorAll('.row')) {
+      const cards = [...row.children]
+        .filter((c) => c.matches('[class^="col"]'))
+        .map((c) => c.querySelector(':scope > .bp-panel'))
+        .filter((c) => c && c.getClientRects().length);
+      if (cards.length < 2) continue;
+      const rects = cards.map((c) => c.getBoundingClientRect());
+      const 顶 = Math.min(...rects.map((r) => r.top));
+      const 同行 = rects.filter((r) => Math.abs(r.top - 顶) < 2);
+      if (同行.length < 2) continue;
+      const 底 = Math.max(...同行.map((r) => r.bottom));
+      for (const r of 同行) {
+        if (底 - r.bottom > 1.5) {
+          note('同一行面板底边不齐', u.id, `差 ${(底 - r.bottom).toFixed(1)}px（该行的卡：${cards.map((c) => (c.querySelector('.card-title') || {}).textContent || c.id).join('、').replace(/\s+/g, '').slice(0, 40)}）`);
+          break;
+        }
+      }
+    }
+    // I 横向溢出 = 布局被压坏（零视口时整页会挤成 8px 宽）
     if (u.win.innerWidth > 600 && d.documentElement.scrollWidth > u.win.innerWidth + 4) {
       note('页面横向溢出', u.id, `scrollWidth ${d.documentElement.scrollWidth} > 视口 ${u.win.innerWidth}`);
     }

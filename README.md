@@ -91,6 +91,8 @@ bash /d/agent_workspace/tools/check-docs.sh 3178-battle-platform
 
 房主点"离开房间"会被挡住并提示"要么移交要么关房"——这是 war3 式房主语义，不是防误操作的兜底。
 
+**同一排面板默认底边对齐**（`.row > [class^="col"] > .bp-panel { height: 100% }`）：大厅两张卡、房间内"席位 / 房间聊天 / 房主面板"三张卡都跟着整行走，不再一高一矮。聊天记录区因此改成"至少 460px、能长就多长"（原来写死 460，卡拉齐后会在记录区与输入条之间空出 44px）。席位卡在开局前看着空，是因为**游戏界面就挂在那张卡里**（`#game-host` 是它的第二个 `card-body`），开局后会被填满。这条对齐由 UI 猴测的"同一行面板底边不齐"不变式盯着（顶掉规则重跑报 120 条，含大厅那 29.6px）。
+
 ### 接一个新游戏要写什么
 
 实现 [module-api.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/module-api.ts) 的 `GameModule`，共七个成员：`normalizeConfig` / `rulesHashOf` / `create` / `resume` / `serialize(viewer)` / `handle(action, by)` / `begin()`，可选 `tick` / `onSeatJoin` / `onSeatLeave` / `onTimeout` / `acceptsSnapshot`。放进 `games/<id>/`，构建产物落在 `games/<id>/dist/index.js`，房主端由 [loader.ts](file:///D:/agent_workspace/3178-battle-platform/packages/server/src/loader.ts) 在运行时按 id 动态加载——**平台源码不 import 它**。参考实现：[games/echo/src/index.ts](file:///D:/agent_workspace/3178-battle-platform/games/echo/src/index.ts)（回合制 + 隐私）与 [games/turncount/src/index.ts](file:///D:/agent_workspace/3178-battle-platform/games/turncount/src/index.ts)（无游标 + 无隐私 + 同时操作）。
