@@ -158,13 +158,12 @@ body {
   color: var(--bp-dim-hi);
 }
 .nick-field { display: flex; align-items: center; gap: 12px; }
-/* 昵称是"这台机器上你是谁"，放在右上角最容易被忽略，所以它比大厅标签大一档。
-   white-space 只是防挤压保险（真 900px / 700px 视口实测标签都是单行；
-   我一度以为它竖排成两行，那是在 in-app Browser 的零视口页面上量出来的假象）。 */
-/* 醒目那一档：字重 + 颜色 + 描边。标签用 --bp-accent-hi（在顶栏 #111118 上实测 6.30:1），
-   输入框描边用 --bp-accent-dim，让它跟大厅其他输入框一眼分得开。这一档单独一笔，不喜欢可只退它。 */
-.nick-field .form-label { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: 0.08em; color: var(--bp-accent-hi); white-space: nowrap; }
-.nick-field .form-control { width: 320px; height: 62px; font-size: 26px; font-weight: 700; letter-spacing: 0.02em; border-color: var(--bp-accent-dim); }
+/* 要显眼的是右上角"昵称"这两个字（用户原话："是'昵称'这两个字改大，输入昵称的这个框不用动，恢复原样"）。
+   我上一轮连输入框一起放大了，那是理解错，输入框已退回原样（只剩原来那条宽度）。
+   标签抬到 26px＝品牌"3178 对战平台"30px 小两号，加粗，颜色用亮紫 #818cf8（顶栏 #111118 上实测 6.30:1）。
+   white-space 只是防挤压保险：真 900/700px 视口下标签本来就单行，"会竖排成两行"是在零视口页上量的假象。 */
+.nick-field .form-label { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: 0.08em; color: var(--bp-accent-hi); white-space: nowrap; }
+.nick-field .form-control { width: 220px; }
 
 /* ---------- 卡片：纯色 + 1px 描边，无阴影 ---------- */
 .bp-panel {
@@ -541,5 +540,5 @@ option:disabled {
 }
 @media (max-width: 992px) {
   .chat-log { min-height: 260px; }
-  .nick-field .form-control { width: 240px; }
+  .nick-field .form-control { width: 160px; }
 }
