@@ -295,8 +295,10 @@ option:disabled {
   border-radius: 6px;
 }
 .room-head h2 { font: 500 var(--bp-title)/1.2 var(--bp-font-display); letter-spacing: 0.06em; }
-.connection-bar { margin-top: 8px; font: 13px/1.5 var(--bp-font-mono); color: var(--bp-dim); }
-.hud-code-label { font: 11px/1 var(--bp-font-mono); letter-spacing: 0.26em; color: var(--bp-dim); }
+/* 连接条与大厅状态行是**同一类字**（setStatus 同时写这两处），所以字号与颜色都走同一档。 */
+.connection-bar { margin-top: 8px; font: 15px/1.5 var(--bp-font-mono); color: var(--bp-dim-hi); }
+/* HUD 上的微标签：比正文标签再小一档，但不再用 0.26em 那种把中文拉开的字距 */
+.hud-code-label { font: 12.5px/1 var(--bp-font-mono); letter-spacing: 0.18em; color: var(--bp-dim-hi); }
 .hud-code {
   margin-top: 8px;
   font: 500 var(--bp-code)/0.9 var(--bp-font-display);
@@ -340,7 +342,7 @@ option:disabled {
   border-radius: 4px;
 }
 .seat-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.seat-state { font: 12px/1 var(--bp-font-mono); letter-spacing: 0.14em; color: var(--bp-dim); }
+.seat-state { font: 13.5px/1 var(--bp-font-mono); letter-spacing: 0.06em; color: var(--bp-dim-hi); }
 /* 左轨优先级：身份（房主）> 状态（已准备）> 角色默认。靠特异度，不靠书写顺序。 */
 .seat-player { border-left-color: var(--bp-accent); }
 .seat-ai { border-left-color: var(--bp-violet); border-left-style: dashed; }
@@ -387,7 +389,7 @@ option:disabled {
 .chat-line { padding: 6px 0; border-bottom: 1px dotted var(--bp-line); word-break: break-word; }
 .chat-line:last-child { border-bottom: none; }
 .chat-say { color: var(--bp-text); }
-.chat-system { font: 13px/1.6 var(--bp-font-mono); color: var(--bp-dim); }
+.chat-system { font: 14px/1.6 var(--bp-font-mono); color: var(--bp-dim-hi); }
 .chat-system::before { content: "▸ "; color: var(--bp-accent); }
 
 /* ---------- 局域网房间列表 ---------- */
@@ -419,7 +421,7 @@ option:disabled {
 
 /* ---------- 对局挂载区 ---------- */
 .game-host { border-top: 1px solid var(--bp-line); background: var(--bp-panel-alt); }
-.game-placeholder p { margin: 0 0 14px; font: 12px/1.7 var(--bp-font-mono); letter-spacing: 0.1em; color: var(--bp-dim); }
+.game-placeholder p { margin: 0 0 14px; font: 14.5px/1.7 var(--bp-font-mono); letter-spacing: 0.04em; color: var(--bp-dim-hi); }
 .game-placeholder pre {
   max-height: 380px;
   padding: 16px 18px;
