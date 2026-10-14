@@ -152,3 +152,26 @@ test('下拉控件必须有箭头，且展开列表跟着主题色', () => {
   assert.match(optionRule[1], /background-color:/, 'option 要有自己的底色');
   assert.match(cssCode, /option:checked[^{]*\{[^}]*background-color:/, '选中条要跟着主题色，不然还是系统灰');
 });
+
+/**
+ * 昵称记忆（静态源码守卫，形状同上面的 className 检查）。
+ * 原 bug：只在 connectTo 里写一次 `输入 || '无名玩家'`，于是（1）改完名没点按钮就刷新＝没改，
+ * （2）某次空字段点下去就把"无名玩家"永久钉进存储——用户报的"每次进来都变回无名玩家"。
+ * 真浏览器里的行为我另外手工验过；这里钉的是"不许再把兜底值写进存储"这个回归形状。
+ */
+test('昵称：改了立刻记，空字段与占位称呼都不许写进存储', () => {
+  // 先剥注释再判：本文件上面那句"@layer / url() 的检查要先剥注释，否则注释里提一句就把检查判红"
+  // 立刻在我身上复现了一次——我在新监听的注释里引了一遍旧代码 `输入 || '无名玩家'`，守卫就红了。
+  const code = appSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const sets = [...code.matchAll(/this\.nick\.set\(([^)]*)\)/g)].map((m) => m[1].trim());
+  assert.deepEqual(sets, ['name'], '只有 rememberNick 那一处允许写昵称存储');
+  assert.match(code, /if \(name && name !== DEFAULT_NICK\)/, '占位称呼不许进存储');
+  assert.match(
+    code,
+    /on\('nick', 'input', \(\) => this\.rememberNick\(this\.typedNick\(\)\)\)/,
+    '改名要立刻持久化，不能等到点建房/加入才存',
+  );
+  assert.match(code, /\.value = this\.nick\.get\(\)/, '开机要回填上次记住的昵称');
+  assert.doesNotMatch(code, /\|\|\s*'无名玩家'/, '兜底称呼不许再和存储写入写在同一行');
+  assert.match(code, /nick: this\.currentNick\(\)/, 'hello 与界面显示要走同一个解析口，避免"显示空、发出去无名玩家"');
+});

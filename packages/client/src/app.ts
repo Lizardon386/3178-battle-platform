@@ -27,6 +27,8 @@ export interface AppDeps {
 
 const el = <T extends HTMLElement>(doc: Document, id: string): T | null => doc.getElementById(id) as T | null;
 const value = (node: HTMLElement | null): string => (node as HTMLInputElement | null)?.value?.trim() ?? '';
+/** 没填名字时的占位称呼。它**不是**一个可被记住的昵称——存进去就等于把"无名玩家"永久钉在本机上。 */
+const DEFAULT_NICK = '无名玩家';
 
 export class PlatformApp {
   private readonly doc: Document;
@@ -134,11 +136,35 @@ export class PlatformApp {
     this.renderAddressBook();
   }
 
+  /** 输入框里真正打过的字（没打就是空，不去碰占位称呼）。 */
+  private typedNick(): string {
+    return value(el(this.doc, 'nick'));
+  }
+
+  /**
+   * 当前有效昵称 = 输入框 > 本机记住的上次 > 占位称呼。
+   * 顺手把结果写回输入框：让玩家看见的名字就是将要发出去的那一个（原来两处各读各的，
+   * 于是"界面显示空、发出去无名玩家"这种不一致是可能出现的）。
+   */
+  private currentNick(): string {
+    const name = this.typedNick() || this.nick.get() || DEFAULT_NICK;
+    const field = el(this.doc, 'nick') as HTMLInputElement | null;
+    if (field && field.value !== name) field.value = name;
+    return name;
+  }
+
+  /** 只记真正填过的名字。空字段与占位称呼都不写存储。 */
+  private rememberNick(name: string): void {
+    if (name && name !== DEFAULT_NICK) this.nick.set(name);
+  }
+
   private connectTo(endpoint: Endpoint, code: string | null): void {
     this.endpoint = endpoint;
     this.resumeAttempted = false;
-    const nickValue = value(el(this.doc, 'nick')) || '无名玩家';
-    this.nick.set(nickValue);
+    // 先取"打过字的"再算有效昵称：currentNick() 会回填输入框，顺序反了就分不清是不是本人打的。
+    const typed = this.typedNick();
+    const nickValue = this.currentNick();
+    this.rememberNick(typed);
     const wantedGameId = this.pendingManifest?.id ?? (el(this.doc, 'game-select') as HTMLSelectElement | null)?.value ?? '';
     const handlers: ConnectionHandlers = {
       hello: () => {
@@ -147,7 +173,7 @@ export class PlatformApp {
         return {
           type: 'hello',
           protocol: 1,
-          nick: value(el(this.doc, 'nick')) || '无名玩家',
+          nick: this.currentNick(),
           gameId: installed?.id,
           version: installed?.version,
         };
@@ -283,6 +309,11 @@ export class PlatformApp {
       const node = el(this.doc, id);
       node?.addEventListener(event, handler);
     };
+
+    // 昵称即时记忆：改完就存，不必等到点「建房 / 加入」。原实现只在 connectTo 里写一次
+    // `输入 || '无名玩家'`，于是两个后果：只改名没点按钮就刷新等于没改；某次空字段点下去
+    // 就把"无名玩家"永久钉进存储——用户报的"每次进来都变回无名玩家"是这个。
+    on('nick', 'input', () => this.rememberNick(this.typedNick()));
 
     on('btn-create', 'click', () => {
       const gameSelect = el(this.doc, 'game-select') as HTMLSelectElement | null;
