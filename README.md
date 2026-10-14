@@ -1,6 +1,6 @@
 # 3178 对战平台
 
-> 面向使用者：这是什么、能干什么、怎么跑起来、有什么限制。设计取舍、逐条实测数据与 agent 交接记录在 [CONTEXT.md](CONTEXT.md)。
+> 面向使用者：这是什么、能干什么、怎么跑起来、有什么限制。设计取舍与已定语义在 [DESIGN.md](DESIGN.md)，逐条实测数据与 agent 交接记录在 [CONTEXT.md](CONTEXT.md)。
 > 最近更新：2026-10-14
 <!-- 日期必须留在这行 blockquote 上：check-docs.sh 的 [新]/[旧]/[期] 只读这一行，正文里写日期不算顶部日期。 -->
 
@@ -21,17 +21,6 @@
 - **按视角裁剪** —— 快照按座位生成，观战看不到别人的秘密。
 - **无构建** —— 浏览器直接吃原生 ESM（import map），没有打包步骤，离线可用。
 - **界面** —— 大厅 / 房间内 / 对局挂载点；暗紫主题，键盘可完整操作。
-
-## 设计思路
-
-- **宿主制**：权威在房主那个进程里，不做分布式也不做中央服务器——所以"谁是权威"永远没有争议，代价是房主关机这局就没了。
-- **平台与玩法只经由 `GameModule` 契约通信**：平台源码里禁止出现任何玩法词，有 `tools/check-seam.sh` 当闸门。不立字据的"分层"下一次重构就会被穿透。
-- **引擎与传输分离**：引擎只吐 `Outbound[]`，传输层负责 socket。所以证明"无关玩法"的契约测试不需要真端口、真网卡。
-- **一切出口都是 `Effect[]`**：游戏碰不到 socket，投递、限流、视角裁剪、审计才守得住。
-- **无构建**：浏览器直接吃原生 ESM（import map），没有打包步骤——离线双击是可用的前提。
-- **表现层盖在成熟底座上**：`@tabler/core`（MIT）+ 一层自己的主题与字体，不重写框架组件。
-
-每条的完整理由、实测代价与被否掉的方案在 [CONTEXT.md](CONTEXT.md) 的「工程细节」节。
 
 ## 快速开始
 
@@ -126,11 +115,13 @@ node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议�
 | [games/](games/echo/src/index.ts) | 两个合成游戏（契约无关玩法的活证据） |
 | [tools/](tools/check-seam.sh) | 接缝闸门、两层猴测、复现脚本、.bat 生成器 |
 | [房主建房.bat](房主建房.bat) / [玩家本机壳.bat](玩家本机壳.bat) | 双击入口（由 [tools/gen-bat.mjs](tools/gen-bat.mjs) 生成，别手写） |
-| [CONTEXT.md](CONTEXT.md) | 设计取舍、逐条实测数据、遗留问题、agent 交接记录 |
+| [DESIGN.md](DESIGN.md) | 方案设计：设计取舍的完整理由与代价、架构与接缝、已定语义表、工程侧硬约束 |
+| [CONTEXT.md](CONTEXT.md) | 逐阶段验收凭据、遗留问题、agent 交接记录 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 探索性 QA 报告：15 条 finding 与修法 |
 
 ## 更多
 
-- 设计取舍、逐条实测数据、遗留问题与 agent 交接记录：[CONTEXT.md](CONTEXT.md)
+- 设计取舍（完整理由、实测代价、被否掉的方案）、架构与接缝、已定语义表：[DESIGN.md](DESIGN.md)
+- 逐阶段验收凭据、遗留问题与 agent 交接记录：[CONTEXT.md](CONTEXT.md)
 - 探索性 QA 报告（15 条 finding、修法与复跑计数）：[dogfood-output/猴测报告.md](dogfood-output/猴测报告.md)
 - 本项目是从同工作区的 `uno-online` 剥离连接层重写而来，那边代码一行没动；玩法改动归那边，连接/身份/分发改动归这里。
