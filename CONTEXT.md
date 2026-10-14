@@ -7,7 +7,7 @@
 
 ## 背景与目标
 
-用户 2026-10-10 指令：**本会话只做类 war3 的联机对战平台**，把这部分能力从 [uno-online](file:///D:/agent_workspace/uno-online/CONTEXT.md) 里剥离出来重做，"不要怕麻烦，用合适的语言重构"；代码就落在本目录（原 `game-host-platform` 改名而来），不在别处新建仓库。
+用户 2026-10-10 指令：**本会话只做类 war3 的联机对战平台**，把这部分能力从 [uno-online](../uno-online/CONTEXT.md) 里剥离出来重做，"不要怕麻烦，用合适的语言重构"；代码就落在本目录（原 `game-host-platform` 改名而来），不在别处新建仓库。
 
 上一轮（同日、同目录的评估档）给出的取舍已被本会话按新指令改掉两条：
 
@@ -36,14 +36,14 @@
 
 | 事实 | 证据 |
 |---|---|
-| `Room` 同时是座位管理器和规则引擎：第 1 行就 import 玩法模块 | [server/room.js:1](file:///D:/agent_workspace/uno-online/server/room.js) |
-| 房间对象里座位字段与玩法字段同居一处，回合游标 `this.turn` 被规则与 eject 两边改写 | [server/room.js:10-43](file:///D:/agent_workspace/uno-online/server/room.js) |
-| 广播路径带玩法：`broadcastState` → `room.serialize(p.id)` 内部算 peng/stack 选项 | [server/index.js:192-198](file:///D:/agent_workspace/uno-online/server/index.js) |
-| 唯一漏斗是 `commit()`（广播+落盘+机器人调度） | [server/index.js:201-206](file:///D:/agent_workspace/uno-online/server/index.js) |
-| 无房主概念：任何 socket 发 `start` 都能开局；`rejoin` 只要猜中房号+座位号即占座 | [server/index.js:426-433](file:///D:/agent_workspace/uno-online/server/index.js)、[server/index.js:401-414](file:///D:/agent_workspace/uno-online/server/index.js) |
-| 不校验 Origin / 无 verifyClient（对本机壳连远程房主是好事，保留为默认放行） | [server/index.js:105](file:///D:/agent_workspace/uno-online/server/index.js) |
-| 客户端连接地址写死 `location.host`，且倒计时拿本地钟比服务端绝对时间戳 | [public/client.js:156-157](file:///D:/agent_workspace/uno-online/public/client.js) |
-| `ready` 字段存在但 `start()` 完全忽略它 | [server/room.js:236-239](file:///D:/agent_workspace/uno-online/server/room.js) |
+| `Room` 同时是座位管理器和规则引擎：第 1 行就 import 玩法模块 | [server/room.js:1](../uno-online/server/room.js) |
+| 房间对象里座位字段与玩法字段同居一处，回合游标 `this.turn` 被规则与 eject 两边改写 | [server/room.js:10-43](../uno-online/server/room.js) |
+| 广播路径带玩法：`broadcastState` → `room.serialize(p.id)` 内部算 peng/stack 选项 | [server/index.js:192-198](../uno-online/server/index.js) |
+| 唯一漏斗是 `commit()`（广播+落盘+机器人调度） | [server/index.js:201-206](../uno-online/server/index.js) |
+| 无房主概念：任何 socket 发 `start` 都能开局；`rejoin` 只要猜中房号+座位号即占座 | [server/index.js:426-433](../uno-online/server/index.js)、[server/index.js:401-414](../uno-online/server/index.js) |
+| 不校验 Origin / 无 verifyClient（对本机壳连远程房主是好事，保留为默认放行） | [server/index.js:105](../uno-online/server/index.js) |
+| 客户端连接地址写死 `location.host`，且倒计时拿本地钟比服务端绝对时间戳 | [public/client.js:156-157](../uno-online/public/client.js) |
+| `ready` 字段存在但 `start()` 完全忽略它 | [server/room.js:236-239](../uno-online/server/room.js) |
 
 ## 计划 / 待办
 
@@ -89,7 +89,7 @@
 
 ## 变更记录
 - 2026-10-10 Qoder：**目录改名 `game-host-platform` → `3178-battle-platform`，并由评估档转为实施档**（用户指令：本会话就在本目录继续开发对战平台）。同时改判两项：计划 D2「代码落新目录 battle-platform」作废，代码就落本目录；D6「房间列表/大厅」用户不接受"只做地址簿 + 邀请链接"，要求**尽量贴合 war3 的房间设计**，发现层级改为 B+A（见 README「房间形态」）。顺带修掉本档 4 处 `[链]` 违规。
-- 2026-10-10 Qoder：**开工 P0–P5，交付平台内核第一版**（用户"选 B+A，其他默认，直接开工"）。新建 npm workspaces + TS 工程（`tsc -b` 项目引用、`node --test`），`packages/protocol`（消息目录/错误码/握手/稳定摘要/形状闸门）、`packages/server`（`Engine` 引擎、`Room` 座位与 revision 不变式、`authority` 权限集中处、`HostStore` 房主侧落盘、`WsTransport`、`discovery` 组播信标、`loader` 运行时动态加载）、`games/echo` + `games/turncount` 两个形状不同的合成游戏。测试 57 例全绿：19 例契约套件用**同一组断言**跑两个游戏，4 例真 socket 端到端跨游戏换房，含落盘重启后旧票据回座。**修掉两个实现缺陷**：① 出站按房间寻址会在 `hostClose`/`shutdown` 清空会话表后丢掉最后一条通知 → 改为创建时即解析 connIds；② 入座/连接/聊天不推进 revision → 按版本号去重的客户端会把新状态当重复帧丢弃。新增 `tools/check-seam.sh`（平台包禁玩法词与 `games/` import）。改名遗留：本档与 [uno-online/CONTEXT.md](file:///D:/agent_workspace/uno-online/CONTEXT.md)、[uno-online/README.md](file:///D:/agent_workspace/uno-online/README.md) 内引用已全部替换为新名（uno-online 那两处经用户授权后修改，其工作树现为未提交状态）。
+- 2026-10-10 Qoder：**开工 P0–P5，交付平台内核第一版**（用户"选 B+A，其他默认，直接开工"）。新建 npm workspaces + TS 工程（`tsc -b` 项目引用、`node --test`），`packages/protocol`（消息目录/错误码/握手/稳定摘要/形状闸门）、`packages/server`（`Engine` 引擎、`Room` 座位与 revision 不变式、`authority` 权限集中处、`HostStore` 房主侧落盘、`WsTransport`、`discovery` 组播信标、`loader` 运行时动态加载）、`games/echo` + `games/turncount` 两个形状不同的合成游戏。测试 57 例全绿：19 例契约套件用**同一组断言**跑两个游戏，4 例真 socket 端到端跨游戏换房，含落盘重启后旧票据回座。**修掉两个实现缺陷**：① 出站按房间寻址会在 `hostClose`/`shutdown` 清空会话表后丢掉最后一条通知 → 改为创建时即解析 connIds；② 入座/连接/聊天不推进 revision → 按版本号去重的客户端会把新状态当重复帧丢弃。新增 `tools/check-seam.sh`（平台包禁玩法词与 `games/` import）。改名遗留：本档与 [uno-online/CONTEXT.md](../uno-online/CONTEXT.md)、[uno-online/README.md](../uno-online/README.md) 内引用已全部替换为新名（uno-online 那两处经用户授权后修改，其工作树现为未提交状态）。
 - 2026-10-10 Qoder：**P6 客户端 + P7 宿主壳，界面在浏览器里跑通**。`packages/client`（地址解析 / 地址簿+票据 / 指数退避 / 服务端时间轴 / 帧归约 / 模块下发与 sha256 校验 / 大厅+房间内+对局三层界面）与 `packages/hostd`（host/join/diagnose/stop、静态与接口路由、cloudflared 解析、`房主建房.bat` + `玩家本机壳.bat` 双击入口 + `.gitattributes` 锁 CRLF）。测试从 57 涨到 **77 例全绿**（新增 12 例客户端逻辑 + 6 例宿主壳集成，含路径穿越与真 ws）。**修掉四个真实缺陷**：① `this.fetchImpl(...)` 丢接收者 → 浏览器 `Illegal invocation`，表现为局域网列表永远空白，且被静默 `catch` 吞掉（现在把原因写进提示）；② `safeJoin` 用正斜杠比前缀，Windows 上 `resolve` 给反斜杠 → `/app/`、`/games/` 全部误判越界 404；③ `server.close()`/`wss.close()` 在有 keep-alive 与 WS 连接时回调不触发 → 收尾挂死，改 `closeAllConnections()` + 超时竞速、`terminate()` 先行；④ 客户端 `until('snapshot')` 拿到的是在途旧帧 → 测试助手改成带 predicate 等"符合条件的那一帧"。**验证方式**：in-app Browser 无可见视口，用 `evaluate_script` 真点：建房→客人入座→观战入座→加电脑位→未准备时开局按钮写明"等准备：客人乙"并 `disabled`→准备后变亮→开局后倒计时 58→56 秒（服务端时间轴生效）→房主离席被中文提示挡住→踢观战→移交后 👑 换位、房主面板隐藏、通知条正确→离席回大厅。
 - 2026-10-10 Qoder：**界面视觉重做，按用户要求改用官方 skill `frontend-design`（已安装并启用）而不是我自己的审美**。方向「冰封指挥台」：单一主色（深冰蓝黑）+ 一处黄铜强调 + 就绪翡翠/风险铁锈，房号·槽位号·倒计时统一等宽数字，面板用双层斜面 + 斜切铭牌标题条，载入做成分层阶梯浮现，主按钮一条慢扫光，`prefers-reduced-motion` 全关。**为离线与老浏览器做了两个取舍**：不引外网字体（内网双击是可用的前提，层次靠字阶字距撑）；不用 `@layer`（未知 at-rule 会让老 Chromium/Edge 把整块样式一起跳过 → 整站裸奔）。**顺带修掉一处从未生效的 bug**：`style.css` 里写的是 `.seat-ready/.seat-me/.seat-offline`，而 `app.ts` 发的类名是 `is-ready/is-me/is-offline`，所以"已准备/我的座位/离线"三种状态在上界版本里根本没有样式——实测计算样式已命中（房主行黄铜轨 + 白字粗体 + "你"角标、就绪行翡翠轨、观战行石板轨、空位斜织）。浏览器复核 `document.styleSheets` 108 条规则解析通过，控制台只剩预期内的 `/games/echo/client.js` 404（占位渲染路径）。**像素级观感仍未确认**（in-app Browser `innerWidth/innerHeight` 报 0，无可见视口），要用户自己打开看一眼。
 - 2026-10-10 Qoder：**用户仍不满意，改从 GitHub（skills.sh）找能力**：搜到并（经用户点选）安装 `nextlevelbuilder/ui-ux-pro-max-skill@ui-styling`，按它做 v2 视觉。取用的三层：CSS 变量主题层、`references/canvas-design-system.md` 的构成原则（≤5 语义色、字号巨大反差、"参考刻度"式重复结构、第二遍只磨不加）、以及它 `canvas-fonts/` 里的 OFL 字体——**BigShoulders 做展示体、Geist Mono 做 HUD 数字，拷进 `public/fonts/` 同源分发（372KB + 许可文本）**，这才补上 v1 的妥协（离线不能用外链字体）。它的 shadcn/Tailwind 组件层与"无 React、无打包"冲突，明确弃用；两个 python 脚本一个没跑。连带改动：`app.ts` 席位行改成 `seat-slot/seat-name/seat-state` 三段（仍 `createElement`+`textContent`，昵称绝不进 innerHTML），房号独立成 `.hud-code` 铭牌；`webroot.ts` 补 `.ttf/.otf/.woff2` 的 MIME；测试新增"CSS 引用的字体文件必须在盘上 + 只准同源 `/fonts/` + 禁 `@import`/外链/`@layer`"，总数 **82/82**。**浏览器复核**：`document.fonts` 四个 face 全部加载、房号用 BP Display 渲染、名册三段结构正确、控制台只剩预期内的 `/games/echo/client.js` 404。**顺带确认一处设计生效**：页面点"加入"时命中了本机存的房号票据，直接 `seatResume` 回到主座（"准备"因此落在 1 号位），是预期行为不是 bug。**观感结论仍归用户**（in-app Browser 无可见视口）。
