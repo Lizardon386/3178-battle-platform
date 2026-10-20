@@ -86,7 +86,7 @@ function createRoom(h, spec, overrides = {}) {
 
 const SPECS = [
   {
-    name: '数字回声（有回合游标 + 隐私）',
+    name: '测试回合制demo（有回合游标 + 隐私）',
     module: echoModule,
     seatSlots: 3,
     config: { range: 6, target: 4, turnMs: 5000 },
@@ -103,7 +103,7 @@ const SPECS = [
     tickExpect: 'turnAdvanced',
   },
   {
-    name: '一起数到（无游标 + 无隐私 + 同时操作）',
+    name: '测试同时操作demo（无游标 + 无隐私 + 同时操作）',
     module: turncountModule,
     seatSlots: 3,
     config: { goal: 3, limitMs: 2000 },

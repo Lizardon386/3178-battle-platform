@@ -159,7 +159,7 @@ const beaconRoom = (over = {}) => ({
   code: 'AB3D',
   name: '公开房',
   gameId: 'echo',
-  gameName: '数字回声',
+  gameName: '测试回合制demo',
   phase: 'lobby',
   occupied: 2,
   seatSlots: 4,

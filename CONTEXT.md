@@ -170,5 +170,7 @@
 
 （后续会话请在此追加一行 `- YYYY-MM-DD <来源>：<结论/改动/遗留问题>`，或直接更新上面各节）
 
+- 2026-10-20 Qoder：**两个合成游戏的玩家可见名改为「测试回合制demo」「测试同时操作demo」**（用户要求测试游戏不要和玩家混淆；后者是“无回合、多人并发操作”，不是实时动作游戏）。内部 id 仍是 `echo` / `turncount`，不动 URL、房文件与票据；同步更新了 `/api/games` 断言、契约/客户端测试夹具、README/DESIGN 与字号预览页。历史记录里的旧名保留，不追改。
+
 **下一步顺序建议**：① **P8 把 uno 接成真游戏**——这是唯一能证伪"契约够不够宽"的检验（No Mercy 规则有碰/接龙/质疑/弃牌阶段，比两个合成游戏刁钻得多），做完 `tools/check-seam.sh` 必须仍然零命中；② 接真游戏前先把**沙箱挂载**补上（`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`），否则房主可向玩家浏览器注入可读票据的代码；③ **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；④ **双机实测**组播发现与隧道，本会话只在一台机器上证伪了编解码与 HTTP 路由；⑤ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家进房.bat`，**别手写**：改 [tools/gen-bat.mjs](tools/gen-bat.mjs) 再 `node tools/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。

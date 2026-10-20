@@ -17,7 +17,7 @@
 - **手牌这类私有信息不能泄**：观战与他人看不到别人的秘密。
 - 权威只能落在某一台机器上——不做分布式，也不做中央服务器。
 
-成功判据（都可机器验证，不是自述）：`tools/check-seam.sh` 在平台包内**零命中**玩法词；仓库自带两个形状完全不同的合成游戏（`echo` 回合制 + 有隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作）作为"契约确实无关玩法"的活证据；协议层与 UI 层两层猴测无违规。逐阶段实测数据在 [CONTEXT.md](CONTEXT.md) 的「阶段状态与逐文件验收凭据」。
+成功判据（都可机器验证，不是自述）：`tools/check-seam.sh` 在平台包内**零命中**玩法词；仓库自带两个形状完全不同的合成游戏（`echo` 回合制 + 有隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作，不是实时动作游戏）作为"契约确实无关玩法"的活证据；协议层与 UI 层两层猴测无违规。逐阶段实测数据在 [CONTEXT.md](CONTEXT.md) 的「阶段状态与逐文件验收凭据」。
 
 ## 设计思路
 
@@ -105,7 +105,7 @@
 | [packages/hostd/test/sigint-shutdown.test.mjs](packages/hostd/test/sigint-shutdown.test.mjs) | Ctrl+C 收尾：SIGINT 后落盘、删 run 记录、退出码 0、端口释放 |
 | [packages/hostd/test/shell-join.test.mjs](packages/hostd/test/shell-join.test.mjs) | 本地壳也带 WS：建房→加电脑→开局，并按端口各留一份记录 |
 
-| [games/turncount/src/index.ts](games/turncount/src/index.ts) | 合成游戏 B：无游标 + 无隐私 |
+| [games/turncount/src/index.ts](games/turncount/src/index.ts) | 合成游戏 B：无游标 + 无隐私 + 同时操作（不是实时动作游戏） |
 | [packages/protocol/test/protocol.test.mjs](packages/protocol/test/protocol.test.mjs) | 协议与摘要测试 |
 | [packages/server/test/room-authority.test.mjs](packages/server/test/room-authority.test.mjs) | 房主权限/票据/座位模型测试 |
 | [packages/server/test/contract.test.mjs](packages/server/test/contract.test.mjs) | 两游戏共用同一断言集的契约测试 |
@@ -200,7 +200,7 @@ node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议�
 | 房间列表 | 局域网组播实时列表（需本地壳）+ 地址簿 + 邀请链接；不做目录服务器 |
 | **链路断开时的房间命令**（2026-10-12 定，猴测规则抓出来的） | 一律**本地拒绝并说清楚**："和房主的连接断了，这条没有发出去。先点「重新连接」，修好再点一次。" 不再悄悄塞进待发队列——否则玩家点的"开始对局"会在重连成功那一刻突然生效。待发队列只留给拨号中的握手（`roomJoin` / `seatResume`），那正是"断线重连坐回原位"需要的 |
 | **地址簿是同源共享的**（2026-10-12 定） | 地址簿每次读都走共享存储，所以另一个标签页"忘掉"一条时，本标签页的下拉里可能还留着那条假的。两条一起治：收到 `storage` 事件就重建下拉；点了已经不在簿子里的旧条目不再静默，报"这条地址已经不在簿子里了"并当场重建 |
-| 游戏模块没带自己的界面 | 走平台自带的**占位状态面板**，这是正常降级不是故障：只在**进房挂载那一刻**说一句「数字回声 没带自己的界面，先用平台自带的状态面板显示（拿入口得到 404）」，括号里的状态码留给接真游戏的人调试。**回到大厅会把状态行清掉**——否则房里最后一句会一直挂在大厅上，看着像大厅坏了（用户就是拿这句来问的） |
+| 游戏模块没带自己的界面 | 走平台自带的**占位状态面板**，这是正常降级不是故障：只在**进房挂载那一刻**说一句「测试回合制demo 没带自己的界面，先用平台自带的状态面板显示（拿入口得到 404）」，括号里的状态码留给接真游戏的人调试。**回到大厅会把状态行清掉**——否则房里最后一句会一直挂在大厅上，看着像大厅坏了（用户就是拿这句来问的） |
 | **"按钮亮着"就等于"这一下真有效果"**（2026-10-12 定为规矩） | 房主面板与大厅里每个动作按钮在渲染时都要问一句"此刻这个动作合法吗"：`startBlockers`（人不够/有人没准备）、`aiFillBlocker`（游戏不支持电脑位/槽满）、下拉有没有可选值（`transfer-target` / `kick-target` / `address-book`）。不合法就变灰并把原因写进按钮文案，**绝不让玩家从提示里自己发现**。同一条规矩也管下拉本身：**没得选时格子里不留白**，而是放一条不可选的占位项写明原因（`seatPickerBlocker`：房里没有别人 / 无法移交电脑位 / 没有可移交的真人玩家…），触发器随之置灰（`.is-placeholder`），占位项也**不算"已选中"**（不吃那层选中紫）。UI 猴测把这条当规则在扫（`tools/monkey-ui.page.js` 的 `auditButton` + `checkLegality`） |
 
 - **我们自己的 CSS 不写 `oklch` 与 `@layer`**：底座 Tabler 的颜色变量用了 `oklch()`，把浏览器底线抬到 Chrome/Edge 111+（用户视角的表现为按钮发灰、边框消失，全文见 [README.md](README.md) 的「限制与注意事项」）。给旧机器装包之前先确认浏览器版本。

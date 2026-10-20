@@ -104,7 +104,7 @@ class CountInstance implements GameInstance {
 
 export const turncountModule: GameModule = {
   id: 'turncount',
-  name: '一起数到',
+  name: '测试同时操作demo',
   version: '0.1.0',
   entry: 'client.js',
   seats: { min: 2, max: 8 },

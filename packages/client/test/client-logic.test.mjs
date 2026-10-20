@@ -151,7 +151,7 @@ test('视图归约：重复或乱序的快照被丢掉', () => {
     revision,
     serverNow: 1000 + revision,
     phase,
-    room: { code: 'AB3D', name: '房', gameId: 'echo', gameName: '数字回声', hostSeatId: 's1', hostName: '甲', seatSlots: 4, occupied: 1, allowSpectate: true, hasPassword: false, rulesHash: 'x', createdAt: 1, phase },
+    room: { code: 'AB3D', name: '房', gameId: 'echo', gameName: '测试回合制demo', hostSeatId: 's1', hostName: '甲', seatSlots: 4, occupied: 1, allowSpectate: true, hasPassword: false, rulesHash: 'x', createdAt: 1, phase },
     seats: [seat()],
     game: null,
   });
@@ -166,7 +166,7 @@ test('视图归约：重复或乱序的快照被丢掉', () => {
 
 test('视图归约：票据先落袋，座位表随后；聊天环形缓冲有上限', () => {
   let view = emptyViewModel();
-  view = reduce(view, { type: 'seatGranted', code: 'AB3D', seatId: 's1', ticket: 't', role: 'host', slot: 1, hostSeatId: 's1', serverNow: 1, manifest: { id: 'echo', name: '数字回声', version: '0.1.0', rulesHash: 'x', seats: { min: 2, max: 6 }, allowSpectate: true, soloFill: true, roles: ['host', 'player'], entry: 'client.js' } }, 1);
+  view = reduce(view, { type: 'seatGranted', code: 'AB3D', seatId: 's1', ticket: 't', role: 'host', slot: 1, hostSeatId: 's1', serverNow: 1, manifest: { id: 'echo', name: '测试回合制demo', version: '0.1.0', rulesHash: 'x', seats: { min: 2, max: 6 }, allowSpectate: true, soloFill: true, roles: ['host', 'player'], entry: 'client.js' } }, 1);
   assert.equal(view.mySeatId, 's1', 'seatGranted 先把座位与票据交出去');
   assert.equal(view.ticket, 't');
   assert.equal(mySeat(view), null, '还没收到座位表时不该假装知道座位细节');
@@ -176,7 +176,7 @@ test('视图归约：票据先落袋，座位表随后；聊天环形缓冲有�
     revision: 2,
     serverNow: 2,
     phase: 'lobby',
-    room: { code: 'AB3D', name: '房', gameId: 'echo', gameName: '数字回声', hostSeatId: 's1', hostName: '甲', seatSlots: 4, occupied: 1, allowSpectate: true, hasPassword: false, rulesHash: 'x', createdAt: 1, phase: 'lobby' },
+    room: { code: 'AB3D', name: '房', gameId: 'echo', gameName: '测试回合制demo', hostSeatId: 's1', hostName: '甲', seatSlots: 4, occupied: 1, allowSpectate: true, hasPassword: false, rulesHash: 'x', createdAt: 1, phase: 'lobby' },
     seats: [seat({ seatId: 's1', role: 'host', name: '甲' })],
     game: null,
   }, 2);
@@ -197,7 +197,7 @@ test('开局按钮的文案要把"还差谁"讲出来', () => {
     revision: 1,
     serverNow: 1,
     phase: 'lobby',
-    room: { code: 'AB3D', name: '房', gameId: 'echo', gameName: '数字回声', hostSeatId: 'h1', hostName: '房主', seatSlots: 4, occupied: 3, allowSpectate: true, hasPassword: false, rulesHash: 'x', createdAt: 1, phase: 'lobby' },
+    room: { code: 'AB3D', name: '房', gameId: 'echo', gameName: '测试回合制demo', hostSeatId: 'h1', hostName: '房主', seatSlots: 4, occupied: 3, allowSpectate: true, hasPassword: false, rulesHash: 'x', createdAt: 1, phase: 'lobby' },
     seats: [
       seat({ seatId: 'h1', role: 'host', name: '房主', slot: 1 }),
       seat({ seatId: 'p2', name: '乙', ready: true, slot: 2 }),
@@ -395,7 +395,7 @@ test('自绘下拉的纯逻辑：键盘高亮算得对、选项签名能认出�
 
 test('"加电脑位"不亮时必须给原因：游戏不支持填充 vs 槽位已满', () => {
   const noFill = { ...emptyViewModel(), manifest: { soloFill: false }, room: { occupied: 1, seatSlots: 4 } };
-  assert.equal(aiFillBlocker(noFill), '这个游戏不支持电脑位', '一起数到就是这种：平台拒绝得对，但按钮不该照样端给人点');
+  assert.equal(aiFillBlocker(noFill), '这个游戏不支持电脑位', '测试同时操作demo就是这种：平台拒绝得对，但按钮不该照样端给人点');
 
   const full = { ...emptyViewModel(), manifest: { soloFill: true }, room: { occupied: 4, seatSlots: 4 } };
   assert.equal(aiFillBlocker(full), '槽位已满');

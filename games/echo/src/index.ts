@@ -182,7 +182,7 @@ class EchoInstance implements GameInstance {
 
 export const echoModule: GameModule = {
   id: 'echo',
-  name: '数字回声',
+  name: '测试回合制demo',
   version: '0.1.0',
   entry: 'client.js',
   seats: { min: 2, max: 6 },

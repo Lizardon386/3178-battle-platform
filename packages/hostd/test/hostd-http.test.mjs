@@ -121,7 +121,7 @@ test('路径穿越：../ 编码变形一律 404', async () => {
 test('游戏模块产物可跨源取（模块下发位）', async () => {
   const { status, body, headers } = await get('/games/echo/dist/index.js');
   assert.equal(status, 200);
-  assert.match(body, /数字回声/);
+  assert.match(body, /测试回合制demo/);
   assert.equal(headers.get('access-control-allow-origin'), '*');
 });
 

@@ -150,7 +150,7 @@ test('真 socket：建房→入座→准备→开局→出招，两端各自拿�
   // 换第二个游戏：同一套传输与引擎，形状完全不同
   host.push({ type: 'hostClose' });
   host.messages.length = 0;
-  host.push({ type: 'roomCreate', gameId: 'turncount', roomName: '一起数到', seatSlots: 4, config: { goal: 3, limitMs: 60000 } });
+  host.push({ type: 'roomCreate', gameId: 'turncount', roomName: '测试同时操作demo', seatSlots: 4, config: { goal: 3, limitMs: 60000 } });
   const countRoom = await host.until('snapshot', 2000, (m) => m.room.gameId === 'turncount');
   assert.equal(countRoom.room.gameId, 'turncount');
   guest.messages.length = 0;
