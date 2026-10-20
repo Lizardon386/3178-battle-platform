@@ -144,27 +144,6 @@ function writeLicenses() {
   for (const [src, name] of licenses) copyOne(src, join('licenses', name));
 }
 
-function writeUsage() {
-  const text = [
-    '3178 对战平台 · 绿色便携包',
-    '',
-    '双击入口：',
-    '  房主建房.bat   本机开房（本机界面 http://127.0.0.1:3178 ，局域网端口 3000）',
-    '  玩家进房.bat   只开本地大厅，用来进别人的房',
-    '',
-    '两个入口共用同一个本机界面端口，不要同时开。',
-    '房主第一次启动时 Windows 可能弹出防火墙提示：请亲手点“允许”，脚本不会替你改防火墙。',
-    '',
-    '停止：在对局控制台窗口按 Ctrl+C，会先落盘再退出；窗口自己关闭。',
-    '数据：data/ 目录由程序自动创建，房间与票据只落在房主这一侧。',
-    '',
-    '不需要安装 Node 或 npm。浏览器要求 Chrome / Edge 111 及以上。',
-    '跨网需要房主本机安装 cloudflared，并在房主启动器上追加 --tunnel。',
-    '',
-  ].join('\r\n');
-  writeFileSync(join(OUT, '使用说明.txt'), text, 'utf8');
-}
-
 function listTextFiles(dir) {
   const out = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -310,7 +289,6 @@ writeFileSync(join(OUT, '玩家进房.bat'), joinBat, 'utf8');
 verifyBat('房主建房.bat（便携版）', readFileSync(join(OUT, '房主建房.bat'), 'utf8'));
 verifyBat('玩家进房.bat（便携版）', readFileSync(join(OUT, '玩家进房.bat'), 'utf8'));
 writeLicenses();
-writeUsage();
 
 writeFileSync(
   join(OUT, MARKER),
