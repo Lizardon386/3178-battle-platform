@@ -1,6 +1,6 @@
 # 3178-battle-platform（3178 对战平台）· 方案架构设计
 
-> 面向方案评审者、维护者与二次开发的人：目标与约束、运行模式、核心流程、架构接缝、线协议、已定语义；游戏接入契约见 [接入契约.md](接入契约.md)。
+> 写给方案评审、维护和二次开发的人。内容按运行模式、核心流程、架构接缝、协议、语义和工程约束排列；游戏接入见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。
 > 使用者说明见 [README.md](README.md)；进度、逐阶段验收凭据与 agent 交接记录见 [CONTEXT.md](CONTEXT.md)。
 > 最近更新：2026-10-20
 >
@@ -8,7 +8,7 @@
 
 ## 1. 目标与约束
 
-做一个**游戏无关的宿主制联机对战平台**：每人本机跑一个可双击的客户端，谁建房谁的进程就是服务器，别人从局域网列表或邀请链接进房——war3 对战平台那个形状。玩法通过 `GameModule` 契约插进来，平台自己只管房间、座位、房主权限、准备、聊天、观战、电脑位、掉线宽限、版本闸、落盘与传输。
+做一个**游戏无关的宿主制联机对战平台**：每个人在自己电脑上跑一个可双击的客户端，谁建房谁的进程就是服务器，别人从局域网列表或邀请链接进房，类似 war3 对战平台。玩法通过 `GameModule` 接口接入，平台自己只管房间、座位、房主权限、准备、聊天、观战、电脑位、掉线宽限、版本检查、存档和传输。
 
 约束（每条都直接逼出后面的设计）：
 
@@ -17,7 +17,7 @@
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 
-成功判据（都可机器验证）：`tools/check-seam.sh` 在平台包内**零命中**玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作）作为“契约确实无关玩法”的活证据；协议层与 UI 层两层猴测无违规。当前 `npm test` **114 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **114 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
 
 ## 2. 运行模式
 
@@ -106,7 +106,7 @@ sequenceDiagram
   S-->>S: 其他座位（按其 transport 投递）
 ```
 
-- 游戏不能直接碰 socket；`Effect[]` 是唯一出口。
+- 游戏不能直接碰 socket；游戏只通过 `Effect[]` 与平台交互。
 - 每次可见状态变更都推进 `revision`；客户端按它去重，不推进就会被当重复帧丢掉。
 - 出站目标在消息创建时就解析成具体 `connId`，避免关房/退出时最后一条通知凭空消失。
 
@@ -168,10 +168,10 @@ flowchart TD
 ### 4.2 三处接缝
 
 - **线协议**（`packages/protocol`）：消息目录与错误码是客户端/服务端唯一的字据。
-- **`GameModule` / `GameInstance` 契约**（`packages/server/src/module-api.ts`）：运行时按 id 动态加载 `games/<id>/dist/index.js`，平台源码不 import 游戏。
+- **`GameModule` / `GameInstance` 接口**（`packages/server/src/module-api.ts`）：运行时按 id 动态加载 `games/<id>/dist/index.js`，平台源码不 import 游戏。
 - **`Effect[]` 出口**：游戏碰不到 socket；投递、限流、视角裁剪、审计都在平台。
 
-> 接一个新游戏（GameModule / GameInstance / 客户端入口 / 目录与构建）见 [接入契约.md](接入契约.md)。
+> 接一个新游戏（GameModule / GameInstance / 客户端入口 / 目录与构建）见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。
 
 ### 4.3 文件清单
 
@@ -192,7 +192,7 @@ flowchart TD
 | [packages/server/src/engine.ts](packages/server/src/engine.ts) | 引擎：线消息 → 房间/游戏操作 → 出站编排 |
 | [packages/server/src/room.ts](packages/server/src/room.ts) | 座位表、房主标记、聊天、revision、落盘导出/恢复 |
 | [packages/server/src/authority.ts](packages/server/src/authority.ts) | 权限判定集中处 |
-| [packages/server/src/module-api.ts](packages/server/src/module-api.ts) | `GameModule` / `GameInstance` / `Effect` 契约 |
+| [packages/server/src/module-api.ts](packages/server/src/module-api.ts) | `GameModule` / `GameInstance` / `Effect` 接口 |
 | [packages/server/src/loader.ts](packages/server/src/loader.ts) | 运行时按 id 动态加载游戏模块 |
 | [packages/server/src/transport.ts](packages/server/src/transport.ts) | ws 薄壳：握手、编码、Origin、心跳 |
 | [packages/server/src/store.ts](packages/server/src/store.ts) | 房主侧原子落盘与坏文件处理 |
@@ -242,7 +242,7 @@ flowchart TD
 |---|---|
 | [packages/protocol/test/protocol.test.mjs](packages/protocol/test/protocol.test.mjs) | 协议与摘要 |
 | [packages/server/test/room-authority.test.mjs](packages/server/test/room-authority.test.mjs) | 房主权限/票据/座位模型 |
-| [packages/server/test/contract.test.mjs](packages/server/test/contract.test.mjs) | 两游戏共用同一断言集的契约测试 |
+| [packages/server/test/contract.test.mjs](packages/server/test/contract.test.mjs) | 两个游戏共用同一套接口断言 |
 | [packages/server/test/ws-live.test.mjs](packages/server/test/ws-live.test.mjs) | 真 socket 端到端 |
 | [packages/server/test/store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) | 落盘恢复 + 信标编解码 |
 | [packages/client/test/client-logic.test.mjs](packages/client/test/client-logic.test.mjs) | 客户端无 DOM 逻辑 |
@@ -284,8 +284,8 @@ node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议�
 | TypeScript（Node ESM）+ 官方签名 `node.exe` | 本机 Smart App Control 强制，未签名 exe 被拦且没有“仍要运行” | 交付物是文件夹 + 快捷方式 |
 | 宿主制权威，不做中央服务器/分布式 | 离线双击可用，不需要常开公网节点 | 房主关机=这局没了；天然不防房主 |
 | 一个进程、两个监听、本机单一 UI origin | 昵称/票据按 origin 存；邀请链接必须给局域网/隧道地址 | 两套 `http.Server` + `WsTransport` 的生命周期；`--port` / `--lan-port` 分开 |
-| 平台与玩法只经 `GameModule` 契约 | 旧 `Room` 同时管座位和规则，分层一改就穿透 | 接入要写一套接口 |
-| `Engine` 只吐 `Outbound[]`，`WsTransport` 管 socket | 契约测试可纯内存跑，不依赖端口/网卡 | 投递要显式 `publish()` |
+| 平台与玩法只经 `GameModule` 接口 | 旧 `Room` 同时管座位和规则，分层一改就穿透 | 接入要写一套接口 |
+| `Engine` 只吐 `Outbound[]`，`WsTransport` 管 socket | 接口测试可纯内存跑，不依赖端口/网卡 | 投递要显式 `publish()` |
 | 出站目标创建时解析成 `connId` | 关房/退出会先清会话表，按房间寻址会丢最后一条通知 | 消息生成后不能按房间状态寻址 |
 | 游戏只能返回 `Effect[]` | 投递、限流、视角、审计统一在平台 | 跨端事件名没有集中枚举 |
 | `revision` 每次可见变更推进 | 客户端按 revision 去重，不推进会丢新快照 | 聊天等高频事件也推版本号 |
@@ -319,7 +319,7 @@ node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议�
 - 与 [uno-online](../uno-online/CONTEXT.md) 是同一份玩法的两种演进：玩法改动归那边，连接/身份/分发改动归这里；不要两边同时动同一份逻辑。
 - 浏览器底线（Chrome/Edge 111+）与使用者视角的限制由 [README.md](README.md) 的「限制与注意事项」持有，本档不重述。
 
-## 9. 工程硬约束
+## 9. 工程约束
 
 - **`.bat` 编码**：UTF-8 无 BOM + CRLF + 第 2 行 `chcp 65001`，中文只出现在 chcp 之后；否则 cmd 按 cp936 解析会把中文拼成命令分隔符。`.bat` 只能做启动器（`start …` 后 `exit /b 0`），Ctrl+C 才会落在 node 上，收尾后窗口自己关而不出 Y/N。
 - **Ctrl+C 验证边界**：收尾处理器本身有测试；但“Windows 把控制台 Ctrl+C 投递成 SIGINT”这一步无法从外部模拟，靠 libuv 自身。
