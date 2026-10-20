@@ -18,6 +18,16 @@
 
 > 想接新游戏？实现 `GameModule` / `GameInstance` 两个接口即可；完整契约、线协议和开发命令见下文「文档」。
 
+## 文档
+
+| 文档 | 阅读对象 | 内容 |
+|---|---|---|
+| [README.md](README.md) | 玩家 / 房主 | 平台是什么、前置与双击入口、一局怎么走、命令行、限制与注意事项 |
+| [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 目标与约束；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
+| [接入契约.md](接入契约.md) | 游戏开发者 / 接入方 | GameModule / GameInstance / Effect[] / 客户端入口；三条硬规矩、目录与构建、接缝闸门 |
+| [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
+| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
+
 ## 开始玩
 
 ### 前置
@@ -65,14 +75,6 @@ node packages/hostd/dist/cli.js stop --port 3178
 ```
 
 `--port` 是本机界面端口（只绑 `127.0.0.1`），`--lan-port` 是房主模式给局域网/隧道开放的端口；`--no-lan` 连公网监听一起关，`--no-announce` 只关组播广播。便携包里把 `node` 换成包内 `node.exe` 即可。
-
-## 文档
-
-| 文档 | 阅读对象 | 内容 |
-|---|---|---|
-| [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 目标与约束；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；接入契约（GameModule / GameInstance / 客户端入口）；线协议；开发与构建；关键设计决策；已定语义与边界 |
-| [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
-| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
 
 ## 限制与注意事项
 

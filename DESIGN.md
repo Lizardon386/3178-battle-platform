@@ -1,6 +1,6 @@
 # 3178-battle-platform（3178 对战平台）· 方案架构设计
 
-> 面向方案评审者、维护者与二次开发的人：目标与约束、运行模式、核心流程、架构接缝、接入契约、线协议、已定语义。
+> 面向方案评审者、维护者与二次开发的人：目标与约束、运行模式、核心流程、架构接缝、线协议、已定语义；游戏接入契约见 [接入契约.md](接入契约.md)。
 > 使用者说明见 [README.md](README.md)；进度、逐阶段验收凭据与 agent 交接记录见 [CONTEXT.md](CONTEXT.md)。
 > 最近更新：2026-10-20
 >
@@ -171,6 +171,8 @@ flowchart TD
 - **`GameModule` / `GameInstance` 契约**（`packages/server/src/module-api.ts`）：运行时按 id 动态加载 `games/<id>/dist/index.js`，平台源码不 import 游戏。
 - **`Effect[]` 出口**：游戏碰不到 socket；投递、限流、视角裁剪、审计都在平台。
 
+> 接一个新游戏（GameModule / GameInstance / 客户端入口 / 目录与构建）见 [接入契约.md](接入契约.md)。
+
 ### 4.3 文件清单
 
 > 只列关键文件；UI 观感相关的样式/字体/预览页不在这里展开。
@@ -250,55 +252,7 @@ flowchart TD
 | [packages/hostd/test/sigint-shutdown.test.mjs](packages/hostd/test/sigint-shutdown.test.mjs) | Ctrl+C 收尾：落盘、删记录、退出码 0、端口释放 |
 | [packages/hostd/test/dual-listener.test.mjs](packages/hostd/test/dual-listener.test.mjs) | 私网建房、公网进房，两个监听共享同一引擎 |
 
-## 5. 接入契约
-
-实现 [module-api.ts](packages/server/src/module-api.ts) 里的两个接口，游戏就接进来了。三条硬规矩写在文件头：状态不进平台对象、游戏不碰 socket、不改房间相位/座位表/房主权限。目录名必须等于模块自称的 `id`（`^[a-z0-9][a-z0-9-]{0,31}$`），加载器会拒绝不一致。
-
-### `GameModule`
-
-```ts
-export const myModule: GameModule = {
-  id: 'mygame', name: '我的游戏', version: '0.1.0',
-  entry: 'client.js',                 // 相对 games/<id>/ 的 URL，不许含 '..' 或 http
-  seats: { min: 2, max: 8 },          // max ≤ 16（manifest 校验硬上限）
-  allowSpectate: true,
-  soloFill: true,
-  roles: ['host', 'player', 'ai', 'spectator'],
-  normalizeConfig: (raw) => ({ /* 把房主原始设置收敛成确定形状 */ }),
-  rulesHashOf: (config) => stableDigest(config), // 只摘要真影响对局的字段
-  create: (config, ctx) => new MyInstance(config, ctx),
-  resume: (snapshot, ctx) => { /* 从快照还原 */ },
-  acceptsSnapshot: (snapshot) => snapshot?.version === 1,
-};
-```
-
-`rulesHashOf` 只挑影响玩法的字段：房主改房名不应让客人报“房规不同”。`ctx` 提供注入的 `now()` / `random()`、`seats()` / `seat(id)`，测试因此可以确定性推进。
-
-### `GameInstance`
-
-- 必给：`serialize(viewer)` / `handle(action, by)` / `begin()` / `snapshot()`。
-  - `serialize(viewer)` 里 `viewer === null` 是观战视角；隐私裁剪归游戏。
-  - `handle` / `begin` 返回 `Effect[]`；非法动作返回 `reject('中文说明', 'PHASE')`，不要抛异常或静默吞掉。
-- 按需：`tick(now)`、`onSeatJoin`、`onSeatLeave`、`onTimeout`、`dispose`。
-- `Effect` 六种：`broadcast` / `toSeat` / `notice` / `system` / `end` / `kick`。
-
-放进 `games/<id>/`，`package.json` 的 `main` 指向 `dist/index.js`，根 `tsconfig.json` 的 `references` 加一行 `{ "path": "games/<id>" }`；漏了这步 `npm run build` 不产出 `dist/index.js`，`loadGames()` 会静默跳过没有该文件的目录。
-
-### 客户端界面（可选）
-
-`entry` 最终解析成 `<房主地址>/games/<id>/<entry>`。入口导出 `default` 或 `client`：
-
-```js
-export default {
-  mount(host, view, actions) { /* 渲染 view；按钮里 actions.send('动作名', payload) */ },
-  unmount(host) {},
-  onEvent({ name, payload }, actions) { /* 服务端 broadcast 的事件 */ },
-};
-```
-
-拿不到 socket、拿不到别人的座位，只有 `actions.send()` 与 `actions.seatId()`。没有界面也能跑：平台会退到内置占位面板。
-
-## 6. 线协议
+## 5. 线协议
 
 | 方向 | 消息 | 要座位 | 要房主 |
 |---|---|---|---|
@@ -309,7 +263,7 @@ export default {
 
 完整字段与中文错误码文案在 [wire.ts](packages/protocol/src/wire.ts) 与 [codes.ts](packages/protocol/src/codes.ts)。
 
-## 7. 开发与构建
+## 6. 开发与构建
 
 ```bash
 npm run build          # tsc -b 项目引用，无打包器
@@ -323,7 +277,7 @@ node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议�
 - `.bat` 由 [tools/gen-bat.mjs](tools/gen-bat.mjs) 生成，别手写。
 - 便携包由 [tools/build-portable.mjs](tools/build-portable.mjs) 汇编并自检，产物 `dist-portable/` 不进 git。
 
-## 8. 关键设计决策
+## 7. 关键设计决策
 
 | 决策 | 理由 | 代价 |
 |---|---|---|
@@ -341,7 +295,7 @@ node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议�
 | 落盘只发生在房间权威所在进程 | “谁是权威”只有一份 | 房主关机这局就没了 |
 | 两个形状不同的测试 demo 游戏 | “平台无关玩法”必须有第二个形状做证据 | 多写约 300 行测试用游戏代码 |
 
-## 9. 已定语义与边界
+## 8. 已定语义与边界
 
 | 事项 | 结论 |
 |---|---|
@@ -365,7 +319,7 @@ node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议�
 - 与 [uno-online](../uno-online/CONTEXT.md) 是同一份玩法的两种演进：玩法改动归那边，连接/身份/分发改动归这里；不要两边同时动同一份逻辑。
 - 浏览器底线（Chrome/Edge 111+）与使用者视角的限制由 [README.md](README.md) 的「限制与注意事项」持有，本档不重述。
 
-## 10. 工程硬约束
+## 9. 工程硬约束
 
 - **`.bat` 编码**：UTF-8 无 BOM + CRLF + 第 2 行 `chcp 65001`，中文只出现在 chcp 之后；否则 cmd 按 cp936 解析会把中文拼成命令分隔符。`.bat` 只能做启动器（`start …` 后 `exit /b 0`），Ctrl+C 才会落在 node 上，收尾后窗口自己关而不出 Y/N。
 - **Ctrl+C 验证边界**：收尾处理器本身有测试；但“Windows 把控制台 Ctrl+C 投递成 SIGINT”这一步无法从外部模拟，靠 libuv 自身。
