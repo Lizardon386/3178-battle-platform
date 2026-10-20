@@ -1,6 +1,6 @@
 # 3178-battle-platform（3178 对战平台）· 方案设计
 
-> 面向方案评审者与二次开发的人：为什么这么设计、包与包之间的接缝、哪些语义已经定死。使用者说明见 [README.md](README.md)，进度、逐阶段验收凭据与 agent 交接记录见 [CONTEXT.md](CONTEXT.md)。
+> 面向方案评审者与二次开发的人：为什么这么设计、包与包之间的接缝、接入契约、线协议、开发命令、哪些语义已经定死。使用者说明见 [README.md](README.md)，进度、逐阶段验收凭据与 agent 交接记录见 [CONTEXT.md](CONTEXT.md)。
 > 最近更新：2026-10-20
 >
 > 本仓库推到 GitHub，文档内部一律用仓库相对链接（`file:///D:/...` 在别人机器上是死链）。
@@ -46,7 +46,7 @@
 
 四个包 + 两个游戏 + 一组工具，接缝只有三处：**线协议**（`packages/protocol`，消息目录与错误码是唯一的字据）、**`GameModule` / `GameInstance` 契约**（`packages/server/src/module-api.ts`，平台运行时按 id 动态加载 `games/<id>/dist/index.js`，源码里不 import 它）、**`Effect[]` 出口**（游戏碰不到 socket，投递、限流、视角裁剪、审计才守得住）。
 
-接入方法与消息权限表的使用者版见 [README.md](README.md) 的「接一个新游戏」与「线协议」；这里是完整文件清单。
+接入方法、线协议与开发命令见本档后面的「接入契约」「线协议」「开发与构建」；这里只列文件清单。
 
 
 | 文件 | 用途 |
@@ -111,6 +111,79 @@
 | [packages/server/test/contract.test.mjs](packages/server/test/contract.test.mjs) | 两游戏共用同一断言集的契约测试 |
 | [packages/server/test/ws-live.test.mjs](packages/server/test/ws-live.test.mjs) | 真 socket 端到端 |
 | [packages/server/test/store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) | 落盘恢复 + 信标编解码 |
+
+## 接入契约
+
+实现 [module-api.ts](packages/server/src/module-api.ts) 里的两个接口，游戏就接进来了。三条硬规矩写在文件头：状态不进平台对象、游戏不碰 socket、不改房间相位/座位表/房主权限。目录名必须等于模块自称的 `id`（`^[a-z0-9][a-z0-9-]{0,31}$`），加载器会拒绝不一致。
+
+### `GameModule`
+
+```ts
+export const myModule: GameModule = {
+  id: 'mygame', name: '我的游戏', version: '0.1.0',
+  entry: 'client.js',                 // 相对 games/<id>/ 的 URL，不许含 '..' 或 http
+  seats: { min: 2, max: 8 },          // max ≤ 16（manifest 校验硬上限）
+  allowSpectate: true,
+  soloFill: true,
+  roles: ['host', 'player', 'ai', 'spectator'],
+  normalizeConfig: (raw) => ({ /* 把房主原始设置收敛成确定形状 */ }),
+  rulesHashOf: (config) => stableDigest(config), // 只摘要真影响对局的字段
+  create: (config, ctx) => new MyInstance(config, ctx),
+  resume: (snapshot, ctx) => { /* 从快照还原 */ },
+  acceptsSnapshot: (snapshot) => snapshot?.version === 1, // 不兼容就丢弃，别硬解
+};
+```
+
+`rulesHashOf` 只挑影响玩法的字段：房主改房名不应让客人报“房规不同”。`ctx` 提供注入的 `now()` / `random()`、`seats()` / `seat(id)`，测试因此可以确定性推进，不用真等计时器。
+
+### `GameInstance`
+
+- 必给：`serialize(viewer)` / `handle(action, by)` / `begin()` / `snapshot()`。
+  - `serialize(viewer)` 里 `viewer === null` 是观战视角；隐私裁剪归游戏，平台不知道“秘密”是什么。
+  - `handle` / `begin` 返回 `Effect[]`；非法动作返回 `reject('中文说明', 'PHASE')`，不要抛异常，也不要静默吞掉。拒绝文案会直接显示给玩家。
+- 按需：`tick(now)`、`onSeatJoin`、`onSeatLeave`、`onTimeout`、`dispose`。
+- `Effect` 六种：`broadcast` / `toSeat` / `notice` / `system` / `end` / `kick`。
+
+放进 `games/<id>/`，`package.json` 的 `main` 指向 `dist/index.js`，根 `tsconfig.json` 的 `references` 加一行 `{ "path": "games/<id>" }`；漏了这步 `npm run build` 不产出 `dist/index.js`，而 `loadGames()` 会静默跳过没有该文件的目录。参考实现：[games/echo](games/echo/src/index.ts)（回合制 + 隐私）与 [games/turncount](games/turncount/src/index.ts)（无游标 + 无隐私 + 同时操作）。
+
+### 客户端界面（可选）
+
+`entry` 最终解析成 `<房主地址>/games/<id>/<entry>`。入口导出 `default` 或 `client`：
+
+```js
+export default {
+  mount(host, view, actions) { /* 渲染 view；按钮里 actions.send('动作名', payload) */ },
+  unmount(host) {},
+  onEvent({ name, payload }, actions) { /* 服务端 broadcast 的事件 */ },
+};
+```
+
+拿不到 socket、拿不到别人的座位，只有 `actions.send()` 与 `actions.seatId()`。没有界面也能跑：平台会退到内置占位面板（只认 `count` 的 `plus` / `minus`），所以新游戏在写出 `client.js` 之前能看状态、点不了动作。
+
+## 线协议
+
+| 方向 | 消息 | 要座位 | 要房主 |
+|---|---|---|---|
+| C→S | `hello` `roomCreate` `roomJoin` `seatResume` `resync` `ping` | 否 | 否 |
+| C→S | `ready` `gameAction` `chat` `seatLeave` | 是 | 否 |
+| C→S | `hostStart` `hostClose` `hostKick` `hostTransfer` `hostSeat` | 是 | **是** |
+| S→C | `welcome` `seatGranted` `snapshot` `event` `chat` `notice` `error` `pong` | — | — |
+
+完整字段与中文错误码文案在 [wire.ts](packages/protocol/src/wire.ts) 与 [codes.ts](packages/protocol/src/codes.ts)。
+
+## 开发与构建
+
+```bash
+npm run build          # tsc -b 项目引用，无打包器
+npm test               # node --test（当前 114 例）
+bash tools/check-seam.sh                        # 闸门：平台包内不得出现玩法词
+npm run portable                                # 绿色便携包（dist-portable/，不入库）
+node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测
+```
+
+- `node --test` 跑目录参数在 Windows 下不可靠：必须用引号包住的 glob，并带 `--test-timeout`。
+- `.bat` 由 [tools/gen-bat.mjs](tools/gen-bat.mjs) 生成，别手写；编码与启动器结构由 [bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) 钉住。
+- 便携包由 [tools/build-portable.mjs](tools/build-portable.mjs) 汇编并自检，产物 `dist-portable/` 不进 git。
 
 ## 已定语义与边界
 

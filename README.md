@@ -1,70 +1,53 @@
 # 3178-battle-platform（3178 对战平台）
 
-> 面向使用者：这是什么、能干什么、怎么跑起来、有什么限制。设计取舍与已定语义在 [DESIGN.md](DESIGN.md)，逐条实测数据与 agent 交接记录在 [CONTEXT.md](CONTEXT.md)。
+> 游戏无关的宿主制联机对战平台：谁建房谁的进程就是服务器，别人从局域网列表或邀请链接进房——war3 对战平台那个形状。
+> 玩家：从「开始玩」往下看。开发者：接入契约、线协议、开发命令见 [DESIGN.md](DESIGN.md)；进度与交接记录见 [CONTEXT.md](CONTEXT.md)。
 > 最近更新：2026-10-20
 <!-- 日期必须留在这行 blockquote 上：check-docs.sh 的 [新]/[旧]/[期] 只读这一行，正文里写日期不算顶部日期。 -->
 
-## 一句话说明
+## 这是什么
 
-**游戏无关的宿主制联机对战平台**：每人本机跑一个可双击的客户端，谁建房谁的进程就是服务器，别人从局域网列表或邀请链接进房——war3 对战平台那个形状。
-
-具体玩法通过一个 `GameModule` 契约插进来。平台只管房间、座位、房主权限、准备、聊天、观战、电脑位、掉线宽限、版本闸、落盘与传输；仓库自带两个形状完全不同的合成游戏（`echo` / `turncount`）作为这层契约确实无关玩法的证据。
-
-## 能力
+每人本机跑一个可双击的客户端，玩法通过 `GameModule` 契约插进来。平台只管房间、座位、房主权限、准备、聊天、观战、电脑位、掉线宽限、版本闸、落盘与传输；仓库自带两个形状完全不同的合成游戏（`echo` / `turncount`），用来证明契约确实无关玩法。
 
 - **房主制** —— 建房人所在进程是权威；开局、踢人、关房、移交只有房主能发。
-- **座位与票据** —— 槽位号 + 玩家/电脑/观战角色；入席发票据，掉线可凭它坐回原位（盘上只存摘要）。
+- **座位与票据** —— 玩家 / 电脑 / 观战角色；入席发票据，掉线可凭它坐回原位。
 - **房间发现** —— 同网段 UDP 组播实时列表；跨网用邀请链接，可选 cloudflared 隧道。
-- **断线重连** —— 指数退避；对局中保留座位 30 分钟（可配）；房主掉线过久直接终局。
-- **落盘恢复** —— 房主机原子写快照，重启后房号、座位、票据、对局状态都回来。
 - **版本与房规闸** —— 房规摘要或游戏版本对不上时挡在门外，不会开成一局不一样的。
+- **断线重连与落盘** —— 对局中保留座位 30 分钟；房主重启后房号、座位、票据、对局状态都回来。
 - **按视角裁剪** —— 快照按座位生成，观战看不到别人的秘密。
-- **无构建** —— 浏览器直接吃原生 ESM（import map），没有打包步骤，离线可用。
-- **界面** —— 大厅 / 房间内 / 对局挂载点；暗紫主题，键盘可完整操作。
+- **无构建** —— 浏览器直接吃原生 ESM，离线可用；界面覆盖大厅、房间内和对局挂载点，键盘可完整操作。
 
-## 快速开始
+> 想接新游戏？实现 `GameModule` / `GameInstance` 两个接口即可；完整契约、线协议和开发命令在 [DESIGN.md](DESIGN.md)。
 
-前置：Windows + [Node 24](https://nodejs.org/)（`node -v` 出得来数就行）。在项目目录里先跑一次：
+## 开始玩
 
-```bash
-npm install && npm run build
-```
+### 前置
 
-然后双击：
+| 你拿到的是 | 需要什么 | 怎么启动 |
+|---|---|---|
+| 源码目录 | Windows + [Node 24](https://nodejs.org/)，先跑一次 `npm install && npm run build` | 双击下面的入口 |
+| 绿色便携包 | 什么都不用装（自带官方签名 `node.exe`） | 双击下面的入口 |
+
+浏览器用 Chrome / Edge 111 及以上（样式底座的 `oklch()` 色值需要）。两个入口：
 
 | 双击 | 结果 |
 |---|---|
-| `房主建房.bat` | 起房主端：本机界面 <http://127.0.0.1:3178>，同时开 3000 端口给局域网朋友；浏览器自动打开 |
-| `玩家进房.bat` | 只开本机界面 <http://127.0.0.1:3178>：能看局域网房间列表，也能进别人的房 |
+| [房主建房.bat](房主建房.bat) | 起房主端：本机界面 <http://127.0.0.1:3178>，同时开 3000 端口给局域网朋友；浏览器自动打开 |
+| [玩家进房.bat](玩家进房.bat) | 只开本机界面 <http://127.0.0.1:3178>：看局域网房间列表、进别人的房 |
 
-两个入口共用同一个本机界面端口（3178），**不要同时开**；房主端已经包含大厅，不需要再开本地壳。
+两个入口共用同一个本机界面端口（3178），**不要同时开**；房主端已经包含大厅，不需要再开玩家进房。
 
-对局跑在**新开的那个控制台窗口**里。要停就在那个窗口按 <kbd>Ctrl</kbd>+<kbd>C</kbd>：先落盘收尾再退出，窗口自己关闭，不会问你"终止批处理操作吗"。
+对局跑在**新开的控制台窗口**里。要停就在那个窗口按 <kbd>Ctrl</kbd>+<kbd>C</kbd>：先落盘收尾再退出，窗口自己关闭。首次绑定局域网时 Windows 会弹防火墙提示，需要你亲手点“允许”——启动器不写防火墙规则，也不静默装东西。
 
-环境缺东西时启动器不会一闪而过——它打印该跑哪条命令并停住等你看。它不静默装东西，也不写防火墙规则：首次绑定局域网时 Windows 会弹窗，需要你亲手点"允许"。
+### 一局怎么走
 
-### 命令行
-
-```bash
-npm test                                   # 全量用例
-node packages/hostd/dist/cli.js host --port 3178 --lan-port 3000 [--tunnel] [--no-lan] [--no-announce]
-node packages/hostd/dist/cli.js join --port 3178     # 本地壳，只绑 127.0.0.1
-node packages/hostd/dist/cli.js diagnose             # node 版本 / 已装游戏 / cloudflared / 网卡 / 在跑的壳
-node packages/hostd/dist/cli.js stop --port 3178
-npm run portable                                     # 生成绿色便携包（产物在 dist-portable/）
-```
-
-`--port` 是本机界面端口（只绑 127.0.0.1），`--lan-port` 是房主模式给局域网/隧道开放的端口；`--no-lan` 连公网监听一起关，`--no-announce` 只关组播广播。
-
-## 使用说明
-
-1. **房主**：填房名、选游戏、定座位数 → 点「建房并坐 1 号位」，界面上出现四位房号。本机页面始终是 `127.0.0.1:3178`；`3000` 只是给朋友的入口。
-2. **客人**：另一台机器双击「玩家进房.bat」，填房主地址（`192.168.x.x:3000` 或隧道网址）+ 房号进房；或者直接点房主复制出去的邀请链接，地址和房号都替你填好。
-3. 各自点「准备」，房主的「开始对局」变亮后开局。人不够时按钮上会写明"等准备：谁"。
+1. **房主**：填房名、选游戏、定座位数 → 点「建房并坐 1 号位」，界面上出现四位房号。本机页面始终是 `127.0.0.1:3178`；控制台横幅会打印局域网入口（通常是 `192.168.x.x:3000`），那是给朋友的地址。
+2. **客人**：另一台机器双击「玩家进房.bat」，填房主地址（上面那个局域网入口或隧道网址）+ 房号；或者直接点房主发来的邀请链接，地址和房号都替你填好。
+3. 各自点「准备」，房主的「开始对局」变亮后开局。人不够时按钮上会写明“等准备：谁”。
 4. **掉线 / 关页面 / 换设备**：浏览器数据还在就会自动坐回原位；票据失效时界面会说明原因，不会只丢一句错误码。
-5. **昵称会自动记住**：改完就存，不用点「建房」或「加入」才生效；下次打开直接是你上次填的名字。把输入框清空不会抹掉记忆（清空＝这次没填，仍会用上次那个）。
+5. **昵称会自动记住**：改完就存，不用点按钮才生效；清空输入框等于“这次没填”，不会抹掉记住的名字。
 
-> 昵称、地址簿与座位票据存在浏览器的同源存储里。两个启动器都从 `http://127.0.0.1:3178/` 打开，所以只有**一份**存储：在房主端改的名字，换成本地壳仍然在。房主端的 `3000` 只是给局域网朋友的入口，不作为本机页面来源。
+> 昵称、地址簿与座位票据存在浏览器的同源存储里。两个入口都从 `http://127.0.0.1:3178/` 打开，所以只有**一份**存储。
 
 | 位置 | 房主 | 玩家 | 观战 |
 |---|---|---|---|
@@ -73,65 +56,28 @@ npm run portable                                     # 生成绿色便携包（�
 
 房主不能直接走人：要么先移交，要么关房——这是 war3 式的房主语义，不是防误触的兜底。
 
-## 接一个新游戏
+### 命令行（高级）
 
-实现 `packages/server/src/module-api.ts` 里的两个接口：
+```bash
+node packages/hostd/dist/cli.js host --port 3178 --lan-port 3000 [--tunnel] [--no-lan] [--no-announce]
+node packages/hostd/dist/cli.js join --port 3178     # 只进房，绑 127.0.0.1
+node packages/hostd/dist/cli.js diagnose             # node / 游戏 / cloudflared / 网卡 / 在跑的壳
+node packages/hostd/dist/cli.js stop --port 3178
+```
 
-- **`GameModule`**：`id / name / version / entry / seats / allowSpectate / soloFill / roles` 加 `normalizeConfig`、`rulesHashOf`、`create`、`resume`。
-- **`GameInstance`**（一局的状态机）：`serialize(viewer)`、`handle(action, by)`、`begin()`、`snapshot()`，按需再加 `tick` / `onSeatJoin` / `onSeatLeave` / `onTimeout`。
-
-游戏碰不到 socket，所有出口都是返回 `Effect[]`（广播 / 发给某个座位 / 通知 / 系统消息 / 终局 / 踢）。把目录放进 `games/<id>/`，构建产物落在 `games/<id>/dist/index.js`，房主端运行时按 id 动态加载——平台源码不会 import 它。参考实现：`games/echo`（回合制 + 有隐私）与 `games/turncount`（无回合游标 + 无隐私 + 同时操作）。
-
-## 线协议
-
-| 方向 | 消息 | 要座位 | 要房主 |
-|---|---|---|---|
-| C→S | `hello` `roomCreate` `roomJoin` `seatResume` `resync` `ping` | 否 | 否 |
-| C→S | `ready` `gameAction` `chat` `seatLeave` | 是 | 否 |
-| C→S | `hostStart` `hostClose` `hostKick` `hostTransfer` `hostSeat` | 是 | **是** |
-| S→C | `welcome` `seatGranted` `snapshot` `event` `chat` `notice` `error` `pong` | — | — |
-
-完整字段与中文错误码文案在 `packages/protocol/src/wire.ts` 与 `codes.ts`。
+`--port` 是本机界面端口（只绑 `127.0.0.1`），`--lan-port` 是房主模式给局域网/隧道开放的端口；`--no-lan` 连公网监听一起关，`--no-announce` 只关组播广播。便携包里把 `node` 换成包内 `node.exe` 即可。
 
 ## 限制与注意事项
 
-- **浏览器要 Chrome/Edge 111+**：样式底座 Tabler 的颜色变量用了 `oklch()`，更老的内核算不出颜色（表现为按钮发灰、边框消失）。
-- **便携包已能构建，但还没上第二台机器实测**：`npm run portable` 产出 `dist-portable/3178-battle-platform/`（约 94 MB，含官方签名 `node.exe`）；本机已用"剥掉 PATH 里的 node/npm、只用包内 node.exe"的方式验过启动、`/health` 与 `stop` 收尾，真正没有 Node 的另一台电脑仍待实测。
-- **局域网组播未双机实测**：编解码和过期表有测试，真网卡上的收发、以及首次绑定触发防火墙弹窗这条路还没验证过。跨网目前只能靠邀请链接。
-- **隧道域名每次启动都变**：别把它当固定地址记。
-- **游戏自带界面还没有**：下发通道（清单、CORS、哈希校验）已通，但两个合成游戏没有客户端入口，对局区走内置占位渲染。真游戏的牌桌 UI 属于游戏侧工作。
-- **宿主制天然不防房主**：权威进程在房主机上，"按视角裁剪"只防透视。移交只移权限、不迁进程，原房主断电就没有"已移交的房主"。
-- **从房主拉游戏模块 = 在浏览器里执行房主给的代码**。哈希只保证"字节没被改"，不保证"代码无害"。接真游戏前要把它关进沙箱 iframe，否则房主能读你本机的座位票据与地址簿。
-
-## 开发
-
-```bash
-npm run build          # tsc -b 项目引用，无打包器
-npm test               # node --test
-bash tools/check-seam.sh                        # 闸门：平台包内不得出现玩法词
-npm run portable                                # 绿色便携包（dist-portable/，不入库）
-node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测
-```
-
-## 产物与目录
-
-| 位置 | 是什么 |
-|---|---|
-| [packages/protocol/](packages/protocol/src/wire.ts) | 线消息目录、错误码、稳定摘要、入站形状闸门 |
-| [packages/server/](packages/server/src/engine.ts) | 引擎、座位与权限、落盘、ws 传输、局域网信标 |
-| [packages/client/](packages/client/src/app.ts) | 浏览器端：连接、票据、界面、自绘下拉（原生 ESM，无打包） |
-| [packages/hostd/](packages/hostd/src/cli.ts) | 宿主壳：host / join / diagnose / stop + 静态路由 |
-| [games/](games/echo/src/index.ts) | 两个合成游戏（契约无关玩法的活证据） |
-| [tools/](tools/check-seam.sh) | 接缝闸门、两层猴测、复现脚本、.bat 生成器 |
-| [tools/build-portable.mjs](tools/build-portable.mjs) | 绿色便携包：签名 `node.exe` + 运行时子集 + 启动器（产物 `dist-portable/` 不入库） |
-| [房主建房.bat](房主建房.bat) / [玩家进房.bat](玩家进房.bat) | 双击入口（由 [tools/gen-bat.mjs](tools/gen-bat.mjs) 生成，别手写） |
-| [DESIGN.md](DESIGN.md) | 方案设计：设计取舍的完整理由与代价、架构与接缝、已定语义表、工程侧硬约束 |
-| [CONTEXT.md](CONTEXT.md) | 逐阶段验收凭据、遗留问题、agent 交接记录 |
-| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 探索性 QA 报告：15 条 finding 与修法 |
+- **便携包还没上第二台机器实测**：`npm run portable` 产出 `dist-portable/3178-battle-platform/`（约 94 MB，含官方签名 `node.exe`）；本机已用“剥掉 PATH 里的 node/npm”的方式验过启动、`/health` 与 `stop`，真正没有 Node 的电脑仍待实测。
+- **局域网组播与隧道未双机实测**：编解码和过期表有测试，真网卡收发与防火墙弹窗还没验证；跨网目前只能靠邀请链接，隧道域名每次启动都变。
+- **游戏自带界面还没有**：下发通道已通，但两个合成游戏没有客户端入口，对局区走内置占位渲染。
+- **宿主制天然不防房主**：权威进程在房主机上，“按视角裁剪”只防透视；移交只移权限、不迁进程。
+- **从房主拉游戏模块 = 在浏览器里执行房主给的代码**。哈希只保证字节没被改，不保证代码无害；接真游戏前要关进沙箱 iframe。
 
 ## 更多
 
-- 设计取舍（完整理由、实测代价、被否掉的方案）、架构与接缝、已定语义表：[DESIGN.md](DESIGN.md)
-- 逐阶段验收凭据、遗留问题与 agent 交接记录：[CONTEXT.md](CONTEXT.md)
-- 探索性 QA 报告（15 条 finding、修法与复跑计数）：[dogfood-output/猴测报告.md](dogfood-output/猴测报告.md)
-- 本项目是从同工作区的 `uno-online` 剥离连接层重写而来，那边代码一行没动；玩法改动归那边，连接/身份/分发改动归这里。
+- **设计与开发**：设计取舍、架构与接缝、接入契约、线协议、开发命令、完整目录表——[DESIGN.md](DESIGN.md)
+- **进度与交接**：逐阶段验收凭据、遗留问题、agent 交接记录——[CONTEXT.md](CONTEXT.md)
+- **探索性 QA**：15 条 finding 与修法、复跑计数——[dogfood-output/猴测报告.md](dogfood-output/猴测报告.md)
+- 本项目从同工作区的 `uno-online` 剥离连接层重写而来，那边代码一行没动；玩法改动归那边，连接/身份/分发改动归这里。
