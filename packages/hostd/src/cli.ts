@@ -280,9 +280,9 @@ async function startShell(options: Options, role: 'host' | 'join'): Promise<void
       `隧道：${tunnel?.url ?? (options.tunnel ? '未就绪（看上面的 tunnel 日志）' : '未启用（加 --tunnel 且本机装了 cloudflared 才有）')}`,
     ]
     : [
-      `本地壳已就绪：http://127.0.0.1:${options.port}`,
+      `玩家进房已就绪：http://127.0.0.1:${options.port}`,
       '局域网房间监听：组播 239.255.77.178:47878（首次绑定 Windows 会弹窗，请你亲手点"允许"）',
-      '这个壳只监听 127.0.0.1：自己开房能玩，别人连不进来。要当房主请用「房主建房.bat」。',
+      '这个入口只监听 127.0.0.1：自己开房能玩，别人连不进来。要当房主请用「房主建房.bat」。',
     ];
   lines.push(
     `装了这些游戏：${modules.map((m) => `${m.name}(${m.id} ${m.version})`).join('、')}`,

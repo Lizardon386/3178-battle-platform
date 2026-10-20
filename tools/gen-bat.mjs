@@ -67,7 +67,7 @@ export function renderJoinBat({ portable = false } = {}) {
     ...nodeGuard(portable),
     ...depsGuard(portable),
     ...distGuard(portable),
-    `start "3178 本地壳" ${nodeCommand(portable)} packages\\hostd\\dist\\cli.js join --port 3178 %*`,
+    `start "3178 玩家进房" ${nodeCommand(portable)} packages\\hostd\\dist\\cli.js join --port 3178 %*`,
     ...tail,
   ].join('\r\n');
 }
@@ -90,9 +90,9 @@ function writeRepoBats() {
   const host = renderHostBat();
   const join = renderJoinBat();
   writeFileSync('房主建房.bat', host, 'utf8');
-  writeFileSync('玩家本机壳.bat', join, 'utf8');
+  writeFileSync('玩家进房.bat', join, 'utf8');
   verifyBat('房主建房.bat', readFileSync('房主建房.bat', 'utf8'));
-  verifyBat('玩家本机壳.bat', readFileSync('玩家本机壳.bat', 'utf8'));
+  verifyBat('玩家进房.bat', readFileSync('玩家进房.bat', 'utf8'));
 }
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;

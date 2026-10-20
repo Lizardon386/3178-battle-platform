@@ -150,7 +150,7 @@ function writeUsage() {
     '',
     '双击入口：',
     '  房主建房.bat   本机开房（本机界面 http://127.0.0.1:3178 ，局域网端口 3000）',
-    '  玩家本机壳.bat 只开本地大厅，用来进别人的房',
+    '  玩家进房.bat   只开本地大厅，用来进别人的房',
     '',
     '两个入口共用同一个本机界面端口，不要同时开。',
     '房主第一次启动时 Windows 可能弹出防火墙提示：请亲手点“允许”，脚本不会替你改防火墙。',
@@ -306,9 +306,9 @@ step('生成启动器与许可');
 const hostBat = renderHostBat({ portable: true });
 const joinBat = renderJoinBat({ portable: true });
 writeFileSync(join(OUT, '房主建房.bat'), hostBat, 'utf8');
-writeFileSync(join(OUT, '玩家本机壳.bat'), joinBat, 'utf8');
+writeFileSync(join(OUT, '玩家进房.bat'), joinBat, 'utf8');
 verifyBat('房主建房.bat（便携版）', readFileSync(join(OUT, '房主建房.bat'), 'utf8'));
-verifyBat('玩家本机壳.bat（便携版）', readFileSync(join(OUT, '玩家本机壳.bat'), 'utf8'));
+verifyBat('玩家进房.bat（便携版）', readFileSync(join(OUT, '玩家进房.bat'), 'utf8'));
 writeLicenses();
 writeUsage();
 

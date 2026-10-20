@@ -94,7 +94,7 @@
 | [packages/hostd/src/cli.ts](packages/hostd/src/cli.ts) | 宿主壳：host / join / diagnose / stop 四个模式 |
 | [packages/hostd/src/webroot.ts](packages/hostd/src/webroot.ts) | 静态与接口路由（`/app/`、`/vendor/protocol/`、`/games/`、`/api/games`、`/api/self`、`/discovery/rooms`） |
 | [packages/hostd/src/tunnel.ts](packages/hostd/src/tunnel.ts) | cloudflared 查找与隧道网址解析（找不到就退回本地地址，不下载） |
-| [房主建房.bat](房主建房.bat) / [玩家本机壳.bat](玩家本机壳.bat) | 双击入口（CRLF，由 [.gitattributes](.gitattributes) 锁住） |
+| [房主建房.bat](房主建房.bat) / [玩家进房.bat](玩家进房.bat) | 双击入口（CRLF，由 [.gitattributes](.gitattributes) 锁住） |
 | [tools/gen-bat.mjs](tools/gen-bat.mjs) | 生成上面两个 .bat，保证编码不变式（UTF-8 无 BOM / CRLF / chcp 先于中文） |
 | [packages/hostd/test/bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) | 双击入口的编码与结构防呆 |
 | [packages/client/test/client-logic.test.mjs](packages/client/test/client-logic.test.mjs) | 客户端无 DOM 逻辑测试 23 例（含"重连该按哪个房号翻票据"四条、`aiFillBlocker`、`seatPickerBlocker`、自绘下拉的纯函数） |

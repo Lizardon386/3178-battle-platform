@@ -16,13 +16,17 @@ import { WebSocket } from 'ws';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const CLI = join(ROOT, 'packages', 'hostd', 'dist', 'cli.js');
 
-function freePort() {
+/**
+ * 分别在本机口和局域网口的绑定地址上预留端口，**拿着不放**到 spawn 前一刻。
+ * 只 bind 127.0.0.1 去挑局域网口会在 Windows 上和 0.0.0.0 撞车（两个测试文件并行时尤其容易）。
+ */
+function reservePort(host) {
   return new Promise((res, rej) => {
     const srv = createServer();
     srv.once('error', rej);
-    srv.listen(0, '127.0.0.1', () => {
+    srv.listen(0, host, () => {
       const port = srv.address().port;
-      srv.close(() => res(port));
+      res({ port, release: () => new Promise((r) => srv.close(() => r())) });
     });
   });
 }
@@ -57,9 +61,10 @@ function connect(port) {
   };
 }
 
-async function waitHealth(port, timeoutMs = 12_000) {
+async function waitHealth(port, timeoutMs = 12_000, isExited = () => false, getLog = () => '') {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    if (isExited()) throw new Error(`壳提前退出，端口 ${port} 没起来：\n${getLog()}`);
     try {
       const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(400) });
       if (res.ok) return res;
@@ -68,28 +73,35 @@ async function waitHealth(port, timeoutMs = 12_000) {
     }
     await new Promise((r) => setTimeout(r, 120));
   }
-  throw new Error(`端口 ${port} 的 /health 没起来`);
+  throw new Error(`端口 ${port} 的 /health 没起来：\n${getLog()}`);
 }
 
 test('本机界面建房、局域网口进房：两个监听共享同一个引擎', async () => {
-  const uiPort = await freePort();
-  const lanPort = await freePort();
+  const uiReservation = await reservePort('127.0.0.1');
+  const lanReservation = await reservePort('0.0.0.0');
+  const uiPort = uiReservation.port;
+  const lanPort = lanReservation.port;
   const runFile = join(ROOT, 'data', `run-${uiPort}.json`);
   if (existsSync(runFile)) rmSync(runFile);
 
+  await uiReservation.release();
+  await lanReservation.release();
   // --no-announce：保留局域网监听，但不碰组播，测试不去动网卡
   const child = spawn(process.execPath, [CLI, 'host', '--port', String(uiPort), '--lan-port', String(lanPort), '--no-announce'], {
     cwd: ROOT,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let log = '';
+  let exitCode = null;
   child.stdout.on('data', (b) => (log += b.toString()));
   child.stderr.on('data', (b) => (log += b.toString()));
+  child.once('exit', (code) => (exitCode = code));
+  const diedEarly = () => exitCode !== null;
 
   let roomCode = null;
   try {
-    await waitHealth(uiPort);
-    await waitHealth(lanPort);
+    await waitHealth(uiPort, 12_000, diedEarly, () => log);
+    await waitHealth(lanPort, 12_000, diedEarly, () => log);
 
     const selfResponse = await fetch(`http://127.0.0.1:${uiPort}/api/self`);
     const self = await selfResponse.json();
@@ -117,7 +129,8 @@ test('本机界面建房、局域网口进房：两个监听共享同一个引�
     host.ws.close();
     guest.ws.close();
   } finally {
-    const gone = new Promise((r) => child.once('close', r));
+    // 进程可能已经因端口冲突先退了；这时再等 'close' 会永远等下去，把测试拖到超时
+    const gone = exitCode !== null ? Promise.resolve() : new Promise((r) => child.once('close', r));
     child.kill('SIGTERM');
     await gone;
 
@@ -126,5 +139,4 @@ test('本机界面建房、局域网口进房：两个监听共享同一个引�
     assert.equal(existsSync(runFile), false, `stop --port ${lanPort} 应该收掉本机口 ${uiPort} 的记录`);
     if (roomCode) rmSync(join(ROOT, 'data', `room-${roomCode}.json`), { force: true });
   }
-  assert.ok(log.length >= 0);
 });

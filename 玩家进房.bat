@@ -19,7 +19,7 @@ if not exist packages\hostd\dist\cli.js (
   pause
   exit /b 1
 )
-start "3178 本地壳" node packages\hostd\dist\cli.js join --port 3178 %*
+start "3178 玩家进房" node packages\hostd\dist\cli.js join --port 3178 %*
 rem 给壳两秒起服务，再开浏览器（ping 当睡眠用，timeout 在输入被重定向时会失败）
 ping -n 3 127.0.0.1 >nul
 start "" http://127.0.0.1:3178/
