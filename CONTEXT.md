@@ -1,7 +1,7 @@
 # 3178-battle-platform · 会话上下文与进展
 
 > 本文件是任务交接档案，供后续 agent 实时跟进。改动产物后请更新「当前状态」「变更记录」。
-> 最近更新：2026-10-14（Qoder）
+> 最近更新：2026-10-20（Qoder）
 <!-- 日期必须留在这行 blockquote 上：check-docs.sh 的 [新]/[旧]/[期] 只读这一行，正文里写日期不算顶部日期。改完本档也要把 README 与 DESIGN 顶部改成同一天，否则 [期] 判失败。 -->
 > 面向使用者的说明见同目录 [README.md](README.md)，方案设计（设计取舍 / 架构接缝 / 已定语义 / 工程硬约束）见 [DESIGN.md](DESIGN.md)。
 
@@ -18,7 +18,7 @@
 
 ## 当前状态
 
-**P0–P7 完成（P8.5 通道已通、游戏自带界面未做），`npm test` 109/109 全绿；`tools/check-seam.sh` 零命中；界面在 in-app Browser 里真点过三遍。** 表现层底座已换成 `@tabler/core` + `@tabler/icons-webfont`（MIT，从 node_modules 同源挂 `/vendor/`）。代码全部在本目录，`uno-online` 的代码未动一行（HEAD 仍是 `e9ad2cc`，只有两档文档因改名被授权修改，仍是未提交状态）。
+**P0–P7 完成（P8.5 通道已通、游戏自带界面未做；本机入口已统一到 `127.0.0.1:3178`；R1 便携包已能构建），`npm test` 114/114 全绿；`tools/check-seam.sh` 零命中；界面在 in-app Browser 里真点过。** 表现层底座已换成 `@tabler/core` + `@tabler/icons-webfont`（MIT，从 node_modules 同源挂 `/vendor/`）。代码全部在本目录，`uno-online` 的代码未动一行（HEAD 仍是 `e9ad2cc`，只有两档文档因改名被授权修改，仍是未提交状态）。
 
 浏览器实测（`hostd host --port 3289 --no-lan`，页面内 `evaluate_script` 驱动，in-app Browser 无可见视口所以不截图）走过的路径：大厅取到 `/api/games` 两个游戏 → 建房坐 1 号位 → 客人 ws 入座 2 号、观战入 901 → 加电脑位 → 未准备时开局按钮写"等准备：客人乙"且 `disabled` → 客人准备后变"开始对局" → 开局后牌桌区渲染按视角裁剪的状态、倒计时 `剩 58 秒 → 剩 56 秒`（服务端时间轴生效）→ 房主点"离开房间"被中文提示挡住 → 踢观战生效 → 移交后 👑 跳到 2 号位、房主面板自动隐藏、通知条"房主已移交给 客人乙" → 此后离席成功回到大厅。
 
@@ -54,14 +54,14 @@
 - [x] P4 传输 / 房间聊天 / 局域网信标（信标本身仍需双机实测）
 - [x] P5 房主侧落盘与恢复
 - [x] P6 客户端 SDK 与房间界面骨架：地址可配、地址簿、票据、指数退避、`serverNow` 校时、错误码→UI、四个屏幕、邀请链接解析
-- [x] P7 `hostd` 宿主壳：`host`（引擎 + ws + 静态 + 组播广播 + 可选隧道 + 邀请链接）、`join`（本地壳：静态页 + 组播监听 + `/discovery/rooms`）、`diagnose`、`stop`；不写防火墙规则
+- [x] P7 `hostd` 宿主壳：`host`（本机界面 + 局域网监听 + 组播广播 + 可选隧道 + 邀请链接）、`join`（只开本机界面 + 组播监听）、`diagnose`、`stop`；不写防火墙规则
 - [~] P8.5 游戏模块下发：`/api/games`、`/games/<id>/*`(CORS)、客户端 sha256 校验 + blob 导入已通；**游戏自带界面还没有**，两个合成游戏走占位渲染
 - [ ] P8 把 uno 接成第一个真游戏（`uno.js` 规则包成 `GameModule`，**不动 uno-online**）
 - [ ] 给真游戏写沙箱挂载：`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`，否则房主能读玩家本机票据
 - [ ] 双机实测组播发现：同 WiFi 下两台机器能否互相看见；首次绑定的防火墙弹窗行为
 - [ ] 双机实测隧道：`--tunnel` 需要本机装了 cloudflared，本会话未验证过一条真隧道
-- [ ] R1 绿色便携包：官方签名 `node.exe` + `dist/` + `games/` + 快捷方式，干净目录双击开局
-- [ ] R1 绿色便携包：官方签名 `node.exe` + `dist/` + `games/` + 快捷方式，干净目录双击开局
+- [x] R1 绿色便携包：官方签名 `node.exe` + 运行时子集 + 便携启动器，`npm run portable` 产出 `dist-portable/3178-battle-platform/`（本机剥离 PATH 验证；真干净机未测）
+- [ ] 便携包上第二台真正没装 Node 的电脑实测
 - [ ] 待做实验（做单文件 exe 之前必须跑）：Node SEA 打一个 hello-world，看这台机器的 SAC 拦不拦。**别在未跑实验前投入打包链路**
 - [ ] 未做且刻意不做：目录服务器 / 账号 / 好友 / 段位 / 匹配 / 反作弊仲裁 / 自动写防火墙规则
 
@@ -72,6 +72,8 @@
 - **出站目标在创建时解析成 connIds**：任何"先改会话表再投递"的写法都会让最后一条通知丢掉（`hostClose`、`shutdown` 两处踩过）。新增广播入口时用 `Engine.toRoom/toSeat`，别自己拼 target。
 - **游戏侧红线**：不许直接持有 socket、不许改 `Room.phase`/座位表、不许把玩法错误码塞进平台错误码（走 `event`）。`Effect` 是唯一的对外出口。
 - **玩家端绝不写 `data/`**：权威只有一份才说得清谁是房主。`Engine.persistable/syncStore/restoreFrom` 只允许 `hostd host` 模式调用。
+- **host 的两个监听必须共享同一个 `Engine`/`HostStore`**：本机界面口与局域网口只是两张网卡上的门，房间、座位、票据、落盘都只能有一份。不要为第二个监听 new 一个 Engine——那会让本机与朋友看到两桌。[dual-listener.test.mjs](packages/hostd/test/dual-listener.test.mjs) 钉住这条。
+- **端口语义**：`--port` 是本机界面端口（默认 3178，只绑 `127.0.0.1`），`--lan-port` 是 host 模式对外端口（默认 3000）。`--no-lan` 关掉公网监听与组播；`--no-announce` 只关组播（测试与"只走隧道"用）。`run-<界面端口>.json` 一份记录带 `lanPort`，`stop --port` 按任一端口都能找到同一个壳。
 - **明文票据不落盘**：盘上只有 `secretHash` 摘要；房间密码同理（`RoomExport.secretHash`），不存的话重启后密码房变公开房。
 - **`HostStore.fileFor` 卡死房号字符集**：文件名来自磁盘内容，不做校验就是路径注入面。
 - **不可逆 / 高危动作清单**（任何实现细节都不许顺带触发）：① 写 Windows 防火墙入站规则；② 建议用户关闭 Smart App Control（关掉后不重装系统无法再开）；③ `force push`。
@@ -84,7 +86,7 @@
 - **UI 验证方式**：in-app Browser 无可见视口，不能截图/像素点击；用 `navigate_page` + `evaluate_script` 驱动 DOM（`.click()`、原生 `WebSocket` 当第二个玩家），观感仍需人工确认。
 - 环境事实：本机 Smart App Control = `On`（`VerifiedAndReputablePolicyState=1`），官方 `node.exe` 签名有效；node v24.19.0 / npm 11.17.0；registry 可达；无全局 `tsc`（走 `npx tsc -b`）。
 - 测试写法：`node --test` 跑目录参数在 Windows 下不可靠，**必须用引号包住的 glob**（`node --test "packages/*/test/*.test.mjs"`），并带 `--test-timeout`，否则未决的 await 会让整轮挂死。测试里"等一条消息"要用 predicate 等**符合条件的那一帧**，在途的旧快照会先到。
-- **版本管理**：本目录已 `git init`（本地仓库，提交 `a606f33`，**无远程、未 push**）。P7 引入 `.bat` 双击入口时要一并加 `.gitattributes`——`.bat` 必须 CRLF，否则双击行为异常且 diff 一片红。
+- **版本管理**：本目录是 GitHub 仓库（`origin`，公开），`.bat` 由 `.gitattributes` 锁 CRLF；提交前跑 `npm test` 与 `npm run seam`。便携包产物 `dist-portable/` 不入库。
 - 收工跑 `bash /d/agent_workspace/multi-agent-task-handoff/check-docs.sh`（**不加管道**，`[链]`/`[期]` 是失败项），exit 0 才算收尾。
 
 ## 变更记录
@@ -141,6 +143,7 @@
 - 2026-10-14 Qoder：**工作区规范从两档扩成三档，本目录拆出 [DESIGN.md](DESIGN.md)，代码一行没碰**。搬移动作全部用行区间机械剪切（不重打，避免抄错），并逐行核对过 111 行有效内容在 DESIGN 里一行不缺：① CONTEXT「工程细节」的 **设计取舍**（决策/理由/代价全表）→ DESIGN「设计思路」；② **产物与目录（完整表）** → DESIGN「架构与关键接缝」，另加一段接缝说明（线协议 / `GameModule`+`GameInstance` 契约 / `Effect[]` 出口三处，接入方法与消息权限表的使用者版仍在 README，不重述）；③ **已定语义（完整表）** + **限制里的工程侧硬约束**（`.bat` 必须 UTF-8 无 BOM+CRLF+chcp、字体 OFL 随包、`/vendor/` 体积、Ctrl+C 投递验到哪一步、混合内容方向、禁防火墙/关 SAC/force push）→ DESIGN「已定语义与边界」；④ README 的「设计思路」六条 + 它那句"完整版在 CONTEXT"→ 删掉，改为指向 DESIGN（六条概念逐条 grep 确认 DESIGN 里都有）。**「阶段状态与逐文件验收凭据」留在 CONTEXT**——它是时间序列的验证记录，按分工红线不许进 DESIGN。去重：DESIGN 与 README 原本都各写一份的六条限制（浏览器 111+/便携包未做/组播未双机实测/隧道域名会变/真游戏 UI 未做/宿主制不防房主）改成 README 持有全文 + DESIGN 一行指路；DESIGN 里「移交只移权限」与已定语义表重复，删。链接：本仓库是公开的，README/DESIGN/CONTEXT 里 46 条 `file:///D:/agent_workspace/3178-battle-platform/` 绝对链接全换成仓库相对链接（别人机器上绝对链接是死链），跨到 `uno-online` 的仍留绝对路径。三档日期同为 2026-10-14。
 
 - 2026-10-14 Qoder：**用户"进入后昵称每次都变回无名玩家，改成能记住上次改的"**。读代码定位到两个**互相独立**的成因，只有一个能在这一改里修掉：① **存储污染**（真 bug，已修）——昵称原先只在 [connectTo()](packages/client/src/app.ts) 里写一次 `输入 || '无名玩家'`，于是某次空字段点了建房/加入，"无名玩家"就被永久写进 `bp.nick.v1`，此后每次回填都是它；而且只改名不点按钮＝没存。② **同源存储按入口分份**（不是 bug，是架构边界，未修）——房主端提示 `http://localhost:3000`、本机壳自动打开 `http://127.0.0.1:3178/`，主机名与端口都不同，localStorage 是两份，互相看不见。**两者对得上不同的说法，分得清**：输入框里**直接显示"无名玩家"**只可能是①（新代码下没填过的 origin 显示的是空+占位提示"填个名字"，不会显示无名玩家）；而"框里是空的、进房后自己那席叫无名玩家"是②。用户的措辞是前者，所以①是主因，②是换入口时会再撞一次的次因。修法：`typedNick()/currentNick()/rememberNick()` 三个小函数——有效昵称 = 输入框 > 记住的上次 > 占位称呼，且**回填进输入框**（原来界面读一遍、hello 再读一遍，两处各写各的兜底）；只有真正填过的名字才进存储，空字段与占位称呼都不写；绑定 `nick` 的 `input` 事件，改完即存。守卫：[style-hooks.test.mjs](packages/client/test/style-hooks.test.mjs) 新增一条静态源码检查（六条断言，先剥注释再判——我自己就踩了一次：在注释里引用旧代码 `|| '无名玩家'` 把守卫判红，正是这个文件上面那条教训的形状）；反向验证拿"旧形状"的源码喂给六条断言，**五条全部响起**。**浏览器实测**（自起房主壳 `--port 3210 --no-lan`，health 200 / 20ms，不是遗留死壳）：改一个字即存储 `"北大教授w"`（没点任何按钮）→ 刷新回填同一值 → 清空输入框后存储仍是它 → 再刷新仍回填（清空＝这次没填，不等于忘掉）→ 换 `http://localhost:3210` 存储为 `null`，**这条就是成因②的现场证据**。`npm test` **113/113**（原 112 + 新守卫 1），`npm run seam` 与三档闸门 exit 0。**副作用如实说**：我在 3210 那个 origin 上为了测试 `localStorage.clear()` 过一次，随后用新代码把"北大教授w"重新写回并验证；测试完 `stop --port 3210`（带自己的端口，没碰用户的 3000/3178），`data/` 只留我自己那次运行的记录被清掉。**成因②要真解决**得等平台有唯一本机入口（放开 `btn-create` 目前写死的"只在本机 selfOrigin 开房"），与 R1 便携包同一件事，已写进 DESIGN 的「已定语义与边界」，本轮不假装它成立。
+- 2026-10-20 Qoder：**R1 绿色便携包 + 唯一本机入口落地**（用户："直接改吧"）。① 壳改成"一个进程、两个监听"：`127.0.0.1:3178` 永远是本机界面，host 模式再加 `0.0.0.0:3000` 给局域网，两个 `WsTransport` 共享同一个 `Engine`/`HostStore`；`--port` 统一为本机界面口，新增 `--lan-port` 与 `--no-announce`（只关组播），`--no-lan` 连公网监听一起关。② 新增 `/api/self`，邀请链接改用 `publicOrigin`（隧道优先、其次局域网 IP）——此前从本机页面复制的链接是 `localhost`，朋友点开指向自己的电脑。③ 两个启动器都打开 `http://127.0.0.1:3178/`，昵称/地址簿/票据只剩一份存储；房主启动器也自动开浏览器。④ 新增 [tools/build-portable.mjs](tools/build-portable.mjs)：校验官方签名 `node.exe`（本机 v24.19.0，OpenJS Foundation，Authenticode Valid）、装配运行时子集（dist/public/games/ws/Tabler 子集/@bp 实体目录）、生成便携版启动器与许可，产物 `dist-portable/3178-battle-platform/` 约 **94.2MB**。**验收**：`npm test` **114/114**（新增 [dual-listener.test.mjs](packages/hostd/test/dual-listener.test.mjs)：本机口建房→局域网口进房，看到同一张桌）；`npm run seam` OK；便携包自检在**剥掉 PATH 里的 node/npm** 后只用包内 `node.exe` 跑通 `diagnose`、host `/health`、`stop` 收尾；浏览器实测：建房后邀请链接为 `http://10.111.14.45:3221/?...`（不再是 localhost），把链接当客人打开后地址/房号/游戏自动填好，进房坐 2 号位、1 号位是原始房主；同一 origin 从 host 换成 join 后昵称仍是"单入口验收"。**遗留**：便携包只在剥离 PATH 的本机验证，真干净机/第二台电脑未实测；组播与隧道仍未双机实测；`--tunnel` 现在指向 `--lan-port`。
 
 ## 阶段状态与逐文件验收凭据
 
@@ -156,13 +159,13 @@
 | P4 | 传输（ws/限流/Origin/心跳）、房间聊天、局域网信标 | 已完成（信标未双机实测） | [ws-live.test.mjs](packages/server/test/ws-live.test.mjs) 4 例；[store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) 12 例 |
 | P5 | 房主侧落盘与恢复：原子写、版本闸、票据幸存 | 已完成 | 同上：重启→恢复→旧票据回座；坏文件不挡启动；"票据离开进程前座位必须已在盘上"有专例 |
 | P6 | 客户端 SDK 与房间界面骨架（地址可配、地址簿、票据、退避、校时、槽位/聊天/房主面板、自绘下拉） | 已完成 | [client-logic.test.mjs](packages/client/test/client-logic.test.mjs) 23 例 + [style-hooks.test.mjs](packages/client/test/style-hooks.test.mjs) 11 例 + 浏览器实测与两层猴测（记录见 CONTEXT） |
-| P7 | `hostd` 宿主壳：host/join/diagnose/stop + 静态路由 + 邀请链接 + 双击入口 | 已完成（隧道未实测） | [hostd-http.test.mjs](packages/hostd/test/hostd-http.test.mjs) 8 例 + [bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) 5 例 + [shell-join.test.mjs](packages/hostd/test/shell-join.test.mjs) 4 例 + [sigint-shutdown.test.mjs](packages/hostd/test/sigint-shutdown.test.mjs) 2 例 |
+| P7 | `hostd` 宿主壳：host/join/diagnose/stop + 双监听（本机界面 + 局域网）+ 静态路由 + 邀请链接 + 双击入口 | 已完成（隧道未实测） | [hostd-http.test.mjs](packages/hostd/test/hostd-http.test.mjs) 8 例 + [bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) 5 例 + [shell-join.test.mjs](packages/hostd/test/shell-join.test.mjs) 4 例 + [sigint-shutdown.test.mjs](packages/hostd/test/sigint-shutdown.test.mjs) 2 例 + [dual-listener.test.mjs](packages/hostd/test/dual-listener.test.mjs) 1 例 |
 | P8.5 | 游戏模块下发通道：`/api/games` + `/games/<id>/*`(CORS) + 客户端哈希校验 + blob 导入；缺入口时占位渲染 | 通道已通，**游戏自带界面还没有** | 同上：产物可跨源取、穿越被挡 |
 | Q1 | 两层猴测台（协议层 + 页内 UI 层）与探索性 QA 报告 | 已完成，持续在跑 | 协议层 12 seed × 8 人 × 300 步 × 3 次硬重启 **0 违规**；UI 层多轮 0 违规；报告 [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) 15 条 finding + 台子自己的 9 个缺陷全记 |
-| R1 | 绿色便携包（官方 `node.exe` + 代码 + 快捷方式） | 未开始 | — |
+| R1 | 绿色便携包（官方签名 `node.exe` + 运行时子集 + 便携启动器） | 已完成（本机剥离 PATH 验证；真干净机未测） | `npm run portable`：签名校验（OpenJS Foundation / Valid）+ 产物约 **94.2MB**；自检只用包内 `node.exe` 跑通 `diagnose`、host `/health`、`stop` 收尾 |
 ## 给下一个 agent 的追加区
 
 （后续会话请在此追加一行 `- YYYY-MM-DD <来源>：<结论/改动/遗留问题>`，或直接更新上面各节）
 
-**下一步顺序建议**：① **P8 把 uno 接成真游戏**——这是唯一能证伪"契约够不够宽"的检验（No Mercy 规则有碰/接龙/质疑/弃牌阶段，比两个合成游戏刁钻得多），做完 `tools/check-seam.sh` 必须仍然零命中；② 接真游戏前先把**沙箱挂载**补上（`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`），否则房主可向玩家浏览器注入可读票据的代码；③ **双机实测**组播发现与隧道，本会话只在一台机器上证伪了编解码与 HTTP 路由；④ R1 绿色便携包（官方 `node.exe` 随包走）。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
+**下一步顺序建议**：① **P8 把 uno 接成真游戏**——这是唯一能证伪"契约够不够宽"的检验（No Mercy 规则有碰/接龙/质疑/弃牌阶段，比两个合成游戏刁钻得多），做完 `tools/check-seam.sh` 必须仍然零命中；② 接真游戏前先把**沙箱挂载**补上（`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`），否则房主可向玩家浏览器注入可读票据的代码；③ **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；④ **双机实测**组播发现与隧道，本会话只在一台机器上证伪了编解码与 HTTP 路由；⑤ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家本机壳.bat`，**别手写**：改 [tools/gen-bat.mjs](tools/gen-bat.mjs) 再 `node tools/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。

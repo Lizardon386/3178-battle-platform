@@ -15,11 +15,21 @@ import type { DiscoveryRoom } from '@bp/protocol';
  *   /discovery/rooms      → 局域网房间列表（由本地壳代浏览器收组播）
  */
 
+export interface SelfInfo {
+  /** 本机页面自己的地址，永远是回环。 */
+  uiOrigin: string;
+  /** 朋友该用哪个地址进来：优先隧道，其次局域网；纯本机壳为 null。 */
+  publicOrigin: string | null;
+  lanOrigins?: string[];
+}
+
 export interface WebRootOptions {
   root: string;
   modules: GameModule[];
   /** 组播浏览结果；没有本地壳时返回空表。 */
   getRooms?: () => DiscoveryRoom[];
+  /** 页面用它生成邀请链接；老壳没有这个端点时客户端会退回 selfOrigin。 */
+  selfInfo?: () => SelfInfo;
   onBadPath?: (path: string) => void;
 }
 const CONTENT_TYPES: Record<string, string> = {
@@ -104,6 +114,10 @@ export function createWebServer(opts: WebRootOptions): Server {
     }
     if (path === '/discovery/rooms') {
       sendJson(res, { rooms: opts.getRooms?.() ?? [] });
+      return;
+    }
+    if (path === '/api/self') {
+      sendJson(res, opts.selfInfo?.() ?? { uiOrigin: null, publicOrigin: null });
       return;
     }
     if (path === '/health') {

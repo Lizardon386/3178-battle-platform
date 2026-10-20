@@ -12,6 +12,7 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "seam": "bash tools/check-seam.sh",
+    "portable": "node tools/build-portable.mjs",
     "test": "npm run build && node --test --test-timeout=20000 \"packages/*/test/*.test.mjs\" \"games/*/test/*.test.mjs\""
   },
   "devDependencies": {

@@ -76,9 +76,9 @@ test('启动顺序：先写 run 记录再 listen，listen 失败要收回记录'
   const src = readFileSync(join(ROOT, 'packages/hostd/src/cli.ts'), 'utf8');
   const shell = src.slice(src.indexOf('async function startShell'));
   const write = shell.indexOf('writeRun(record)');
-  const listen = shell.indexOf('server.listen(options.port');
-  assert.ok(write > 0 && listen > 0, `没找到 writeRun/listen（write=${write} listen=${listen}），这条守卫要跟着源码改名`);
-  assert.ok(write < listen, 'run 记录必须在 server.listen 之前写好，否则 health 应答与记录落盘之间有个看不见的窗口');
+  const listen = shell.indexOf('listenOn(privateServer');
+  assert.ok(write > 0 && listen > 0, `没找到 writeRun/listenOn（write=${write} listen=${listen}），这条守卫要跟着源码改名`);
+  assert.ok(write < listen, 'run 记录必须在 listen 之前写好，否则 health 应答与记录落盘之间有个看不见的窗口');
   assert.ok(shell.indexOf('removeRun(options.port)') > listen, 'listen 失败必须删掉刚写的记录，别让 diagnose 谎报"在跑的壳"');
 });
 

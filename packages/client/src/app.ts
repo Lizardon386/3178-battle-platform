@@ -38,6 +38,8 @@ export class PlatformApp {
   private readonly clock: ServerClock;
   private readonly fetchImpl: FetchImpl;
   private readonly selfOrigin: string;
+  /** 邀请链接该写哪个地址：host 模式由 /api/self 给出局域网/隧道入口。 */
+  private inviteOrigin: string;
   private view: ViewModel = emptyViewModel();
   private conn: PlatformConnection | null = null;
   private endpoint: Endpoint | null = null;
@@ -62,6 +64,7 @@ export class PlatformApp {
     const injected = deps.fetchImpl;
     this.fetchImpl = injected ? (input, init) => injected(input, init) : (input, init) => fetch(input, init);
     this.selfOrigin = deps.selfOrigin ?? 'http://127.0.0.1:3178';
+    this.inviteOrigin = this.selfOrigin;
   }
 
   start(): void {
@@ -74,6 +77,7 @@ export class PlatformApp {
     // storage 事件只在**别的**文档写同一 key 时触发（自己写不触发），所以这里不会自己转圈；
     // 不按 key 过滤是因为重建一次下拉本来就这么点成本，多一个魔法字符串反而多一处会过期的耦合。
     this.doc.defaultView?.addEventListener('storage', () => this.renderAddressBook());
+    void this.loadSelfInfo();
     void this.refreshLobbySources(invite);
     this.startRenderLoop();
     this.render();
@@ -429,19 +433,38 @@ export class PlatformApp {
     input!.value = '';
   }
 
+  /**
+   * 邀请链接该用哪个地址：host 模式由壳给出局域网/隧道入口。
+   * 老壳没有 /api/self 时保持页面自己的来源——行为与以前一致，不会因为升级前端就发不出链接。
+   */
+  private async loadSelfInfo(): Promise<void> {
+    try {
+      const response = await this.fetchImpl(`${this.selfOrigin}/api/self`);
+      if (!response.ok) return;
+      const info = (await response.json()) as { publicOrigin?: string | null };
+      if (info.publicOrigin) this.inviteOrigin = info.publicOrigin;
+    } catch {
+      // 纯浏览器打开或老壳：没有这个端点
+    }
+  }
+
   private copyInvite(): void {
-    const link = this.inviteUrl();
-    const node = el(this.doc, 'invite-url') as HTMLInputElement | null;
-    if (node) node.value = link;
-    void this.doc.defaultView?.navigator.clipboard?.writeText(link).then(
-      () => this.setStatus('邀请链接已复制，发给朋友点开就填好地址和房号'),
-      () => this.setStatus(`复制失败，手动拷这条：${link}`),
-    );
+    void this.loadSelfInfo().then(() => {
+      const link = this.inviteUrl();
+      const node = el(this.doc, 'invite-url') as HTMLInputElement | null;
+      if (node) node.value = link;
+      void this.doc.defaultView?.navigator.clipboard?.writeText(link).then(
+        () => this.setStatus('邀请链接已复制，发给朋友点开就填好地址和房号'),
+        () => this.setStatus(`复制失败，手动拷这条：${link}`),
+      );
+    });
   }
 
   private inviteUrl(): string {
     if (!this.view.room || !this.endpoint) return '';
-    return inviteLink(this.endpoint.httpOrigin, this.view.room.code, this.view.room.gameId, pathOf(this.endpoint.wsUrl));
+    // 本机页面在 127.0.0.1 上，但朋友要用局域网/隧道地址才点得开；
+    // 连接仍走 this.endpoint（本机界面口），这里只换链接里写的地址。
+    return inviteLink(this.inviteOrigin, this.view.room.code, this.view.room.gameId, pathOf(this.endpoint.wsUrl));
   }
 
   private setStatus(text: string): void {

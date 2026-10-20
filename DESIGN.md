@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 方案设计
 
 > 面向方案评审者与二次开发的人：为什么这么设计、包与包之间的接缝、哪些语义已经定死。使用者说明见 [README.md](README.md)，进度、逐阶段验收凭据与 agent 交接记录见 [CONTEXT.md](CONTEXT.md)。
-> 最近更新：2026-10-14
+> 最近更新：2026-10-20
 >
 > 本仓库推到 GitHub，文档内部一律用仓库相对链接（`file:///D:/...` 在别人机器上是死链）。
 > 数字都是实测的，改动时请同步这里。
@@ -25,6 +25,7 @@
 | 决策 | 理由 | 代价 |
 |---|---|---|
 | **TypeScript（Node ESM）编译后跑在官方签名 `node.exe` 上**，不自建单文件 exe | 本机 Smart App Control 实测为强制（注册表 `VerifiedAndReputablePolicyState=1`），未签名 exe 被拦且**没有"仍要运行"**；官方 `node.exe` 签名有效。Go/Rust/Electron 都要自带未签名二进制，在这台机器上是死路 | 交付物是"一个文件夹 + 快捷方式"，观感不像正经客户端；要单文件得先买代码签名证书 |
+| **本机只保留一个 UI origin（`http://127.0.0.1:3178`）**：host 模式在同一进程里再开 `0.0.0.0:3000` 给局域网，两个监听共享一个 `Engine`；两个启动器都打开 3178 | 昵称、地址簿、票据都按 origin 存，两个入口就是两份互不相通的存储（用户实测过"换个入口昵称就变"）；而邀请链接必须给局域网/隧道地址，页面自己却永远在本机回环上 | 一个进程要管两个 `http.Server` + 两个 `WsTransport` 的生命周期；`--port`（界面）与 `--lan-port`（局域网）语义分开；测试要覆盖"私网建房、公网进房"（[dual-listener.test.mjs](packages/hostd/test/dual-listener.test.mjs)） |
 | **平台与玩法只经由 `GameModule` 契约通信**，平台源码内禁止出现任何玩法词（`tools/check-seam.sh` 当闸门） | 旧代码 `Room` 同时是座位管理器和规则引擎，回合游标被规则与 eject 两边改；不立字据的"分层"下一次重构就又被穿透 | 加一个游戏要写 manifest/normalizeConfig/create/resume 一套接口，比在旧代码里加个字段麻烦 |
 | **引擎与传输分离**：`Engine` 只吐 `Outbound[]`，`WsTransport` 负责 socket | 证明"无关玩法"的契约测试不需要真端口、真网卡，毫秒级跑完（当前全量 **112 例**里，契约套件 20 例是纯内存的）；真 socket 另有一套端到端测试兜底 | 出站投递要显式 `publish()`，多一层心智负担 |
 | **出站目标在创建时就解析成具体连接**（`Target.connIds`） | 关房与进程退出会先清会话表再投递，按"房间"寻址会让最后一条通知凭空消失——测试就是这么抓出来的 | 消息一旦生成就不能靠后续房间状态寻址 |
@@ -37,7 +38,7 @@
 | **落盘只发生在房主机**，玩家端不写 `data/` | 每个客户端都有自己的快照目录时，"谁是权威"就说不清了 | 房主机器关机=这局没了，这是宿主制而不是分布式 |
 | **小字一律给中文补黑体回退**：`--bp-font-mono` 从 `"BP Mono", Consolas, monospace` 扩成再跟一档 `"Microsoft YaHei UI" → "Microsoft YaHei" → "PingFang SC" → "Noto Sans CJK SC"`；标签与小标题 12px→**13.5px**、字距 0.2em→**0.08em**、颜色 `#8b8b9e`(5.38:1)→`#9c9cb2`(6.68:1)；说明文字 13/13.5px→**14.5px**；状态行 14→**15px**；**房间屏同类小字一起改**（连接条 13→15px，它与状态行是 `setStatus` 同时写的同一类字；席位状态 12→13.5px；HUD 微标签 11→12.5px 且字距 0.26em→0.18em；系统聊天行 13→14px；游戏占位段 12→14.5px）；开关**高度与旋钮都不变（20px / 15px），只把轨道从 32px 加长到 44px**；**右上角"昵称"这两个字单独提一级**（标签 13.5→26px＝品牌"3178 对战平台"30px 小两号、加粗、亮紫 `#818cf8`；**输入框保持原样** 17px / 52×220） | 用户："红框里的字体稍微大一些、好看一些，所有页面同类型都要改"。根因不是字号一个维度：**Geist Mono 与 Consolas 都没有中文字形**，原来字栈到 `monospace` 为止，中文只能掉进系统对 generic monospace 的默认中文字体（Windows 上通常是中易宋体），再叠 0.2em 字距就成了"又小又散又瘦"。拉丁与数字仍走 Geist Mono（逐字符回退，房号/倒计时的等宽感不受影响） | **中文具体掉到哪一款字体我们无法直接证明**（宽度量不出字形差别，`document.fonts.check` 也不是字形覆盖测试），能证明的只有"栈里没有中文字体"这一条；观感结论归用户。开关的旋钮位置 Tabler 是按 `calc(100% − 旋钮 − 偏移)` 算的，所以加宽轨道会自动走到位、**不需要手写位移**，但 `.form-switch` 的 `padding-inline-start` 要跟着从 40px 加到 52px，否则白点会压住文字（实测间隙仍是 8px）。改字号的决策辅助页：[预览-字号与开关.html](packages/client/public/预览-字号与开关.html)（四栏字号对比 + 开关四档 + 昵称三档，全用真字体真色值，双击可开） |
 | **同时做两个合成游戏，而不是先接一个真游戏** | "平台无关玩法"是不可证的口号，除非有第二个形状不同的游戏。`turncount` 连回合游标都没有 | 多写约 300 行测试用游戏代码，但这是整个平台阶段最便宜的证据 |
-| **表现层底座用成熟开源框架 `@tabler/core`（MIT），上面只盖一层主题**：尺度整体放大一档（正文 16.5px、控件 52px、席位行 68px、房号 58px 展示体）；字体是 **Tektur（展示）+ Outfit（拉丁正文）+ Geist Mono（数字/标签）**，身份符号用同源图标字体 `@tabler/icons-webfont`（皇冠/机器人/眼睛/圆勾，不再堆 emoji），logo 是内联 SVG 几何徽记（菱形套菱形 + 两翼，不再是色块里塞"3178"） | 用户三轮否掉手写 CSS 的观感（"排版小气"、"颜色也丑"），继续手搓只会第四轮返工；方向 C 由效果图选定。Tabler 是成熟面板风，卡片/表单/按钮/徽章/栅格都是别人打磨过的，且它自带 Bootstrap 5、纯 CSS 文件、样式不需要 JS，"无构建 + 离线双击"仍然成立 | **Tabler 的颜色用 oklch → 浏览器底线抬到 Chrome/Edge 111+**（因此我们自己的 CSS 仍不写 oklch，也不写 `@layer`）；`tabler.min.css` 635KB + 图标字体 520KB 从 `node_modules` 挂 `/vendor/` 同源路由（不把产物复制进仓库），**便携包必须带 node_modules 或预拷这两个 dist 目录**；`.hidden` 要自己留着（Bootstrap 5 不再提供）——这条和"左轨靠特异度而不是书写顺序"都由 `style-hooks.test.mjs` 钉住；三套字体约 290KB（Tektur 152KB + Outfit 110KB + Geist Mono 157KB 里取三个文件），中文没有随包（体积与授权都不划算），仍走系统黑体 |
+| **表现层底座用成熟开源框架 `@tabler/core`（MIT），上面只盖一层主题**：尺度整体放大一档（正文 16.5px、控件 52px、席位行 68px、房号 58px 展示体）；字体是 **Tektur（展示）+ Outfit（拉丁正文）+ Geist Mono（数字/标签）**，身份符号用同源图标字体 `@tabler/icons-webfont`（皇冠/机器人/眼睛/圆勾，不再堆 emoji），logo 是内联 SVG 几何徽记（菱形套菱形 + 两翼，不再是色块里塞"3178"） | 用户三轮否掉手写 CSS 的观感（"排版小气"、"颜色也丑"），继续手搓只会第四轮返工；方向 C 由效果图选定。Tabler 是成熟面板风，卡片/表单/按钮/徽章/栅格都是别人打磨过的，且它自带 Bootstrap 5、纯 CSS 文件、样式不需要 JS，"无构建 + 离线双击"仍然成立 | **Tabler 的颜色用 oklch → 浏览器底线抬到 Chrome/Edge 111+**（因此我们自己的 CSS 仍不写 oklch，也不写 `@layer`）；`tabler.min.css` 635KB + 图标字体 520KB 从 `node_modules` 挂 `/vendor/` 同源路由（不把产物复制进仓库），**便携包由 [tools/build-portable.mjs](tools/build-portable.mjs) 预拷这两个 dist 子集（外加 `ws` 与 `@bp` 实体副本）**；`.hidden` 要自己留着（Bootstrap 5 不再提供）——这条和"左轨靠特异度而不是书写顺序"都由 `style-hooks.test.mjs` 钉住；三套字体约 290KB（Tektur 152KB + Outfit 110KB + Geist Mono 157KB 里取三个文件），中文没有随包（体积与授权都不划算），仍走系统黑体 |
 | **下拉框换成自绘 listbox，但保留原生 `<select>` 当唯一数据源**：`packages/client/src/listbox.js` 给每个 `select.form-select` 套一个按钮 + 自画弹层，选择时写回 `select.value` 并派发 `change`，app.ts 的读写与 `replaceChildren` 重建一行没改 | Windows Chrome 的 `<select>` 展开层是**系统控件**：CSS 管得到每行底色与选中行，管不到"鼠标划过"那条，会落回系统浅蓝（用户两次截图问"这个颜色怎么这个样子"）。用户在三档选择里点了"换自绘下拉（彻底治）" | 代价是**自己实现交互**：上下键/`Home`/`End`/`Enter`/`Esc`/`Tab`、点外面收起、`aria-expanded`/`role=listbox`/`aria-selected`。**没实现 typeahead**（原生 select 支持"按字母跳到该项"，这里不支持）；焦点仍在触发按钮上，用 `aria-expanded` 表达状态。同步时机是个坑：`syncAll()` 必须排在**重建选项之后**（原来放在 `render()` 开头，导致 `kick-target` 的按钮标签比 select 慢一帧、最长 500ms 是空的——UI 猴测抓出 26 条才暴露）。原生 select 用 `display:none` 藏起来（`opacity:0` + 绝对定位仍会留下一个 58px 的盒子，select 有内在最小宽度）。**同一行里的对齐要自己管**：`.input-group > .bp-listbox` 必须参与本行的 flex 伸展，否则两件事同时坏——空下拉里没有文字，flex 的内容高度只剩那枚 14px 箭头，于是它 40px、旁边按 padding 撑出来的按钮 46.1px（底边差 6.1px，用户截图就是这里），而且包装层不是表单控件、拿不到 `.form-select` 的伸展，宽度只剩 64px。现在这两条都由 UI 猴测的几何不变式盯着（改前实测报 128 条，改后 0 条） |
 | **底色与动效照抄 `apigoto.com` 的实测值（紫底靛强调）**：底色五阶 `#0a0a0f / #111118 / #16161f / #1c1c28 / #23233a`（近黑带紫，不是明显的紫），强调 `#6366f1`（hover 抬到 `#818cf8`），紫 `#8b5cf6` 管电脑位、粉 `#ec4899` 管观战、琥珀 `#f59e0b` 管房主、绿 `#22c55e` 管已准备；动效**只放开 0.2~0.3s 过渡**——参考站实测 0 个 `@keyframes`，只有 hover 换描边 + `translateY(-2px)`，所以我们也不写关键帧、不写渐变、不写发光 | 用户给了参考站并三选一点定："近黑带紫照抄 / 只放开 0.2s 过渡 / 字体不动"。参考站自己用 11 处渐变和 `0 0 20px rgba(99,102,241,.15)` 发光，但上一轮"不要动画渐变"的约定仍然有效，所以那两档**没跟**（要跟得改防回归测试，等用户点头）。字体保持本地三套（Tektur/Outfit/Geist Mono，OFL 同源分发）：参考站的 Inter/JetBrains Mono 是外链 CDN，离线便携包会当场退化 | 全站过渡时长被测试钉成"≤0.3s 且不许 `all`"（`style-hooks.test.mjs`）；`.btn-primary` 静止态填色从参考站的 `#6366f1` 降到 `#4f46e5`——白字压在 `#6366f1` 上是 4.47:1 不到 AA（参考站自己也没过），降一档后 6.29:1，hover 才回到 `#6366f1`（瞬时态 4.47 已知）；状态行与房号铭牌改用抬亮的 `#818cf8`（6.02:1）而不是实心靛紫（4.02:1）；下拉框的箭头必须自己画——`.form-select` 用 `background:` 简写会把 Tabler 的 `background-image` 清成 `none`，`appearance:none` 之后原生箭头也没了，所以守卫测试同时钉"有箭头"和"这两条规则里不许出现 background 简写"；展开列表要显式给 `option` / `option:checked` 上色，否则选中条是系统浅灰 |
 
@@ -55,6 +56,7 @@
 | [package.json](package.json) | npm workspaces 与 `build/test/seam` 脚本 |
 | [tsconfig.json](tsconfig.json) / [tsconfig.base.json](tsconfig.base.json) | 项目引用（`tsc -b`）与共享编译选项 |
 | [tools/check-seam.sh](tools/check-seam.sh) | 接缝闸门：平台包内不得出现玩法词或 `games/` import |
+| [tools/build-portable.mjs](tools/build-portable.mjs) | 绿色便携包：校验签名 `node.exe`、装配运行时子集、生成便携版启动器、自检后产出 `dist-portable/`（不入库） |
 | [tools/monkey.mjs](tools/monkey.mjs) | 协议层猴测：多开模拟用户随机发帧（含 6 类故意非法）+ 随机硬重启房主端，**每帧跑 15 条不变式**（revision 单调、房主唯一、座位不超槽、票据不被拒、秘密不外泄…）+ 6 条运行级检查；违规带 seed 可复现；**收尾按 mtime 只删本次运行造的 `room-*.json` 与自己的 `run-<port>.json`**（`data/` 与用户真实跑房共用，绝不批量删） |
 | [tools/monkey-ui.page.js](tools/monkey-ui.page.js) | 页内注入的 UI 层猴测：真实页面里开同源 iframe 当并发真人，随机点击 + **10 组界面不变式**（A 两屏互斥 / B"你"最多一个 / C 状态行不漏英文码 / D 席位行数与槽位一致 / E 无座不许能点准备 / F 倒计时格式 / G 静默丢失类（箭头、空标签、aria 与可见性、弹层无阴影）/ G2 同行下拉与按钮等高齐底 / H 同行面板卡底边对齐 / I 横向溢出），再加两条"死点击"规矩（`auditButton` 要求亮着的按钮点下去必须留下反应、`checkLegality` 要求下拉选不出值时旁边的按钮不许亮） |
 | [tools/repro-persist.mjs](tools/repro-persist.mjs) | 量"建房成功 → 盘上出现房文件"的延迟，即硬杀会丢房的窗口 |
@@ -90,7 +92,7 @@
 | [design-refs/](design-refs/E-cyber-minimal.png) | 八张方向效果图（A–H），选定的是 [C-tabler-dashboard.png](design-refs/C-tabler-dashboard.png) |
 | [packages/client/public/fonts/](packages/client/public/fonts/Tektur-Medium.ttf) | 同源分发的 OFL 字体：Tektur 展示体 + Outfit 拉丁正文 + Geist Mono 数字，含各自许可文本 |
 | [packages/hostd/src/cli.ts](packages/hostd/src/cli.ts) | 宿主壳：host / join / diagnose / stop 四个模式 |
-| [packages/hostd/src/webroot.ts](packages/hostd/src/webroot.ts) | 静态与接口路由（`/app/`、`/vendor/protocol/`、`/games/`、`/api/games`、`/discovery/rooms`） |
+| [packages/hostd/src/webroot.ts](packages/hostd/src/webroot.ts) | 静态与接口路由（`/app/`、`/vendor/protocol/`、`/games/`、`/api/games`、`/api/self`、`/discovery/rooms`） |
 | [packages/hostd/src/tunnel.ts](packages/hostd/src/tunnel.ts) | cloudflared 查找与隧道网址解析（找不到就退回本地地址，不下载） |
 | [房主建房.bat](房主建房.bat) / [玩家本机壳.bat](玩家本机壳.bat) | 双击入口（CRLF，由 [.gitattributes](.gitattributes) 锁住） |
 | [tools/gen-bat.mjs](tools/gen-bat.mjs) | 生成上面两个 .bat，保证编码不变式（UTF-8 无 BOM / CRLF / chcp 先于中文） |
@@ -129,7 +131,7 @@
 | **"按钮亮着"就等于"这一下真有效果"**（2026-10-12 定为规矩） | 房主面板与大厅里每个动作按钮在渲染时都要问一句"此刻这个动作合法吗"：`startBlockers`（人不够/有人没准备）、`aiFillBlocker`（游戏不支持电脑位/槽满）、下拉有没有可选值（`transfer-target` / `kick-target` / `address-book`）。不合法就变灰并把原因写进按钮文案，**绝不让玩家从提示里自己发现**。同一条规矩也管下拉本身：**没得选时格子里不留白**，而是放一条不可选的占位项写明原因（`seatPickerBlocker`：房里没有别人 / 无法移交电脑位 / 没有可移交的真人玩家…），触发器随之置灰（`.is-placeholder`），占位项也**不算"已选中"**（不吃那层选中紫）。UI 猴测把这条当规则在扫（`tools/monkey-ui.page.js` 的 `auditButton` + `checkLegality`） |
 
 - **我们自己的 CSS 不写 `oklch` 与 `@layer`**：底座 Tabler 的颜色变量用了 `oklch()`，把浏览器底线抬到 Chrome/Edge 111+（用户视角的表现为按钮发灰、边框消失，全文见 [README.md](README.md) 的「限制与注意事项」）。给旧机器装包之前先确认浏览器版本。
-- **底座体积**：`tabler.min.css` 635KB + 图标字体 520KB，从 `node_modules` 挂 `/vendor/` 同源路由（不复制进仓库）。R1 便携包要么带 `node_modules`，要么在打包脚本里预拷 `@tabler/core/dist/css` 与 `@tabler/icons-webfont/dist`。
+- **底座体积**：`tabler.min.css` 635KB + 图标字体 520KB，从 `node_modules` 挂 `/vendor/` 同源路由（不复制进仓库）。便携包由 [tools/build-portable.mjs](tools/build-portable.mjs) 只预拷 `@tabler/core/dist/css/tabler.min.css`、`@tabler/icons-webfont/dist` 的 CSS+字体子集、`ws` 与 `@bp/*` 实体副本，成品约 **94MB**（其中官方签名 `node.exe` 约 88.5MiB）。
 - **字体随包分发，许可文本不能丢**：`public/fonts/` 里的 Tektur、Outfit、Geist Mono 来自 `ui-styling` skill 的 `canvas-fonts/`，OFL 许可；打包（R1）时必须连 `.ttf` 带 `*-OFL.txt` 一起拷，测试里已经钉住"CSS 引用的字体文件必须存在于盘上"。没有中文字体随包（体积与授权都不划算），中文仍走系统黑体。
 - **`.bat` 的编码是硬约束，不是风格问题**：必须 UTF-8 无 BOM + CRLF + 第二行 `chcp 65001`，且中文只能出现在 chcp 之后。否则 cmd 按 cp936 解析 UTF-8 字节，第二个字节落进 GBK trail 区（里面有个 `|`），**中文会被拼成命令分隔符**——表现为平白一句"系统找不到指定的路径"加一行乱码。另一个坑：在 Git Bash 里用 `node -e '...'` 写批处理，argv 里的 `nul` 会被 MSYS 路径转换改成 `/dev/null`，直接写坏文件；所以走 `tools/gen-bat.mjs`，并由 [bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) 钉住这些不变式。
 - **`.bat` 只做启动器，不留在前台**：`start "标题" node …` 之后立刻 `exit /b 0`，所以双击的窗口一闪就没，进程跑在它自己的控制台窗口里。好处是 Ctrl+C 直接送给 node——落盘收尾后进程退出，窗口自己关，**不问"终止批处理操作吗(Y/N)"**（那句话只在批处理本身被 Ctrl+C 打断时出现）。代价是启动器拿不到 node 的退出码，环境缺失只靠那三条 `if not exist` 拦；失败分支特意留着 `pause`，双击的人看得见原因。
@@ -140,7 +142,7 @@
 - **从房主拉游戏模块 = 在你浏览器里执行房主给的代码**。哈希校验只保证"传过来的字节和房主声明的一致"，不保证"房主写的代码无害"。今天两个合成游戏没有客户端入口，实际跑的是内置占位渲染器，所以这条风险还没落地；**接真游戏前要把它关进沙箱 iframe（`sandbox=allow-scripts`，不给 `allow-same-origin`）**，否则房主能读你本机的座位票据与地址簿。
 - **宿主制天然放弃一部分防作弊**：权威进程在房主机上，房主可改自己的秘密与判定；"按视角裁剪"只防透视，不防房主。
 - **昵称的解析口只有一个**（2026-10-14）：`有效昵称 = 输入框 > 本机记住的上次 > 占位称呼「无名玩家」`，界面显示与 `hello` 都走 `currentNick()`，所以"屏幕上空白、发出去却是无名玩家"这种不一致不可能再出现。存储侧只收**真正填过的**名字：空字段与占位称呼都不写（`rememberNick`），清空输入框等于"这次没填"而不是"忘掉"。**为什么这条要立字据**：原实现只在 `connectTo` 里写一次 `输入 || '无名玩家'`，于是两个后果——只改名没点建房就刷新等于没改；某次空字段点下去就把"无名玩家"永久钉进存储，之后每次进来都显示它。回归形状由 [style-hooks.test.mjs](packages/client/test/style-hooks.test.mjs) 的静态守卫钉住（先剥注释再判，否则注释里引一句旧代码就误报）。
-- **同源存储是"按入口分份"的**：房主端提示 `http://localhost:3000`、本机壳打开 `http://127.0.0.1:3178/`，主机名与端口都不同 → 昵称、地址簿、票据是两份互不相通的存储。彻底解决要等平台有**唯一的本机入口**（页面永远从壳打开，建房请求发给指定端口的房主进程——即 `btn-create` 目前把 `parseHostAddress(this.selfOrigin)` 写死成"只在本机开房"这一步要放开），与 R1 绿色便携包 / 客户端化是同一件事，本档不假装它已经成立。
+- **同源存储只有一份**（2026-10-20）：两个启动器都从 `http://127.0.0.1:3178/` 打开；房主模式的 `0.0.0.0:3000` 只是局域网/隧道入口，不作为本机页面来源。昵称、地址簿、票据因此不再按入口分份。邀请链接由 `/api/self` 给出的 `publicOrigin` 生成（隧道优先、其次局域网 IP），所以房主从本机页面复制的链接不再是 `localhost`——否则朋友点开指向的是他自己电脑的 localhost。
 - **禁止**：写 Windows 防火墙入站规则、建议关闭 Smart App Control（关掉后不重装系统无法再开）、`force push`。
 - **混合内容方向性**：`http://127.0.0.1` 页面可以连 `ws://`（局域网房主）也可以连 `wss://`（隧道房主）；反过来 `https://` 页面连 `ws://` 会被浏览器拦。本地壳页面必须走 http。
 - 与 [uno-online](../uno-online/CONTEXT.md) 是同一份玩法的两种演进：玩法改动归那边，连接/身份/分发改动归这里；**不要两边同时动同一份逻辑**。

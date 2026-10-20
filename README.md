@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）
 
 > 面向使用者：这是什么、能干什么、怎么跑起来、有什么限制。设计取舍与已定语义在 [DESIGN.md](DESIGN.md)，逐条实测数据与 agent 交接记录在 [CONTEXT.md](CONTEXT.md)。
-> 最近更新：2026-10-14
+> 最近更新：2026-10-20
 <!-- 日期必须留在这行 blockquote 上：check-docs.sh 的 [新]/[旧]/[期] 只读这一行，正文里写日期不算顶部日期。 -->
 
 ## 一句话说明
@@ -34,8 +34,10 @@ npm install && npm run build
 
 | 双击 | 结果 |
 |---|---|
-| `房主建房.bat` | 起房主端（默认 3000 端口），浏览器打开 <http://localhost:3000> 建房 |
-| `玩家本机壳.bat` | 起本地壳（3178）并自动打开页面：能看局域网房间列表，也能进别人的房 |
+| `房主建房.bat` | 起房主端：本机界面 <http://127.0.0.1:3178>，同时开 3000 端口给局域网朋友；浏览器自动打开 |
+| `玩家本机壳.bat` | 只开本机界面 <http://127.0.0.1:3178>：能看局域网房间列表，也能进别人的房 |
+
+两个入口共用同一个本机界面端口（3178），**不要同时开**；房主端已经包含大厅，不需要再开本地壳。
 
 对局跑在**新开的那个控制台窗口**里。要停就在那个窗口按 <kbd>Ctrl</kbd>+<kbd>C</kbd>：先落盘收尾再退出，窗口自己关闭，不会问你"终止批处理操作吗"。
 
@@ -45,21 +47,24 @@ npm install && npm run build
 
 ```bash
 npm test                                   # 全量用例
-node packages/hostd/dist/cli.js host --port 3000 [--tunnel] [--no-lan] [--game echo]
+node packages/hostd/dist/cli.js host --port 3178 --lan-port 3000 [--tunnel] [--no-lan] [--no-announce]
 node packages/hostd/dist/cli.js join --port 3178     # 本地壳，只绑 127.0.0.1
 node packages/hostd/dist/cli.js diagnose             # node 版本 / 已装游戏 / cloudflared / 网卡 / 在跑的壳
 node packages/hostd/dist/cli.js stop --port 3178
+npm run portable                                     # 生成绿色便携包（产物在 dist-portable/）
 ```
+
+`--port` 是本机界面端口（只绑 127.0.0.1），`--lan-port` 是房主模式给局域网/隧道开放的端口；`--no-lan` 连公网监听一起关，`--no-announce` 只关组播广播。
 
 ## 使用说明
 
-1. **房主**：填房名、选游戏、定座位数 → 点「建房并坐 1 号位」，界面上出现四位房号。
+1. **房主**：填房名、选游戏、定座位数 → 点「建房并坐 1 号位」，界面上出现四位房号。本机页面始终是 `127.0.0.1:3178`；`3000` 只是给朋友的入口。
 2. **客人**：另一台机器双击「玩家本机壳.bat」，填房主地址（`192.168.x.x:3000` 或隧道网址）+ 房号进房；或者直接点房主复制出去的邀请链接，地址和房号都替你填好。
 3. 各自点「准备」，房主的「开始对局」变亮后开局。人不够时按钮上会写明"等准备：谁"。
 4. **掉线 / 关页面 / 换设备**：浏览器数据还在就会自动坐回原位；票据失效时界面会说明原因，不会只丢一句错误码。
 5. **昵称会自动记住**：改完就存，不用点「建房」或「加入」才生效；下次打开直接是你上次填的名字。把输入框清空不会抹掉记忆（清空＝这次没填，仍会用上次那个）。
 
-> 昵称与地址簿存在浏览器的同源存储里，**按"入口"分开记**：房主端提示的是 `http://localhost:3000`，本机壳自动打开的是 `http://127.0.0.1:3178/`——主机名和端口都不同，两份存储互相看不见。要在一个入口记住的名字到处都用，得等平台只有一个本机入口（见 [DESIGN.md](DESIGN.md) 的「已定语义与边界」）。
+> 昵称、地址簿与座位票据存在浏览器的同源存储里。两个启动器都从 `http://127.0.0.1:3178/` 打开，所以只有**一份**存储：在房主端改的名字，换成本地壳仍然在。房主端的 `3000` 只是给局域网朋友的入口，不作为本机页面来源。
 
 | 位置 | 房主 | 玩家 | 观战 |
 |---|---|---|---|
@@ -91,7 +96,7 @@ node packages/hostd/dist/cli.js stop --port 3178
 ## 限制与注意事项
 
 - **浏览器要 Chrome/Edge 111+**：样式底座 Tabler 的颜色变量用了 `oklch()`，更老的内核算不出颜色（表现为按钮发灰、边框消失）。
-- **还不是"发给朋友的那份包"**：绿色便携包（官方 `node.exe` 随包走）没做，两台机器都要自己装 Node 并 `npm install && npm run build`。
+- **便携包已能构建，但还没上第二台机器实测**：`npm run portable` 产出 `dist-portable/3178-battle-platform/`（约 94 MB，含官方签名 `node.exe`）；本机已用"剥掉 PATH 里的 node/npm、只用包内 node.exe"的方式验过启动、`/health` 与 `stop` 收尾，真正没有 Node 的另一台电脑仍待实测。
 - **局域网组播未双机实测**：编解码和过期表有测试，真网卡上的收发、以及首次绑定触发防火墙弹窗这条路还没验证过。跨网目前只能靠邀请链接。
 - **隧道域名每次启动都变**：别把它当固定地址记。
 - **游戏自带界面还没有**：下发通道（清单、CORS、哈希校验）已通，但两个合成游戏没有客户端入口，对局区走内置占位渲染。真游戏的牌桌 UI 属于游戏侧工作。
@@ -104,6 +109,7 @@ node packages/hostd/dist/cli.js stop --port 3178
 npm run build          # tsc -b 项目引用，无打包器
 npm test               # node --test
 bash tools/check-seam.sh                        # 闸门：平台包内不得出现玩法词
+npm run portable                                # 绿色便携包（dist-portable/，不入库）
 node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测
 ```
 
@@ -117,6 +123,7 @@ node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议�
 | [packages/hostd/](packages/hostd/src/cli.ts) | 宿主壳：host / join / diagnose / stop + 静态路由 |
 | [games/](games/echo/src/index.ts) | 两个合成游戏（契约无关玩法的活证据） |
 | [tools/](tools/check-seam.sh) | 接缝闸门、两层猴测、复现脚本、.bat 生成器 |
+| [tools/build-portable.mjs](tools/build-portable.mjs) | 绿色便携包：签名 `node.exe` + 运行时子集 + 启动器（产物 `dist-portable/` 不入库） |
 | [房主建房.bat](房主建房.bat) / [玩家本机壳.bat](玩家本机壳.bat) | 双击入口（由 [tools/gen-bat.mjs](tools/gen-bat.mjs) 生成，别手写） |
 | [DESIGN.md](DESIGN.md) | 方案设计：设计取舍的完整理由与代价、架构与接缝、已定语义表、工程侧硬约束 |
 | [CONTEXT.md](CONTEXT.md) | 逐阶段验收凭据、遗留问题、agent 交接记录 |

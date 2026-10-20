@@ -5,7 +5,7 @@ cd /d "%~dp0"
 
 where node >nul 2>&1
 if errorlevel 1 (
-  echo [x] 没找到 node。请先装 Node LTS，或用绿色便携包那份（R1 还在做）。
+  echo [x] 没找到 node。请先装 Node LTS。
   pause
   exit /b 1
 )
@@ -19,5 +19,8 @@ if not exist packages\hostd\dist\cli.js (
   pause
   exit /b 1
 )
-start "3178 房主端" node packages\hostd\dist\cli.js host --port 3000 %*
+start "3178 房主端" node packages\hostd\dist\cli.js host --port 3178 --lan-port 3000 %*
+rem 给壳两秒起服务，再开浏览器（ping 当睡眠用，timeout 在输入被重定向时会失败）
+ping -n 3 127.0.0.1 >nul
+start "" http://127.0.0.1:3178/
 exit /b 0
