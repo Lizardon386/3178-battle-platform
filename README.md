@@ -16,7 +16,7 @@
 - **按视角裁剪** —— 快照按座位生成，观战看不到别人的秘密。
 - **无构建** —— 浏览器直接吃原生 ESM，离线可用；界面覆盖大厅、房间内和对局挂载点，键盘可完整操作。
 
-> 想接新游戏？实现 `GameModule` / `GameInstance` 两个接口即可；完整契约、线协议和开发命令见文末「文档」。
+> 想接新游戏？实现 `GameModule` / `GameInstance` 两个接口即可；完整契约、线协议和开发命令见下文「文档」。
 
 ## 开始玩
 
@@ -66,6 +66,14 @@ node packages/hostd/dist/cli.js stop --port 3178
 
 `--port` 是本机界面端口（只绑 `127.0.0.1`），`--lan-port` 是房主模式给局域网/隧道开放的端口；`--no-lan` 连公网监听一起关，`--no-announce` 只关组播广播。便携包里把 `node` 换成包内 `node.exe` 即可。
 
+## 文档
+
+| 文档 | 阅读对象 | 内容 |
+|---|---|---|
+| [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 目标与约束；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；接入契约（GameModule / GameInstance / 客户端入口）；线协议；开发与构建；关键设计决策；已定语义与边界 |
+| [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
+| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
+
 ## 限制与注意事项
 
 - **便携包还没上第二台机器实测**：`npm run portable` 产出 `dist-portable/3178-battle-platform/`（约 94 MB，含官方签名 `node.exe`）；本机已用“剥掉 PATH 里的 node/npm”的方式验过启动、`/health` 与 `stop`，真正没有 Node 的电脑仍待实测。
@@ -73,13 +81,5 @@ node packages/hostd/dist/cli.js stop --port 3178
 - **游戏自带界面还没有**：下发通道已通，但两个合成游戏没有客户端入口，对局区走内置占位渲染。
 - **宿主制天然不防房主**：权威进程在房主机上，“按视角裁剪”只防透视；移交只移权限、不迁进程。
 - **从房主拉游戏模块 = 在浏览器里执行房主给的代码**。哈希只保证字节没被改，不保证代码无害；接真游戏前要关进沙箱 iframe。
-
-## 文档
-
-| 文档 | 内容 |
-|---|---|
-| [DESIGN.md](DESIGN.md) | 设计取舍、架构与接缝、接入契约、线协议、开发命令、完整目录表 |
-| [CONTEXT.md](CONTEXT.md) | 逐阶段验收凭据、遗留问题、agent 交接记录 |
-| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 探索性 QA：15 条 finding、修法与复跑计数 |
 
 本项目从同工作区的 `uno-online` 剥离连接层重写而来，那边代码一行没动；玩法改动归那边，连接/身份/分发改动归这里。
