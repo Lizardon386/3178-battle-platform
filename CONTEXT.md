@@ -203,7 +203,7 @@
 
 - 2026-10-21 Qoder：**统一章节编号与 4.1 架构目录**：README/CONTEXT/INTEGRATION_GUIDE 的正文 H2/H3 从 1 编号，文档索引保持不编号；INTEGRATION_GUIDE 在文档表后新增「1. 接入总则」，后续接口章节顺延；DESIGN 4.1 先列 packages/games/tools 目录文本树，再保留包关系图。
 
-- 2026-10-21 Qoder：**清理过时文件**：删除 `design-refs/`（8 张方向图，14MB，零引用）、`packages/client/public/预览-字号与开关.html`（字体/开关决策辅助页，仅两条历史记录引用，已改为纯文本）、`nc.log`（旧测试日志）。`dogfood-output`（文档仍引用）、`games/*.bpmap` 与 `data/packs`（运行/测试数据）保留；`dist-portable` 是旧构建产物，未删，需要时 `npm run portable` 重建。
+- 2026-10-21 Qoder：**清理过时文件**：删除 `design-refs/`（8 张方向图，14MB，零引用）、`packages/client/public/预览-字号与开关.html`（字体/开关决策辅助页，仅两条历史记录引用，已改为纯文本）、`nc.log`（旧测试日志）。`dogfood-output`（文档仍引用）与 `games/*.bpmap`（测试包）保留；`data/` 与 `dist-portable/` 已按用户确认删除，运行/测试会自动重建 `data/`，便携包用 `npm run portable` 重建。
 
 **下一步顺序建议**：① **M3 试点**：拿一个具体回合制游戏（uno 或其他，或先把 `测试夹具·回合制` 补成带 AI 和客户端的测试夹具），验证“1 人 + 电脑打完整局”和 `.bpmap` 端到端；接入步骤写进 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。② **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；③ **双机实测**组播发现与隧道，目前只在一台机器上证伪了编解码与 HTTP 路由；④ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家进房.bat`，**别手写**：改 [tools/gen-bat.mjs](tools/gen-bat.mjs) 再 `node tools/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。
