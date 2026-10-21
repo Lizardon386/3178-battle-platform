@@ -61,6 +61,8 @@ export default {
 
 游戏界面拿不到 socket，也拿不到别人的座位，只能用 `actions.send()` 和 `actions.seatId()`。不写界面也能运行，平台会显示一个简单的占位面板。
 
+客户端入口在 `sandbox="allow-scripts"` 的 iframe 里执行，不带 `allow-same-origin`：读不到宿主的 `localStorage`、票据和 DOM。入口源码先在父页面按清单哈希校验，再交给沙箱。入口要写成单文件模块，不要用相对 `import`；包内资源用 `fetch('assets/...')`，iframe 的 base 已指向入口目录。
+
 ## 目录与构建
 
 把模块放在 `games/<id>/`，`package.json` 的 `main` 指向 `dist/index.js`。根 `tsconfig.json` 的 `references` 里加一行 `{ "path": "games/<id>" }`；不加的话 `npm run build` 不会生成 `dist/index.js`，`loadGames()` 会跳过这个目录。
@@ -97,4 +99,4 @@ node tools/bpmap.mjs unpack mygame.bpmap ./mygame-unpacked
 
 同一个 id 只加载一个包：和目录游戏或其他包重名时，后面的包会被跳过并在控制台报错。包版本在入房握手里是 `模块版本+包哈希前 12 位`，两边不一致会被版本闸挡住。
 
-包里的服务端代码会在房主进程里执行，和安装一个程序一样，只装来源可信的包。客户端入口仍按现有方式从 `/games/<id>/<entry>` 加载；客户端沙箱落地后这里会补上对应限制。
+包里的服务端代码会在房主进程里执行，和安装一个程序一样，只装来源可信的包。客户端入口在沙箱 iframe 中执行，源码先按清单哈希校验再交给沙箱；它不继承宿主的 localStorage 和票据。
