@@ -33,6 +33,8 @@ export const myModule: GameModule = {
 
 `rulesHashOf` 只摘要影响玩法的字段。房主改房名不应该让客人看到“房规不同”。`ctx` 里的 `now()` 和 `random()` 是平台注入的，测试可以按固定节奏推进，不用等真计时器。
 
+`soloFill` 只表示允许加电脑位，不代表电脑会行动。设为 true 的游戏要自己实现电脑出招（例如在 `tick` 或动作处理里推进），否则单机局会卡在电脑回合。
+
 ## GameInstance
 
 必须实现：
@@ -64,3 +66,35 @@ export default {
 把模块放在 `games/<id>/`，`package.json` 的 `main` 指向 `dist/index.js`。根 `tsconfig.json` 的 `references` 里加一行 `{ "path": "games/<id>" }`；不加的话 `npm run build` 不会生成 `dist/index.js`，`loadGames()` 会跳过这个目录。
 
 `bash tools/check-seam.sh` 应该保持无输出：`packages/*/src` 里不要出现玩法词，也不要 import `games/`。参考实现是 [games/echo](games/echo/src/index.ts) 和 [games/turncount](games/turncount/src/index.ts)，两者都标成测试 demo。
+
+## 单文件游戏包（.bpmap）
+
+除了把模块放进 `games/<id>/`，也可以打成一个 `.bpmap` 文件丢进 `games/`。宿主启动时会扫描、校验、解包，并像目录游戏一样加载。
+
+源目录里放一个 `bpmap.json`：
+
+```json
+{
+  "id": "mygame",
+  "version": "0.1.0",
+  "server": "server.js",
+  "client": "client.js"
+}
+```
+
+- `id` 和模块导出的 `id` 一致，`version` 和模块导出的 `version` 一致；不一致时宿主跳过这个包并在控制台说明原因。
+- `server` 是包内服务端入口；`client` 可选，填了就必须在包内，并和模块导出的 `entry` 一致。
+- 源目录里除 `bpmap.json` 外的普通文件都会进包。不允许符号链接、`..` 和绝对路径。
+- 打包、检查、调试解包：
+
+```bash
+node tools/bpmap.mjs pack mygame --out mygame.bpmap
+node tools/bpmap.mjs inspect mygame.bpmap
+node tools/bpmap.mjs unpack mygame.bpmap ./mygame-unpacked
+```
+
+把 `mygame.bpmap` 放进 `games/`，重启宿主即可。宿主把包解到数据目录下的 `packs/<id>/<包哈希>/`：开发目录是 `data/packs`，便携包是 `%LOCALAPPDATA%\3178-battle-platform\data\packs`。缓存的文件集合必须和包清单完全一致；多一个文件、少一个文件或改一个字节都会重新解包。
+
+同一个 id 只加载一个包：和目录游戏或其他包重名时，后面的包会被跳过并在控制台报错。包版本在入房握手里是 `模块版本+包哈希前 12 位`，两边不一致会被版本闸挡住。
+
+包里的服务端代码会在房主进程里执行，和安装一个程序一样，只装来源可信的包。客户端入口仍按现有方式从 `/games/<id>/<entry>` 加载；客户端沙箱落地后这里会补上对应限制。
