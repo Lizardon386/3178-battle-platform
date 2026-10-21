@@ -13,6 +13,8 @@
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
 
+## 1. 接入总则
+
 把游戏接进平台，需要实现 [module-api.ts](packages/game-sdk/src/module-api.ts) 里的两个接口。平台负责房间、座位、权限和消息投递，玩法逻辑放在游戏模块里。公开类型、客户端契约和 `bpmap` 打包器在 `@bp/game-sdk`；平台内部仍从 `@bp/server` 兼容入口导出同一套类型。
 
 接入时有三条限制：
@@ -23,7 +25,7 @@
 
 模块目录名要和模块导出的 `id` 一致（`^[a-z0-9][a-z0-9-]{0,31}$`），否则加载器会拒绝加载。
 
-## GameModule
+## 2. GameModule
 
 ```ts
 export const myModule: GameModule = {
@@ -45,7 +47,7 @@ export const myModule: GameModule = {
 
 `soloFill` 只表示允许加电脑位，不代表电脑会行动。设为 true 的游戏要自己实现电脑出招（例如在 `tick` 或动作处理里推进），否则单机局会卡在电脑回合。
 
-## GameInstance
+## 3. GameInstance
 
 必须实现：
 
@@ -57,7 +59,7 @@ export const myModule: GameModule = {
 
 `Effect` 有六种：`broadcast`、`toSeat`、`notice`、`system`、`end`、`kick`。
 
-## 客户端界面（可选）
+## 4. 客户端界面（可选）
 
 `entry` 会解析成 `<房主地址>/games/<id>/<entry>`。入口导出 `default` 或 `client`：
 
@@ -73,7 +75,7 @@ export default {
 
 客户端入口在 `sandbox="allow-scripts"` 的 iframe 里执行，不带 `allow-same-origin`：读不到宿主的 `localStorage`、票据和 DOM。入口源码先在父页面按清单哈希校验，再交给沙箱。入口要写成单文件模块，不要用相对 `import`；包内资源用 `fetch('assets/...')`，iframe 的 base 已指向入口目录。
 
-## 目录与构建
+## 5. 目录与构建
 
 平台仓库里的目录式模块只用于测试夹具：`packages/test-tools/test-games/`，由 test-tools 的 `tsconfig` 编译；`games/` 里只放生成的 `.bpmap`。第三方游戏在自己的工程里构建，打成 `.bpmap` 分发，不要把源码加进平台 monorepo。
 
@@ -81,7 +83,7 @@ export default {
 
 参考夹具：[turn-based](packages/test-tools/test-games/turn-based/index.ts)、[simultaneous](packages/test-tools/test-games/simultaneous/index.ts)。
 
-## 单文件游戏包（.bpmap）
+## 6. 单文件游戏包（.bpmap）
 
 游戏分发用 `.bpmap` 单文件；目录式只用于平台自己的测试夹具和开发。把 `.bpmap` 丢进 `games/`，宿主启动时会扫描、校验、解包，并像目录游戏一样加载。
 

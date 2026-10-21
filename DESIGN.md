@@ -160,6 +160,18 @@ stateDiagram-v2
 
 ### 4.1 包结构
 
+```text
+packages/
+  game-sdk/    GameModule 契约、.bpmap 打包/读取、客户端入口类型
+  protocol/    线消息、错误码、摘要、入站形状闸
+  server/      引擎、房间、权限、落盘、传输、发现
+  client/      浏览器端连接、视图、界面、沙箱挂载
+  hostd/       宿主壳 host/join/diagnose/stop、静态路由
+  test-tools/  测试夹具与契约测试
+games/         运行时 .bpmap
+tools/         接缝闸门、猴测、便携包
+```
+
 ```mermaid
 flowchart TD
   P["@bp/protocol<br/>线消息 / 错误码 / 摘要 / 形状闸"]

@@ -14,7 +14,7 @@
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
 
-## 背景与目标
+## 1. 背景与目标
 
 用户 2026-10-10 指令：**本会话只做类 war3 的联机对战平台**，把这部分能力从 [uno-online](../uno-online/CONTEXT.md) 里剥离出来重做，"不要怕麻烦，用合适的语言重构"；代码就落在本目录（原 `game-host-platform` 改名而来），不在别处新建仓库。
 
@@ -25,7 +25,7 @@
 
 目标产物：一个可被两个形状不同的游戏驱动、带房主权限与终局语义、能落盘恢复、能真 socket 联机的**平台内核**，以及尚未开始的客户端壳。
 
-## 当前状态
+## 2. 当前状态
 
 **P0–P7 完成（P8.5 通道已通、游戏自带界面未做；本机入口已统一到 `127.0.0.1:3178`；R1 便携包已能构建，数据落在用户目录），`npm test` 145/145 全绿；`tools/check-seam.sh` 零命中；界面在 in-app Browser 里真点过。** 表现层底座已换成 `@tabler/core` + `@tabler/icons-webfont`（MIT，从 node_modules 同源挂 `/vendor/`）。代码全部在本目录，`uno-online` 的代码未动一行（HEAD 仍是 `e9ad2cc`，只有两档文档因改名被授权修改，仍是未提交状态）。
 
@@ -54,7 +54,7 @@
 | 客户端连接地址写死 `location.host`，且倒计时拿本地钟比服务端绝对时间戳 | [public/client.js:156-157](../uno-online/public/client.js) |
 | `ready` 字段存在但 `start()` 完全忽略它 | [server/room.js:236-239](../uno-online/server/room.js) |
 
-## 计划 / 待办
+## 3. 计划 / 待办
 
 - [x] P0 工程骨架 + 接缝闸门 + `node --test`
 - [x] P1 协议包
@@ -74,7 +74,7 @@
 - [ ] 待做实验（做单文件 exe 之前必须跑）：Node SEA 打一个 hello-world，看这台机器的 SAC 拦不拦。**别在未跑实验前投入打包链路**
 - [ ] 未做且刻意不做：目录服务器 / 账号 / 好友 / 段位 / 匹配 / 反作弊仲裁 / 自动写防火墙规则
 
-## 关键约束与注意事项
+## 4. 关键约束与注意事项
 
 - **接缝闸门必须保持绿**：`bash tools/check-seam.sh` 扫 `packages/*/src` 里的玩法词与 `games/` import。重构中最容易发生的退化就是"顺手把旧 `room.js` 搬过来"，这条是唯一的机械防线。**不要在闸门里加例外**（例外一旦存在就形同不存在）；平台代码的注释也不要提旧游戏名字，历史来源写在本档案里。
 - **revision 不变式**：任何可见状态变更都要推进 revision（`Room.addSeat/removeSeat/attach/detach/pushChat/bump` 已内置）。新加变更点时忘了 bump 的表现是"客户端收到了却不更新"，排查成本很高——本会话就是靠端到端测试抓到这个 bug 的。
@@ -98,7 +98,7 @@
 - **版本管理**：本目录是 GitHub 仓库（`origin`，公开），`.bat` 由 `.gitattributes` 锁 CRLF；提交前跑 `npm test` 与 `npm run seam`。便携包产物 `dist-portable/` 不入库。
 - 收工跑 `bash /d/agent_workspace/multi-agent-task-handoff/check-docs.sh`（**不加管道**，`[链]`/`[期]` 是失败项），exit 0 才算收尾。
 
-## 变更记录
+## 5. 变更记录
 - 2026-10-10 Qoder：**目录改名 `game-host-platform` → `3178-battle-platform`，并由评估档转为实施档**（用户指令：本会话就在本目录继续开发对战平台）。同时改判两项：计划 D2「代码落新目录 battle-platform」作废，代码就落本目录；D6「房间列表/大厅」用户不接受"只做地址簿 + 邀请链接"，要求**尽量贴合 war3 的房间设计**，发现层级改为 B+A（见 README「房间形态」）。顺带修掉本档 4 处 `[链]` 违规。
 - 2026-10-10 Qoder：**开工 P0–P5，交付平台内核第一版**（用户"选 B+A，其他默认，直接开工"）。新建 npm workspaces + TS 工程（`tsc -b` 项目引用、`node --test`），`packages/protocol`（消息目录/错误码/握手/稳定摘要/形状闸门）、`packages/server`（`Engine` 引擎、`Room` 座位与 revision 不变式、`authority` 权限集中处、`HostStore` 房主侧落盘、`WsTransport`、`discovery` 组播信标、`loader` 运行时动态加载）、`games/echo` + `games/turncount` 两个形状不同的合成游戏。测试 57 例全绿：19 例契约套件用**同一组断言**跑两个游戏，4 例真 socket 端到端跨游戏换房，含落盘重启后旧票据回座。**修掉两个实现缺陷**：① 出站按房间寻址会在 `hostClose`/`shutdown` 清空会话表后丢掉最后一条通知 → 改为创建时即解析 connIds；② 入座/连接/聊天不推进 revision → 按版本号去重的客户端会把新状态当重复帧丢弃。新增 `tools/check-seam.sh`（平台包禁玩法词与 `games/` import）。改名遗留：本档与 [uno-online/CONTEXT.md](../uno-online/CONTEXT.md)、[uno-online/README.md](../uno-online/README.md) 内引用已全部替换为新名（uno-online 那两处经用户授权后修改，其工作树现为未提交状态）。
 - 2026-10-10 Qoder：**P6 客户端 + P7 宿主壳，界面在浏览器里跑通**。`packages/client`（地址解析 / 地址簿+票据 / 指数退避 / 服务端时间轴 / 帧归约 / 模块下发与 sha256 校验 / 大厅+房间内+对局三层界面）与 `packages/hostd`（host/join/diagnose/stop、静态与接口路由、cloudflared 解析、`房主建房.bat` + `玩家本机壳.bat` 双击入口 + `.gitattributes` 锁 CRLF）。测试从 57 涨到 **77 例全绿**（新增 12 例客户端逻辑 + 6 例宿主壳集成，含路径穿越与真 ws）。**修掉四个真实缺陷**：① `this.fetchImpl(...)` 丢接收者 → 浏览器 `Illegal invocation`，表现为局域网列表永远空白，且被静默 `catch` 吞掉（现在把原因写进提示）；② `safeJoin` 用正斜杠比前缀，Windows 上 `resolve` 给反斜杠 → `/app/`、`/games/` 全部误判越界 404；③ `server.close()`/`wss.close()` 在有 keep-alive 与 WS 连接时回调不触发 → 收尾挂死，改 `closeAllConnections()` + 超时竞速、`terminate()` 先行；④ 客户端 `until('snapshot')` 拿到的是在途旧帧 → 测试助手改成带 predicate 等"符合条件的那一帧"。**验证方式**：in-app Browser 无可见视口，用 `evaluate_script` 真点：建房→客人入座→观战入座→加电脑位→未准备时开局按钮写明"等准备：客人乙"并 `disabled`→准备后变亮→开局后倒计时 58→56 秒（服务端时间轴生效）→房主离席被中文提示挡住→踢观战→移交后 👑 换位、房主面板隐藏、通知条正确→离席回大厅。
@@ -162,7 +162,7 @@
 - 2026-10-20 Qoder：**用户要求把接入文档改名为 `INTEGRATION_GUIDE.md`，并去掉文档里的 AI 腔**：新文档改成直述句，去掉“硬规矩 / 唯一出口”这类口号；README 与 DESIGN 的“契约”改为“接口”，入口说明里多余的破折号改成正常句号。
 - 2026-10-21 Qoder：**「单机游戏单文件对接」交接过来的三项平台改动全部完成**。① README 补「同网 / 跨网」，防火墙提示改成“专用 + 公用都勾选”。② 房主页在邀请链接下面显示 `/api/self` 的 `lanOrigins`：两行文字——局域网地址列表（多网卡全列、去重）和“手动加入：房主地址填 …，房号 …”（纯函数 `accessHints`，两条单测；join 模式无局域网入口时该段不显示，实测隐藏）。③ 便携包的数据目录移出程序目录：新增 [data-dir.ts](packages/hostd/src/data-dir.ts)，根目录带 `.portable-build.json` 时写 `%LOCALAPPDATA%\3178-battle-platform\data`，开发目录仍写仓库 `data/`，`BP_DATA_DIR` 可覆盖；diagnose 打印落点与原因，新增 [data-dir.test.mjs](packages/hostd/test/data-dir.test.mjs) 五条用例；打包器自检改走临时目录，并校验 diagnose 真的报用户目录。**验证**：`npm test` 114 → **131/131**，`npm run seam` OK；便携包重建后自检全绿（94.3 MB），`data/` 为空，用户目录下尚未创建数据目录。README 新增「你的数据在哪里」表格。：新文档改成直述句，去掉“硬规矩 / 唯一出口”这类口号；README 与 DESIGN 的“契约”改为“接口”，入口说明里多余的破折号改成正常句号。
 
-## 阶段状态与逐文件验收凭据
+## 6. 阶段状态与逐文件验收凭据
 
 > 2026-10-14：设计结论（设计取舍 / 架构与产物清单 / 已定语义 / 工程侧硬约束）已搬到同目录 [DESIGN.md](DESIGN.md)——本档只留时间序列的进度与凭据。逐条实测数字在下面，改动时请同步 DESIGN。
 
@@ -180,7 +180,7 @@
 | P8.5 | 游戏模块下发通道：`/api/games` + `/games/<id>/*`(CORS) + 客户端哈希校验 + blob 导入；缺入口时占位渲染 | 通道已通，**游戏自带界面还没有** | 同上：产物可跨源取、穿越被挡 |
 | Q1 | 两层猴测台（协议层 + 页内 UI 层）与探索性 QA 报告 | 已完成，持续在跑 | 协议层 12 seed × 8 人 × 300 步 × 3 次硬重启 **0 违规**；UI 层多轮 0 违规；报告 [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) 15 条 finding + 台子自己的 9 个缺陷全记 |
 | R1 | 绿色便携包（官方签名 `node.exe` + 运行时子集 + 便携启动器） | 已完成（本机剥离 PATH 验证；真干净机未测） | `npm run portable`：签名校验（OpenJS Foundation / Valid）+ 产物约 **94.2MB**；自检只用包内 `node.exe` 跑通 `diagnose`、host `/health`、`stop` 收尾 |
-## 给下一个 agent 的追加区
+## 7. 给下一个 agent 的追加区
 
 （后续会话请在此追加一行 `- YYYY-MM-DD <来源>：<结论/改动/遗留问题>`，或直接更新上面各节）
 
@@ -200,6 +200,8 @@
 - 2026-10-21 Qoder：**修正下一步清单**：沙箱已完成，从待办移除；下一项改为 M3 试点游戏（uno 或先把 `测试夹具·回合制` 补成带 AI 和客户端的夹具），其次第二台机器与双机实测。
 
 - 2026-10-21 Qoder：**同步测试夹具迁移与 SDK 抽取**：README/DESIGN/CONTEXT 里当前状态和下一步的 echo/turncount 改为“测试夹具·回合制 / 测试夹具·同时操作”（`packages/test-tools/test-games/`）；契约测试路径改到 `packages/test-tools/test/contract.test.mjs`；DESIGN 文件清单补 `@bp/game-sdk` 与 test-tools。历史变更记录保留旧名。
+
+- 2026-10-21 Qoder：**统一章节编号与 4.1 架构目录**：README/CONTEXT/INTEGRATION_GUIDE 的正文 H2/H3 从 1 编号，文档索引保持不编号；INTEGRATION_GUIDE 在文档表后新增「1. 接入总则」，后续接口章节顺延；DESIGN 4.1 先列 packages/games/tools 目录文本树，再保留包关系图。
 
 **下一步顺序建议**：① **M3 试点**：拿一个具体回合制游戏（uno 或其他，或先把 `测试夹具·回合制` 补成带 AI 和客户端的测试夹具），验证“1 人 + 电脑打完整局”和 `.bpmap` 端到端；接入步骤写进 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。② **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；③ **双机实测**组播发现与隧道，目前只在一台机器上证伪了编解码与 HTTP 路由；④ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家进房.bat`，**别手写**：改 [tools/gen-bat.mjs](tools/gen-bat.mjs) 再 `node tools/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。
