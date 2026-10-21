@@ -1,4 +1,7 @@
 import type { GameManifest } from '@bp/protocol';
+import type { GameActions, GameClientContract } from '@bp/game-sdk/client';
+
+export type { GameActions, GameClientContract } from '@bp/game-sdk/client';
 
 /**
  * 游戏模块的客户端侧加载（war3 对战平台的"地图自动下载"位）：
@@ -10,18 +13,6 @@ import type { GameManifest } from '@bp/protocol';
  */
 
 export type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>;
-
-export interface GameClientContract {
-  /** 把对局状态渲染进容器；返回的视图要能在下一次 mount 时替换。 */
-  mount(host: HTMLElement, view: unknown, actions: GameActions): void;
-  unmount?(host: HTMLElement): void;
-  onEvent?(event: { name: string; payload?: unknown }, actions: GameActions): void;
-}
-
-export interface GameActions {
-  send(name: string, payload?: unknown): void;
-  seatId(): string | null;
-}
 
 export interface ClientSourceResult {
   ok: boolean;

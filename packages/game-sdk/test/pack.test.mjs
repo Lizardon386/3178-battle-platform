@@ -12,7 +12,7 @@ import {
   readPack,
   readPackSource,
   sha256Hex,
-} from '@bp/server';
+} from '@bp/game-sdk/node';
 
 function tempDir(prefix = 'bp-pack-') {
   return mkdtempSync(join(tmpdir(), prefix));

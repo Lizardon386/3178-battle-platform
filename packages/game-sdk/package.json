@@ -1,0 +1,32 @@
+{
+  "name": "@bp/game-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./node": {
+      "types": "./dist/node/pack.d.ts",
+      "default": "./dist/node/pack.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "bpmap": "dist/cli.js"
+  },
+  "dependencies": {
+    "@bp/protocol": "*"
+  },
+  "files": [
+    "dist"
+  ]
+}

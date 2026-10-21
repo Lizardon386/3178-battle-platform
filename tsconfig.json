@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "packages/protocol" },
+    { "path": "packages/game-sdk" },
     { "path": "packages/server" },
     { "path": "packages/client" },
     { "path": "packages/hostd" },

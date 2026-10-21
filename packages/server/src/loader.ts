@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { GameAsset } from '@bp/protocol';
 import type { GameModule } from './module-api.js';
-import { extractPack, listPackFiles, readPack } from './pack.js';
+import { extractPack, listPackFiles, readPack } from '@bp/game-sdk/node';
 
 /**
  * 游戏模块在运行时按 id 动态加载——平台源码里不许 import 任何 games/ 路径，

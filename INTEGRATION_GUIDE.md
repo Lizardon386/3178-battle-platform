@@ -13,7 +13,7 @@
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
 
-把游戏接进平台，需要实现 [module-api.ts](packages/server/src/module-api.ts) 里的两个接口。平台负责房间、座位、权限和消息投递，玩法逻辑放在游戏模块里。
+把游戏接进平台，需要实现 [module-api.ts](packages/game-sdk/src/module-api.ts) 里的两个接口。平台负责房间、座位、权限和消息投递，玩法逻辑放在游戏模块里。公开类型、客户端契约和 `bpmap` 打包器在 `@bp/game-sdk`；平台内部仍从 `@bp/server` 兼容入口导出同一套类型。
 
 接入时有三条限制：
 
@@ -103,6 +103,9 @@ export default {
 node tools/bpmap.mjs pack mygame --out mygame.bpmap
 node tools/bpmap.mjs inspect mygame.bpmap
 node tools/bpmap.mjs unpack mygame.bpmap ./mygame-unpacked
+
+# 外部工程装 @bp/game-sdk 后也可以直接用 bpmap 这个 bin
+bpmap pack mygame --out mygame.bpmap
 ```
 
 把 `mygame.bpmap` 放进 `games/`，重启宿主即可。宿主把包解到数据目录下的 `packs/<id>/<包哈希>/`：开发目录是 `data/packs`，便携包是 `%LOCALAPPDATA%\3178-battle-platform\data\packs`。缓存的文件集合必须和包清单完全一致；多一个文件、少一个文件或改一个字节都会重新解包。
