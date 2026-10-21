@@ -82,8 +82,8 @@ test('房号规范化：大小写与空格不影响查房', () => {
 
 test('manifest 形状检查挡住越界声明', () => {
   const base = {
-    id: 'echo',
-    name: '回声',
+    id: 'fixture-turn',
+    name: '测试夹具·回合制',
     version: '0.1.0',
     rulesHash: stableDigest({}),
     seats: { min: 2, max: 4 },

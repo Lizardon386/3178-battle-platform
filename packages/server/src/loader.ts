@@ -1,9 +1,31 @@
 import { existsSync, readdirSync } from 'node:fs';
+import { registerHooks } from 'node:module';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { GameAsset } from '@bp/protocol';
 import type { GameModule } from './module-api.js';
 import { extractPack, listPackFiles, readPack } from '@bp/game-sdk/node';
+
+/**
+ * 解包缓存可能落在程序目录之外（便携包的数据目录在用户目录），那里向上找不到
+ * node_modules/@bp。包内服务端入口的裸导入一律按宿主自己的依赖解析。
+ */
+const PACK_IMPORTS = ['@bp/game-sdk', '@bp/game-sdk/node', '@bp/protocol'];
+const packImportUrls = new Map<string, string>();
+for (const specifier of PACK_IMPORTS) {
+  try {
+    packImportUrls.set(specifier, import.meta.resolve(specifier));
+  } catch {
+    // 打包产物始终带着这三个包；解析不到就让包加载时报原本的错误
+  }
+}
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    const url = packImportUrls.get(specifier);
+    if (url) return { url, shortCircuit: true };
+    return nextResolve(specifier, context);
+  },
+});
 
 /**
  * 游戏模块在运行时按 id 动态加载——平台源码里不许 import 任何 games/ 路径，

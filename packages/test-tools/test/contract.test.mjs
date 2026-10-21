@@ -1,93 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Engine } from '@bp/server';
-import echoModule from '@bp/game-echo';
-import turncountModule from '@bp/game-turncount';
+import { harness, createRoom } from '@bp/test-tools/contract-harness';
+import turnBasedFixture from '@bp/test-tools/test-games/turn-based';
+import simultaneousFixture from '@bp/test-tools/test-games/simultaneous';
 
 /**
- * 契约测试：同一份平台内核 + 两个形状完全不同的游戏。
- * echo 有回合游标和隐私状态，turncount 两者都没有——
- * 如果内核里藏着任何玩法假设，这个套件会在其中一个游戏上红掉。
+ * 契约测试：同一份平台内核 + 两个形状完全不同的测试夹具。
+ * 回合制夹具有回合游标和隐私状态，同时操作夹具两者都没有——
+ * 如果内核里藏着任何玩法假设，这个套件会在其中一个夹具上红掉。
  */
-
-class Recorder {
-  constructor() {
-    this.sent = [];
-    this.closedCode = null;
-  }
-
-  send(raw) {
-    this.sent.push(JSON.parse(raw));
-  }
-
-  close(code) {
-    this.closedCode = code ?? 1000;
-  }
-
-  of(type) {
-    return this.sent.filter((m) => m.type === type);
-  }
-
-  last(type) {
-    const list = this.of(type);
-    return list[list.length - 1];
-  }
-
-  clear() {
-    this.sent.length = 0;
-  }
-}
-
-function harness(spec) {
-  let now = 10_000;
-  let tick_ = 0;
-  const engine = new Engine({
-    modules: [spec.module],
-    now: () => now,
-    // 每次调用给出不同的值，否则两个玩家会拿到一模一样的秘密数字，隐私断言就是空的。
-    random: spec.random ?? (() => (tick_ = (tick_ + 0.37) % 1)),
-    ttl: spec.ttl,
-    ratePerSec: spec.ratePerSec ?? 1000,
-    burst: spec.burst ?? 1000,
-  });
-  const join = (nick, extra = {}) => {
-    const rec = new Recorder();
-    const connId = engine.openConn(rec);
-    engine.publish(engine.dispatch(connId, {
-      type: 'hello',
-      protocol: 1,
-      nick,
-      gameId: spec.module.id,
-      version: extra.version ?? spec.module.version,
-      rulesHash: extra.rulesHash ?? spec.rulesHash,
-    }));
-    return { rec, connId, send: (msg) => { const out = engine.dispatch(connId, msg); engine.publish(out); return out; } };
-  };
-  const step = (ms) => {
-    now += ms;
-    engine.publish(engine.tick());
-  };
-  return { engine, now: () => now, join, step, setNow: (v) => (now = v) };
-}
-
-function createRoom(h, spec, overrides = {}) {
-  const host = h.join('房主');
-  host.send({
-    type: 'roomCreate',
-    gameId: spec.module.id,
-    roomName: spec.roomName ?? '测试房',
-    seatSlots: spec.seatSlots ?? 3,
-    config: spec.config,
-    allowSpectate: true,
-    ...overrides,
-  });
-  return host;
-}
 
 const SPECS = [
   {
-    name: '测试回合制demo（有回合游标 + 隐私）',
-    module: echoModule,
+    name: '测试夹具·回合制（有回合游标 + 隐私）',
+    module: turnBasedFixture,
     seatSlots: 3,
     config: { range: 6, target: 4, turnMs: 5000 },
     legal: (who, room) => ({ name: 'guess', payload: { targetSeatId: room.otherSeat(who), value: 3 } }),
@@ -103,8 +29,8 @@ const SPECS = [
     tickExpect: 'turnAdvanced',
   },
   {
-    name: '测试同时操作demo（无游标 + 无隐私 + 同时操作）',
-    module: turncountModule,
+    name: '测试夹具·同时操作（无游标 + 无隐私 + 同时操作）',
+    module: simultaneousFixture,
     seatSlots: 3,
     config: { goal: 3, limitMs: 2000 },
     legal: () => ({ name: 'plus' }),
@@ -175,9 +101,9 @@ for (const spec of SPECS) {
     const before = guest.rec.last('snapshot').revision;
     const room = { otherSeat };
     const legal = spec.legal(guestSeatId, room);
-    // echo 有回合概念：不是它的回合会被游戏自己拒绝；turncount 永远接受。
+    // 回合制夹具有回合概念：不是它的回合会被游戏自己拒绝；同时操作夹具永远接受。
     const isTurn = guest.rec.last('snapshot').game?.current === guestSeatId;
-    if (spec.module.id === 'echo' && !isTurn) {
+    if (spec.module.id === 'fixture-turn' && !isTurn) {
       guest.send({ type: 'gameAction', name: legal.name, payload: legal.payload });
       const rejected = guest.rec.last('error');
       assert.equal(rejected.code, 'PHASE', '回合判断由游戏给出，平台只转发');

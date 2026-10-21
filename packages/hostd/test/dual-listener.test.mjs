@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
@@ -15,6 +16,7 @@ import { WebSocket } from 'ws';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const CLI = join(ROOT, 'packages', 'hostd', 'dist', 'cli.js');
+const DATA_DIR = mkdtempSync(join(tmpdir(), 'bp-dual-listener-'));
 
 /**
  * 分别在本机口和局域网口的绑定地址上预留端口，**拿着不放**到 spawn 前一刻。
@@ -81,7 +83,7 @@ test('本机界面建房、局域网口进房：两个监听共享同一个引�
   const lanReservation = await reservePort('0.0.0.0');
   const uiPort = uiReservation.port;
   const lanPort = lanReservation.port;
-  const runFile = join(ROOT, 'data', `run-${uiPort}.json`);
+  const runFile = join(DATA_DIR, `run-${uiPort}.json`);
   if (existsSync(runFile)) rmSync(runFile);
 
   await uiReservation.release();
@@ -89,6 +91,7 @@ test('本机界面建房、局域网口进房：两个监听共享同一个引�
   // --no-announce：保留局域网监听，但不碰组播，测试不去动网卡
   const child = spawn(process.execPath, [CLI, 'host', '--port', String(uiPort), '--lan-port', String(lanPort), '--no-announce'], {
     cwd: ROOT,
+    env: { ...process.env, BP_DATA_DIR: DATA_DIR },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let log = '';
@@ -110,7 +113,7 @@ test('本机界面建房、局域网口进房：两个监听共享同一个引�
 
     const host = connect(uiPort);
     await host.hello('本机房主');
-    host.send({ type: 'roomCreate', gameId: 'echo', roomName: '双口同房', seatSlots: 3, config: { range: 6, target: 2, turnMs: 20000 } });
+    host.send({ type: 'roomCreate', gameId: 'fixture-turn', roomName: '双口同房', seatSlots: 3, config: { range: 6, target: 2, turnMs: 20000 } });
     const granted = await host.until('seatGranted');
     assert.equal(granted.role, 'host');
     const firstSnapshot = await host.until('snapshot');
@@ -135,8 +138,9 @@ test('本机界面建房、局域网口进房：两个监听共享同一个引�
     await gone;
 
     // 按**局域网端口**也必须找得到同一个壳：用户记得住的往往是 3000
-    spawnSync(process.execPath, [CLI, 'stop', '--port', String(lanPort)], { cwd: ROOT, stdio: 'ignore' });
+    spawnSync(process.execPath, [CLI, 'stop', '--port', String(lanPort)], { cwd: ROOT, env: { ...process.env, BP_DATA_DIR: DATA_DIR }, stdio: 'ignore' });
     assert.equal(existsSync(runFile), false, `stop --port ${lanPort} 应该收掉本机口 ${uiPort} 的记录`);
-    if (roomCode) rmSync(join(ROOT, 'data', `room-${roomCode}.json`), { force: true });
+    if (roomCode) rmSync(join(DATA_DIR, `room-${roomCode}.json`), { force: true });
+    rmSync(DATA_DIR, { recursive: true, force: true });
   }
 });

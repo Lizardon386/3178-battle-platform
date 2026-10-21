@@ -36,7 +36,7 @@ function client(nick) {
     frames,
     async hello() {
       await new Promise((r, j) => { ws.once('open', r); ws.once('error', j); });
-      ws.send(JSON.stringify({ type: 'hello', protocol: 1, nick, gameId: 'echo', version: '0.1.0' }));
+      ws.send(JSON.stringify({ type: 'hello', protocol: 1, nick, gameId: 'fixture-turn' }));
       return api.until('welcome');
     },
     until(type, pred = () => true, ms = 4000) {
@@ -65,7 +65,7 @@ if (!(await up())) { console.log('起不来'); process.exit(1); }
 
 const host = client('房主甲');
 await host.hello();
-host.send({ type: 'roomCreate', gameId: 'echo', roomName: '复现重连房', seatSlots: 3, config: {} });
+host.send({ type: 'roomCreate', gameId: 'fixture-turn', roomName: '复现重连房', seatSlots: 3, config: {} });
 const hg = await host.until('seatGranted');
 const hostSeat = { code: hg.code, seatId: hg.seatId, ticket: hg.ticket };
 console.log(`房主入座 ${hg.code} / ${hg.seatId}`);

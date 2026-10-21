@@ -1,8 +1,9 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
 
@@ -15,6 +16,7 @@ import { WebSocket } from 'ws';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const PORT = 3212;
 const BASE = `http://127.0.0.1:${PORT}`;
+const DATA_DIR = mkdtempSync(join(tmpdir(), 'bp-shell-join-'));
 
 let child = null;
 
@@ -51,6 +53,7 @@ function connect() {
 before(async () => {
   child = spawn(process.execPath, [join(ROOT, 'packages', 'hostd', 'dist', 'cli.js'), 'join', '--port', String(PORT), '--no-lan'], {
     cwd: ROOT,
+    env: { ...process.env, BP_DATA_DIR: DATA_DIR },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let log = '';
@@ -78,24 +81,25 @@ after(async () => {
   const stop = spawn(
     process.execPath,
     [join(ROOT, 'packages', 'hostd', 'dist', 'cli.js'), 'stop', '--port', String(PORT)],
-    { cwd: ROOT, stdio: 'ignore' },
+    { cwd: ROOT, env: { ...process.env, BP_DATA_DIR: DATA_DIR }, stdio: 'ignore' },
   );
   await new Promise((r) => stop.once('close', r));
-  assert.equal(existsSync(join(ROOT, 'data', `run-${PORT}.json`)), false, 'stop 之后不该留这个端口的记录');
+  assert.equal(existsSync(join(DATA_DIR, `run-${PORT}.json`)), false, 'stop 之后不该留这个端口的记录');
+  rmSync(DATA_DIR, { recursive: true, force: true });
 });
 
 test('本地壳也带 WS 服务：hello 能拿到 welcome 与游戏清单', async () => {
   const c = connect();
   const welcome = await c.hello('壳里开房的玩家');
   assert.equal(welcome.protocol, 1);
-  assert.deepEqual(welcome.availableGames.map((g) => g.id).sort(), ['echo', 'turncount']);
+  assert.deepEqual(welcome.availableGames.map((g) => g.id).sort(), ['fixture-simultaneous', 'fixture-turn']);
   c.ws.close();
 });
 
 test('在本地壳上建房 + 加个电脑位 + 开局：不再"协议不对"', async () => {
   const c = connect();
   await c.hello('壳里开房的玩家');
-  c.send({ type: 'roomCreate', gameId: 'echo', roomName: '壳里自建', seatSlots: 2, config: { range: 6, target: 2, turnMs: 20000 } });
+  c.send({ type: 'roomCreate', gameId: 'fixture-turn', roomName: '壳里自建', seatSlots: 2, config: { range: 6, target: 2, turnMs: 20000 } });
   const granted = await c.until('seatGranted');
   assert.equal(granted.role, 'host');
   assert.ok(granted.ticket.length >= 16);
@@ -117,7 +121,7 @@ test('本地壳只绑 127.0.0.1：不声不响对外开门是不行的', async (
 });
 
 test('两个壳同时跑要各留一份记录，否则 stop 只能停掉最后启动的那个', async () => {
-  const file = join(ROOT, 'data', `run-${PORT}.json`);
+  const file = join(DATA_DIR, `run-${PORT}.json`);
   assert.ok(existsSync(file), '本地壳要写自己端口的记录');
   const record = JSON.parse(readFileSync(file, 'utf8'));
   assert.equal(record.mode, 'join');

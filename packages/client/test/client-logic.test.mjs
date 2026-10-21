@@ -59,12 +59,12 @@ test('地址输入错误的提示要能用中文说清下一步', () => {
 });
 
 test('邀请链接：h 缺省时用自己的来源，房号大写', () => {
-  const parsed = parseInviteLink('http://192.168.1.20:3000/?r=ab3d&g=echo');
+  const parsed = parseInviteLink('http://192.168.1.20:3000/?r=ab3d&g=fixture-turn');
   assert.equal(parsed.code, 'AB3D');
-  assert.equal(parsed.gameId, 'echo');
+  assert.equal(parsed.gameId, 'fixture-turn');
   assert.equal(parsed.endpoint?.wsUrl, 'ws://192.168.1.20:3000/ws');
 
-  const relay = parseInviteLink('https://share.example/?h=192.168.1.20:3000&r=K7QT&g=turncount');
+  const relay = parseInviteLink('https://share.example/?h=192.168.1.20:3000&r=K7QT&g=fixture-simultaneous');
   assert.equal(relay.endpoint?.wsUrl, 'ws://192.168.1.20:3000/ws');
   assert.equal(relay.code, 'K7QT');
 
@@ -123,8 +123,8 @@ test('地址簿坏数据与昵称截断都不许炸', () => {
 test('票据按房主+房号隔离，换个房不会串座位', () => {
   const storage = fakeStorage();
   const vault = new SessionVault(storage);
-  vault.save('http://a:3000', { roomCode: 'AB3D', seatId: 's1', ticket: 't1', gameId: 'echo' }, 1);
-  vault.save('http://a:3000', { roomCode: 'ZZ99', seatId: 's2', ticket: 't2', gameId: 'echo' }, 2);
+  vault.save('http://a:3000', { roomCode: 'AB3D', seatId: 's1', ticket: 't1', gameId: 'fixture-turn' }, 1);
+  vault.save('http://a:3000', { roomCode: 'ZZ99', seatId: 's2', ticket: 't2', gameId: 'fixture-turn' }, 2);
   assert.equal(vault.load('http://a:3000', 'AB3D').seatId, 's1');
   assert.equal(vault.load('http://a:3000', 'ZZ99').seatId, 's2');
   assert.equal(vault.load('http://b:3000', 'AB3D'), null);
@@ -152,7 +152,7 @@ test('视图归约：重复或乱序的快照被丢掉', () => {
     revision,
     serverNow: 1000 + revision,
     phase,
-    room: { code: 'AB3D', name: '房', gameId: 'echo', gameName: '测试回合制demo', hostSeatId: 's1', hostName: '甲', seatSlots: 4, occupied: 1, allowSpectate: true, hasPassword: false, rulesHash: 'x', createdAt: 1, phase },
+    room: { code: 'AB3D', name: '房', gameId: 'fixture-turn', gameName: '测试夹具·回合制', hostSeatId: 's1', hostName: '甲', seatSlots: 4, occupied: 1, allowSpectate: true, hasPassword: false, rulesHash: 'x', createdAt: 1, phase },
     seats: [seat()],
     game: null,
   });
@@ -167,7 +167,7 @@ test('视图归约：重复或乱序的快照被丢掉', () => {
 
 test('视图归约：票据先落袋，座位表随后；聊天环形缓冲有上限', () => {
   let view = emptyViewModel();
-  view = reduce(view, { type: 'seatGranted', code: 'AB3D', seatId: 's1', ticket: 't', role: 'host', slot: 1, hostSeatId: 's1', serverNow: 1, manifest: { id: 'echo', name: '测试回合制demo', version: '0.1.0', rulesHash: 'x', seats: { min: 2, max: 6 }, allowSpectate: true, soloFill: true, roles: ['host', 'player'], entry: 'client.js' } }, 1);
+  view = reduce(view, { type: 'seatGranted', code: 'AB3D', seatId: 's1', ticket: 't', role: 'host', slot: 1, hostSeatId: 's1', serverNow: 1, manifest: { id: 'fixture-turn', name: '测试夹具·回合制', version: '0.1.0', rulesHash: 'x', seats: { min: 2, max: 6 }, allowSpectate: true, soloFill: true, roles: ['host', 'player'], entry: 'client.js' } }, 1);
   assert.equal(view.mySeatId, 's1', 'seatGranted 先把座位与票据交出去');
   assert.equal(view.ticket, 't');
   assert.equal(mySeat(view), null, '还没收到座位表时不该假装知道座位细节');
@@ -177,7 +177,7 @@ test('视图归约：票据先落袋，座位表随后；聊天环形缓冲有�
     revision: 2,
     serverNow: 2,
     phase: 'lobby',
-    room: { code: 'AB3D', name: '房', gameId: 'echo', gameName: '测试回合制demo', hostSeatId: 's1', hostName: '甲', seatSlots: 4, occupied: 1, allowSpectate: true, hasPassword: false, rulesHash: 'x', createdAt: 1, phase: 'lobby' },
+    room: { code: 'AB3D', name: '房', gameId: 'fixture-turn', gameName: '测试夹具·回合制', hostSeatId: 's1', hostName: '甲', seatSlots: 4, occupied: 1, allowSpectate: true, hasPassword: false, rulesHash: 'x', createdAt: 1, phase: 'lobby' },
     seats: [seat({ seatId: 's1', role: 'host', name: '甲' })],
     game: null,
   }, 2);
@@ -198,7 +198,7 @@ test('开局按钮的文案要把"还差谁"讲出来', () => {
     revision: 1,
     serverNow: 1,
     phase: 'lobby',
-    room: { code: 'AB3D', name: '房', gameId: 'echo', gameName: '测试回合制demo', hostSeatId: 'h1', hostName: '房主', seatSlots: 4, occupied: 3, allowSpectate: true, hasPassword: false, rulesHash: 'x', createdAt: 1, phase: 'lobby' },
+    room: { code: 'AB3D', name: '房', gameId: 'fixture-turn', gameName: '测试夹具·回合制', hostSeatId: 'h1', hostName: '房主', seatSlots: 4, occupied: 3, allowSpectate: true, hasPassword: false, rulesHash: 'x', createdAt: 1, phase: 'lobby' },
     seats: [
       seat({ seatId: 'h1', role: 'host', name: '房主', slot: 1 }),
       seat({ seatId: 'p2', name: '乙', ready: true, slot: 2 }),
@@ -217,10 +217,10 @@ test('开局按钮的文案要把"还差谁"讲出来', () => {
 });
 
 test('邀请链接带上房主地址、房号与游戏', () => {
-  const link = inviteLink('http://192.168.1.20:3000', 'ab3d', 'echo');
+  const link = inviteLink('http://192.168.1.20:3000', 'ab3d', 'fixture-turn');
   assert.match(link, /^http:\/\/192\.168\.1\.20:3000\/\?/);
   assert.match(link, /r=ab3d/);
-  assert.match(link, /g=echo/);
+  assert.match(link, /g=fixture-turn/);
 });
 
 function scriptedSocket() {
@@ -310,7 +310,7 @@ test('重连坐回原位：房号取"人正在待的房"，不取大厅输入框
 });
 
 test('重连坐回原位：正要开新房时不翻旧票据，免得拿上一个房的位置占掉这次', () => {
-  const create = { type: 'roomCreate', gameId: 'echo', roomName: '', seatSlots: 2, config: {} };
+  const create = { type: 'roomCreate', gameId: 'fixture-turn', roomName: '', seatSlots: 2, config: {} };
   assert.equal(resumeCodeFor({ ...emptyViewModel(), room: { code: 'ABCD' } }, create, 'ABCD'), null);
 });
 
@@ -325,7 +325,7 @@ test('票据真的存得下、也翻得出：seatGranted 存一次，重连按�
   const vault = new SessionVault(fakeStorage());
   const granted = { type: 'seatGranted', code: 'ABCD', seatId: 's1', ticket: 't-abc', manifest: null, serverNow: 0 };
   const view = reduce(emptyViewModel(), granted, 0);
-  vault.save('http://127.0.0.1:3178', { roomCode: granted.code, seatId: granted.seatId, ticket: granted.ticket, gameId: 'echo' }, 1);
+  vault.save('http://127.0.0.1:3178', { roomCode: granted.code, seatId: granted.seatId, ticket: granted.ticket, gameId: 'fixture-turn' }, 1);
   const code = resumeCodeFor({ ...view, room: { code: granted.code } }, null, null);
   const record = vault.load('http://127.0.0.1:3178', code);
   assert.ok(record, '重连时必须拿得到刚才那张票据');

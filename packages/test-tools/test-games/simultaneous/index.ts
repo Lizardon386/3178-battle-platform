@@ -1,8 +1,7 @@
-import { stableDigest } from '@bp/protocol';
-import type { Effect, GameContext, GameInstance, GameModule, Outcome, ViewerId } from '@bp/server';
+import { stableDigest, type Effect, type GameContext, type GameInstance, type GameModule, type Outcome, type ViewerId } from '@bp/game-sdk';
 
 /**
- * 合成游戏 B：**没有回合游标、没有隐私状态、所有人同时操作**的协作计数。
+ * 测试夹具：**没有回合游标、没有隐私状态、所有人同时操作**的协作计数。
  * 它存在的意义是证伪"平台按回合制抽象"：如果内核里还藏着"当前行动者"这类假设，
  * 这个模块就接不上。
  */
@@ -102,9 +101,9 @@ class CountInstance implements GameInstance {
   }
 }
 
-export const turncountModule: GameModule = {
-  id: 'turncount',
-  name: '测试同时操作demo',
+export const simultaneousFixture: GameModule = {
+  id: 'fixture-simultaneous',
+  name: '测试夹具·同时操作',
   version: '0.1.0',
   entry: 'client.js',
   seats: { min: 2, max: 8 },
@@ -122,4 +121,4 @@ export const turncountModule: GameModule = {
   acceptsSnapshot: (snapshot) => (snapshot as { version?: number } | null)?.version === 1,
 };
 
-export default turncountModule;
+export default simultaneousFixture;

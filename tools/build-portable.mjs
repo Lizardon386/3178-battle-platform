@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from 'node:child_process';
-import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderHostBat, renderJoinBat, verifyBat } from './gen-bat.mjs';
@@ -49,6 +50,12 @@ function build() {
   if (!existsSync(tsc)) fail('找不到 node_modules/typescript，先跑 npm install');
   const result = spawnSync(process.execPath, [tsc, '-b'], { cwd: ROOT, stdio: 'inherit' });
   if (result.status !== 0) fail('tsc -b 失败，先修编译错误再打包');
+  step('打包测试夹具');
+  const packed = spawnSync(process.execPath, [join(ROOT, 'packages', 'test-tools', 'scripts', 'pack-test-games.mjs')], {
+    cwd: ROOT,
+    stdio: 'inherit',
+  });
+  if (packed.status !== 0) fail('测试夹具打包失败');
 }
 
 function findNode(explicit) {
@@ -204,7 +211,7 @@ async function smoke(nodeExe, nodeVersionText) {
   };
   const diag = spawnSync(nodeExe, ['packages/hostd/dist/cli.js', 'diagnose'], { cwd: OUT, env: cleanEnv, encoding: 'utf8' });
   if (diag.status !== 0) fail(`diagnose 失败（退出码 ${diag.status}）：\n${diag.stdout}\n${diag.stderr}`);
-  for (const needle of ['echo@0.1.0', 'turncount@0.1.0', nodeVersionText]) {
+  for (const needle of ['fixture-turn@0.1.0', 'fixture-simultaneous@0.1.0', nodeVersionText]) {
     if (!diag.stdout.includes(needle)) fail(`diagnose 输出里没有 ${needle}：\n${diag.stdout}`);
   }
   if (!diag.stdout.includes('更新程序目录不会丢')) fail(`diagnose 没说明便携包的数据落点：\n${diag.stdout}`);
@@ -214,8 +221,9 @@ async function smoke(nodeExe, nodeVersionText) {
   }
   console.log('OK：diagnose 能找到两个游戏、包内 node，数据目录也在用户目录下');
 
-  // 自检本身不往用户的真实数据目录写东西：用 BP_DATA_DIR 指到包里一个临时目录，跑完删掉
-  const smokeData = join(OUT, '.smoke-data');
+  // 自检不往用户的真实数据目录写东西；数据目录还得在程序目录**外**，
+  // 才能证明解包缓存的裸导入不是靠向上找仓库/程序里的 node_modules 蒙对的
+  const smokeData = mkdtempSync(join(tmpdir(), 'bp-portable-smoke-'));
   const smokeEnv = { ...cleanEnv, BP_DATA_DIR: smokeData };
   const port = await freePort();
   const child = spawn(nodeExe, ['packages/hostd/dist/cli.js', 'host', '--port', String(port), '--no-lan'], {
@@ -246,7 +254,7 @@ async function smoke(nodeExe, nodeVersionText) {
     fail(`便携包里的 host 没起来：\n${log}`);
   }
   const ids = (health.games ?? []).slice().sort();
-  if (ids.join(',') !== 'echo,turncount') fail(`/health 的游戏清单不对：${JSON.stringify(ids)}\n${log}`);
+  if (ids.join(',') !== 'fixture-simultaneous,fixture-turn') fail(`/health 的游戏清单不对：${JSON.stringify(ids)}\n${log}`);
 
   const stop = spawnSync(nodeExe, ['packages/hostd/dist/cli.js', 'stop', '--port', String(port)], { cwd: OUT, env: smokeEnv, encoding: 'utf8' });
   if (stop.status !== 0) fail(`stop 失败：\n${stop.stdout}\n${stop.stderr}`);
@@ -283,10 +291,7 @@ copy('packages/client/public');
 copy('packages/client/package.json');
 copy('packages/hostd/dist');
 copy('packages/hostd/package.json');
-copy('games/echo/dist');
-copy('games/echo/package.json');
-copy('games/turncount/dist');
-copy('games/turncount/package.json');
+copy('games');
 copyRuntimeModules();
 cpSync(nodeExe, join(OUT, 'node.exe'));
 

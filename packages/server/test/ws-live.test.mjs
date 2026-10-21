@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { WebSocket } from 'ws';
 import { Engine, WsTransport } from '@bp/server';
-import echoModule from '@bp/game-echo';
-import turncountModule from '@bp/game-turncount';
+import turnBasedFixture from '@bp/test-tools/test-games/turn-based';
+import simultaneousFixture from '@bp/test-tools/test-games/simultaneous';
 
 /**
  * 真 WebSocket 端到端：走 HTTP 起服务、真客户端连、真 socket 收帧。
  * 契约测试证明的是"逻辑无关玩法"，这里证明的是"传输层真的能把那套逻辑跑起来"。
  */
 
-function bootPlatform(modules = [echoModule, turncountModule], transportOptions = {}) {
+function bootPlatform(modules = [turnBasedFixture, simultaneousFixture], transportOptions = {}) {
   const engine = new Engine({ modules });
   const transport = new WsTransport(engine, transportOptions);
   const server = createServer((_req, res) => {
@@ -108,14 +108,14 @@ test('真 socket：建房→入座→准备→开局→出招，两端各自拿�
   const platform = bootPlatform();
   const port = await platform.listen();
   const url = platform.url(port);
-  const host = new Client(url, '房主', { gameId: 'echo', version: echoModule.version });
-  const guest = new Client(url, '客人', { gameId: 'echo', version: echoModule.version });
+  const host = new Client(url, '房主', { gameId: 'fixture-turn', version: turnBasedFixture.version });
+  const guest = new Client(url, '客人', { gameId: 'fixture-turn', version: turnBasedFixture.version });
   await host.hello();
   await guest.hello();
 
   host.push({
     type: 'roomCreate',
-    gameId: 'echo',
+    gameId: 'fixture-turn',
     roomName: '真连一局',
     seatSlots: 4,
     config: { range: 6, target: 3, turnMs: 20000 },
@@ -150,9 +150,9 @@ test('真 socket：建房→入座→准备→开局→出招，两端各自拿�
   // 换第二个游戏：同一套传输与引擎，形状完全不同
   host.push({ type: 'hostClose' });
   host.messages.length = 0;
-  host.push({ type: 'roomCreate', gameId: 'turncount', roomName: '测试同时操作demo', seatSlots: 4, config: { goal: 3, limitMs: 60000 } });
-  const countRoom = await host.until('snapshot', 2000, (m) => m.room.gameId === 'turncount');
-  assert.equal(countRoom.room.gameId, 'turncount');
+  host.push({ type: 'roomCreate', gameId: 'fixture-simultaneous', roomName: '测试夹具·同时操作', seatSlots: 4, config: { goal: 3, limitMs: 60000 } });
+  const countRoom = await host.until('snapshot', 2000, (m) => m.room.gameId === 'fixture-simultaneous');
+  assert.equal(countRoom.room.gameId, 'fixture-simultaneous');
   guest.messages.length = 0;
   guest.push({ type: 'roomJoin', code: countRoom.room.code });
   await guest.until('seatGranted');
@@ -179,7 +179,7 @@ test('同票据的第二台设备会顶掉旧连接，错票据进不来', async
   const url = platform.url(port);
   const host = new Client(url, '房主');
   await host.hello();
-  host.push({ type: 'roomCreate', gameId: 'echo', roomName: '顶号', seatSlots: 3, config: {} });
+  host.push({ type: 'roomCreate', gameId: 'fixture-turn', roomName: '顶号', seatSlots: 3, config: {} });
   const code = (await host.until('snapshot')).room.code;
   const guest = new Client(url, '客人');
   await guest.hello();
@@ -236,7 +236,7 @@ test('Origin 白名单：给了列表就拦陌生来源，没给就放行（本�
   await open.stop();
   intruder.terminate();
 
-  const strict = bootPlatform([echoModule], { allowOrigins: ['http://127.0.0.1:3178'] });
+  const strict = bootPlatform([turnBasedFixture], { allowOrigins: ['http://127.0.0.1:3178'] });
   const p2 = await strict.listen();
   const blocked = new WebSocket(strict.url(p2), { headers: { Origin: 'http://evil.example' } });
   const closed = await new Promise((resolve) => {

@@ -39,12 +39,12 @@ test('游戏根映射：单文件包按 id 从解包目录取客户端入口', a
 
 test('游戏根映射：没有映射时仍走 games/<id> 目录', async () => {
   const root = tempDir('bp-webroot-');
-  const dir = join(root, 'games', 'echo', 'dist');
+  const dir = join(root, 'games', 'fixture-turn', 'dist');
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'index.js'), 'export const ok = true;\n', 'utf8');
 
   await withServer(root, {}, async (base) => {
-    const response = await fetch(`${base}/games/echo/dist/index.js`);
+    const response = await fetch(`${base}/games/fixture-turn/dist/index.js`);
     assert.equal(response.status, 200);
     assert.match(await response.text(), /ok = true/);
   });

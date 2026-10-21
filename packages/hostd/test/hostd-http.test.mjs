@@ -1,8 +1,9 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
 
@@ -16,6 +17,7 @@ const HERE = dirnameSafe(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..', '..');
 const PORT = 3211;
 const BASE = `http://127.0.0.1:${PORT}`;
+const DATA_DIR = mkdtempSync(join(tmpdir(), 'bp-hostd-http-'));
 
 function dirnameSafe(path) {
   return path.replace(/[^/\\]+$/, '');
@@ -29,9 +31,9 @@ async function get(pathName) {
 }
 
 before(async () => {
-  rmSync(join(ROOT, 'data'), { recursive: true, force: true });
   child = spawn(process.execPath, [join(ROOT, 'packages', 'hostd', 'dist', 'cli.js'), 'host', '--port', String(PORT), '--no-lan'], {
     cwd: ROOT,
+    env: { ...process.env, BP_DATA_DIR: DATA_DIR },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let stdout = '';
@@ -56,17 +58,18 @@ before(async () => {
 
 after(() => {
   child?.kill('SIGTERM');
+  rmSync(DATA_DIR, { recursive: true, force: true });
 });
 
 test('/api/games 报出本机装的游戏，含房规摘要与入口', async () => {
   const { status, body } = await get('/api/games');
   assert.equal(status, 200);
   const games = JSON.parse(body).games;
-  assert.deepEqual(games.map((g) => g.id).sort(), ['echo', 'turncount']);
-  const echo = games.find((g) => g.id === 'echo');
-  assert.equal(echo.seats.min, 2);
-  assert.equal(echo.rulesHash.length, 16);
-  assert.ok(!echo.entry.includes('..'), '入口路径不许越界');
+  assert.deepEqual(games.map((g) => g.id).sort(), ['fixture-simultaneous', 'fixture-turn']);
+  const fixture = games.find((g) => g.id === 'fixture-turn');
+  assert.equal(fixture.seats.min, 2);
+  assert.equal(fixture.rulesHash.length, 16);
+  assert.ok(!fixture.entry.includes('..'), '入口路径不许越界');
 });
 
 test('页面、客户端模块与协议包都能取到，且 MIME 是对的', async () => {
@@ -109,7 +112,7 @@ test('路径穿越：../ 编码变形一律 404', async () => {
     '/app/%2e%2e%2f%2e%2e%2fpackage.json',
     '/vendor/protocol/../../package.json',
     '/vendor/tabler/../../../package.json',
-    '/games/echo/../../package.json',
+    '/games/fixture-turn/../../package.json',
   ]) {
     const { status } = await get(attempt);
     assert.equal(status, 404, `${attempt} 不该被送出去`);
@@ -119,9 +122,9 @@ test('路径穿越：../ 编码变形一律 404', async () => {
 });
 
 test('游戏模块产物可跨源取（模块下发位）', async () => {
-  const { status, body, headers } = await get('/games/echo/dist/index.js');
+  const { status, body, headers } = await get('/games/fixture-turn/index.js');
   assert.equal(status, 200);
-  assert.match(body, /测试回合制demo/);
+  assert.match(body, /测试夹具·回合制/);
   assert.equal(headers.get('access-control-allow-origin'), '*');
 });
 
@@ -133,19 +136,19 @@ test('真 WebSocket 经宿主壳连上并拿到 welcome', async () => {
     ws.once('open', resolve);
     ws.once('error', reject);
   });
-  ws.send(JSON.stringify({ type: 'hello', protocol: 1, nick: '测试机', gameId: 'echo', version: '0.1.0' }));
+  ws.send(JSON.stringify({ type: 'hello', protocol: 1, nick: '测试机', gameId: 'fixture-turn', version: '0.1.0' }));
   const deadline = Date.now() + 4_000;
   while (!frames.some((f) => f.type === 'welcome') && Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 50));
   }
   const welcome = frames.find((f) => f.type === 'welcome');
   assert.ok(welcome, `没拿到 welcome：${JSON.stringify(frames)}`);
-  assert.deepEqual(welcome.availableGames.map((g) => g.id).sort(), ['echo', 'turncount']);
+  assert.deepEqual(welcome.availableGames.map((g) => g.id).sort(), ['fixture-simultaneous', 'fixture-turn']);
   ws.close();
 });
 
 test('hostd 按端口写 run-<port>.json，供 stop 精确收尾', async () => {
-  const file = join(ROOT, 'data', `run-${PORT}.json`);
+  const file = join(DATA_DIR, `run-${PORT}.json`);
   assert.ok(existsSync(file), '应该记录 pid 与端口');
   const record = JSON.parse(readFileSync(file, 'utf8'));
   assert.equal(record.mode, 'host');
@@ -154,7 +157,7 @@ test('hostd 按端口写 run-<port>.json，供 stop 精确收尾', async () => {
 });
 
 test('hostd stop --port 能收掉对应记录（Windows 上 kill 是硬杀，不走信号处理器）', async () => {
-  const file = join(ROOT, 'data', `run-${PORT}.json`);
+  const file = join(DATA_DIR, `run-${PORT}.json`);
   const pid = child?.pid;
   child?.kill('SIGTERM');
   await new Promise((r) => (child?.once('close', r) ?? r()));
@@ -163,7 +166,7 @@ test('hostd stop --port 能收掉对应记录（Windows 上 kill 是硬杀，不
 
   await new Promise((resolveStop) => {
     // 只收自己这个端口：另一个测试文件正在跑 join 壳，全停会把它打断
-    const stop = spawn(process.execPath, [join(ROOT, 'packages', 'hostd', 'dist', 'cli.js'), 'stop', '--port', String(PORT)], { cwd: ROOT, stdio: 'ignore' });
+    const stop = spawn(process.execPath, [join(ROOT, 'packages', 'hostd', 'dist', 'cli.js'), 'stop', '--port', String(PORT)], { cwd: ROOT, env: { ...process.env, BP_DATA_DIR: DATA_DIR }, stdio: 'ignore' });
     stop.once('close', () => resolveStop());
   });
   assert.equal(existsSync(file), false, 'stop 之后不该再留这个端口的记录');

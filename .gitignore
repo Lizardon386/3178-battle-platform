@@ -4,3 +4,6 @@ dist-portable/
 *.tsbuildinfo
 data/
 *.log
+
+# 运行时游戏包（测试夹具生成的包也不入库）
+games/*.bpmap

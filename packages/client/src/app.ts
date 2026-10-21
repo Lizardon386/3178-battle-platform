@@ -341,7 +341,7 @@ export class PlatformApp {
 
     on('btn-create', 'click', () => {
       const gameSelect = el(this.doc, 'game-select') as HTMLSelectElement | null;
-      const gameId = gameSelect?.value || 'echo';
+      const gameId = gameSelect?.value || 'fixture-turn';
       const manifest = this.view.availableGames.find((g) => g.id === gameId) ?? null;
       this.pendingManifest = manifest;
       this.pendingJoin = null;

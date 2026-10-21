@@ -1,0 +1,32 @@
+{
+  "name": "@bp/test-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/contract-harness/index.js",
+  "types": "dist/contract-harness/index.d.ts",
+  "exports": {
+    "./contract-harness": {
+      "types": "./dist/contract-harness/index.d.ts",
+      "default": "./dist/contract-harness/index.js"
+    },
+    "./fake-context": {
+      "types": "./dist/fake-context/index.d.ts",
+      "default": "./dist/fake-context/index.js"
+    },
+    "./test-games/*": {
+      "types": "./dist/test-games/*/index.d.ts",
+      "default": "./dist/test-games/*/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "pack:test-games": "node scripts/pack-test-games.mjs"
+  },
+  "dependencies": {
+    "@bp/game-sdk": "*",
+    "@bp/protocol": "*",
+    "@bp/server": "*"
+  },
+  "files": ["dist"]
+}

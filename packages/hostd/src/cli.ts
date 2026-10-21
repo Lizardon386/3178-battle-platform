@@ -51,7 +51,7 @@ function parseArgs(argv: string[]): Options {
     mode: (argv[0] as Options['mode']) || 'host',
     port: 0,
     lanPort: DEFAULT_LAN_PORT,
-    game: 'echo',
+    game: 'fixture-turn',
     roomName: '未命名房间',
     seats: 4,
     tunnel: false,

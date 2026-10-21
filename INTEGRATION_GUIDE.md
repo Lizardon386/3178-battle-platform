@@ -75,13 +75,15 @@ export default {
 
 ## 目录与构建
 
-把模块放在 `games/<id>/`，`package.json` 的 `main` 指向 `dist/index.js`。根 `tsconfig.json` 的 `references` 里加一行 `{ "path": "games/<id>" }`；不加的话 `npm run build` 不会生成 `dist/index.js`，`loadGames()` 会跳过这个目录。
+平台仓库里的目录式模块只用于测试夹具：`packages/test-tools/test-games/`，由 test-tools 的 `tsconfig` 编译；`games/` 里只放生成的 `.bpmap`。第三方游戏在自己的工程里构建，打成 `.bpmap` 分发，不要把源码加进平台 monorepo。
 
-`bash tools/check-seam.sh` 应该保持无输出：`packages/*/src` 里不要出现玩法词，也不要 import `games/`。参考实现是 [games/echo](games/echo/src/index.ts) 和 [games/turncount](games/turncount/src/index.ts)，两者都标成测试 demo。
+`bash tools/check-seam.sh` 扫运行时平台包和 test-tools 的工具代码：运行时包里不能出现玩法词，也不能 import `games/`；测试夹具在 test-tools 里，按测试资产处理。
+
+参考夹具：[turn-based](packages/test-tools/test-games/turn-based/index.ts)、[simultaneous](packages/test-tools/test-games/simultaneous/index.ts)。
 
 ## 单文件游戏包（.bpmap）
 
-除了把模块放进 `games/<id>/`，也可以打成一个 `.bpmap` 文件丢进 `games/`。宿主启动时会扫描、校验、解包，并像目录游戏一样加载。
+游戏分发用 `.bpmap` 单文件；目录式只用于平台自己的测试夹具和开发。把 `.bpmap` 丢进 `games/`，宿主启动时会扫描、校验、解包，并像目录游戏一样加载。
 
 源目录里放一个 `bpmap.json`：
 
@@ -97,6 +99,7 @@ export default {
 - `id` 和模块导出的 `id` 一致，`version` 和模块导出的 `version` 一致；不一致时宿主跳过这个包并在控制台说明原因。
 - `server` 是包内服务端入口；`client` 可选，填了就必须在包内，并和模块导出的 `entry` 一致。
 - 源目录里除 `bpmap.json` 外的普通文件都会进包。不允许符号链接、`..` 和绝对路径。
+- 服务端入口可以直接 `import '@bp/game-sdk'` 或 `'@bp/protocol'`，宿主按自己装的版本解析，不要求把 SDK 打进包。除此之外的裸包名，宿主不会替你在它的 `node_modules` 里找：要么打进包内（例如源目录里的 `node_modules/`），要么改成相对路径。
 - 打包、检查、调试解包：
 
 ```bash

@@ -1,13 +1,12 @@
-import { stableDigest } from '@bp/protocol';
-import type { Effect, GameContext, GameInstance, GameModule, Outcome, ViewerId } from '@bp/server';
+import { stableDigest, type Effect, type GameContext, type GameInstance, type GameModule, type Outcome, type ViewerId } from '@bp/game-sdk';
 
 /**
- * 合成游戏 A：回合制 + 隐私状态。
- * 存在意义是给"平台是否真的无关玩法"提供一个形状——它猜数字、有当前行动者、每人一个秘密值。
- * 与 turncount 的形状完全不同，但两者用的是同一份平台代码。
+ * 测试夹具：回合制 + 隐私状态。
+ * 给"平台是否真的无关玩法"提供一个形状——它猜数字、有当前行动者、每人一个秘密值。
+ * 与 simultaneous 夹具的形状完全不同，但两者用的是同一份平台代码。
  */
 
-interface EchoState {
+interface TurnState {
   secret: Record<string, number>;
   score: Record<string, number>;
   current: string | null;
@@ -17,13 +16,13 @@ interface EchoState {
   lines: string[];
 }
 
-interface EchoConfig {
+interface TurnConfig {
   range: number;
   target: number;
   turnMs: number;
 }
 
-function normalize(raw: Record<string, unknown> | undefined): EchoConfig {
+function normalize(raw: Record<string, unknown> | undefined): TurnConfig {
   const num = (v: unknown, min: number, max: number, dft: number): number => {
     if (typeof v !== 'number' || !Number.isFinite(v)) return dft;
     return Math.min(max, Math.max(min, Math.trunc(v)));
@@ -35,10 +34,10 @@ function normalize(raw: Record<string, unknown> | undefined): EchoConfig {
   };
 }
 
-class EchoInstance implements GameInstance {
-  private state: EchoState;
+class TurnInstance implements GameInstance {
+  private state: TurnState;
 
-  constructor(private readonly config: EchoConfig, private readonly ctx: GameContext, state?: EchoState) {
+  constructor(private readonly config: TurnConfig, private readonly ctx: GameContext, state?: TurnState) {
     this.state = state ?? {
       secret: {},
       score: {},
@@ -116,7 +115,7 @@ class EchoInstance implements GameInstance {
       this.push(`${this.nameOf(by)} 公开了自己的数字 ${own}`);
       effects.push({ kind: 'broadcast', name: 'reveal', payload: { by, value: own } });
     } else {
-      return { reject: `回声玩法没有这个动作：${action.name}`, code: 'BADMSG' };
+      return { reject: `回合制夹具没有这个动作：${action.name}`, code: 'BADMSG' };
     }
 
     if (this.state.winner) {
@@ -157,7 +156,7 @@ class EchoInstance implements GameInstance {
 
   serialize(viewer: ViewerId): unknown {
     const shared = {
-      kind: 'echo',
+      kind: 'fixture-turn',
       target: this.config.target,
       // 计分表只列参战座位：中途进来的观战者不该出现在分数里。
       scores: this.state.order.map((seatId) => ({
@@ -180,9 +179,9 @@ class EchoInstance implements GameInstance {
   }
 }
 
-export const echoModule: GameModule = {
-  id: 'echo',
-  name: '测试回合制demo',
+export const turnBasedFixture: GameModule = {
+  id: 'fixture-turn',
+  name: '测试夹具·回合制',
   version: '0.1.0',
   entry: 'client.js',
   seats: { min: 2, max: 6 },
@@ -191,11 +190,11 @@ export const echoModule: GameModule = {
   roles: ['host', 'player', 'spectator', 'ai'],
   normalizeConfig: (raw) => normalize(raw) as unknown as Record<string, unknown>,
   rulesHashOf: (config) => stableDigest(config),
-  create: (config, ctx) => new EchoInstance(config as unknown as EchoConfig, ctx),
+  create: (config, ctx) => new TurnInstance(config as unknown as TurnConfig, ctx),
   resume: (snapshot, ctx) => {
-    const snap = snapshot as { config: EchoConfig; state: EchoState } | null;
-    if (!snap?.state || !snap.config) throw new Error('回声快照不可用');
-    return new EchoInstance(snap.config, ctx, snap.state);
+    const snap = snapshot as { config: TurnConfig; state: TurnState } | null;
+    if (!snap?.state || !snap.config) throw new Error('回合制夹具快照不可用');
+    return new TurnInstance(snap.config, ctx, snap.state);
   },
   acceptsSnapshot: (snapshot) => {
     const snap = snapshot as { version?: number } | null;
@@ -203,4 +202,4 @@ export const echoModule: GameModule = {
   },
 };
 
-export default echoModule;
+export default turnBasedFixture;

@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -16,6 +17,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
  */
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+const DATA_DIR = mkdtempSync(join(tmpdir(), 'bp-sigint-shutdown-'));
 
 /**
  * 端口不能写死：上一次跑留下的壳如果还占着那个口，本次子进程会 EADDRINUSE 立刻退出，
@@ -84,7 +86,7 @@ test('启动顺序：先写 run 记录再 listen，listen 失败要收回记录'
 
 test('SIGINT 收尾：落盘、删掉 run 记录、退出码 0（窗口才会自己关）', async () => {
   const PORT = await freePort();
-  const runFile = join(ROOT, 'data', `run-${PORT}.json`);
+  const runFile = join(DATA_DIR, `run-${PORT}.json`);
   if (existsSync(runFile)) rmSync(runFile);
 
   const hook = pathToFileURL(join(ROOT, 'packages/hostd/test/fixtures/sigint-after-boot.mjs')).href;
@@ -92,7 +94,7 @@ test('SIGINT 收尾：落盘、删掉 run 记录、退出码 0（窗口才会自
     process.execPath,
     [join(ROOT, 'packages/hostd/dist/cli.js'), 'host', '--port', String(PORT), '--no-lan'],
     {
-      env: { ...process.env, NODE_OPTIONS: `--import ${hook}`, BP_SIGINT_DELAY_MS: '1800' },
+      env: { ...process.env, NODE_OPTIONS: `--import ${hook}`, BP_SIGINT_DELAY_MS: '1800', BP_DATA_DIR: DATA_DIR },
       stdio: ['ignore', 'pipe', 'pipe'],
     },
   );
@@ -113,4 +115,5 @@ test('SIGINT 收尾：落盘、删掉 run 记录、退出码 0（窗口才会自
   assert.equal(existsSync(runFile), false, '收尾必须删掉自己的 run 记录，否则下次 stop 会去杀一个不存在的 pid');
   assert.match(out, /收到 SIGINT，正在收尾/, '要让人看见收尾确实跑了，而不是被硬杀');
   assert.equal(await waitHealth(PORT, 1_200), false, '端口必须真的释放，别让下次启动撞 EADDRINUSE');
+  rmSync(DATA_DIR, { recursive: true, force: true });
 });

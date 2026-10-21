@@ -140,7 +140,7 @@ class User {
     my.on('open', () => {
       if (this.ws !== my) return; // 已经换下一代连接了
       this.raw(
-        { type: 'hello', protocol: 1, nick: this.nick, gameId: 'echo', version: '0.1.0' },
+        { type: 'hello', protocol: 1, nick: this.nick, gameId: 'fixture-turn' },
         'hello',
       );
     });
@@ -305,7 +305,7 @@ const ACTIONS = [
       const r = u.raw(
         {
           type: 'roomCreate',
-          gameId: pick(['echo', 'echo', 'turncount']),
+          gameId: pick(['fixture-turn', 'fixture-turn', 'fixture-simultaneous']),
           roomName: `猴房${int(1, 99)}`,
           seatSlots: int(1, 4),
           allowSpectate: rnd() < 0.7,

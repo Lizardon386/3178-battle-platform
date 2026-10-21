@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } fro
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Engine, HostStore, STORE_VERSION, decodeBeacon, encodeBeacon, LanBrowser } from '@bp/server';
-import echoModule from '@bp/game-echo';
+import turnBasedFixture from '@bp/test-tools/test-games/turn-based';
 
 /** 房主侧落盘与局域网发现信标的测试：都不需要真网卡，也不需要真进程重启。 */
 
@@ -14,7 +14,7 @@ function storeDir() {
 
 function makeEngine() {
   let now = 100_000;
-  const engine = new Engine({ modules: [echoModule], now: () => now, random: () => 0.4 });
+  const engine = new Engine({ modules: [turnBasedFixture], now: () => now, random: () => 0.4 });
   return { engine, now: () => now };
 }
 
@@ -22,17 +22,17 @@ function playOneRound(engine) {
   const hostTransport = { sent: [], send(raw) { this.sent.push(JSON.parse(raw)); }, close() {} };
   const guestTransport = { sent: [], send(raw) { this.sent.push(JSON.parse(raw)); }, close() {} };
   const hostId = engine.openConn(hostTransport);
-  engine.publish(engine.dispatch(hostId, { type: 'hello', protocol: 1, nick: '房主', gameId: 'echo', version: echoModule.version }));
+  engine.publish(engine.dispatch(hostId, { type: 'hello', protocol: 1, nick: '房主', gameId: 'fixture-turn', version: turnBasedFixture.version }));
   engine.publish(engine.dispatch(hostId, {
     type: 'roomCreate',
-    gameId: 'echo',
+    gameId: 'fixture-turn',
     roomName: '落盘测试',
     seatSlots: 3,
     config: { range: 9, target: 3, turnMs: 20000 },
   }));
   const code = hostTransport.sent.at(-1).room.code;
   const guestId = engine.openConn(guestTransport);
-  engine.publish(engine.dispatch(guestId, { type: 'hello', protocol: 1, nick: '客人', gameId: 'echo', version: echoModule.version }));
+  engine.publish(engine.dispatch(guestId, { type: 'hello', protocol: 1, nick: '客人', gameId: 'fixture-turn', version: turnBasedFixture.version }));
   engine.publish(engine.dispatch(guestId, { type: 'roomJoin', code }));
   const granted = guestTransport.sent.find((m) => m.type === 'seatGranted');
   engine.publish(engine.dispatch(guestId, { type: 'ready', ready: true }));
@@ -66,7 +66,7 @@ test('房主侧落盘 → 重启恢复：房号、座位、票据、对局状态
 
   const back = { sent: [], send(raw) { this.sent.push(JSON.parse(raw)); }, close() {} };
   const backId = b.engine.openConn(back);
-  b.engine.publish(b.engine.dispatch(backId, { type: 'hello', protocol: 1, nick: '客人重开', gameId: 'echo', version: echoModule.version }));
+  b.engine.publish(b.engine.dispatch(backId, { type: 'hello', protocol: 1, nick: '客人重开', gameId: 'fixture-turn', version: turnBasedFixture.version }));
   b.engine.publish(b.engine.dispatch(backId, {
     type: 'seatResume',
     code: round.code,
@@ -75,7 +75,7 @@ test('房主侧落盘 → 重启恢复：房号、座位、票据、对局状态
   }));
   assert.ok(room.seat(round.granted.seatId).connected, '旧票据在重启后仍能回到同一个座位');
   assert.equal(back.sent.at(-1).type, 'snapshot');
-  assert.equal(back.sent.at(-1).game.kind, 'echo');
+  assert.equal(back.sent.at(-1).game.kind, 'fixture-turn');
 });
 
 test('明文票据不落盘，落的是摘要', () => {
@@ -158,8 +158,8 @@ test('关掉的房不会在下次启动时复活', () => {
 const beaconRoom = (over = {}) => ({
   code: 'AB3D',
   name: '公开房',
-  gameId: 'echo',
-  gameName: '测试回合制demo',
+  gameId: 'fixture-turn',
+  gameName: '测试夹具·回合制',
   phase: 'lobby',
   occupied: 2,
   seatSlots: 4,
@@ -200,17 +200,17 @@ test('票据离开进程前，座位必须已经在盘上（挂 onTicketIssued�
   // 玩家拿真票据重连只能得到 NOSEAT（房还在、座位没了）。这条钉住那一次写盘是必须的。
   const dir = storeDir();
   const store = new HostStore(dir);
-  const engine = new Engine({ modules: [echoModule], onTicketIssued: () => engine.syncStore(store) });
+  const engine = new Engine({ modules: [turnBasedFixture], onTicketIssued: () => engine.syncStore(store) });
   const hostT = { sent: [], send(raw) { this.sent.push(JSON.parse(raw)); }, close() {} };
   const guestT = { sent: [], send(raw) { this.sent.push(JSON.parse(raw)); }, close() {} };
   const hostId = engine.openConn(hostT);
-  engine.publish(engine.dispatch(hostId, { type: 'hello', protocol: 1, nick: '房主', gameId: 'echo', version: echoModule.version }));
-  engine.publish(engine.dispatch(hostId, { type: 'roomCreate', gameId: 'echo', roomName: '票据前落盘', seatSlots: 2, config: {} }));
+  engine.publish(engine.dispatch(hostId, { type: 'hello', protocol: 1, nick: '房主', gameId: 'fixture-turn', version: turnBasedFixture.version }));
+  engine.publish(engine.dispatch(hostId, { type: 'roomCreate', gameId: 'fixture-turn', roomName: '票据前落盘', seatSlots: 2, config: {} }));
   const code = hostT.sent.map((m) => m.code).find(Boolean);
   assert.ok(existsSync(join(dir, `room-${code}.json`)), '房主拿到票据时，房里就该已经有它的座位文件');
 
   const guestId = engine.openConn(guestT);
-  engine.publish(engine.dispatch(guestId, { type: 'hello', protocol: 1, nick: '客人', gameId: 'echo', version: echoModule.version }));
+  engine.publish(engine.dispatch(guestId, { type: 'hello', protocol: 1, nick: '客人', gameId: 'fixture-turn', version: turnBasedFixture.version }));
   engine.publish(engine.dispatch(guestId, { type: 'roomJoin', code }));
   const granted = guestT.sent.find((m) => m.type === 'seatGranted');
   assert.ok(granted, '客人没坐上');
@@ -225,8 +225,8 @@ test('落盘跳过没变的房：所以同步可以跟着心跳勤调，而不�
   const { engine } = makeEngine();
   const transport = { sent: [], send(raw) { this.sent.push(JSON.parse(raw)); }, close() {} };
   const id = engine.openConn(transport);
-  engine.publish(engine.dispatch(id, { type: 'hello', protocol: 1, nick: '房主', gameId: 'echo', version: echoModule.version }));
-  engine.publish(engine.dispatch(id, { type: 'roomCreate', gameId: 'echo', roomName: '勤同步', seatSlots: 2, config: {} }));
+  engine.publish(engine.dispatch(id, { type: 'hello', protocol: 1, nick: '房主', gameId: 'fixture-turn', version: turnBasedFixture.version }));
+  engine.publish(engine.dispatch(id, { type: 'roomCreate', gameId: 'fixture-turn', roomName: '勤同步', seatSlots: 2, config: {} }));
   const store = new HostStore(dir);
 
   assert.equal(engine.syncStore(store).saved, 1, '新建的房要当场落盘，别等下一个周期');
