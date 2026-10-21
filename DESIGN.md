@@ -27,7 +27,7 @@
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 
-怎么算做成了（都能用工具验证）：`tools/devtools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试夹具（`测试夹具·回合制` + 隐私 / `测试夹具·同时操作` 无游标 + 无隐私 + 同时操作，在 `tools/testkit/test-games/`），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **145 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+怎么算做成了（都能用工具验证）：`tools/devtools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试夹具（`测试夹具·回合制` + 隐私 / `测试夹具·同时操作` 无游标 + 无隐私 + 同时操作，在 `tools/testkit/src/test-games/`），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **145 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
 
 ## 2. 运行模式
 
@@ -184,11 +184,12 @@ stateDiagram-v2
 │        └─ fixtures/                SIGINT 注入钩子
 ├─ tools/                            开发与测试工具
 │  ├─ testkit/                       @bp/testkit：契约 harness、fake context、测试夹具
-│  │  ├─ contract-harness/           契约测试 harness
-│  │  ├─ fake-context/               假 GameContext
-│  │  ├─ test-games/                 测试夹具
-│  │  │  ├─ turn-based/              回合制夹具
-│  │  │  └─ simultaneous/            同时操作夹具
+│  │  ├─ src/                        源码
+│  │  │  ├─ contract-harness/        契约测试 harness
+│  │  │  ├─ fake-context/            假 GameContext
+│  │  │  └─ test-games/              测试夹具
+│  │  │     ├─ turn-based/           回合制夹具
+│  │  │     └─ simultaneous/         同时操作夹具
 │  │  ├─ test/                       契约测试
 │  │  └─ scripts/                    夹具打包脚本
 │  └─ devtools/                      @bp/devtools：仓库级脚本（平铺）
@@ -288,8 +289,8 @@ flowchart TD
 | 文件 | 用途 |
 |---|---|
 | [games/](games/.gitkeep) | 运行时游戏包目录，只放生成的 `.bpmap` |
-| [tools/testkit/test-games/turn-based/index.ts](tools/testkit/test-games/turn-based/index.ts) | 测试夹具·回合制（id `fixture-turn`）：回合游标 + 隐私 |
-| [tools/testkit/test-games/simultaneous/index.ts](tools/testkit/test-games/simultaneous/index.ts) | 测试夹具·同时操作（id `fixture-simultaneous`）：无游标 + 无隐私 |
+| [tools/testkit/src/test-games/turn-based/index.ts](tools/testkit/src/test-games/turn-based/index.ts) | 测试夹具·回合制（id `fixture-turn`）：回合游标 + 隐私 |
+| [tools/testkit/src/test-games/simultaneous/index.ts](tools/testkit/src/test-games/simultaneous/index.ts) | 测试夹具·同时操作（id `fixture-simultaneous`）：无游标 + 无隐私 |
 | [tools/devtools/check-seam.sh](tools/devtools/check-seam.sh) | 接缝闸门 |
 | [tools/devtools/build-portable.mjs](tools/devtools/build-portable.mjs) | 绿色便携包装配与自检 |
 | [tools/devtools/monkey.mjs](tools/devtools/monkey.mjs) | 协议层猴测 |

@@ -199,7 +199,7 @@
 
 - 2026-10-21 Qoder：**修正下一步清单**：沙箱已完成，从待办移除；下一项改为 M3 试点游戏（uno 或先把 `测试夹具·回合制` 补成带 AI 和客户端的夹具），其次第二台机器与双机实测。
 
-- 2026-10-21 Qoder：**同步测试夹具迁移与 SDK 抽取**：README/DESIGN/CONTEXT 里当前状态和下一步的 echo/turncount 改为“测试夹具·回合制 / 测试夹具·同时操作”（`tools/testkit/test-games/`）；契约测试路径改到 `tools/testkit/test/contract.test.mjs`；DESIGN 文件清单补 `@bp/game-sdk` 与 testkit。历史变更记录保留旧名。
+- 2026-10-21 Qoder：**同步测试夹具迁移与 SDK 抽取**：README/DESIGN/CONTEXT 里当前状态和下一步的 echo/turncount 改为“测试夹具·回合制 / 测试夹具·同时操作”（`tools/testkit/src/test-games/`）；契约测试路径改到 `tools/testkit/test/contract.test.mjs`；DESIGN 文件清单补 `@bp/game-sdk` 与 testkit。历史变更记录保留旧名。
 
 - 2026-10-21 Qoder：**统一章节编号与 4.1 架构目录**：README/CONTEXT/INTEGRATION_GUIDE 的正文 H2/H3 从 1 编号，文档索引保持不编号；INTEGRATION_GUIDE 在文档表后新增「1. 接入总则」，后续接口章节顺延；DESIGN 4.1 先列 packages/games/tools 目录文本树，再保留包关系图。
 
@@ -212,6 +212,8 @@
 - 2026-10-21 Qoder：**工具目录收口到 tools/**：`packages/test-tools` → `tools/testkit`（包名 `@bp/testkit`），`tools/` → `tools/devtools`（workspace `@bp/devtools`）；同步包名、imports、tsconfig、package-lock、闸门/猴测/打包路径和文档。`devtools/` 先保持平铺，脚本数量不大，不额外加说明文档或子目录。
 
 - 2026-10-21 Qoder：**DESIGN 4.1 细化到源码子目录**：展开各包的 `src/`、`test/`、`public/fonts/`、`hostd/test/fixtures/`，以及 testkit 的 `contract-harness/`、`fake-context/`、`test-games/{turn-based,simultaneous}/`、`test/`、`scripts/`；补 `dogfood-output/`。`dist/`、`node_modules/`、`data/`、`dist-portable/` 作为构建/运行产物不列入。
+
+- 2026-10-21 Qoder：**testkit 源码收进 src/**：`contract-harness`、`fake-context`、`test-games` 移到 `tools/testkit/src/`；`tsconfig` 的 `rootDir` / `include`、`check-seam` 扫描路径、DESIGN 树和接入指南引用同步。测试与打包脚本仍在 testkit 外层。
 
 **下一步顺序建议**：① **M3 试点**：拿一个具体回合制游戏（uno 或其他，或先把 `测试夹具·回合制` 补成带 AI 和客户端的测试夹具），验证“1 人 + 电脑打完整局”和 `.bpmap` 端到端；接入步骤写进 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。② **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；③ **双机实测**组播发现与隧道，目前只在一台机器上证伪了编解码与 HTTP 路由；④ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家进房.bat`，**别手写**：改 [tools/devtools/gen-bat.mjs](tools/devtools/gen-bat.mjs) 再 `node tools/devtools/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。

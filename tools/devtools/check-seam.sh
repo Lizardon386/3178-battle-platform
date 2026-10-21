@@ -9,9 +9,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORDS=(uno deck card cards peng discard pile wild drawfrom syntheticcard)
 SCAN_DIRS=(
   "$ROOT"/packages/*/src
-  "$ROOT"/tools/testkit/contract-harness
-  "$ROOT"/tools/testkit/fake-context
-  "$ROOT"/tools/testkit/test-games
+  "$ROOT"/tools/testkit/src/contract-harness
+  "$ROOT"/tools/testkit/src/fake-context
+  "$ROOT"/tools/testkit/src/test-games
 )
 
 fail=0
