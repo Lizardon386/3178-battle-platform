@@ -4,7 +4,7 @@ import { PlatformConnection, browserSocketFactory, type ConnectionHandlers, type
 import { AddressBook, NickName, SessionVault, type KeyValueStore, type SessionRecord } from './local-store.js';
 import { ServerClock } from './clock.js';
 import { parseHostAddress, parseInviteLink, wouldBeBlocked, type Endpoint } from './endpoint.js';
-import { aiFillBlocker, emptyViewModel, inviteLink, isHost, mySeat, reduce, resumeCodeFor, seatLabel, seatPickerBlocker, seatPickerCandidates, startBlockers, emptySlots, type ViewModel } from './view-model.js';
+import { aiFillBlocker, emptyViewModel, inviteLink, accessHints, isHost, mySeat, reduce, resumeCodeFor, seatLabel, seatPickerBlocker, seatPickerCandidates, startBlockers, emptySlots, type ViewModel } from './view-model.js';
 import { fetchGameList, loadGameClient, placeholderClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
 import { SelectListboxes } from './listbox.js';
 
@@ -40,6 +40,8 @@ export class PlatformApp {
   private readonly selfOrigin: string;
   /** 邀请链接该写哪个地址：host 模式由 /api/self 给出局域网/隧道入口。 */
   private inviteOrigin: string;
+  /** 本机可告知朋友的局域网入口（多网卡会有多个）。 */
+  private lanOrigins: string[] = [];
   private view: ViewModel = emptyViewModel();
   private conn: PlatformConnection | null = null;
   private endpoint: Endpoint | null = null;
@@ -441,8 +443,9 @@ export class PlatformApp {
     try {
       const response = await this.fetchImpl(`${this.selfOrigin}/api/self`);
       if (!response.ok) return;
-      const info = (await response.json()) as { publicOrigin?: string | null };
+      const info = (await response.json()) as { publicOrigin?: string | null; lanOrigins?: unknown };
       if (info.publicOrigin) this.inviteOrigin = info.publicOrigin;
+      if (Array.isArray(info.lanOrigins)) this.lanOrigins = info.lanOrigins.filter((item): item is string => typeof item === 'string');
     } catch {
       // 纯浏览器打开或老壳：没有这个端点
     }
@@ -556,6 +559,12 @@ export class PlatformApp {
     }
     const invite = el(this.doc, 'invite-url') as HTMLInputElement | null;
     if (invite && !invite.value) invite.value = this.inviteUrl();
+    const access = el(this.doc, 'lan-access');
+    if (access) {
+      const hints = accessHints(this.lanOrigins, this.view.room?.code ?? null);
+      access.textContent = hints.join('\n');
+      access.classList.toggle('hidden', hints.length === 0);
+    }
     const countdown = el(this.doc, 'turn-countdown');
     if (countdown) {
       countdown.textContent =

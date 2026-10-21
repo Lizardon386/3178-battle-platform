@@ -203,3 +203,15 @@ export function inviteLink(httpOrigin: string, code: string, gameId: string, pat
   const params = new URLSearchParams({ h: `${httpOrigin}${path === '/ws' ? '' : path}`, r: code, g: gameId });
   return `${httpOrigin}/?${params.toString()}`;
 }
+
+/**
+ * 房主页面上给局域网朋友的手动入口：邀请链接之外，还要能照抄「地址 + 房号」。
+ * 多网卡时局域网地址会有多个，全列出来比只猜哪一个有效更可靠。
+ */
+export function accessHints(lanOrigins: string[], code: string | null): string[] {
+  if (!code || lanOrigins.length === 0) return [];
+  const origins = [...new Set(lanOrigins)];
+  const [first = ''] = origins;
+  const address = first.replace(/^https?:\/\//, '');
+  return [`局域网地址：${origins.join('、')}`, `手动加入：房主地址填 ${address}，房号 ${code}`];
+}

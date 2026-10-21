@@ -2,7 +2,7 @@
 
 > 写给方案评审、维护和二次开发的人。内容按运行模式、核心流程、架构接缝、协议、语义和工程约束排列；游戏接入见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。
 > 使用者说明见 [README.md](README.md)；进度、逐阶段验收凭据与 agent 交接记录见 [CONTEXT.md](CONTEXT.md)。
-> 最近更新：2026-10-20
+> 最近更新：2026-10-21
 >
 > 本仓库推到 GitHub，文档内部一律用仓库相对链接。数字都是实测的，改动时请同步这里。
 
@@ -17,7 +17,7 @@
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 
-怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **124 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **131 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
 
 ## 2. 运行模式
 
@@ -56,7 +56,7 @@ flowchart LR
 
 - **权威在房主进程**：建房、开局、踢人、关房、移交都由它裁决；没有中央服务器。
 - **内存状态归 `Room`**：座位表、房主标记、聊天环形缓冲、`revision`；游戏状态是 opaque blob，平台不解释。
-- **落盘只在权威进程**：`data/room-<房号>.json` 原子写；盘上只存票据摘要（`secretHash`），不存明文票据。玩家进别人的房不写对方的盘；`join` 壳自己开的房仍由本机落盘——此时它本身就是房主。
+- **落盘只在权威进程**：开发目录写仓库里的 `data/`；便携包（根目录有 `.portable-build.json`）改写到 `%LOCALAPPDATA%\3178-battle-platform\data`，因为整个程序目录会被新版本直接替换。`BP_DATA_DIR` 可覆盖，`diagnose` 会打印实际路径。写盘是原子写；盘上只存票据摘要（`secretHash`），不存明文票据。玩家进别人的房不写对方的盘；`join` 壳自己开的房仍由本机落盘——此时它本身就是房主。
 - **票据先落盘再离进程**：`onTicketIssued` 在唯一的发票据点触发 `syncStore`，避免“加入后立刻硬杀，重启后房在座位不在”。
 
 ### 2.4 房间发现与跨网
@@ -219,6 +219,7 @@ flowchart TD
 | 文件 | 用途 |
 |---|---|
 | [packages/hostd/src/cli.ts](packages/hostd/src/cli.ts) | host / join / diagnose / stop；host 双监听 |
+| [packages/hostd/src/data-dir.ts](packages/hostd/src/data-dir.ts) | 数据目录落点（便携包写用户目录，开发目录写仓库） |
 | [packages/hostd/src/webroot.ts](packages/hostd/src/webroot.ts) | 静态与接口路由（含 `/api/self`） |
 | [packages/hostd/src/tunnel.ts](packages/hostd/src/tunnel.ts) | cloudflared 查找与隧道网址解析 |
 | [房主建房.bat](房主建房.bat) / [玩家进房.bat](玩家进房.bat) | 双击入口（CRLF） |
@@ -253,6 +254,7 @@ flowchart TD
 | [packages/hostd/test/shell-join.test.mjs](packages/hostd/test/shell-join.test.mjs) | join 模式壳建房→加电脑→开局 |
 | [packages/hostd/test/sigint-shutdown.test.mjs](packages/hostd/test/sigint-shutdown.test.mjs) | Ctrl+C 收尾：落盘、删记录、退出码 0、端口释放 |
 | [packages/hostd/test/dual-listener.test.mjs](packages/hostd/test/dual-listener.test.mjs) | 私网建房、公网进房，两个监听共享同一引擎 |
+| [packages/hostd/test/data-dir.test.mjs](packages/hostd/test/data-dir.test.mjs) | 数据目录落点与覆盖顺序 |
 
 ## 5. 线协议
 
@@ -269,7 +271,7 @@ flowchart TD
 
 ```bash
 npm run build          # tsc -b 项目引用，无打包器
-npm test               # node --test（当前 124 例）
+npm test               # node --test（当前 131 例）
 bash tools/check-seam.sh                        # 闸门：平台包内不得出现玩法词
 npm run portable                                # 绿色便携包（dist-portable/，不入库）
 node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测

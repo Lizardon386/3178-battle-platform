@@ -8,6 +8,7 @@ import type { Server } from 'node:http';
 import { Engine, HostStore, WsTransport, LanAnnouncer, LanBrowser, loadGames, toDiscoveryRoom, type GameModule } from '@bp/server';
 import type { DiscoveryRoom } from '@bp/protocol';
 import { createWebServer } from './webroot.js';
+import { dataDirNote, resolveDataDir } from './data-dir.js';
 import { findCloudflared, startTunnel } from './tunnel.js';
 
 /**
@@ -22,7 +23,7 @@ import { findCloudflared, startTunnel } from './tunnel.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..', '..');
-const DATA_DIR = join(ROOT, 'data');
+const DATA_DIR = resolveDataDir(ROOT);
 /**
  * 记录按**本机界面端口**分文件。一个进程只有一个界面口；局域网口只作为记录里的字段。
  * 两个端口写两份记录会让 stop 对同一个 pid 下手两次，也会让 diagnose 把一桌数成两桌。
@@ -191,7 +192,7 @@ async function startShell(options: Options, role: 'host' | 'join'): Promise<void
     process.exit(1);
   }
   const engine = new Engine({ modules });
-  const store = new HostStore(join(ROOT, 'data'));
+  const store = new HostStore(DATA_DIR);
   // 票据发出前先落盘：syncStore 会跳过内容没变的房，所以这一刀只在"有人入座/重连坐回"时真的写盘
   engine.onTicketIssued = () => engine.syncStore(store);
   store.purgeOrphans();
@@ -382,7 +383,7 @@ async function runDiagnose(): Promise<void> {
   console.log(`已构建的游戏模块：${modules.length === 0 ? '（无，先 npm run build）' : modules.map((m) => `${m.id}@${m.version}`).join('、')}`);
   console.log(`cloudflared：${findCloudflared() ?? '未找到（跨网需要它）'}`);
   console.log(`本机 IPv4：${lanAddresses().join('、') || '（没找到非回环地址）'}`);
-  console.log(`数据目录：${DATA_DIR}${existsSync(DATA_DIR) ? '（存在）' : '（还没建）'}`);
+  console.log(`数据目录：${DATA_DIR} ${dataDirNote(ROOT)}${existsSync(DATA_DIR) ? '（已建）' : '（还没建）'}`);
   const runs = existsSync(DATA_DIR) ? readdirSync(DATA_DIR).filter((n) => /^run-\d+\.json$/.test(n)) : [];
   if (runs.length === 0) {
     console.log('在跑的壳：（无记录）');

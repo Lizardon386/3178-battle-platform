@@ -12,6 +12,7 @@ import {
   emptySlots,
   seatLabel,
   inviteLink,
+  accessHints,
   resumeCodeFor,
   aiFillBlocker,
   seatPickerCandidates,
@@ -442,4 +443,17 @@ test('下拉空着要写清为什么空着，而不是留一个白格子', () =>
     seats: [me, seat({ seatId: 'a1', slot: 2, name: '电脑', role: 'ai' }), seat({ seatId: 's1', slot: 3, name: '看客', role: 'spectator' })],
   };
   assert.match(seatPickerBlocker(mixed, 'transfer'), /没有可移交的真人玩家/);
+});
+
+test('房主页的局域网入口：没有房号或没有局域网地址时不占地方', () => {
+  assert.deepEqual(accessHints([], null), []);
+  assert.deepEqual(accessHints(['http://10.0.0.5:3000'], null), []);
+  assert.deepEqual(accessHints([], 'AB12'), []);
+});
+
+test('房主页的局域网入口：地址可照抄，多网卡全列且不重复', () => {
+  const hints = accessHints(['http://10.0.0.5:3000', 'http://192.168.1.20:3000', 'http://10.0.0.5:3000'], 'AB12');
+  assert.equal(hints.length, 2);
+  assert.equal(hints[0], '局域网地址：http://10.0.0.5:3000、http://192.168.1.20:3000');
+  assert.equal(hints[1], '手动加入：房主地址填 10.0.0.5:3000，房号 AB12');
 });

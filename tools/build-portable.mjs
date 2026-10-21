@@ -197,7 +197,7 @@ function freePort() {
 }
 
 async function smoke(nodeExe, nodeVersionText) {
-  step('自检：剥掉 PATH 里的 node/npm 后，用包内 node 跑 diagnose 与 host');
+  step('自检：数据目录落点、diagnose 与 host（PATH 已剥掉 node/npm）');
   const cleanEnv = {
     ...process.env,
     PATH: process.platform === 'win32' ? 'C:\\Windows\\System32;C:\\Windows' : '/usr/bin:/bin',
@@ -207,12 +207,20 @@ async function smoke(nodeExe, nodeVersionText) {
   for (const needle of ['echo@0.1.0', 'turncount@0.1.0', nodeVersionText]) {
     if (!diag.stdout.includes(needle)) fail(`diagnose 输出里没有 ${needle}：\n${diag.stdout}`);
   }
-  console.log('OK：diagnose 能找到两个游戏与包内 node');
+  if (!diag.stdout.includes('更新程序目录不会丢')) fail(`diagnose 没说明便携包的数据落点：\n${diag.stdout}`);
+  if (process.platform === 'win32' && process.env.LOCALAPPDATA) {
+    const expected = join(process.env.LOCALAPPDATA, '3178-battle-platform', 'data');
+    if (!diag.stdout.includes(expected)) fail(`便携包的数据目录没落到用户目录（期望包含 ${expected}）：\n${diag.stdout}`);
+  }
+  console.log('OK：diagnose 能找到两个游戏、包内 node，数据目录也在用户目录下');
 
+  // 自检本身不往用户的真实数据目录写东西：用 BP_DATA_DIR 指到包里一个临时目录，跑完删掉
+  const smokeData = join(OUT, '.smoke-data');
+  const smokeEnv = { ...cleanEnv, BP_DATA_DIR: smokeData };
   const port = await freePort();
   const child = spawn(nodeExe, ['packages/hostd/dist/cli.js', 'host', '--port', String(port), '--no-lan'], {
     cwd: OUT,
-    env: cleanEnv,
+    env: smokeEnv,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let log = '';
@@ -240,17 +248,18 @@ async function smoke(nodeExe, nodeVersionText) {
   const ids = (health.games ?? []).slice().sort();
   if (ids.join(',') !== 'echo,turncount') fail(`/health 的游戏清单不对：${JSON.stringify(ids)}\n${log}`);
 
-  const stop = spawnSync(nodeExe, ['packages/hostd/dist/cli.js', 'stop', '--port', String(port)], { cwd: OUT, env: cleanEnv, encoding: 'utf8' });
+  const stop = spawnSync(nodeExe, ['packages/hostd/dist/cli.js', 'stop', '--port', String(port)], { cwd: OUT, env: smokeEnv, encoding: 'utf8' });
   if (stop.status !== 0) fail(`stop 失败：\n${stop.stdout}\n${stop.stderr}`);
   await Promise.race([
     new Promise((r) => child.once('close', r)),
     new Promise((r) => setTimeout(r, 8_000)),
   ]);
-  const runFile = join(OUT, 'data', `run-${port}.json`);
+  const runFile = join(smokeData, `run-${port}.json`);
   if (existsSync(runFile)) fail('stop 之后 run 记录还在');
-  console.log('OK：host 启动、/health、stop 收尾都正常（全程只用包内 node）');
+  if (existsSync(join(OUT, 'data'))) fail('便携包在程序目录里建了 data/，数据目录迁移没生效');
+  console.log('OK：host 启动、/health、stop 收尾都正常（数据只写临时目录，全程只用包内 node）');
 
-  rmSync(join(OUT, 'data'), { recursive: true, force: true });
+  rmSync(smokeData, { recursive: true, force: true });
 }
 
 const args = parseArgs(process.argv.slice(2));

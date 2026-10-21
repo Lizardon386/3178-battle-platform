@@ -283,6 +283,8 @@ option:disabled {
   color: var(--bp-dim-hi);
 }
 .hint { margin: 14px 0 0; font-size: 14.5px; line-height: 1.75; color: var(--bp-dim-hi); }
+/* 房主页的局域网入口是两行文字（地址一行、手动加入一行），换行要照原文走。 */
+#lan-access { white-space: pre-line; overflow-wrap: anywhere; }
 /* 状态行与房号铭牌是"必须读得清"的那两类字：实心 #6366f1 在 #16161f 上只有 4.02:1，
    所以文字一律用抬亮一档的 --bp-accent-hi（实测 6.02:1），实心靛紫留给描边与填充。 */
 .status { min-height: 26px; margin: 16px 0 0; font: 15px/1.6 var(--bp-font-mono); color: var(--bp-accent-hi); }
