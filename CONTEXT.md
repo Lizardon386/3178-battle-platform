@@ -1,8 +1,18 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
-> 本文件是任务交接档案，供后续 agent 跟进；改动产物后请更新「当前状态」「变更记录」。使用者说明见 [README.md](README.md)，方案设计见 [DESIGN.md](DESIGN.md)。
+> 本文件是任务交接档案，供后续 agent 跟进；改动产物后请更新「当前状态」「变更记录」。
 > 最近更新：2026-10-21
 <!-- 日期必须留在这个 blockquote 里：check-docs.sh 的 [新]/[旧]/[期] 只读这里。改日期时 README、DESIGN、CONTEXT 顶部要同一天。 -->
+
+## 文档
+
+| 文档 | 阅读对象 | 内容 |
+|---|---|---|
+| [README.md](README.md) | 玩家 / 房主 | 平台是什么、前置与双击入口、一局怎么走、命令行、限制与注意事项 |
+| [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 目标与约束；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
+| [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | GameModule / GameInstance / Effect[]、客户端入口、单文件包、沙箱限制、目录与构建、check-seam 要求 |
+| [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
+| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
 
 ## 背景与目标
 
@@ -184,6 +194,8 @@
 - 2026-10-21 Qoder：**同步 M2 沙箱完成**：客户端游戏入口改为 `sandbox=allow-scripts` iframe（不给 `allow-same-origin`），父页面负责取源码/校验，iframe 内 blob 导入并用 postMessage 桥接 view/event/action；README/DESIGN 的“接真游戏前要关进沙箱”改为已落地；DESIGN 补 `game-sandbox.html`、`sandbox-hooks.test.mjs`，测试计数 144，CONTEXT 当前状态与 P8.5/待办同步。
 
 - 2026-10-21 Qoder：**客户端入口哈希随清单下发**（`002bed8`）：单文件包的客户端入口哈希不再靠猜，随 manifest 一起给客户端；测试计数 144 → 145。平台文档同步到 145。
+
+- 2026-10-21 Qoder：**文档索引统一放到每份文档的第一节**：删掉 DESIGN/CONTEXT/INTEGRATION_GUIDE 头部引用块里的文档索引，只留用途和日期；四份文档都在标题下第一节放同一张「文档 / 阅读对象 / 内容」表。README 的文档表也前移到第一节。
 
 **下一步顺序建议**：① **P8 把 uno 接成真游戏**——这是唯一能证伪"契约够不够宽"的检验（No Mercy 规则有碰/接龙/质疑/弃牌阶段，比两个合成游戏刁钻得多），做完 `tools/check-seam.sh` 必须仍然零命中；② 接真游戏前先把**沙箱挂载**补上（`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`），否则房主可向玩家浏览器注入可读票据的代码；③ **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；④ **双机实测**组播发现与隧道，本会话只在一台机器上证伪了编解码与 HTTP 路由；⑤ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家进房.bat`，**别手写**：改 [tools/gen-bat.mjs](tools/gen-bat.mjs) 再 `node tools/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。

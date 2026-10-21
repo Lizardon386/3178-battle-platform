@@ -1,7 +1,17 @@
 # 3178-battle-platform（3178 对战平台）· 游戏接入指南
 
-> 写给要接新游戏的人；平台架构见 [DESIGN.md](DESIGN.md)，玩家说明见 [README.md](README.md)。
+> 写给要接新游戏的人。
 > 最近更新：2026-10-21
+
+## 文档
+
+| 文档 | 阅读对象 | 内容 |
+|---|---|---|
+| [README.md](README.md) | 玩家 / 房主 | 平台是什么、前置与双击入口、一局怎么走、命令行、限制与注意事项 |
+| [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 目标与约束；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
+| [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | GameModule / GameInstance / Effect[]、客户端入口、单文件包、沙箱限制、目录与构建、check-seam 要求 |
+| [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
+| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
 
 把游戏接进平台，需要实现 [module-api.ts](packages/server/src/module-api.ts) 里的两个接口。平台负责房间、座位、权限和消息投递，玩法逻辑放在游戏模块里。
 

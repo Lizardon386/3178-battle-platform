@@ -4,6 +4,16 @@
 > 最近更新：2026-10-21
 <!-- 日期必须留在这个 blockquote 里：check-docs.sh 的 [新]/[旧]/[期] 只读这里。改日期时 README、DESIGN、CONTEXT 顶部要同一天。 -->
 
+## 文档
+
+| 文档 | 阅读对象 | 内容 |
+|---|---|---|
+| [README.md](README.md) | 玩家 / 房主 | 平台是什么、前置与双击入口、一局怎么走、命令行、限制与注意事项 |
+| [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 目标与约束；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
+| [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | GameModule / GameInstance / Effect[]、客户端入口、单文件包、沙箱限制、目录与构建、check-seam 要求 |
+| [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
+| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
+
 ## 这是什么
 
 每个人在自己电脑上跑一个可双击的客户端；建房那台机器就是服务器。玩法通过 `GameModule` 接口接入，平台只负责房间、座位、房主权限、准备、聊天、观战、电脑位、掉线宽限、版本检查、存档和传输。仓库自带两个测试用 demo 游戏（`echo` / `turncount`），形状不同，用来证明接口确实与玩法无关。
@@ -16,17 +26,7 @@
 - **按座位裁剪状态**：快照按座位生成，观战看不到别人的秘密。
 - **不用打包**：浏览器直接吃原生 ESM，离线可用；界面覆盖大厅、房间内和对局挂载点，键盘可完整操作。
 
-> 想接新游戏？实现 `GameModule` / `GameInstance` 两个接口即可；完整规则、线协议和开发命令见下文「文档」。
-
-## 文档
-
-| 文档 | 阅读对象 | 内容 |
-|---|---|---|
-| [README.md](README.md) | 玩家 / 房主 | 平台是什么、前置与双击入口、一局怎么走、命令行、限制与注意事项 |
-| [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 目标与约束；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
-| [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | GameModule / GameInstance / Effect[]、客户端入口、单文件包、沙箱限制、目录与构建、check-seam 要求 |
-| [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
-| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
+> 想接新游戏？实现 `GameModule` / `GameInstance` 两个接口即可；完整规则、线协议和开发命令见上文「文档」。
 
 ## 开始玩
 
