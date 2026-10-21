@@ -217,5 +217,7 @@
 
 - 2026-10-21 Qoder：**devtools 按职责拆成 `tools/checks` 与 `tools/packaging`**：checks 放接缝闸门、猴测、落盘/重连复现；packaging 放便携包、`.bpmap` CLI、启动器生成。移除 `@bp/devtools` workspace，只保留 `@bp/testkit`；同步根脚本、测试路径和文档。
 
+- 2026-10-21 Qoder：**DESIGN 4.1 目录树收回到包一级**：只列 `packages/*`、`tools/{testkit,checks,packaging}`、`games/` 和根文档，不再展开 `src/`、`test/`、`public/`；各目录的职责写在同行说明里。
+
 **下一步顺序建议**：① **M3 试点**：拿一个具体回合制游戏（uno 或其他，或先把 `测试夹具·回合制` 补成带 AI 和客户端的测试夹具），验证“1 人 + 电脑打完整局”和 `.bpmap` 端到端；接入步骤写进 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。② **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；③ **双机实测**组播发现与隧道，目前只在一台机器上证伪了编解码与 HTTP 路由；④ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家进房.bat`，**别手写**：改 [tools/packaging/gen-bat.mjs](tools/packaging/gen-bat.mjs) 再 `node tools/packaging/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。

@@ -164,36 +164,14 @@ stateDiagram-v2
 3178-battle-platform/
 ├─ packages/                         平台源码
 │  ├─ game-sdk/                      GameModule 契约、.bpmap 打包/读取、客户端入口类型
-│  │  ├─ src/                        契约与 CLI 源码
-│  │  │  └─ node/                    .bpmap 打包/读取实现
-│  │  └─ test/                       单文件包测试
 │  ├─ protocol/                      线消息、错误码、摘要、入站形状闸
-│  │  ├─ src/                        协议源码
-│  │  └─ test/                       协议测试
 │  ├─ server/                        引擎、房间、权限、落盘、传输、发现
-│  │  ├─ src/                        引擎与运行时
-│  │  └─ test/                       权限、契约、socket、落盘测试
 │  ├─ client/                        浏览器端连接、视图、界面、沙箱挂载
-│  │  ├─ src/                        连接、视图、界面装配
-│  │  ├─ public/                     页面、样式、沙箱页、字体
-│  │  │  └─ fonts/                   本地 OFL 字体
-│  │  └─ test/                       客户端逻辑测试
 │  └─ hostd/                         宿主壳 host/join/diagnose/stop、静态路由
-│     ├─ src/                        壳、路由、隧道
-│     └─ test/                       集成测试
-│        └─ fixtures/                SIGINT 注入钩子
 ├─ tools/                            开发与测试工具
 │  ├─ testkit/                       @bp/testkit：契约 harness、fake context、测试夹具
-│  │  ├─ src/                        源码
-│  │  │  ├─ contract-harness/        契约测试 harness
-│  │  │  ├─ fake-context/            假 GameContext
-│  │  │  └─ test-games/              测试夹具
-│  │  │     ├─ turn-based/           回合制夹具
-│  │  │     └─ simultaneous/         同时操作夹具
-│  │  ├─ test/                       契约测试
-│  │  └─ scripts/                    夹具打包脚本
-│  ├─ checks/                       验证脚本：接缝闸门、猴测、落盘/重连复现
-│  └─ packaging/                    构建与分发：便携包、.bpmap CLI、启动器生成
+│  ├─ checks/                        接缝闸门、猴测、落盘/重连复现
+│  └─ packaging/                     便携包、.bpmap CLI、启动器生成
 ├─ games/                            运行时 .bpmap（不入库）
 ├─ dogfood-output/                   探索性 QA 报告
 ├─ README.md                         玩家使用说明
