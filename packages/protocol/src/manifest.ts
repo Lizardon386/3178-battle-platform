@@ -17,7 +17,7 @@ export interface GameManifest {
   roles: SeatRole[];
   /** 客户端 UI 入口，相对该模块的 base URL。 */
   entry: string;
-  /** 下发给客户端的资源清单；hash 为 sha256(base64) 或 'fnv:<digest>'。 */
+  /** 下发给客户端的资源清单；hash 为 'sha256:<hex>' 或裸 hex。 */
   assets?: GameAsset[];
 }
 

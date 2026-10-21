@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import type { GameAsset } from '@bp/protocol';
 import type { GameModule } from './module-api.js';
 import { extractPack, listPackFiles, readPack } from './pack.js';
 
@@ -58,6 +59,7 @@ export interface GameSource {
   module: GameModule;
   root: string;
   packageHash?: string;
+  assets: GameAsset[];
 }
 
 export interface GameLoadError {
@@ -68,6 +70,7 @@ export interface GameLoadError {
 export interface GameSet {
   modules: GameModule[];
   roots: Map<string, string>;
+  assets: Map<string, GameAsset[]>;
   errors: GameLoadError[];
 }
 
@@ -88,6 +91,11 @@ export async function loadPackGame(packPath: string, cacheRoot: string): Promise
     module: { ...module, version: `${module.version}+${pack.packageHash.slice(0, 12)}` },
     root: extracted.dir,
     packageHash: pack.packageHash,
+    assets: pack.manifest.files.map((file) => ({
+      path: file.path,
+      hash: `sha256:${file.sha256}`,
+      bytes: file.size,
+    })),
   };
 }
 
@@ -97,6 +105,7 @@ export async function loadPackGame(packPath: string, cacheRoot: string): Promise
 export async function loadGameSet(gamesRoot: string, cacheRoot: string): Promise<GameSet> {
   const modules: GameModule[] = [];
   const roots = new Map<string, string>();
+  const assets = new Map<string, GameAsset[]>();
   const errors: GameLoadError[] = [];
 
   for (const module of await loadGames(gamesRoot)) {
@@ -113,11 +122,12 @@ export async function loadGameSet(gamesRoot: string, cacheRoot: string): Promise
       }
       modules.push(loaded.module);
       roots.set(loaded.module.id, loaded.root);
+      assets.set(loaded.module.id, loaded.assets);
     } catch (error) {
       errors.push({ source: packPath, message: error instanceof Error ? error.message : String(error) });
     }
   }
 
   modules.sort((a, b) => a.id.localeCompare(b.id));
-  return { modules, roots, errors };
+  return { modules, roots, assets, errors };
 }

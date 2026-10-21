@@ -189,7 +189,7 @@ async function closeServer(server: Server): Promise<void> {
  */
 async function startShell(options: Options, role: 'host' | 'join'): Promise<void> {
   const loaded = await loadAllGames();
-  const { modules, roots } = loaded;
+  const { modules, roots, assets } = loaded;
   if (modules.length === 0) {
     console.error(`没在 ${join(ROOT, 'games')} 找到可用的游戏模块或单文件包，先跑 npm run build，或检查 .bpmap`);
     process.exit(1);
@@ -220,11 +220,11 @@ async function startShell(options: Options, role: 'host' | 'join'): Promise<void
   });
 
   const privateTransport = new WsTransport(engine, {});
-  const privateServer = createWebServer({ root: ROOT, modules, gameRoots: roots, getRooms: () => browser?.list() ?? [], selfInfo });
+  const privateServer = createWebServer({ root: ROOT, modules, gameRoots: roots, gameAssets: assets, getRooms: () => browser?.list() ?? [], selfInfo });
   privateTransport.attach(privateServer);
 
   const publicTransport = useLan ? new WsTransport(engine, {}) : null;
-  const publicServer = useLan ? createWebServer({ root: ROOT, modules, gameRoots: roots, getRooms: () => [], selfInfo }) : null;
+  const publicServer = useLan ? createWebServer({ root: ROOT, modules, gameRoots: roots, gameAssets: assets, getRooms: () => [], selfInfo }) : null;
   if (publicTransport && publicServer) publicTransport.attach(publicServer);
 
   const announcer = useLan && options.announce

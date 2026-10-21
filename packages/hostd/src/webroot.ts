@@ -3,7 +3,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import type { GameModule } from '@bp/server';
 import { manifestOf } from '@bp/server';
-import type { DiscoveryRoom } from '@bp/protocol';
+import type { DiscoveryRoom, GameAsset } from '@bp/protocol';
 
 /**
  * 宿主壳的静态与接口层。路由前缀就是"三方来源"的分工：
@@ -28,6 +28,8 @@ export interface WebRootOptions {
   modules: GameModule[];
   /** 游戏 id → 实际产物目录；单文件包指向解包缓存，目录游戏不填则回退到 games/<id>。 */
   gameRoots?: Map<string, string>;
+  /** 游戏 id → 包内文件哈希；单文件包用它把客户端入口的哈希下发给浏览器。 */
+  gameAssets?: Map<string, GameAsset[]>;
   /** 组播浏览结果；没有本地壳时返回空表。 */
   getRooms?: () => DiscoveryRoom[];
   /** 页面用它生成邀请链接；老壳没有这个端点时客户端会退回 selfOrigin。 */
@@ -111,7 +113,13 @@ export function createWebServer(opts: WebRootOptions): Server {
     const path = url.pathname;
 
     if (path === '/api/games') {
-      sendJson(res, { games: opts.modules.map((m) => manifestOf(m, m.normalizeConfig({}))) });
+      sendJson(res, {
+        games: opts.modules.map((module) => {
+          const manifest = manifestOf(module, module.normalizeConfig({}));
+          const assets = opts.gameAssets?.get(module.id);
+          return assets ? { ...manifest, assets } : manifest;
+        }),
+      });
       return;
     }
     if (path === '/discovery/rooms') {

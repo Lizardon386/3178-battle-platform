@@ -60,6 +60,10 @@ test('单文件包：loadGameSet 解包并加载服务端模块', async () => {
   assert.ok(root);
   assert.ok(existsSync(join(root, 'server.js')));
   assert.ok(existsSync(join(root, 'client.js')));
+
+  const assets = set.assets.get('sample');
+  assert.ok(assets);
+  assert.ok(assets.some((asset) => asset.path === 'client.js' && asset.hash.startsWith('sha256:')));
 });
 
 test('单文件包：坏包跳过，不挡其他游戏', async () => {

@@ -50,6 +50,31 @@ test('游戏根映射：没有映射时仍走 games/<id> 目录', async () => {
   });
 });
 
+test('游戏清单：单文件包的 assets 随 /api/games 下发', async () => {
+  const root = tempDir('bp-webroot-');
+  const fakeModule = {
+    id: 'fakepack',
+    name: '样本',
+    version: '0.1.0',
+    entry: 'client.js',
+    seats: { min: 1, max: 2 },
+    allowSpectate: false,
+    soloFill: false,
+    roles: ['host'],
+    normalizeConfig: () => ({}),
+    rulesHashOf: () => 'rules',
+    create: () => ({ serialize: () => ({}), handle: () => [], begin: () => [], snapshot: () => ({}) }),
+    resume: () => ({ serialize: () => ({}), handle: () => [], begin: () => [], snapshot: () => ({}) }),
+  };
+  const assets = [{ path: 'client.js', hash: `sha256:${'a'.repeat(64)}`, bytes: 10 }];
+
+  await withServer(root, { modules: [fakeModule], gameAssets: new Map([['fakepack', assets]]) }, async (base) => {
+    const data = await (await fetch(`${base}/api/games`)).json();
+    assert.equal(data.games[0].id, 'fakepack');
+    assert.deepEqual(data.games[0].assets, assets);
+  });
+});
+
 test('游戏根映射：未知 id 与越界路径都 404', async () => {
   const root = tempDir('bp-webroot-');
   const packDir = tempDir('bp-pack-root-');
