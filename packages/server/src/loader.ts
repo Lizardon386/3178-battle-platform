@@ -29,7 +29,7 @@ registerHooks({
 
 /**
  * 游戏模块在运行时按 id 动态加载——平台源码里不许 import 任何 games/ 路径，
- * 否则"无关玩法"就只是一句口号（见 tools/devtools/check-seam.sh）。
+ * 否则"无关玩法"就只是一句口号（见 tools/checks/check-seam.sh）。
  */
 export function isGameModule(value: unknown): value is GameModule {
   if (typeof value !== 'object' || value === null) return false;

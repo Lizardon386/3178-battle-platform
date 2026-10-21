@@ -6,13 +6,13 @@
   "type": "module",
   "workspaces": [
     "packages/*",
-    "tools/*"
+    "tools/testkit"
   ],
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean",
-    "seam": "bash tools/devtools/check-seam.sh",
-    "portable": "node tools/devtools/build-portable.mjs",
+    "seam": "bash tools/checks/check-seam.sh",
+    "portable": "node tools/packaging/build-portable.mjs",
     "test": "npm run build && node tools/testkit/scripts/pack-test-games.mjs && node --test --test-timeout=20000 \"packages/*/test/*.test.mjs\" \"tools/*/test/*.test.mjs\""
   },
   "devDependencies": {
