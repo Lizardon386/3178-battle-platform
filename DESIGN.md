@@ -27,7 +27,7 @@
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 
-怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **145 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试夹具（`测试夹具·回合制` + 隐私 / `测试夹具·同时操作` 无游标 + 无隐私 + 同时操作，在 `packages/test-tools/test-games/`），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **145 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
 
 ## 2. 运行模式
 
@@ -178,7 +178,7 @@ flowchart TD
 ### 4.2 三处接缝
 
 - **线协议**（`packages/protocol`）：消息目录与错误码是客户端/服务端唯一的字据。
-- **`GameModule` / `GameInstance` 接口**（`packages/server/src/module-api.ts`）：运行时按 id 动态加载目录游戏或单文件包，平台源码不 import 游戏。
+- **`GameModule` / `GameInstance` 接口**（`packages/game-sdk/src/module-api.ts`；`packages/server/src/module-api.ts` 转出）：运行时按 id 动态加载目录游戏或单文件包，平台源码不 import 游戏。
 - **`Effect[]` 出口**：游戏碰不到 socket；投递、限流、视角裁剪、审计都在平台。
 
 > 接一个新游戏（GameModule / GameInstance / 客户端入口 / 目录与构建）见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。
@@ -202,9 +202,11 @@ flowchart TD
 | [packages/server/src/engine.ts](packages/server/src/engine.ts) | 引擎：线消息 → 房间/游戏操作 → 出站编排 |
 | [packages/server/src/room.ts](packages/server/src/room.ts) | 座位表、房主标记、聊天、revision、落盘导出/恢复 |
 | [packages/server/src/authority.ts](packages/server/src/authority.ts) | 权限判定集中处 |
-| [packages/server/src/module-api.ts](packages/server/src/module-api.ts) | `GameModule` / `GameInstance` / `Effect` 接口 |
+| [packages/game-sdk/src/module-api.ts](packages/game-sdk/src/module-api.ts) | `GameModule` / `GameInstance` / `Effect` 接口（契约源） |
+| [packages/server/src/module-api.ts](packages/server/src/module-api.ts) | 转出 SDK 契约，兼容服务端现有 import |
 | [packages/server/src/loader.ts](packages/server/src/loader.ts) | 运行时按 id 动态加载目录游戏或单文件包 |
-| [packages/server/src/pack.ts](packages/server/src/pack.ts) | 单文件游戏包的读取、校验、解包与缓存 |
+| [packages/game-sdk/src/node/pack.ts](packages/game-sdk/src/node/pack.ts) | 单文件游戏包的读取、校验、解包与缓存 |
+| [packages/server/src/pack.ts](packages/server/src/pack.ts) | 转出 SDK 的单文件包实现 |
 | [packages/server/src/transport.ts](packages/server/src/transport.ts) | ws 薄壳：握手、编码、Origin、心跳 |
 | [packages/server/src/store.ts](packages/server/src/store.ts) | 房主侧原子落盘与坏文件处理 |
 | [packages/server/src/discovery.ts](packages/server/src/discovery.ts) | 组播信标：广播与过期表 |
@@ -220,6 +222,7 @@ flowchart TD
 | [packages/client/src/clock.ts](packages/client/src/clock.ts) | 服务端时间轴：`serverNow` + 单调钟外推 |
 | [packages/client/src/local-store.ts](packages/client/src/local-store.ts) | 地址簿、昵称、票据保管 |
 | [packages/client/src/view-model.ts](packages/client/src/view-model.ts) | 帧流 → UI 状态归约（revision 去重等） |
+| [packages/game-sdk/src/client.ts](packages/game-sdk/src/client.ts) | 游戏客户端入口的 `mount` / `unmount` / `onEvent` 类型 |
 | [packages/client/src/module-loader.ts](packages/client/src/module-loader.ts) | 游戏模块拉取、哈希校验、沙箱挂载、占位渲染 |
 | [packages/client/public/game-sandbox.html](packages/client/public/game-sandbox.html) | 沙箱 iframe 页面：执行游戏客户端源码，用 postMessage 桥接 view/action |
 | [packages/client/src/app.ts](packages/client/src/app.ts) | 界面装配：大厅 / 房间内 / 对局挂载点 |
@@ -240,12 +243,14 @@ flowchart TD
 
 | 文件 | 用途 |
 |---|---|
-| [games/echo/src/index.ts](games/echo/src/index.ts) | 测试用 demo A：回合制 + 隐私 |
-| [games/turncount/src/index.ts](games/turncount/src/index.ts) | 测试用 demo B：无游标 + 无隐私 + 同时操作 |
+| [games/](games/.gitkeep) | 运行时游戏包目录，只放生成的 `.bpmap` |
+| [packages/test-tools/test-games/turn-based/index.ts](packages/test-tools/test-games/turn-based/index.ts) | 测试夹具·回合制（id `fixture-turn`）：回合游标 + 隐私 |
+| [packages/test-tools/test-games/simultaneous/index.ts](packages/test-tools/test-games/simultaneous/index.ts) | 测试夹具·同时操作（id `fixture-simultaneous`）：无游标 + 无隐私 |
 | [tools/check-seam.sh](tools/check-seam.sh) | 接缝闸门 |
 | [tools/build-portable.mjs](tools/build-portable.mjs) | 绿色便携包装配与自检 |
 | [tools/monkey.mjs](tools/monkey.mjs) | 协议层猴测 |
-| [tools/bpmap.mjs](tools/bpmap.mjs) | .bpmap 打包与检查 CLI |
+| [tools/bpmap.mjs](tools/bpmap.mjs) | .bpmap 打包/检查入口，调用 `@bp/game-sdk` CLI |
+| [packages/game-sdk/src/cli.ts](packages/game-sdk/src/cli.ts) | `pack` / `inspect` / `unpack` 的 CLI 实现 |
 | [tools/monkey-ui.page.js](tools/monkey-ui.page.js) | 页内 UI 猴测 |
 | [tools/repro-persist.mjs](tools/repro-persist.mjs) / [tools/repro-resume.mjs](tools/repro-resume.mjs) | 落盘窗口与票据重连复现 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 探索性 QA 报告：15 条 finding、修法与复跑计数 |
@@ -256,10 +261,10 @@ flowchart TD
 |---|---|
 | [packages/protocol/test/protocol.test.mjs](packages/protocol/test/protocol.test.mjs) | 协议与摘要 |
 | [packages/server/test/room-authority.test.mjs](packages/server/test/room-authority.test.mjs) | 房主权限/票据/座位模型 |
-| [packages/server/test/contract.test.mjs](packages/server/test/contract.test.mjs) | 两个游戏共用同一套接口断言 |
+| [packages/test-tools/test/contract.test.mjs](packages/test-tools/test/contract.test.mjs) | 两个测试夹具共用同一套接口断言 |
 | [packages/server/test/ws-live.test.mjs](packages/server/test/ws-live.test.mjs) | 真 socket 端到端 |
 | [packages/server/test/store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) | 落盘恢复 + 信标编解码 |
-| [packages/server/test/pack.test.mjs](packages/server/test/pack.test.mjs) | 单文件包：往返、篡改、路径穿越、缓存复用 |
+| [packages/game-sdk/test/pack.test.mjs](packages/game-sdk/test/pack.test.mjs) | 单文件包：往返、篡改、路径穿越、缓存复用 |
 | [packages/server/test/pack-loader.test.mjs](packages/server/test/pack-loader.test.mjs) | 单文件包：宿主加载、坏包跳过、同 id 去重 |
 | [packages/server/test/bpmap-cli.test.mjs](packages/server/test/bpmap-cli.test.mjs) | .bpmap CLI：打包、检查、坏输入 |
 | [packages/hostd/test/game-roots.test.mjs](packages/hostd/test/game-roots.test.mjs) | 游戏根映射：包目录、目录回退、越界 404 |

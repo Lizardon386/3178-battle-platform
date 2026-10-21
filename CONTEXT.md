@@ -20,7 +20,7 @@
 
 上一轮（同日、同目录的评估档）给出的取舍已被本会话按新指令改掉两条：
 
-- **改判 1**：旧结论"不做多游戏容器"作废。平台化本身就是要装多个游戏，`GameModule` 契约与两个合成游戏是本轮的核心交付。
+- **改判 1**：旧结论"不做多游戏容器"作废。平台化本身就是要装多个游戏，`GameModule` 契约与两个测试夹具是本轮的核心交付。
 - **改判 2**：旧结论"房间列表/大厅只做地址簿 + 邀请链接"被用户驳回，要求尽量贴合 war3 的房间设计。落地为 **B+A 两档**：同网段 UDP 组播实时房间列表（需要本地壳）+ 地址簿/邀请链接（纯浏览器可用）；目录服务器仍然不做（需要常开公网节点，`render.yaml` 从未端到端验证过）。
 
 目标产物：一个可被两个形状不同的游戏驱动、带房主权限与终局语义、能落盘恢复、能真 socket 联机的**平台内核**，以及尚未开始的客户端壳。
@@ -35,7 +35,7 @@
 |---|---|---|
 | 协议包（消息目录、错误码、握手、稳定摘要、形状闸门） | [packages/protocol/src](packages/protocol/src/wire.ts) | [protocol.test.mjs](packages/protocol/test/protocol.test.mjs) 9 例 |
 | 座位模型 + 房主权限 + 票据 + Ready 闸 | [room.ts](packages/server/src/room.ts) / [authority.ts](packages/server/src/authority.ts) | [room-authority.test.mjs](packages/server/test/room-authority.test.mjs) 14 例 |
-| `GameModule` 契约 + `echo`/`turncount` + 同一断言集跑两游戏 | [module-api.ts](packages/server/src/module-api.ts) / [engine.ts](packages/server/src/engine.ts) | [contract.test.mjs](packages/server/test/contract.test.mjs) 19 例 |
+| `GameModule` 契约 + 两个测试夹具 + 同一断言集 | [module-api.ts](packages/game-sdk/src/module-api.ts) / [engine.ts](packages/server/src/engine.ts) | [contract.test.mjs](packages/test-tools/test/contract.test.mjs) 19 例 |
 | ws 传输、限流、Origin 策略、心跳、真 socket 双游戏 | [transport.ts](packages/server/src/transport.ts) | [ws-live.test.mjs](packages/server/test/ws-live.test.mjs) 4 例 |
 | 房主侧落盘/恢复（原子写、版本闸、票据幸存、坏文件不挡启动）+ 局域网组播信标（编解码/过期表；真网卡未实测） | [store.ts](packages/server/src/store.ts) / [discovery.ts](packages/server/src/discovery.ts) | [store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) 11 例 |
 | 客户端 SDK + 房间界面（地址可配、地址簿、票据、退避、校时、槽位、聊天、房主面板、邀请链接） | [packages/client/src/app.ts](packages/client/src/app.ts) | [client-logic.test.mjs](packages/client/test/client-logic.test.mjs) 12 例 + 上面的浏览器实测 |
@@ -59,12 +59,12 @@
 - [x] P0 工程骨架 + 接缝闸门 + `node --test`
 - [x] P1 协议包
 - [x] P2 房主身份与座位模型
-- [x] P3 `GameModule` 契约 + 两个合成游戏 + 契约测试
+- [x] P3 `GameModule` 契约 + 两个测试夹具（`fixture-turn` / `fixture-simultaneous`）+ 契约测试
 - [x] P4 传输 / 房间聊天 / 局域网信标（信标本身仍需双机实测）
 - [x] P5 房主侧落盘与恢复
 - [x] P6 客户端 SDK 与房间界面骨架：地址可配、地址簿、票据、指数退避、`serverNow` 校时、错误码→UI、四个屏幕、邀请链接解析
 - [x] P7 `hostd` 宿主壳：`host`（本机界面 + 局域网监听 + 组播广播 + 可选隧道 + 邀请链接）、`join`（只开本机界面 + 组播监听）、`diagnose`、`stop`；不写防火墙规则
-- [~] P8.5 游戏模块下发：`/api/games`、`/games/<id>/*`(CORS)、客户端 sha256 校验 + 沙箱内 blob 导入已通；**两个合成游戏没有客户端入口**，走占位渲染
+- [~] P8.5 游戏模块下发：`/api/games`、`/games/<id>/*`(CORS)、客户端 sha256 校验 + 沙箱内 blob 导入已通；**两个测试夹具没有客户端入口**，走占位渲染
 - [ ] P8 把 uno 接成第一个真游戏（`uno.js` 规则包成 `GameModule`，**不动 uno-online**）
 - [x] 游戏客户端沙箱挂载：`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`（`f03aa28`）
 - [ ] 双机实测组播发现：同 WiFi 下两台机器能否互相看见；首次绑定的防火墙弹窗行为
@@ -172,7 +172,7 @@
 | P0 | monorepo + TS 构建 + `node --test` + 接缝闸门 | 已完成 | `npm test` exit 0；`check-seam.sh` 零命中 |
 | P1 | 协议包：消息目录、错误码、握手、`rulesHash` 稳定摘要 | 已完成 | [protocol.test.mjs](packages/protocol/test/protocol.test.mjs) 9 例 |
 | P2 | 座位模型与房主权限：`hostId`、票据、Ready 闸、kick/transfer/close | 已完成 | [room-authority.test.mjs](packages/server/test/room-authority.test.mjs) 14 例 |
-| P3 | `GameModule` 契约 + 两个合成游戏 + 契约测试 | 已完成 | [contract.test.mjs](packages/server/test/contract.test.mjs) 20 例（同一断言集跑两个游戏） |
+| P3 | `GameModule` 契约 + 两个测试夹具 + 契约测试 | 已完成 | [contract.test.mjs](packages/test-tools/test/contract.test.mjs) 20 例（同一断言集跑两个夹具） |
 | P4 | 传输（ws/限流/Origin/心跳）、房间聊天、局域网信标 | 已完成（信标未双机实测） | [ws-live.test.mjs](packages/server/test/ws-live.test.mjs) 4 例；[store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) 12 例 |
 | P5 | 房主侧落盘与恢复：原子写、版本闸、票据幸存 | 已完成 | 同上：重启→恢复→旧票据回座；坏文件不挡启动；"票据离开进程前座位必须已在盘上"有专例 |
 | P6 | 客户端 SDK 与房间界面骨架（地址可配、地址簿、票据、退避、校时、槽位/聊天/房主面板、自绘下拉） | 已完成 | [client-logic.test.mjs](packages/client/test/client-logic.test.mjs) 23 例 + [style-hooks.test.mjs](packages/client/test/style-hooks.test.mjs) 11 例 + 浏览器实测与两层猴测（记录见 CONTEXT） |
@@ -197,7 +197,9 @@
 
 - 2026-10-21 Qoder：**文档索引统一放到每份文档的第一节**：删掉 DESIGN/CONTEXT/INTEGRATION_GUIDE 头部引用块里的文档索引，只留用途和日期；四份文档都在标题下第一节放同一张「文档 / 阅读对象 / 内容」表。README 的文档表也前移到第一节。
 
-- 2026-10-21 Qoder：**修正下一步清单**：沙箱已完成，从待办移除；下一项改为 M3 试点游戏（uno 或先把 echo 补成带 AI 和客户端的夹具），其次第二台机器与双机实测。
+- 2026-10-21 Qoder：**修正下一步清单**：沙箱已完成，从待办移除；下一项改为 M3 试点游戏（uno 或先把 `测试夹具·回合制` 补成带 AI 和客户端的夹具），其次第二台机器与双机实测。
 
-**下一步顺序建议**：① **M3 试点**：拿一个具体回合制游戏（uno 或其他，或先把 `echo` 补成带 AI 和客户端的测试夹具），验证“1 人 + 电脑打完整局”和 `.bpmap` 端到端；接入步骤写进 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。② **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；③ **双机实测**组播发现与隧道，目前只在一台机器上证伪了编解码与 HTTP 路由；④ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
+- 2026-10-21 Qoder：**同步测试夹具迁移与 SDK 抽取**：README/DESIGN/CONTEXT 里当前状态和下一步的 echo/turncount 改为“测试夹具·回合制 / 测试夹具·同时操作”（`packages/test-tools/test-games/`）；契约测试路径改到 `packages/test-tools/test/contract.test.mjs`；DESIGN 文件清单补 `@bp/game-sdk` 与 test-tools。历史变更记录保留旧名。
+
+**下一步顺序建议**：① **M3 试点**：拿一个具体回合制游戏（uno 或其他，或先把 `测试夹具·回合制` 补成带 AI 和客户端的测试夹具），验证“1 人 + 电脑打完整局”和 `.bpmap` 端到端；接入步骤写进 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。② **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；③ **双机实测**组播发现与隧道，目前只在一台机器上证伪了编解码与 HTTP 路由；④ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家进房.bat`，**别手写**：改 [tools/gen-bat.mjs](tools/gen-bat.mjs) 再 `node tools/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。
