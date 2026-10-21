@@ -5,6 +5,7 @@ export * from './registry.js';
 export * from './authority.js';
 export * from './engine.js';
 export * from './loader.js';
+export * from './pack.js';
 export * from './store.js';
 export * from './transport.js';
 export * from './discovery.js';
