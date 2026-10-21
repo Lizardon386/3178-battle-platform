@@ -161,30 +161,39 @@ stateDiagram-v2
 ### 4.1 包结构
 
 ```text
-packages/
-  game-sdk/    GameModule 契约、.bpmap 打包/读取、客户端入口类型
-  protocol/    线消息、错误码、摘要、入站形状闸
-  server/      引擎、房间、权限、落盘、传输、发现
-  client/      浏览器端连接、视图、界面、沙箱挂载
-  hostd/       宿主壳 host/join/diagnose/stop、静态路由
-  test-tools/  测试夹具与契约测试
-games/         运行时 .bpmap
-tools/         接缝闸门、猴测、便携包
+3178-battle-platform/
+├─ packages/
+│  ├─ game-sdk/         GameModule 契约、.bpmap 打包/读取、客户端入口类型
+│  ├─ protocol/         线消息、错误码、摘要、入站形状闸
+│  ├─ server/           引擎、房间、权限、落盘、传输、发现
+│  ├─ client/           浏览器端连接、视图、界面、沙箱挂载
+│  ├─ hostd/            宿主壳 host/join/diagnose/stop、静态路由
+│  └─ test-tools/       测试夹具与契约测试
+├─ games/               运行时 .bpmap（不入库）
+├─ tools/               接缝闸门、猴测、便携包
+├─ README.md
+├─ DESIGN.md
+├─ INTEGRATION_GUIDE.md
+└─ CONTEXT.md
 ```
+
+`data/` 和 `dist-portable/` 分别是运行时数据与打包产物，不入库，所以不在上面的源码树里。
 
 ```mermaid
 flowchart TD
   P["@bp/protocol<br/>线消息 / 错误码 / 摘要 / 形状闸"]
+  K["@bp/game-sdk<br/>GameModule 契约 / bpmap / 客户端入口类型"]
   S["@bp/server<br/>Engine / Room / Authority / Store / Transport"]
-  C["@bp/client<br/>连接 / 视图 / 界面"]
+  C["@bp/client<br/>连接 / 视图 / 界面 / 沙箱"]
   H["@bp/hostd<br/>host / join / 静态路由"]
-  G["games/[id]<br/>GameModule / GameInstance"]
+  G["games/*.bpmap<br/>运行时游戏包"]
   H --> S
   H --> P
   S --> P
+  S --> K
   C --> P
-  G -. "实现 GameModule" .-> S
-  S -. "按 id 动态加载；只通过 Effect[] 出站" .-> G
+  C --> K
+  G -. "loader 按 id 加载；只通过 Effect[] 出站" .-> S
 ```
 
 ### 4.2 三处接缝
