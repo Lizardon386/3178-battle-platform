@@ -396,7 +396,7 @@ test('自绘下拉的纯逻辑：键盘高亮算得对、选项签名能认出�
 
 test('"加电脑位"不亮时必须给原因：游戏不支持填充 vs 槽位已满', () => {
   const noFill = { ...emptyViewModel(), manifest: { soloFill: false }, room: { occupied: 1, seatSlots: 4 } };
-  assert.equal(aiFillBlocker(noFill), '这个游戏不支持电脑位', '测试同时操作demo就是这种：平台拒绝得对，但按钮不该照样端给人点');
+  assert.equal(aiFillBlocker(noFill), '这个游戏不支持电脑位', '测试夹具·同时操作就是这种：平台拒绝得对，但按钮不该照样端给人点');
 
   const full = { ...emptyViewModel(), manifest: { soloFill: true }, room: { occupied: 4, seatSlots: 4 } };
   assert.equal(aiFillBlocker(full), '槽位已满');
