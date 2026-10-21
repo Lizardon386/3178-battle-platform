@@ -173,7 +173,7 @@ stateDiagram-v2
 │  ├─ checks/                        架构检查、随机操作测试、存档/重连问题复现
 │  └─ packaging/                     便携包、.bpmap CLI、启动器生成
 ├─ games/                            运行时 .bpmap（不入库）
-├─ dogfood-output/                   猴测报告：猴测问题记录
+├─ dogfood-output/                   猴测报告
 ├─ README.md                         玩家使用说明
 ├─ DESIGN.md                         架构、流程与边界
 ├─ INTEGRATION_GUIDE.md              游戏接入规则
