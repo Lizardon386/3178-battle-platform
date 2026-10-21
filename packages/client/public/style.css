@@ -427,6 +427,7 @@ option:disabled {
 
 /* ---------- 对局挂载区 ---------- */
 .game-host { border-top: 1px solid var(--bp-line); background: var(--bp-panel-alt); }
+.game-frame { display: block; width: 100%; min-height: 360px; border: 0; background: transparent; }
 .game-placeholder p { margin: 0 0 14px; font: 14.5px/1.7 var(--bp-font-mono); letter-spacing: 0.04em; color: var(--bp-dim-hi); }
 .game-placeholder pre {
   max-height: 380px;

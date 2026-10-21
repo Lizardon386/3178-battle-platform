@@ -5,7 +5,7 @@ import { AddressBook, NickName, SessionVault, type KeyValueStore, type SessionRe
 import { ServerClock } from './clock.js';
 import { parseHostAddress, parseInviteLink, wouldBeBlocked, type Endpoint } from './endpoint.js';
 import { aiFillBlocker, emptyViewModel, inviteLink, accessHints, isHost, mySeat, reduce, resumeCodeFor, seatLabel, seatPickerBlocker, seatPickerCandidates, startBlockers, emptySlots, type ViewModel } from './view-model.js';
-import { fetchGameList, loadGameClient, placeholderClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
+import { fetchGameList, loadGameClientSource, placeholderClient, sandboxedClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
 import { SelectListboxes } from './listbox.js';
 
 /**
@@ -47,6 +47,8 @@ export class PlatformApp {
   private endpoint: Endpoint | null = null;
   private connState: ConnectionState = { status: 'idle', attempts: 0, lastError: null, wsUrl: null };
   private client: GameClientContract | null = null;
+  /** 防止上一次异步拉取/沙箱启动在换房或离开后还往新界面里挂载。 */
+  private attachSeq = 0;
   private pendingManifest: GameManifest | null = null;
   private localGames: GameManifest[] = [];
   private renderHandle: unknown = null;
@@ -263,12 +265,25 @@ export class PlatformApp {
   }
 
   private async attachGameClient(manifest: GameManifest, endpoint: Endpoint): Promise<void> {
+    const attempt = ++this.attachSeq;
     const host = el(this.doc, 'game-host');
     if (!host) return;
-    const result = await loadGameClient(manifest, endpoint.httpOrigin, this.fetchImpl);
-    if (result.ok && result.client) {
-      this.client = result.client;
-      this.setStatus(result.verified ? `已挂载 ${manifest.name}（哈希校验通过）` : `已挂载 ${manifest.name}（房主未声明哈希，未校验）`);
+    this.client?.unmount?.(host);
+    const result = await loadGameClientSource(manifest, endpoint.httpOrigin, this.fetchImpl);
+    if (attempt !== this.attachSeq) return;
+    if (result.ok) {
+      this.client = sandboxedClient(manifest, result.source, {
+        baseUrl: result.baseUrl,
+        onError: (message) => {
+          if (attempt !== this.attachSeq) return;
+          const currentHost = el(this.doc, 'game-host');
+          if (currentHost) this.client?.unmount?.(currentHost);
+          this.client = placeholderClient(manifest);
+          this.setStatus(message);
+          this.renderGame();
+        },
+      });
+      this.setStatus(result.verified ? `已挂载 ${manifest.name}（沙箱，哈希校验通过）` : `已挂载 ${manifest.name}（沙箱，房主未声明哈希，未校验）`);
     } else {
       this.client = placeholderClient(manifest);
       this.setStatus(result.reason ?? '用占位界面显示原始状态');
@@ -297,9 +312,12 @@ export class PlatformApp {
   }
 
   private leaveToLobby(): void {
+    this.attachSeq += 1;
     this.conn?.close();
     this.conn = null;
     this.view = emptyViewModel();
+    const host = el(this.doc, 'game-host');
+    if (host) this.client?.unmount?.(host);
     this.client = null;
     this.endpoint = null;
     // 状态行不清的话，房里留下的最后一句（挂载结果、被拒的原因）会一直挂在大厅上，

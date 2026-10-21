@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>游戏界面沙箱</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: transparent; color: #e8e8ed; }
+    body { font: 14px/1.6 system-ui, "Microsoft YaHei UI", "Microsoft YaHei", sans-serif; }
+    #game-root { min-height: 100%; }
+    .sandbox-error {
+      margin: 0;
+      padding: 16px 18px;
+      color: #fca5a5;
+      font: 13.5px/1.65 "BP Mono", Consolas, monospace;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-root"></div>
+  <script type="module">
+    const root = document.getElementById('game-root');
+    const base = document.createElement('base');
+    document.head.append(base);
+    let client = null;
+    let blobUrl = null;
+    let seatId = null;
+    let lastView = null;
+    let pendingEvents = [];
+
+    const actions = {
+      send(name, payload) {
+        parent.postMessage({ type: 'action', name, payload }, '*');
+      },
+      seatId() {
+        return seatId;
+      },
+    };
+
+    function showError(error) {
+      const text = error instanceof Error ? error.message : String(error);
+      root.replaceChildren();
+      const line = document.createElement('p');
+      line.className = 'sandbox-error';
+      line.textContent = `游戏界面加载失败：${text}`;
+      root.append(line);
+      parent.postMessage({ type: 'error', message: text }, '*');
+    }
+
+    async function ensureClient(source, baseUrl) {
+      if (typeof source !== 'string' || source.length === 0) throw new Error('缺少客户端源码');
+      if (typeof baseUrl === 'string' && baseUrl.length > 0) base.href = baseUrl;
+      if (client) return client;
+      blobUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+      const loaded = await import(/* webpackIgnore: true */ blobUrl);
+      client = loaded.default ?? loaded.client;
+      if (!client || typeof client.mount !== 'function') throw new Error('客户端入口没有导出 mount()');
+      return client;
+    }
+
+    async function mount(data) {
+      seatId = typeof data.seatId === 'string' ? data.seatId : null;
+      lastView = data.view;
+      const next = await ensureClient(data.source, data.baseUrl);
+      next.mount(root, lastView, actions);
+      for (const queued of pendingEvents) next.onEvent?.(queued, actions);
+      pendingEvents = [];
+    }
+
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'mount') {
+        void mount(data).catch(showError);
+        return;
+      }
+      if (data.type === 'view') {
+        seatId = typeof data.seatId === 'string' ? data.seatId : null;
+        lastView = data.view;
+        try {
+          client?.mount?.(root, lastView, actions);
+        } catch (error) {
+          showError(error);
+        }
+        return;
+      }
+      if (data.type === 'event') {
+        const event = { name: data.name, payload: data.payload };
+        if (!client) {
+          pendingEvents.push(event);
+          return;
+        }
+        try {
+          client.onEvent?.(event, actions);
+        } catch (error) {
+          showError(error);
+        }
+        return;
+      }
+      if (data.type === 'unmount') {
+        try {
+          client?.unmount?.(root);
+        } catch {
+          // 卸载失败也要把画面清掉
+        }
+        root.replaceChildren();
+        if (blobUrl) {
+          URL.revokeObjectURL(blobUrl);
+          blobUrl = null;
+        }
+        client = null;
+        lastView = null;
+        pendingEvents = [];
+      }
+    });
+
+    parent.postMessage({ type: 'ready' }, '*');
+  </script>
+</body>
+</html>
