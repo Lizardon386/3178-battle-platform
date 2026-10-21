@@ -162,19 +162,19 @@ stateDiagram-v2
 
 ```text
 3178-battle-platform/
-├─ packages/
-│  ├─ game-sdk/         GameModule 契约、.bpmap 打包/读取、客户端入口类型
-│  ├─ protocol/         线消息、错误码、摘要、入站形状闸
-│  ├─ server/           引擎、房间、权限、落盘、传输、发现
-│  ├─ client/           浏览器端连接、视图、界面、沙箱挂载
-│  ├─ hostd/            宿主壳 host/join/diagnose/stop、静态路由
-│  └─ test-tools/       测试夹具与契约测试
-├─ games/               运行时 .bpmap（不入库）
-├─ tools/               接缝闸门、猴测、便携包
-├─ README.md
-├─ DESIGN.md
-├─ INTEGRATION_GUIDE.md
-└─ CONTEXT.md
+├─ packages/              平台源码与测试包
+│  ├─ game-sdk/           GameModule 契约、.bpmap 打包/读取、客户端入口类型
+│  ├─ protocol/           线消息、错误码、摘要、入站形状闸
+│  ├─ server/             引擎、房间、权限、落盘、传输、发现
+│  ├─ client/             浏览器端连接、视图、界面、沙箱挂载
+│  ├─ hostd/              宿主壳 host/join/diagnose/stop、静态路由
+│  └─ test-tools/         测试夹具与契约测试
+├─ games/                 运行时 .bpmap（不入库）
+├─ tools/                 接缝闸门、猴测、便携包
+├─ README.md              玩家使用说明
+├─ DESIGN.md              架构、流程与边界
+├─ INTEGRATION_GUIDE.md   游戏接入规则
+└─ CONTEXT.md             进度、验收与交接记录
 ```
 
 `data/` 和 `dist-portable/` 分别是运行时数据与打包产物，不入库，所以不在上面的源码树里。
