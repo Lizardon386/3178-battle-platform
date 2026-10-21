@@ -130,7 +130,7 @@ function banner(lines: string[]): void {
 }
 
 async function loadAllGames(): Promise<GameSet> {
-  const loaded = await loadGameSet(join(ROOT, 'games'), join(DATA_DIR, 'games'));
+  const loaded = await loadGameSet(join(ROOT, 'games'), join(DATA_DIR, 'packs'));
   for (const error of loaded.errors) console.error(`[包] 跳过 ${error.source}：${error.message}`);
   return loaded;
 }
