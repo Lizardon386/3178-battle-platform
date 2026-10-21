@@ -17,7 +17,7 @@
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 
-怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **131 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **138 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
 
 ## 2. 运行模式
 
@@ -168,7 +168,7 @@ flowchart TD
 ### 4.2 三处接缝
 
 - **线协议**（`packages/protocol`）：消息目录与错误码是客户端/服务端唯一的字据。
-- **`GameModule` / `GameInstance` 接口**（`packages/server/src/module-api.ts`）：运行时按 id 动态加载 `games/<id>/dist/index.js`，平台源码不 import 游戏。
+- **`GameModule` / `GameInstance` 接口**（`packages/server/src/module-api.ts`）：运行时按 id 动态加载目录游戏或单文件包，平台源码不 import 游戏。
 - **`Effect[]` 出口**：游戏碰不到 socket；投递、限流、视角裁剪、审计都在平台。
 
 > 接一个新游戏（GameModule / GameInstance / 客户端入口 / 目录与构建）见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。
@@ -193,7 +193,7 @@ flowchart TD
 | [packages/server/src/room.ts](packages/server/src/room.ts) | 座位表、房主标记、聊天、revision、落盘导出/恢复 |
 | [packages/server/src/authority.ts](packages/server/src/authority.ts) | 权限判定集中处 |
 | [packages/server/src/module-api.ts](packages/server/src/module-api.ts) | `GameModule` / `GameInstance` / `Effect` 接口 |
-| [packages/server/src/loader.ts](packages/server/src/loader.ts) | 运行时按 id 动态加载游戏模块 |
+| [packages/server/src/loader.ts](packages/server/src/loader.ts) | 运行时按 id 动态加载目录游戏或单文件包 |
 | [packages/server/src/pack.ts](packages/server/src/pack.ts) | 单文件游戏包的读取、校验、解包与缓存 |
 | [packages/server/src/transport.ts](packages/server/src/transport.ts) | ws 薄壳：握手、编码、Origin、心跳 |
 | [packages/server/src/store.ts](packages/server/src/store.ts) | 房主侧原子落盘与坏文件处理 |
@@ -218,9 +218,9 @@ flowchart TD
 
 | 文件 | 用途 |
 |---|---|
-| [packages/hostd/src/cli.ts](packages/hostd/src/cli.ts) | host / join / diagnose / stop；host 双监听 |
+| [packages/hostd/src/cli.ts](packages/hostd/src/cli.ts) | host / join / diagnose / stop；host 双监听；扫描单文件包 |
 | [packages/hostd/src/data-dir.ts](packages/hostd/src/data-dir.ts) | 数据目录落点（便携包写用户目录，开发目录写仓库） |
-| [packages/hostd/src/webroot.ts](packages/hostd/src/webroot.ts) | 静态与接口路由（含 `/api/self`） |
+| [packages/hostd/src/webroot.ts](packages/hostd/src/webroot.ts) | 静态与接口路由（含 `/api/self`、游戏产物根映射） |
 | [packages/hostd/src/tunnel.ts](packages/hostd/src/tunnel.ts) | cloudflared 查找与隧道网址解析 |
 | [房主建房.bat](房主建房.bat) / [玩家进房.bat](玩家进房.bat) | 双击入口（CRLF） |
 | [tools/gen-bat.mjs](tools/gen-bat.mjs) | 生成 .bat，保证编码与启动器结构 |
@@ -248,6 +248,8 @@ flowchart TD
 | [packages/server/test/ws-live.test.mjs](packages/server/test/ws-live.test.mjs) | 真 socket 端到端 |
 | [packages/server/test/store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) | 落盘恢复 + 信标编解码 |
 | [packages/server/test/pack.test.mjs](packages/server/test/pack.test.mjs) | 单文件包：往返、篡改、路径穿越、缓存复用 |
+| [packages/server/test/pack-loader.test.mjs](packages/server/test/pack-loader.test.mjs) | 单文件包：宿主加载、坏包跳过、同 id 去重 |
+| [packages/hostd/test/game-roots.test.mjs](packages/hostd/test/game-roots.test.mjs) | 游戏根映射：包目录、目录回退、越界 404 |
 | [packages/client/test/client-logic.test.mjs](packages/client/test/client-logic.test.mjs) | 客户端无 DOM 逻辑 |
 | [packages/hostd/test/hostd-http.test.mjs](packages/hostd/test/hostd-http.test.mjs) | 宿主壳集成（静态路由、穿越防线、真 WS） |
 | [packages/hostd/test/bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) | 双击入口编码与结构防呆 |
@@ -271,7 +273,7 @@ flowchart TD
 
 ```bash
 npm run build          # tsc -b 项目引用，无打包器
-npm test               # node --test（当前 131 例）
+npm test               # node --test（当前 138 例）
 bash tools/check-seam.sh                        # 闸门：平台包内不得出现玩法词
 npm run portable                                # 绿色便携包（dist-portable/，不入库）
 node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测
