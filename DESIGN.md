@@ -17,7 +17,7 @@
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 
-怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **114 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **124 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
 
 ## 2. 运行模式
 
@@ -194,6 +194,7 @@ flowchart TD
 | [packages/server/src/authority.ts](packages/server/src/authority.ts) | 权限判定集中处 |
 | [packages/server/src/module-api.ts](packages/server/src/module-api.ts) | `GameModule` / `GameInstance` / `Effect` 接口 |
 | [packages/server/src/loader.ts](packages/server/src/loader.ts) | 运行时按 id 动态加载游戏模块 |
+| [packages/server/src/pack.ts](packages/server/src/pack.ts) | 单文件游戏包的读取、校验、解包与缓存 |
 | [packages/server/src/transport.ts](packages/server/src/transport.ts) | ws 薄壳：握手、编码、Origin、心跳 |
 | [packages/server/src/store.ts](packages/server/src/store.ts) | 房主侧原子落盘与坏文件处理 |
 | [packages/server/src/discovery.ts](packages/server/src/discovery.ts) | 组播信标：广播与过期表 |
@@ -245,6 +246,7 @@ flowchart TD
 | [packages/server/test/contract.test.mjs](packages/server/test/contract.test.mjs) | 两个游戏共用同一套接口断言 |
 | [packages/server/test/ws-live.test.mjs](packages/server/test/ws-live.test.mjs) | 真 socket 端到端 |
 | [packages/server/test/store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) | 落盘恢复 + 信标编解码 |
+| [packages/server/test/pack.test.mjs](packages/server/test/pack.test.mjs) | 单文件包：往返、篡改、路径穿越、缓存复用 |
 | [packages/client/test/client-logic.test.mjs](packages/client/test/client-logic.test.mjs) | 客户端无 DOM 逻辑 |
 | [packages/hostd/test/hostd-http.test.mjs](packages/hostd/test/hostd-http.test.mjs) | 宿主壳集成（静态路由、穿越防线、真 WS） |
 | [packages/hostd/test/bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) | 双击入口编码与结构防呆 |
@@ -267,7 +269,7 @@ flowchart TD
 
 ```bash
 npm run build          # tsc -b 项目引用，无打包器
-npm test               # node --test（当前 114 例）
+npm test               # node --test（当前 124 例）
 bash tools/check-seam.sh                        # 闸门：平台包内不得出现玩法词
 npm run portable                                # 绿色便携包（dist-portable/，不入库）
 node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测
