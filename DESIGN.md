@@ -162,23 +162,45 @@ stateDiagram-v2
 
 ```text
 3178-battle-platform/
-├─ packages/              平台源码
-│  ├─ game-sdk/           GameModule 契约、.bpmap 打包/读取、客户端入口类型
-│  ├─ protocol/           线消息、错误码、摘要、入站形状闸
-│  ├─ server/             引擎、房间、权限、落盘、传输、发现
-│  ├─ client/             浏览器端连接、视图、界面、沙箱挂载
-│  └─ hostd/              宿主壳 host/join/diagnose/stop、静态路由
-├─ tools/                 开发与测试工具
-│  ├─ testkit/            workspace 包 @bp/testkit：契约 harness、fake context、测试夹具
-│  └─ devtools/           仓库级脚本：接缝闸门、猴测、打包、启动器生成
-├─ games/                 运行时 .bpmap（不入库）
-├─ README.md              玩家使用说明
-├─ DESIGN.md              架构、流程与边界
-├─ INTEGRATION_GUIDE.md   游戏接入规则
-└─ CONTEXT.md             进度、验收与交接记录
+├─ packages/                         平台源码
+│  ├─ game-sdk/                      GameModule 契约、.bpmap 打包/读取、客户端入口类型
+│  │  ├─ src/                        契约与 CLI 源码
+│  │  │  └─ node/                    .bpmap 打包/读取实现
+│  │  └─ test/                       单文件包测试
+│  ├─ protocol/                      线消息、错误码、摘要、入站形状闸
+│  │  ├─ src/                        协议源码
+│  │  └─ test/                       协议测试
+│  ├─ server/                        引擎、房间、权限、落盘、传输、发现
+│  │  ├─ src/                        引擎与运行时
+│  │  └─ test/                       权限、契约、socket、落盘测试
+│  ├─ client/                        浏览器端连接、视图、界面、沙箱挂载
+│  │  ├─ src/                        连接、视图、界面装配
+│  │  ├─ public/                     页面、样式、沙箱页、字体
+│  │  │  └─ fonts/                   本地 OFL 字体
+│  │  └─ test/                       客户端逻辑测试
+│  └─ hostd/                         宿主壳 host/join/diagnose/stop、静态路由
+│     ├─ src/                        壳、路由、隧道
+│     └─ test/                       集成测试
+│        └─ fixtures/                SIGINT 注入钩子
+├─ tools/                            开发与测试工具
+│  ├─ testkit/                       @bp/testkit：契约 harness、fake context、测试夹具
+│  │  ├─ contract-harness/           契约测试 harness
+│  │  ├─ fake-context/               假 GameContext
+│  │  ├─ test-games/                 测试夹具
+│  │  │  ├─ turn-based/              回合制夹具
+│  │  │  └─ simultaneous/            同时操作夹具
+│  │  ├─ test/                       契约测试
+│  │  └─ scripts/                    夹具打包脚本
+│  └─ devtools/                      @bp/devtools：仓库级脚本（平铺）
+├─ games/                            运行时 .bpmap（不入库）
+├─ dogfood-output/                   探索性 QA 报告
+├─ README.md                         玩家使用说明
+├─ DESIGN.md                         架构、流程与边界
+├─ INTEGRATION_GUIDE.md              游戏接入规则
+└─ CONTEXT.md                        进度、验收与交接记录
 ```
 
-`data/` 和 `dist-portable/` 分别是运行时数据与打包产物，不入库，所以不在上面的源码树里。
+`dist/`、`node_modules/`、`data/`、`dist-portable/` 都是构建或运行产物，不入库，所以不画进源码树。
 
 ```mermaid
 flowchart TD
