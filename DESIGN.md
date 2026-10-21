@@ -168,9 +168,9 @@ stateDiagram-v2
 │  ├─ server/             引擎、房间、权限、落盘、传输、发现
 │  ├─ client/             浏览器端连接、视图、界面、沙箱挂载
 │  ├─ hostd/              宿主壳 host/join/diagnose/stop、静态路由
-│  └─ test-tools/         测试夹具与契约测试
+│  └─ test-tools/         workspace 包 @bp/test-tools：契约 harness、fake context、测试夹具
 ├─ games/                 运行时 .bpmap（不入库）
-├─ tools/                 接缝闸门、猴测、便携包
+├─ tools/                 仓库级脚本：接缝闸门、猴测、打包、启动器生成
 ├─ README.md              玩家使用说明
 ├─ DESIGN.md              架构、流程与边界
 ├─ INTEGRATION_GUIDE.md   游戏接入规则
