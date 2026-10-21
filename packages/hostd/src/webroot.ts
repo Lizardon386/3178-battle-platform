@@ -26,6 +26,8 @@ export interface SelfInfo {
 export interface WebRootOptions {
   root: string;
   modules: GameModule[];
+  /** 游戏 id → 实际产物目录；单文件包指向解包缓存，目录游戏不填则回退到 games/<id>。 */
+  gameRoots?: Map<string, string>;
   /** 组播浏览结果；没有本地壳时返回空表。 */
   getRooms?: () => DiscoveryRoom[];
   /** 页面用它生成邀请链接；老壳没有这个端点时客户端会退回 selfOrigin。 */
@@ -142,7 +144,12 @@ export function createWebServer(opts: WebRootOptions): Server {
     }
     if (path.startsWith('/games/')) {
       const relative = path.slice('/games/'.length);
-      const absolute = safeJoin(gamesDir, relative);
+      const slash = relative.indexOf('/');
+      const id = slash < 0 ? relative : relative.slice(0, slash);
+      const rest = slash < 0 ? '' : relative.slice(slash + 1);
+      if (!/^[a-z0-9][a-z0-9-]{0,31}$/.test(id)) return notFound(res, opts, path);
+      const gameRoot = opts.gameRoots?.get(id) ?? join(gamesDir, id);
+      const absolute = safeJoin(gameRoot, rest);
       if (!absolute || !existsSync(absolute) || !isFile(absolute)) return notFound(res, opts, path);
       return sendFile(res, absolute, true);
     }

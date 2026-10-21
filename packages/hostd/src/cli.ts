@@ -5,7 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { networkInterfaces } from 'node:os';
 import type { Server } from 'node:http';
-import { Engine, HostStore, WsTransport, LanAnnouncer, LanBrowser, loadGames, toDiscoveryRoom, type GameModule } from '@bp/server';
+import { Engine, HostStore, WsTransport, LanAnnouncer, LanBrowser, loadGameSet, toDiscoveryRoom, type GameSet } from '@bp/server';
 import type { DiscoveryRoom } from '@bp/protocol';
 import { createWebServer } from './webroot.js';
 import { dataDirNote, resolveDataDir } from './data-dir.js';
@@ -129,8 +129,10 @@ function banner(lines: string[]): void {
   console.log(`${'='.repeat(width + 4)}\n`);
 }
 
-async function loadAllGames(): Promise<GameModule[]> {
-  return loadGames(join(ROOT, 'games'));
+async function loadAllGames(): Promise<GameSet> {
+  const loaded = await loadGameSet(join(ROOT, 'games'), join(DATA_DIR, 'games'));
+  for (const error of loaded.errors) console.error(`[包] 跳过 ${error.source}：${error.message}`);
+  return loaded;
 }
 
 interface RunRecord {
@@ -186,9 +188,10 @@ async function closeServer(server: Server): Promise<void> {
  * 两种角色都有完整内核，所以本机界面上"自己开房"永远可用。
  */
 async function startShell(options: Options, role: 'host' | 'join'): Promise<void> {
-  const modules = await loadAllGames();
+  const loaded = await loadAllGames();
+  const { modules, roots } = loaded;
   if (modules.length === 0) {
-    console.error(`没在 ${join(ROOT, 'games')} 找到任何已构建的游戏模块，先跑 npm run build`);
+    console.error(`没在 ${join(ROOT, 'games')} 找到可用的游戏模块或单文件包，先跑 npm run build，或检查 .bpmap`);
     process.exit(1);
   }
   const engine = new Engine({ modules });
@@ -217,11 +220,11 @@ async function startShell(options: Options, role: 'host' | 'join'): Promise<void
   });
 
   const privateTransport = new WsTransport(engine, {});
-  const privateServer = createWebServer({ root: ROOT, modules, getRooms: () => browser?.list() ?? [], selfInfo });
+  const privateServer = createWebServer({ root: ROOT, modules, gameRoots: roots, getRooms: () => browser?.list() ?? [], selfInfo });
   privateTransport.attach(privateServer);
 
   const publicTransport = useLan ? new WsTransport(engine, {}) : null;
-  const publicServer = useLan ? createWebServer({ root: ROOT, modules, getRooms: () => [], selfInfo }) : null;
+  const publicServer = useLan ? createWebServer({ root: ROOT, modules, gameRoots: roots, getRooms: () => [], selfInfo }) : null;
   if (publicTransport && publicServer) publicTransport.attach(publicServer);
 
   const announcer = useLan && options.announce
@@ -377,7 +380,8 @@ function runStop(port: number | null): void {
 }
 
 async function runDiagnose(): Promise<void> {
-  const modules = await loadAllGames();
+  const loaded = await loadAllGames();
+  const modules = loaded.modules;
   console.log(`仓库根：${ROOT}`);
   console.log(`node：${process.version}（${process.execPath}）`);
   console.log(`已构建的游戏模块：${modules.length === 0 ? '（无，先 npm run build）' : modules.map((m) => `${m.id}@${m.version}`).join('、')}`);
