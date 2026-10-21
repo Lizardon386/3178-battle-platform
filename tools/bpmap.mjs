@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PACK_LIB = join(ROOT, 'packages', 'server', 'dist', 'pack.js');
@@ -23,7 +23,7 @@ function fail(message) {
 
 async function loadPackLib() {
   if (!existsSync(PACK_LIB)) fail('找不到 packages/server/dist/pack.js，先跑 npm run build');
-  return import(`file://${PACK_LIB}`);
+  return import(pathToFileURL(PACK_LIB).href);
 }
 
 function parse(argv) {
@@ -32,7 +32,9 @@ function parse(argv) {
   let out = null;
   for (let i = 1; i < argv.length; i += 1) {
     if (argv[i] === '--out') {
-      out = argv[i + 1] ?? null;
+      const value = argv[i + 1];
+      if (!value) fail('--out 后要跟文件路径');
+      out = value;
       i += 1;
     } else if (argv[i] === '--help' || argv[i] === '-h') {
       usage();
