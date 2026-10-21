@@ -17,7 +17,7 @@
 
 ## 当前状态
 
-**P0–P7 完成（P8.5 通道已通、游戏自带界面未做；本机入口已统一到 `127.0.0.1:3178`；R1 便携包已能构建，数据落在用户目录），`npm test` 140/140 全绿；`tools/check-seam.sh` 零命中；界面在 in-app Browser 里真点过。** 表现层底座已换成 `@tabler/core` + `@tabler/icons-webfont`（MIT，从 node_modules 同源挂 `/vendor/`）。代码全部在本目录，`uno-online` 的代码未动一行（HEAD 仍是 `e9ad2cc`，只有两档文档因改名被授权修改，仍是未提交状态）。
+**P0–P7 完成（P8.5 通道已通、游戏自带界面未做；本机入口已统一到 `127.0.0.1:3178`；R1 便携包已能构建，数据落在用户目录），`npm test` 145/145 全绿；`tools/check-seam.sh` 零命中；界面在 in-app Browser 里真点过。** 表现层底座已换成 `@tabler/core` + `@tabler/icons-webfont`（MIT，从 node_modules 同源挂 `/vendor/`）。代码全部在本目录，`uno-online` 的代码未动一行（HEAD 仍是 `e9ad2cc`，只有两档文档因改名被授权修改，仍是未提交状态）。
 
 浏览器实测（`hostd host --port 3289 --no-lan`，页面内 `evaluate_script` 驱动；2026-10-21 复测时 in-app Browser 有 831px 视口，几何和版式可以直接量）走过的路径：大厅取到 `/api/games` 两个游戏 → 建房坐 1 号位 → 客人 ws 入座 2 号、观战入 901 → 加电脑位 → 未准备时开局按钮写"等准备：客人乙"且 `disabled` → 客人准备后变"开始对局" → 开局后牌桌区渲染按视角裁剪的状态、倒计时 `剩 58 秒 → 剩 56 秒`（服务端时间轴生效）→ 房主点"离开房间"被中文提示挡住 → 踢观战生效 → 移交后 👑 跳到 2 号位、房主面板自动隐藏、通知条"房主已移交给 客人乙" → 此后离席成功回到大厅。
 
@@ -54,9 +54,9 @@
 - [x] P5 房主侧落盘与恢复
 - [x] P6 客户端 SDK 与房间界面骨架：地址可配、地址簿、票据、指数退避、`serverNow` 校时、错误码→UI、四个屏幕、邀请链接解析
 - [x] P7 `hostd` 宿主壳：`host`（本机界面 + 局域网监听 + 组播广播 + 可选隧道 + 邀请链接）、`join`（只开本机界面 + 组播监听）、`diagnose`、`stop`；不写防火墙规则
-- [~] P8.5 游戏模块下发：`/api/games`、`/games/<id>/*`(CORS)、客户端 sha256 校验 + blob 导入已通；**游戏自带界面还没有**，两个合成游戏走占位渲染
+- [~] P8.5 游戏模块下发：`/api/games`、`/games/<id>/*`(CORS)、客户端 sha256 校验 + 沙箱内 blob 导入已通；**两个合成游戏没有客户端入口**，走占位渲染
 - [ ] P8 把 uno 接成第一个真游戏（`uno.js` 规则包成 `GameModule`，**不动 uno-online**）
-- [ ] 给真游戏写沙箱挂载：`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`，否则房主能读玩家本机票据
+- [x] 游戏客户端沙箱挂载：`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`（`f03aa28`）
 - [ ] 双机实测组播发现：同 WiFi 下两台机器能否互相看见；首次绑定的防火墙弹窗行为
 - [ ] 双机实测隧道：`--tunnel` 需要本机装了 cloudflared，本会话未验证过一条真隧道
 - [x] R1 绿色便携包：官方签名 `node.exe` + 运行时子集 + 便携启动器，`npm run portable` 产出 `dist-portable/3178-battle-platform/`（本机剥离 PATH 验证；真干净机未测）
@@ -180,6 +180,10 @@
 - 2026-10-21 Qoder：**同步单文件包 CLI 的平台文档**：DESIGN 补 `tools/bpmap.mjs`、`packages/server/test/bpmap-cli.test.mjs`，测试计数改为 140；CONTEXT 当前状态改为 140/140。README 与 INTEGRATION_GUIDE 不动。
 
 - 2026-10-21 Qoder：**统一根目录四份文档的标题与头块**：标题统一为“3178-battle-platform（3178 对战平台）· <文档名>”；标题下的引用块统一成“用途一句话 + 最近更新”两行，日期提示移到引用块外。`INTEGRATION_GUIDE.md` 只改标题和头块，正文仍归单文件包会话。
+
+- 2026-10-21 Qoder：**同步 M2 沙箱完成**：客户端游戏入口改为 `sandbox=allow-scripts` iframe（不给 `allow-same-origin`），父页面负责取源码/校验，iframe 内 blob 导入并用 postMessage 桥接 view/event/action；README/DESIGN 的“接真游戏前要关进沙箱”改为已落地；DESIGN 补 `game-sandbox.html`、`sandbox-hooks.test.mjs`，测试计数 144，CONTEXT 当前状态与 P8.5/待办同步。
+
+- 2026-10-21 Qoder：**客户端入口哈希随清单下发**（`002bed8`）：单文件包的客户端入口哈希不再靠猜，随 manifest 一起给客户端；测试计数 144 → 145。平台文档同步到 145。
 
 **下一步顺序建议**：① **P8 把 uno 接成真游戏**——这是唯一能证伪"契约够不够宽"的检验（No Mercy 规则有碰/接龙/质疑/弃牌阶段，比两个合成游戏刁钻得多），做完 `tools/check-seam.sh` 必须仍然零命中；② 接真游戏前先把**沙箱挂载**补上（`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`），否则房主可向玩家浏览器注入可读票据的代码；③ **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；④ **双机实测**组播发现与隧道，本会话只在一台机器上证伪了编解码与 HTTP 路由；⑤ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家进房.bat`，**别手写**：改 [tools/gen-bat.mjs](tools/gen-bat.mjs) 再 `node tools/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。

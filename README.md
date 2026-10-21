@@ -24,7 +24,7 @@
 |---|---|---|
 | [README.md](README.md) | 玩家 / 房主 | 平台是什么、前置与双击入口、一局怎么走、命令行、限制与注意事项 |
 | [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 目标与约束；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
-| [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | GameModule / GameInstance / Effect[]、客户端入口、目录与构建、check-seam 要求 |
+| [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | GameModule / GameInstance / Effect[]、客户端入口、单文件包、沙箱限制、目录与构建、check-seam 要求 |
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
 
@@ -95,6 +95,6 @@ node packages/hostd/dist/cli.js stop --port 3178
 - **局域网组播与隧道未双机实测**：编解码和过期表有测试，真网卡收发与防火墙弹窗还没验证；跨网目前只能靠邀请链接，隧道域名每次启动都变。
 - **游戏自带界面还没有**：下发通道已通，但两个合成游戏没有客户端入口，对局区走内置占位渲染。
 - **宿主制天然不防房主**：权威进程在房主机上，“按视角裁剪”只防透视；移交只移权限、不迁进程。
-- **从房主拉游戏模块 = 在浏览器里执行房主给的代码**。哈希只保证字节没被改，不保证代码无害；接真游戏前要关进沙箱 iframe。
+- **从房主拉游戏模块 = 在浏览器里执行房主给的代码**。客户端现在默认把它放进 `sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`，沙箱里读不到本机存储和票据。哈希只保证字节没被改，不保证代码无害；沙箱降低风险，玩法本身仍由房主提供。
 
 本项目从同工作区的 `uno-online` 剥离连接层重写而来，那边代码一行没动；玩法改动归那边，连接/身份/分发改动归这里。

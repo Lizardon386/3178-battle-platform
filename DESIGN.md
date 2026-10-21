@@ -17,7 +17,7 @@
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 
-怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **140 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **145 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
 
 ## 2. 运行模式
 
@@ -210,7 +210,8 @@ flowchart TD
 | [packages/client/src/clock.ts](packages/client/src/clock.ts) | 服务端时间轴：`serverNow` + 单调钟外推 |
 | [packages/client/src/local-store.ts](packages/client/src/local-store.ts) | 地址簿、昵称、票据保管 |
 | [packages/client/src/view-model.ts](packages/client/src/view-model.ts) | 帧流 → UI 状态归约（revision 去重等） |
-| [packages/client/src/module-loader.ts](packages/client/src/module-loader.ts) | 游戏模块拉取、哈希校验、占位渲染 |
+| [packages/client/src/module-loader.ts](packages/client/src/module-loader.ts) | 游戏模块拉取、哈希校验、沙箱挂载、占位渲染 |
+| [packages/client/public/game-sandbox.html](packages/client/public/game-sandbox.html) | 沙箱 iframe 页面：执行游戏客户端源码，用 postMessage 桥接 view/action |
 | [packages/client/src/app.ts](packages/client/src/app.ts) | 界面装配：大厅 / 房间内 / 对局挂载点 |
 | [packages/client/public/index.html](packages/client/public/index.html) | 页面骨架与 import map（原生 ESM，无打包） |
 
@@ -253,6 +254,7 @@ flowchart TD
 | [packages/server/test/bpmap-cli.test.mjs](packages/server/test/bpmap-cli.test.mjs) | .bpmap CLI：打包、检查、坏输入 |
 | [packages/hostd/test/game-roots.test.mjs](packages/hostd/test/game-roots.test.mjs) | 游戏根映射：包目录、目录回退、越界 404 |
 | [packages/client/test/client-logic.test.mjs](packages/client/test/client-logic.test.mjs) | 客户端无 DOM 逻辑 |
+| [packages/client/test/sandbox-hooks.test.mjs](packages/client/test/sandbox-hooks.test.mjs) | 沙箱 iframe 的挂载、桥接与卸载 |
 | [packages/hostd/test/hostd-http.test.mjs](packages/hostd/test/hostd-http.test.mjs) | 宿主壳集成（静态路由、穿越防线、真 WS） |
 | [packages/hostd/test/bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) | 双击入口编码与结构防呆 |
 | [packages/hostd/test/shell-join.test.mjs](packages/hostd/test/shell-join.test.mjs) | join 模式壳建房→加电脑→开局 |
@@ -275,7 +277,7 @@ flowchart TD
 
 ```bash
 npm run build          # tsc -b 项目引用，无打包器
-npm test               # node --test（当前 140 例）
+npm test               # node --test（当前 145 例）
 bash tools/check-seam.sh                        # 闸门：平台包内不得出现玩法词
 npm run portable                                # 绿色便携包（dist-portable/，不入库）
 node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测
@@ -321,7 +323,7 @@ node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议�
 | 本机入口与存储 | 两个启动器都从 `127.0.0.1:3178` 打开；`3000` 只是局域网/隧道入口，昵称/地址簿/票据只有一份存储 |
 
 - **宿主制天然不防房主**：权威进程在房主机上，“按视角裁剪”只防透视；移交只移权限、不迁进程。
-- **从房主拉游戏模块 = 在浏览器里执行房主给的代码**。哈希只保证字节没被改，不保证代码无害；接真游戏前要关进沙箱 iframe（`sandbox=allow-scripts`，不给 `allow-same-origin`）。
+- **从房主拉游戏模块 = 在浏览器里执行房主给的代码**。客户端现在默认在 `sandbox=allow-scripts` 的 iframe 中执行游戏入口，不给 `allow-same-origin`；沙箱内拿不到本机存储、票据和宿主 DOM。哈希只保证字节没被改，不保证代码无害，沙箱降低风险但不改变“玩法由房主提供”这一事实。
 - **禁止**：写 Windows 防火墙入站规则、建议关闭 Smart App Control、`force push`。
 - **混合内容方向性**：`http://127.0.0.1` 页面可连 `ws://` 与 `wss://`；`https://` 页面连 `ws://` 会被浏览器拦。
 - 与 [uno-online](../uno-online/CONTEXT.md) 是同一份玩法的两种演进：玩法改动归那边，连接/身份/分发改动归这里；不要两边同时动同一份逻辑。
