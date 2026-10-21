@@ -17,7 +17,7 @@
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 
-怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **138 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试用 demo 游戏（`echo` 回合制 + 隐私 / `turncount` 无回合游标 + 无隐私 + 同时操作），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **140 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
 
 ## 2. 运行模式
 
@@ -234,6 +234,7 @@ flowchart TD
 | [tools/check-seam.sh](tools/check-seam.sh) | 接缝闸门 |
 | [tools/build-portable.mjs](tools/build-portable.mjs) | 绿色便携包装配与自检 |
 | [tools/monkey.mjs](tools/monkey.mjs) | 协议层猴测 |
+| [tools/bpmap.mjs](tools/bpmap.mjs) | .bpmap 打包与检查 CLI |
 | [tools/monkey-ui.page.js](tools/monkey-ui.page.js) | 页内 UI 猴测 |
 | [tools/repro-persist.mjs](tools/repro-persist.mjs) / [tools/repro-resume.mjs](tools/repro-resume.mjs) | 落盘窗口与票据重连复现 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 探索性 QA 报告：15 条 finding、修法与复跑计数 |
@@ -249,6 +250,7 @@ flowchart TD
 | [packages/server/test/store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) | 落盘恢复 + 信标编解码 |
 | [packages/server/test/pack.test.mjs](packages/server/test/pack.test.mjs) | 单文件包：往返、篡改、路径穿越、缓存复用 |
 | [packages/server/test/pack-loader.test.mjs](packages/server/test/pack-loader.test.mjs) | 单文件包：宿主加载、坏包跳过、同 id 去重 |
+| [packages/server/test/bpmap-cli.test.mjs](packages/server/test/bpmap-cli.test.mjs) | .bpmap CLI：打包、检查、坏输入 |
 | [packages/hostd/test/game-roots.test.mjs](packages/hostd/test/game-roots.test.mjs) | 游戏根映射：包目录、目录回退、越界 404 |
 | [packages/client/test/client-logic.test.mjs](packages/client/test/client-logic.test.mjs) | 客户端无 DOM 逻辑 |
 | [packages/hostd/test/hostd-http.test.mjs](packages/hostd/test/hostd-http.test.mjs) | 宿主壳集成（静态路由、穿越防线、真 WS） |
@@ -273,7 +275,7 @@ flowchart TD
 
 ```bash
 npm run build          # tsc -b 项目引用，无打包器
-npm test               # node --test（当前 138 例）
+npm test               # node --test（当前 140 例）
 bash tools/check-seam.sh                        # 闸门：平台包内不得出现玩法词
 npm run portable                                # 绿色便携包（dist-portable/，不入库）
 node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测

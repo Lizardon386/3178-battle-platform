@@ -18,7 +18,7 @@
 
 ## 当前状态
 
-**P0–P7 完成（P8.5 通道已通、游戏自带界面未做；本机入口已统一到 `127.0.0.1:3178`；R1 便携包已能构建，数据落在用户目录），`npm test` 131/131 全绿；`tools/check-seam.sh` 零命中；界面在 in-app Browser 里真点过。** 表现层底座已换成 `@tabler/core` + `@tabler/icons-webfont`（MIT，从 node_modules 同源挂 `/vendor/`）。代码全部在本目录，`uno-online` 的代码未动一行（HEAD 仍是 `e9ad2cc`，只有两档文档因改名被授权修改，仍是未提交状态）。
+**P0–P7 完成（P8.5 通道已通、游戏自带界面未做；本机入口已统一到 `127.0.0.1:3178`；R1 便携包已能构建，数据落在用户目录），`npm test` 140/140 全绿；`tools/check-seam.sh` 零命中；界面在 in-app Browser 里真点过。** 表现层底座已换成 `@tabler/core` + `@tabler/icons-webfont`（MIT，从 node_modules 同源挂 `/vendor/`）。代码全部在本目录，`uno-online` 的代码未动一行（HEAD 仍是 `e9ad2cc`，只有两档文档因改名被授权修改，仍是未提交状态）。
 
 浏览器实测（`hostd host --port 3289 --no-lan`，页面内 `evaluate_script` 驱动；2026-10-21 复测时 in-app Browser 有 831px 视口，几何和版式可以直接量）走过的路径：大厅取到 `/api/games` 两个游戏 → 建房坐 1 号位 → 客人 ws 入座 2 号、观战入 901 → 加电脑位 → 未准备时开局按钮写"等准备：客人乙"且 `disabled` → 客人准备后变"开始对局" → 开局后牌桌区渲染按视角裁剪的状态、倒计时 `剩 58 秒 → 剩 56 秒`（服务端时间轴生效）→ 房主点"离开房间"被中文提示挡住 → 踢观战生效 → 移交后 👑 跳到 2 号位、房主面板自动隐藏、通知条"房主已移交给 客人乙" → 此后离席成功回到大厅。
 
@@ -177,6 +177,8 @@
 
 - 2026-10-20 Qoder：**两个合成游戏的玩家可见名改为「测试回合制demo」「测试同时操作demo」**（用户要求测试游戏不要和玩家混淆；后者是“无回合、多人并发操作”，不是实时动作游戏）。内部 id 仍是 `echo` / `turncount`，不动 URL、房文件与票据；同步更新了 `/api/games` 断言、契约/客户端测试夹具、README/DESIGN 与字号预览页。历史记录里的旧名保留，不追改。
 - 2026-10-21 Qoder：**单文件包接入宿主**：loader 读包/解包/加载服务端入口，webroot 按 id 服务客户端产物，cli 扫描 `games/*.bpmap` 并把缓存放到解析后的数据目录；坏包跳过，不挡启动。包版本用 `模块版本+包哈希前 12 位` 参与版本闸。测试 **138/138**。
+
+- 2026-10-21 Qoder：**同步单文件包 CLI 的平台文档**：DESIGN 补 `tools/bpmap.mjs`、`packages/server/test/bpmap-cli.test.mjs`，测试计数改为 140；CONTEXT 当前状态改为 140/140。README 与 INTEGRATION_GUIDE 不动。
 
 **下一步顺序建议**：① **P8 把 uno 接成真游戏**——这是唯一能证伪"契约够不够宽"的检验（No Mercy 规则有碰/接龙/质疑/弃牌阶段，比两个合成游戏刁钻得多），做完 `tools/check-seam.sh` 必须仍然零命中；② 接真游戏前先把**沙箱挂载**补上（`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`），否则房主可向玩家浏览器注入可读票据的代码；③ **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；④ **双机实测**组播发现与隧道，本会话只在一台机器上证伪了编解码与 HTTP 路由；⑤ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家进房.bat`，**别手写**：改 [tools/gen-bat.mjs](tools/gen-bat.mjs) 再 `node tools/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。
