@@ -7,9 +7,9 @@ import { WebSocket } from 'ws';
 /**
  * 量一件事：从"建房成功"到"盘上出现这个房的文件"要多久。
  * 这段就是硬杀（点控制台窗口的 X 也是 TerminateProcess，不走收尾）会丢房的窗口。
- *   node tools/repro-persist.mjs [端口]
+ *   node tools/devtools/repro-persist.mjs [端口]
  */
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PORT = Number(process.argv[2] ?? 3521);
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const DATA = join(ROOT, 'data');

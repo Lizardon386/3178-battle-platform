@@ -7,9 +7,9 @@ import { WebSocket } from 'ws';
 /**
  * 最小复现：房主 + 玩家同房 → 硬杀房主端 → 两边各自用真票据重连。
  * 问的是：玩家坐不坐得回去？（协议层猴测报了两例"真票据被拒"，都是玩家座位）
- *   node tools/repro-resume.mjs [端口] [重启前等多少毫秒]
+ *   node tools/devtools/repro-resume.mjs [端口] [重启前等多少毫秒]
  */
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PORT = Number(process.argv[2] ?? 3531);
 const WAIT = Number(process.argv[3] ?? 1500);
 const ORIGIN = `http://127.0.0.1:${PORT}`;

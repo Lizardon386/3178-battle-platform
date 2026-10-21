@@ -3,7 +3,7 @@
  * 协议层猴测：多开 N 个模拟用户，随机（含故意非法）地打宿主壳，
  * 每收到一帧就跑一遍不变式检查。中途可以随机重启房主端，逼客户端走"重连坐回原位"。
  *
- *   node tools/monkey.mjs --seed 7 --users 6 --steps 600 --restarts 2
+ *   node tools/devtools/monkey.mjs --seed 7 --users 6 --steps 600 --restarts 2
  *
  * 任何违规都会打印 seed + 那个用户的完整动作/帧轨迹，照 seed 重跑即可复现。
  */
@@ -12,9 +12,9 @@ import { readFileSync, existsSync, readdirSync, rmSync, statSync, unlinkSync } f
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
-import { PLATFORM_CODES, NOTICE_CODES } from '../packages/protocol/dist/index.js';
+import { PLATFORM_CODES, NOTICE_CODES } from '../../packages/protocol/dist/index.js';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 function arg(name, dflt) {
   const i = process.argv.indexOf(`--${name}`);
@@ -489,7 +489,7 @@ async function main() {
     console.log('不变式全部成立 ✔');
     process.exit(0);
   }
-  console.log(`\n发现 ${violations.length} 条违规（复现：node tools/monkey.mjs --seed ${SEED} --users ${USERS} --steps ${STEPS} --restarts ${RESTARTS}）\n`);
+  console.log(`\n发现 ${violations.length} 条违规（复现：node tools/devtools/monkey.mjs --seed ${SEED} --users ${USERS} --steps ${STEPS} --restarts ${RESTARTS}）\n`);
   for (const v of violations.slice(0, 12)) {
     console.log(`× [${v.kind}] 用户 ${v.user}：${v.detail}`);
     console.log('  时序：' + v.events.join('  '));

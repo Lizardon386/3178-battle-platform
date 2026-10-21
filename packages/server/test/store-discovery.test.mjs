@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } fro
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Engine, HostStore, STORE_VERSION, decodeBeacon, encodeBeacon, LanBrowser } from '@bp/server';
-import turnBasedFixture from '@bp/test-tools/test-games/turn-based';
+import turnBasedFixture from '@bp/testkit/test-games/turn-based';
 
 /** 房主侧落盘与局域网发现信标的测试：都不需要真网卡，也不需要真进程重启。 */
 

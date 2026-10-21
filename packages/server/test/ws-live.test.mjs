@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { WebSocket } from 'ws';
 import { Engine, WsTransport } from '@bp/server';
-import turnBasedFixture from '@bp/test-tools/test-games/turn-based';
-import simultaneousFixture from '@bp/test-tools/test-games/simultaneous';
+import turnBasedFixture from '@bp/testkit/test-games/turn-based';
+import simultaneousFixture from '@bp/testkit/test-games/simultaneous';
 
 /**
  * 真 WebSocket 端到端：走 HTTP 起服务、真客户端连、真 socket 收帧。

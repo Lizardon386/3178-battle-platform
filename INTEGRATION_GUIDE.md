@@ -77,11 +77,11 @@ export default {
 
 ## 5. 目录与构建
 
-平台仓库里的目录式模块只用于测试夹具：`packages/test-tools/test-games/`，由 test-tools 的 `tsconfig` 编译；`games/` 里只放生成的 `.bpmap`。第三方游戏在自己的工程里构建，打成 `.bpmap` 分发，不要把源码加进平台 monorepo。
+平台仓库里的目录式模块只用于测试夹具：`tools/testkit/test-games/`，由 testkit 的 `tsconfig` 编译；`games/` 里只放生成的 `.bpmap`。第三方游戏在自己的工程里构建，打成 `.bpmap` 分发，不要把源码加进平台 monorepo。
 
-`bash tools/check-seam.sh` 扫运行时平台包和 test-tools 的工具代码：运行时包里不能出现玩法词，也不能 import `games/`；测试夹具在 test-tools 里，按测试资产处理。
+`bash tools/devtools/check-seam.sh` 扫运行时平台包和 testkit 的工具代码：运行时包里不能出现玩法词，也不能 import `games/`；测试夹具在 testkit 里，按测试资产处理。
 
-参考夹具：[turn-based](packages/test-tools/test-games/turn-based/index.ts)、[simultaneous](packages/test-tools/test-games/simultaneous/index.ts)。
+参考夹具：[turn-based](tools/testkit/test-games/turn-based/index.ts)、[simultaneous](tools/testkit/test-games/simultaneous/index.ts)。
 
 ## 6. 单文件游戏包（.bpmap）
 
@@ -105,9 +105,9 @@ export default {
 - 打包、检查、调试解包：
 
 ```bash
-node tools/bpmap.mjs pack mygame --out mygame.bpmap
-node tools/bpmap.mjs inspect mygame.bpmap
-node tools/bpmap.mjs unpack mygame.bpmap ./mygame-unpacked
+node tools/devtools/bpmap.mjs pack mygame --out mygame.bpmap
+node tools/devtools/bpmap.mjs inspect mygame.bpmap
+node tools/devtools/bpmap.mjs unpack mygame.bpmap ./mygame-unpacked
 
 # 外部工程装 @bp/game-sdk 后也可以直接用 bpmap 这个 bin
 bpmap pack mygame --out mygame.bpmap

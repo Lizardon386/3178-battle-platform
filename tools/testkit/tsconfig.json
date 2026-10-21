@@ -8,8 +8,8 @@
   },
   "include": ["contract-harness/**/*.ts", "fake-context/**/*.ts", "test-games/**/*.ts"],
   "references": [
-    { "path": "../protocol" },
-    { "path": "../game-sdk" },
-    { "path": "../server" }
+    { "path": "../../packages/protocol" },
+    { "path": "../../packages/game-sdk" },
+    { "path": "../../packages/server" }
   ]
 }

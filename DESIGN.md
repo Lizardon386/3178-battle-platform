@@ -27,7 +27,7 @@
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 
-怎么算做成了（都能用工具验证）：`tools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试夹具（`测试夹具·回合制` + 隐私 / `测试夹具·同时操作` 无游标 + 无隐私 + 同时操作，在 `packages/test-tools/test-games/`），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **145 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+怎么算做成了（都能用工具验证）：`tools/devtools/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试夹具（`测试夹具·回合制` + 隐私 / `测试夹具·同时操作` 无游标 + 无隐私 + 同时操作，在 `tools/testkit/test-games/`），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **145 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
 
 ## 2. 运行模式
 
@@ -162,15 +162,16 @@ stateDiagram-v2
 
 ```text
 3178-battle-platform/
-├─ packages/              平台源码与测试包
+├─ packages/              平台源码
 │  ├─ game-sdk/           GameModule 契约、.bpmap 打包/读取、客户端入口类型
 │  ├─ protocol/           线消息、错误码、摘要、入站形状闸
 │  ├─ server/             引擎、房间、权限、落盘、传输、发现
 │  ├─ client/             浏览器端连接、视图、界面、沙箱挂载
-│  ├─ hostd/              宿主壳 host/join/diagnose/stop、静态路由
-│  └─ test-tools/         workspace 包 @bp/test-tools：契约 harness、fake context、测试夹具
+│  └─ hostd/              宿主壳 host/join/diagnose/stop、静态路由
+├─ tools/                 开发与测试工具
+│  ├─ testkit/            workspace 包 @bp/testkit：契约 harness、fake context、测试夹具
+│  └─ devtools/           仓库级脚本：接缝闸门、猴测、打包、启动器生成
 ├─ games/                 运行时 .bpmap（不入库）
-├─ tools/                 仓库级脚本：接缝闸门、猴测、打包、启动器生成
 ├─ README.md              玩家使用说明
 ├─ DESIGN.md              架构、流程与边界
 ├─ INTEGRATION_GUIDE.md   游戏接入规则
@@ -258,22 +259,22 @@ flowchart TD
 | [packages/hostd/src/webroot.ts](packages/hostd/src/webroot.ts) | 静态与接口路由（含 `/api/self`、游戏产物根映射） |
 | [packages/hostd/src/tunnel.ts](packages/hostd/src/tunnel.ts) | cloudflared 查找与隧道网址解析 |
 | [房主建房.bat](房主建房.bat) / [玩家进房.bat](玩家进房.bat) | 双击入口（CRLF） |
-| [tools/gen-bat.mjs](tools/gen-bat.mjs) | 生成 .bat，保证编码与启动器结构 |
+| [tools/devtools/gen-bat.mjs](tools/devtools/gen-bat.mjs) | 生成 .bat，保证编码与启动器结构 |
 
 **游戏与工具**
 
 | 文件 | 用途 |
 |---|---|
 | [games/](games/.gitkeep) | 运行时游戏包目录，只放生成的 `.bpmap` |
-| [packages/test-tools/test-games/turn-based/index.ts](packages/test-tools/test-games/turn-based/index.ts) | 测试夹具·回合制（id `fixture-turn`）：回合游标 + 隐私 |
-| [packages/test-tools/test-games/simultaneous/index.ts](packages/test-tools/test-games/simultaneous/index.ts) | 测试夹具·同时操作（id `fixture-simultaneous`）：无游标 + 无隐私 |
-| [tools/check-seam.sh](tools/check-seam.sh) | 接缝闸门 |
-| [tools/build-portable.mjs](tools/build-portable.mjs) | 绿色便携包装配与自检 |
-| [tools/monkey.mjs](tools/monkey.mjs) | 协议层猴测 |
-| [tools/bpmap.mjs](tools/bpmap.mjs) | .bpmap 打包/检查入口，调用 `@bp/game-sdk` CLI |
+| [tools/testkit/test-games/turn-based/index.ts](tools/testkit/test-games/turn-based/index.ts) | 测试夹具·回合制（id `fixture-turn`）：回合游标 + 隐私 |
+| [tools/testkit/test-games/simultaneous/index.ts](tools/testkit/test-games/simultaneous/index.ts) | 测试夹具·同时操作（id `fixture-simultaneous`）：无游标 + 无隐私 |
+| [tools/devtools/check-seam.sh](tools/devtools/check-seam.sh) | 接缝闸门 |
+| [tools/devtools/build-portable.mjs](tools/devtools/build-portable.mjs) | 绿色便携包装配与自检 |
+| [tools/devtools/monkey.mjs](tools/devtools/monkey.mjs) | 协议层猴测 |
+| [tools/devtools/bpmap.mjs](tools/devtools/bpmap.mjs) | .bpmap 打包/检查入口，调用 `@bp/game-sdk` CLI |
 | [packages/game-sdk/src/cli.ts](packages/game-sdk/src/cli.ts) | `pack` / `inspect` / `unpack` 的 CLI 实现 |
-| [tools/monkey-ui.page.js](tools/monkey-ui.page.js) | 页内 UI 猴测 |
-| [tools/repro-persist.mjs](tools/repro-persist.mjs) / [tools/repro-resume.mjs](tools/repro-resume.mjs) | 落盘窗口与票据重连复现 |
+| [tools/devtools/monkey-ui.page.js](tools/devtools/monkey-ui.page.js) | 页内 UI 猴测 |
+| [tools/devtools/repro-persist.mjs](tools/devtools/repro-persist.mjs) / [tools/devtools/repro-resume.mjs](tools/devtools/repro-resume.mjs) | 落盘窗口与票据重连复现 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 探索性 QA 报告：15 条 finding、修法与复跑计数 |
 
 **测试**
@@ -282,7 +283,7 @@ flowchart TD
 |---|---|
 | [packages/protocol/test/protocol.test.mjs](packages/protocol/test/protocol.test.mjs) | 协议与摘要 |
 | [packages/server/test/room-authority.test.mjs](packages/server/test/room-authority.test.mjs) | 房主权限/票据/座位模型 |
-| [packages/test-tools/test/contract.test.mjs](packages/test-tools/test/contract.test.mjs) | 两个测试夹具共用同一套接口断言 |
+| [tools/testkit/test/contract.test.mjs](tools/testkit/test/contract.test.mjs) | 两个测试夹具共用同一套接口断言 |
 | [packages/server/test/ws-live.test.mjs](packages/server/test/ws-live.test.mjs) | 真 socket 端到端 |
 | [packages/server/test/store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) | 落盘恢复 + 信标编解码 |
 | [packages/game-sdk/test/pack.test.mjs](packages/game-sdk/test/pack.test.mjs) | 单文件包：往返、篡改、路径穿越、缓存复用 |
@@ -314,14 +315,14 @@ flowchart TD
 ```bash
 npm run build          # tsc -b 项目引用，无打包器
 npm test               # node --test（当前 145 例）
-bash tools/check-seam.sh                        # 闸门：平台包内不得出现玩法词
+bash tools/devtools/check-seam.sh                        # 闸门：平台包内不得出现玩法词
 npm run portable                                # 绿色便携包（dist-portable/，不入库）
-node tools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测
+node tools/devtools/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测
 ```
 
 - `node --test` 跑目录参数在 Windows 下不可靠：必须用引号包住的 glob，并带 `--test-timeout`。
-- `.bat` 由 [tools/gen-bat.mjs](tools/gen-bat.mjs) 生成，别手写。
-- 便携包由 [tools/build-portable.mjs](tools/build-portable.mjs) 汇编并自检，产物 `dist-portable/` 不进 git。
+- `.bat` 由 [tools/devtools/gen-bat.mjs](tools/devtools/gen-bat.mjs) 生成，别手写。
+- 便携包由 [tools/devtools/build-portable.mjs](tools/devtools/build-portable.mjs) 汇编并自检，产物 `dist-portable/` 不进 git。
 
 ## 7. 关键设计决策
 

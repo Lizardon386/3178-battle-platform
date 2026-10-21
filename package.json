@@ -5,14 +5,15 @@
   "description": "游戏无关的宿主制联机对战平台内核（war3 式房间）",
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "tools/*"
   ],
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean",
-    "seam": "bash tools/check-seam.sh",
-    "portable": "node tools/build-portable.mjs",
-    "test": "npm run build && node packages/test-tools/scripts/pack-test-games.mjs && node --test --test-timeout=20000 \"packages/*/test/*.test.mjs\""
+    "seam": "bash tools/devtools/check-seam.sh",
+    "portable": "node tools/devtools/build-portable.mjs",
+    "test": "npm run build && node tools/testkit/scripts/pack-test-games.mjs && node --test --test-timeout=20000 \"packages/*/test/*.test.mjs\" \"tools/*/test/*.test.mjs\""
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

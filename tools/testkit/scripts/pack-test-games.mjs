@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { packDirectory, readPack, readPackSource } from '@bp/game-sdk/node';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-const testTools = join(root, 'packages', 'test-tools');
+const testTools = join(root, 'tools', 'testkit');
 const gamesDir = join(root, 'games');
 const specs = [
   { dir: 'turn-based', file: 'fixture-turn.bpmap' },

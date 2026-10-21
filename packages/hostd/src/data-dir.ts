@@ -8,7 +8,7 @@ const APP_DIR_NAME = '3178-battle-platform';
 /**
  * 数据目录的落点。
  *
- * 便携包（根目录带 `.portable-build.json`，由 tools/build-portable.mjs 写入）把数据放到
+ * 便携包（根目录带 `.portable-build.json`，由 tools/devtools/build-portable.mjs 写入）把数据放到
  * 用户目录：整个程序目录会被新版本直接替换掉，数据留在里面会在更新时一起消失。
  * 开发目录没有这个标记，数据仍跟着仓库走，方便测试和清理。
  *

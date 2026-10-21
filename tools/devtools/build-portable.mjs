@@ -11,10 +11,10 @@ import { renderHostBat, renderJoinBat, verifyBat } from './gen-bat.mjs';
  * 绿色便携包：官方签名的 node.exe + 运行所需产物，拷到干净机器双击就能跑。
  * 不打包源码、测试、TypeScript、整个 node_modules，也不碰 data/。
  *
- * 用法：node tools/build-portable.mjs [--out <目录>] [--node <node.exe>] [--skip-build] [--force]
+ * 用法：node tools/devtools/build-portable.mjs [--out <目录>] [--node <node.exe>] [--skip-build] [--force]
  */
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const DEFAULT_OUT = join(ROOT, 'dist-portable', '3178-battle-platform');
 const MARKER = '.portable-build.json';
 
@@ -28,7 +28,7 @@ function parseArgs(argv) {
     else if (token === '--allow-unsigned-node') args.allowUnsigned = true;
     else if (token === '--force') args.force = true;
     else if (token === '--help') {
-      console.log('用法：node tools/build-portable.mjs [--out <目录>] [--node <node.exe>] [--skip-build] [--force]');
+      console.log('用法：node tools/devtools/build-portable.mjs [--out <目录>] [--node <node.exe>] [--skip-build] [--force]');
       process.exit(0);
     }
   }
@@ -51,7 +51,7 @@ function build() {
   const result = spawnSync(process.execPath, [tsc, '-b'], { cwd: ROOT, stdio: 'inherit' });
   if (result.status !== 0) fail('tsc -b 失败，先修编译错误再打包');
   step('打包测试夹具');
-  const packed = spawnSync(process.execPath, [join(ROOT, 'packages', 'test-tools', 'scripts', 'pack-test-games.mjs')], {
+  const packed = spawnSync(process.execPath, [join(ROOT, 'tools', 'testkit', 'scripts', 'pack-test-games.mjs')], {
     cwd: ROOT,
     stdio: 'inherit',
   });

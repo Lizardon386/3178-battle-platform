@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { harness, createRoom } from '@bp/test-tools/contract-harness';
-import turnBasedFixture from '@bp/test-tools/test-games/turn-based';
-import simultaneousFixture from '@bp/test-tools/test-games/simultaneous';
+import { harness, createRoom } from '@bp/testkit/contract-harness';
+import turnBasedFixture from '@bp/testkit/test-games/turn-based';
+import simultaneousFixture from '@bp/testkit/test-games/simultaneous';
 
 /**
  * 契约测试：同一份平台内核 + 两个形状完全不同的测试夹具。

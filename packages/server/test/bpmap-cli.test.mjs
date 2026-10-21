@@ -9,7 +9,7 @@ import { readPack } from '@bp/server';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..', '..');
-const TOOL = join(ROOT, 'tools', 'bpmap.mjs');
+const TOOL = join(ROOT, 'tools', 'devtools', 'bpmap.mjs');
 
 function tempDir(prefix) {
   return mkdtempSync(join(tmpdir(), prefix));

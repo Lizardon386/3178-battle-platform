@@ -1,5 +1,5 @@
 {
-  "name": "@bp/test-tools",
+  "name": "@bp/testkit",
   "version": "0.1.0",
   "private": true,
   "type": "module",
