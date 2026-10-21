@@ -12,7 +12,7 @@
 | [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 目标与约束；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | GameModule / GameInstance / Effect[]、客户端入口、单文件包、沙箱限制、目录与构建、check-seam 要求 |
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
-| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
+| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条问题（4 高 / 9 中 / 2 低）、修法、实测证据、复跑次数、猴测台自身 9 个缺陷与未覆盖范围 |
 
 本仓库推到 GitHub，文档内部用仓库相对链接。数字都是实测的，改动时请同步。
 
@@ -169,11 +169,11 @@ stateDiagram-v2
 │  ├─ client/                        浏览器端连接、视图、界面、沙箱挂载
 │  └─ hostd/                         宿主壳 host/join/diagnose/stop、静态路由
 ├─ tools/                            开发与测试工具
-│  ├─ testkit/                       @bp/testkit：契约 harness、fake context、测试夹具
-│  ├─ checks/                        接缝闸门、猴测、落盘/重连复现
+│  ├─ testkit/                       @bp/testkit：接口测试脚手架、模拟上下文、测试夹具
+│  ├─ checks/                        架构检查、随机操作测试、存档/重连问题复现
 │  └─ packaging/                     便携包、.bpmap CLI、启动器生成
 ├─ games/                            运行时 .bpmap（不入库）
-├─ dogfood-output/                   探索性 QA 报告
+├─ dogfood-output/                   猴测报告：随机操作跑出的问题记录
 ├─ README.md                         玩家使用说明
 ├─ DESIGN.md                         架构、流程与边界
 ├─ INTEGRATION_GUIDE.md              游戏接入规则
@@ -270,14 +270,14 @@ flowchart TD
 | [games/](games/.gitkeep) | 运行时游戏包目录，只放生成的 `.bpmap` |
 | [tools/testkit/src/test-games/turn-based/index.ts](tools/testkit/src/test-games/turn-based/index.ts) | 测试夹具·回合制（id `fixture-turn`）：回合游标 + 隐私 |
 | [tools/testkit/src/test-games/simultaneous/index.ts](tools/testkit/src/test-games/simultaneous/index.ts) | 测试夹具·同时操作（id `fixture-simultaneous`）：无游标 + 无隐私 |
-| [tools/checks/check-seam.sh](tools/checks/check-seam.sh) | 接缝闸门 |
+| [tools/checks/check-seam.sh](tools/checks/check-seam.sh) | 架构检查：平台代码里不许出现玩法词 |
 | [tools/packaging/build-portable.mjs](tools/packaging/build-portable.mjs) | 绿色便携包装配与自检 |
 | [tools/checks/monkey.mjs](tools/checks/monkey.mjs) | 协议层猴测 |
 | [tools/packaging/bpmap.mjs](tools/packaging/bpmap.mjs) | .bpmap 打包/检查入口，调用 `@bp/game-sdk` CLI |
 | [packages/game-sdk/src/cli.ts](packages/game-sdk/src/cli.ts) | `pack` / `inspect` / `unpack` 的 CLI 实现 |
 | [tools/checks/monkey-ui.page.js](tools/checks/monkey-ui.page.js) | 页内 UI 猴测 |
 | [tools/checks/repro-persist.mjs](tools/checks/repro-persist.mjs) / [tools/checks/repro-resume.mjs](tools/checks/repro-resume.mjs) | 落盘窗口与票据重连复现 |
-| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 探索性 QA 报告：15 条 finding、修法与复跑计数 |
+| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 猴测报告：15 条问题、修法与复跑次数 |
 
 **测试**
 

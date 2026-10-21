@@ -12,7 +12,7 @@
 | [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 目标与约束；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | GameModule / GameInstance / Effect[]、客户端入口、单文件包、沙箱限制、目录与构建、check-seam 要求 |
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
-| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条 finding（4 High / 9 Medium / 2 Low）、修法、实测证据、复跑计数、猴测台自身 9 个缺陷与未覆盖范围 |
+| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条问题（4 高 / 9 中 / 2 低）、修法、实测证据、复跑次数、猴测台自身 9 个缺陷与未覆盖范围 |
 
 ## 1. 背景与目标
 
@@ -178,7 +178,7 @@
 | P6 | 客户端 SDK 与房间界面骨架（地址可配、地址簿、票据、退避、校时、槽位/聊天/房主面板、自绘下拉） | 已完成 | [client-logic.test.mjs](packages/client/test/client-logic.test.mjs) 23 例 + [style-hooks.test.mjs](packages/client/test/style-hooks.test.mjs) 11 例 + 浏览器实测与两层猴测（记录见 CONTEXT） |
 | P7 | `hostd` 宿主壳：host/join/diagnose/stop + 双监听（本机界面 + 局域网）+ 静态路由 + 邀请链接 + 双击入口 | 已完成（隧道未实测） | [hostd-http.test.mjs](packages/hostd/test/hostd-http.test.mjs) 8 例 + [bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) 5 例 + [shell-join.test.mjs](packages/hostd/test/shell-join.test.mjs) 4 例 + [sigint-shutdown.test.mjs](packages/hostd/test/sigint-shutdown.test.mjs) 2 例 + [dual-listener.test.mjs](packages/hostd/test/dual-listener.test.mjs) 1 例 |
 | P8.5 | 游戏模块下发通道：`/api/games` + `/games/<id>/*`(CORS) + 客户端哈希校验 + blob 导入；缺入口时占位渲染 | 通道已通，**游戏自带界面还没有** | 同上：产物可跨源取、穿越被挡 |
-| Q1 | 两层猴测台（协议层 + 页内 UI 层）与探索性 QA 报告 | 已完成，持续在跑 | 协议层 12 seed × 8 人 × 300 步 × 3 次硬重启 **0 违规**；UI 层多轮 0 违规；报告 [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) 15 条 finding + 台子自己的 9 个缺陷全记 |
+| Q1 | 两层猴测台（协议层 + 页内 UI 层）与猴测报告 | 已完成，持续在跑 | 协议层 12 seed × 8 人 × 300 步 × 3 次硬重启 **0 违规**；UI 层多轮 0 违规；报告 [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) 15 条 finding + 台子自己的 9 个缺陷全记 |
 | R1 | 绿色便携包（官方签名 `node.exe` + 运行时子集 + 便携启动器） | 已完成（本机剥离 PATH 验证；真干净机未测） | `npm run portable`：签名校验（OpenJS Foundation / Valid）+ 产物约 **94.2MB**；自检只用包内 `node.exe` 跑通 `diagnose`、host `/health`、`stop` 收尾 |
 ## 7. 给下一个 agent 的追加区
 
@@ -207,7 +207,7 @@
 
 - 2026-10-21 Qoder：**DESIGN 4.1 按当前源码树更新**：目录改用 `├─` / `└─` 层级树，列出 `packages/{game-sdk,protocol,server,client,hostd,testkit}`、`games/`、`tools/devtools/` 和四份根文档，每个节点带一句说明；包关系图补 `@bp/game-sdk`，游戏节点改为 `games/*.bpmap`。`data/` 与 `dist-portable/` 标为不入库的运行/打包产物，不画进源码树。
 
-- 2026-10-21 Qoder：**DESIGN 4.1 区分两个“tools”**：`tools/testkit` 是 workspace 包 `@bp/testkit`（契约 harness、fake context、测试夹具，测试会 import）；`tools/devtools/` 是仓库级脚本（闸门、猴测、打包、启动器生成），不参与 npm 包图。
+- 2026-10-21 Qoder：**DESIGN 4.1 区分两个“tools”**：`tools/testkit` 是 workspace 包 `@bp/testkit`（接口测试脚手架、模拟上下文、测试夹具，测试会 import）；`tools/devtools/` 是仓库级脚本（闸门、猴测、打包、启动器生成），不参与 npm 包图。
 
 - 2026-10-21 Qoder：**工具目录收口到 tools/**：`packages/test-tools` → `tools/testkit`（包名 `@bp/testkit`），`tools/` → `tools/devtools`（workspace `@bp/devtools`）；同步包名、imports、tsconfig、package-lock、闸门/猴测/打包路径和文档。`devtools/` 先保持平铺，脚本数量不大，不额外加说明文档或子目录。
 
@@ -215,9 +215,11 @@
 
 - 2026-10-21 Qoder：**testkit 源码收进 src/**：`contract-harness`、`fake-context`、`test-games` 移到 `tools/testkit/src/`；`tsconfig` 的 `rootDir` / `include`、`check-seam` 扫描路径、DESIGN 树和接入指南引用同步。测试与打包脚本仍在 testkit 外层。
 
-- 2026-10-21 Qoder：**devtools 按职责拆成 `tools/checks` 与 `tools/packaging`**：checks 放接缝闸门、猴测、落盘/重连复现；packaging 放便携包、`.bpmap` CLI、启动器生成。移除 `@bp/devtools` workspace，只保留 `@bp/testkit`；同步根脚本、测试路径和文档。
+- 2026-10-21 Qoder：**devtools 按职责拆成 `tools/checks` 与 `tools/packaging`**：checks 放架构检查、随机操作测试、存档/重连问题复现；packaging 放便携包、`.bpmap` CLI、启动器生成。移除 `@bp/devtools` workspace，只保留 `@bp/testkit`；同步根脚本、测试路径和文档。
 
 - 2026-10-21 Qoder：**DESIGN 4.1 目录树收回到包一级**：只列 `packages/*`、`tools/{testkit,checks,packaging}`、`games/` 和根文档，不再展开 `src/`、`test/`、`public/`；各目录的职责写在同行说明里。
+
+- 2026-10-21 Qoder：**文档去掉行话**：`dogfood-output` 的实际内容写成“猴测报告：随机操作跑出的问题记录”；`finding` / `High` / `Medium` / `Low` 改成“问题 / 高 / 中 / 低”；testkit 描述改成“接口测试脚手架、模拟上下文”；checks 描述改成“架构检查、随机操作测试、存档与重连问题复现”。
 
 **下一步顺序建议**：① **M3 试点**：拿一个具体回合制游戏（uno 或其他，或先把 `测试夹具·回合制` 补成带 AI 和客户端的测试夹具），验证“1 人 + 电脑打完整局”和 `.bpmap` 端到端；接入步骤写进 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。② **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；③ **双机实测**组播发现与隧道，目前只在一台机器上证伪了编解码与 HTTP 路由；④ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家进房.bat`，**别手写**：改 [tools/packaging/gen-bat.mjs](tools/packaging/gen-bat.mjs) 再 `node tools/packaging/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。
