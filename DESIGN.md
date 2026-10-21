@@ -1,10 +1,10 @@
 # 3178-battle-platform（3178 对战平台）· 方案架构设计
 
-> 写给方案评审、维护和二次开发的人。内容按运行模式、核心流程、架构接缝、协议、语义和工程约束排列；游戏接入见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。
-> 使用者说明见 [README.md](README.md)；进度、逐阶段验收凭据与 agent 交接记录见 [CONTEXT.md](CONTEXT.md)。
+> 写给方案评审、维护和二次开发的人；运行模式、流程、接缝、协议、语义和工程约束都在这里，使用者说明见 [README.md](README.md)，进度与交接见 [CONTEXT.md](CONTEXT.md)。
 > 最近更新：2026-10-21
->
-> 本仓库推到 GitHub，文档内部一律用仓库相对链接。数字都是实测的，改动时请同步这里。
+<!-- 日期必须留在这个 blockquote 里：check-docs.sh 的 [新]/[旧]/[期] 只读这里。改日期时 README、DESIGN、CONTEXT 顶部要同一天。 -->
+
+本仓库推到 GitHub，文档内部用仓库相对链接。数字都是实测的，改动时请同步。
 
 ## 1. 目标与约束
 

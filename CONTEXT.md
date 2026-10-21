@@ -1,9 +1,8 @@
-# 3178-battle-platform · 会话上下文与进展
+# 3178-battle-platform（3178 对战平台）· 上下文与进展
 
-> 本文件是任务交接档案，供后续 agent 实时跟进。改动产物后请更新「当前状态」「变更记录」。
-> 最近更新：2026-10-21（Qoder）
-<!-- 日期必须留在这行 blockquote 上：check-docs.sh 的 [新]/[旧]/[期] 只读这一行，正文里写日期不算顶部日期。改完本档也要把 README 与 DESIGN 顶部改成同一天，否则 [期] 判失败。 -->
-> 面向使用者的说明见同目录 [README.md](README.md)，方案设计（设计取舍 / 架构接缝 / 已定语义 / 工程硬约束）见 [DESIGN.md](DESIGN.md)。
+> 本文件是任务交接档案，供后续 agent 跟进；改动产物后请更新「当前状态」「变更记录」。使用者说明见 [README.md](README.md)，方案设计见 [DESIGN.md](DESIGN.md)。
+> 最近更新：2026-10-21
+<!-- 日期必须留在这个 blockquote 里：check-docs.sh 的 [新]/[旧]/[期] 只读这里。改日期时 README、DESIGN、CONTEXT 顶部要同一天。 -->
 
 ## 背景与目标
 
@@ -179,6 +178,8 @@
 - 2026-10-21 Qoder：**单文件包接入宿主**：loader 读包/解包/加载服务端入口，webroot 按 id 服务客户端产物，cli 扫描 `games/*.bpmap` 并把缓存放到解析后的数据目录；坏包跳过，不挡启动。包版本用 `模块版本+包哈希前 12 位` 参与版本闸。测试 **138/138**。
 
 - 2026-10-21 Qoder：**同步单文件包 CLI 的平台文档**：DESIGN 补 `tools/bpmap.mjs`、`packages/server/test/bpmap-cli.test.mjs`，测试计数改为 140；CONTEXT 当前状态改为 140/140。README 与 INTEGRATION_GUIDE 不动。
+
+- 2026-10-21 Qoder：**统一根目录四份文档的标题与头块**：标题统一为“3178-battle-platform（3178 对战平台）· <文档名>”；标题下的引用块统一成“用途一句话 + 最近更新”两行，日期提示移到引用块外。`INTEGRATION_GUIDE.md` 只改标题和头块，正文仍归单文件包会话。
 
 **下一步顺序建议**：① **P8 把 uno 接成真游戏**——这是唯一能证伪"契约够不够宽"的检验（No Mercy 规则有碰/接龙/质疑/弃牌阶段，比两个合成游戏刁钻得多），做完 `tools/check-seam.sh` 必须仍然零命中；② 接真游戏前先把**沙箱挂载**补上（`sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`），否则房主可向玩家浏览器注入可读票据的代码；③ **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；④ **双机实测**组播发现与隧道，本会话只在一台机器上证伪了编解码与 HTTP 路由；⑤ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家进房.bat`，**别手写**：改 [tools/gen-bat.mjs](tools/gen-bat.mjs) 再 `node tools/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。

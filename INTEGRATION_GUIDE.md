@@ -1,7 +1,7 @@
-# 游戏接入指南
+# 3178-battle-platform（3178 对战平台）· 游戏接入指南
 
-> 写给要接新游戏的人。平台架构见 [DESIGN.md](DESIGN.md)，玩家说明见 [README.md](README.md)。
-> 最近更新：2026-10-20
+> 写给要接新游戏的人；平台架构见 [DESIGN.md](DESIGN.md)，玩家说明见 [README.md](README.md)。
+> 最近更新：2026-10-21
 
 把游戏接进平台，需要实现 [module-api.ts](packages/server/src/module-api.ts) 里的两个接口。平台负责房间、座位、权限和消息投递，玩法逻辑放在游戏模块里。
 
