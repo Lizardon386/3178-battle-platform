@@ -35,7 +35,7 @@
 |---|---|---|
 | 协议包（消息目录、错误码、握手、稳定摘要、形状闸门） | [packages/protocol/src](packages/protocol/src/wire.ts) | [protocol.test.mjs](packages/protocol/test/protocol.test.mjs) 9 例 |
 | 座位模型 + 房主权限 + 票据 + Ready 闸 | [room.ts](packages/server/src/room.ts) / [authority.ts](packages/server/src/authority.ts) | [room-authority.test.mjs](packages/server/test/room-authority.test.mjs) 14 例 |
-| `GameModule` 契约 + 两个测试夹具 + 同一断言集 | [module-api.ts](packages/game-sdk/src/module-api.ts) / [engine.ts](packages/server/src/engine.ts) | [contract.test.mjs](tools/testkit/test/contract.test.mjs) 19 例 |
+| `GameModule` 契约 + 两个测试夹具 + 同一断言集 | [module-api.ts](packages/game-sdk/src/contract/module-api.ts) / [engine.ts](packages/server/src/engine.ts) | [contract.test.mjs](tools/testkit/test/contract.test.mjs) 19 例 |
 | ws 传输、限流、Origin 策略、心跳、真 socket 双游戏 | [transport.ts](packages/server/src/transport.ts) | [ws-live.test.mjs](packages/server/test/ws-live.test.mjs) 4 例 |
 | 房主侧落盘/恢复（原子写、版本闸、票据幸存、坏文件不挡启动）+ 局域网组播信标（编解码/过期表；真网卡未实测） | [store.ts](packages/server/src/store.ts) / [discovery.ts](packages/server/src/discovery.ts) | [store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) 11 例 |
 | 客户端 SDK + 房间界面（地址可配、地址簿、票据、退避、校时、槽位、聊天、房主面板、邀请链接） | [packages/client/src/app.ts](packages/client/src/app.ts) | [client-logic.test.mjs](packages/client/test/client-logic.test.mjs) 12 例 + 上面的浏览器实测 |

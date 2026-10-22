@@ -202,7 +202,7 @@ flowchart TD
 ### 4.2 三处接缝
 
 - **线协议**（`packages/protocol`）：消息目录与错误码是客户端/服务端唯一的字据。
-- **`GameModule` / `GameInstance` 接口**（`packages/game-sdk/src/module-api.ts`；`packages/server/src/module-api.ts` 转出）：运行时按 id 动态加载目录游戏或单文件包，平台源码不 import 游戏。
+- **`GameModule` / `GameInstance` 接口**（`packages/game-sdk/src/contract/module-api.ts`；`packages/server/src/module-api.ts` 转出）：运行时按 id 动态加载目录游戏或单文件包，平台源码不 import 游戏。
 - **`Effect[]` 出口**：游戏碰不到 socket；投递、限流、视角裁剪、审计都在平台。
 
 > 接一个新游戏（GameModule / GameInstance / 客户端入口 / 目录与构建）见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。
@@ -226,7 +226,7 @@ flowchart TD
 | [packages/server/src/engine.ts](packages/server/src/engine.ts) | 引擎：线消息 → 房间/游戏操作 → 出站编排 |
 | [packages/server/src/room.ts](packages/server/src/room.ts) | 座位表、房主标记、聊天、revision、落盘导出/恢复 |
 | [packages/server/src/authority.ts](packages/server/src/authority.ts) | 权限判定集中处 |
-| [packages/game-sdk/src/module-api.ts](packages/game-sdk/src/module-api.ts) | `GameModule` / `GameInstance` / `Effect` 接口（契约源） |
+| [packages/game-sdk/src/contract/module-api.ts](packages/game-sdk/src/contract/module-api.ts) | `GameModule` / `GameInstance` / `Effect` 接口（契约源） |
 | [packages/server/src/module-api.ts](packages/server/src/module-api.ts) | 转出 SDK 契约，兼容服务端现有 import |
 | [packages/server/src/loader.ts](packages/server/src/loader.ts) | 运行时按 id 动态加载目录游戏或单文件包 |
 | [packages/game-sdk/src/node/pack.ts](packages/game-sdk/src/node/pack.ts) | 单文件游戏包的读取、校验、解包与缓存 |
@@ -246,7 +246,7 @@ flowchart TD
 | [packages/client/src/clock.ts](packages/client/src/clock.ts) | 服务端时间轴：`serverNow` + 单调钟外推 |
 | [packages/client/src/local-store.ts](packages/client/src/local-store.ts) | 地址簿、昵称、票据保管 |
 | [packages/client/src/view-model.ts](packages/client/src/view-model.ts) | 帧流 → UI 状态归约（revision 去重等） |
-| [packages/game-sdk/src/client.ts](packages/game-sdk/src/client.ts) | 游戏客户端入口的 `mount` / `unmount` / `onEvent` 类型 |
+| [packages/game-sdk/src/contract/client.ts](packages/game-sdk/src/contract/client.ts) | 游戏客户端入口的 `mount` / `unmount` / `onEvent` 类型 |
 | [packages/client/src/module-loader.ts](packages/client/src/module-loader.ts) | 游戏模块拉取、哈希校验、沙箱挂载、占位渲染 |
 | [packages/client/public/game-sandbox.html](packages/client/public/game-sandbox.html) | 沙箱 iframe 页面：执行游戏客户端源码，用 postMessage 桥接 view/action |
 | [packages/client/src/app.ts](packages/client/src/app.ts) | 界面装配：大厅 / 房间内 / 对局挂载点 |
@@ -274,7 +274,7 @@ flowchart TD
 | [tools/packaging/build-portable.mjs](tools/packaging/build-portable.mjs) | 绿色便携包装配与自检 |
 | [tools/checks/monkey.mjs](tools/checks/monkey.mjs) | 协议层猴测 |
 | [tools/packaging/bpmap.mjs](tools/packaging/bpmap.mjs) | .bpmap 打包/检查入口，调用 `@bp/game-sdk` CLI |
-| [packages/game-sdk/src/cli.ts](packages/game-sdk/src/cli.ts) | `pack` / `inspect` / `unpack` 的 CLI 实现 |
+| [packages/game-sdk/src/cli/index.ts](packages/game-sdk/src/cli/index.ts) | `pack` / `inspect` / `unpack` 的 CLI 实现 |
 | [tools/checks/monkey-ui.page.js](tools/checks/monkey-ui.page.js) | 页内 UI 猴测 |
 | [tools/checks/repro-persist.mjs](tools/checks/repro-persist.mjs) / [tools/checks/repro-resume.mjs](tools/checks/repro-resume.mjs) | 落盘窗口与票据重连复现 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 猴测报告：15 条问题、修法与复跑次数 |
