@@ -18,6 +18,14 @@
       "types": "./dist/node/pack.d.ts",
       "default": "./dist/node/pack.js"
     },
+    "./kit": {
+      "types": "./dist/kit/client/index.d.ts",
+      "default": "./dist/kit/client/index.js"
+    },
+    "./kit/server": {
+      "types": "./dist/kit/server/index.d.ts",
+      "default": "./dist/kit/server/index.js"
+    },
     "./package.json": "./package.json"
   },
   "bin": {
