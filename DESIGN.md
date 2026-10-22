@@ -176,7 +176,7 @@ stateDiagram-v2
 ├─ dogfood-output/                   猴测报告
 ├─ README.md                         玩家使用说明
 ├─ DESIGN.md                         架构、流程与边界
-├─ INTEGRATION_GUIDE.md              游戏接入规则
+├─ INTEGRATION_GUIDE.md              平台 SDK 接入开发指南
 └─ CONTEXT.md                        进度、验收与交接记录
 ```
 
