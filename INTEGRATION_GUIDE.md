@@ -24,8 +24,8 @@
 | 纯单机、没有联机计划的游戏 | 不作为 SDK 模式；单机用“建房 + 电脑位”；纯单机不建议接平台 |
 | 游戏内事件流（谁死了/回城/轮到谁） | 已提供 `FeedLog` / `FeedPanel` |
 | 座位颜色 | 已提供 `seatColor` |
-| 游戏内聊天 | 平台桥已通；`ChatPanel` 正在实现，当前可直接监听桥事件 |
-| Tab 记分板 | 设计已定，组件正在实现 |
+| 游戏内聊天 | 已提供 `ChatPanel`，复用平台房间聊天 |
+| Tab 记分板 | 已提供 `ScoreboardPanel`，列由游戏定义 |
 | 版本自检、一键升级 | `/api/version` 已可用；`bpmap doctor` / `upgrade` 规划中 |
 
 纯单机游戏接入平台不会简化玩法开发：平台只提供房间、传输、打包、沙箱和少量通用组件，不提供引擎、渲染、物理、动画、关卡编辑器或 AI。单机游戏应该先问自己为什么要经过 3178；如果答案只是“想有个启动器”，普通静态站或现成发行渠道更直接。
@@ -37,7 +37,7 @@
 - `GameModule` / `GameInstance` / `Effect` / `GameContext` 契约；
 - `stableDigest` 与客户端契约类型；
 - `.bpmap` 打包库和 `bpmap` CLI；
-- 可选的 game-kit：事件流、座位颜色，以及后续的聊天/记分板。
+- 可选的 game-kit：事件流、聊天、记分板、座位颜色。
 
 它不提供引擎、渲染器、物理、动画、关卡编辑器、寻路、AI 行为、账号、成就或排行榜。房间、座位、权威、传输、重连和落盘由平台负责。
 
@@ -245,8 +245,8 @@ bpmap pack dist-pack --out dist/mygame.bpmap
 game-kit 在同一个 SDK 包里，通过子路径导入：
 
 ```ts
-import { FeedLog } from '@bp/game-sdk/kit/server';       // 服务端
-import { FeedPanel, seatColor } from '@bp/game-sdk/kit';  // 客户端
+import { FeedLog } from '@bp/game-sdk/kit/server';                 // 服务端
+import { ChatPanel, FeedPanel, ScoreboardPanel, seatColor } from '@bp/game-sdk/kit'; // 客户端
 ```
 
 它只提供跨游戏的展示/数据组件，不提供引擎。
@@ -299,42 +299,52 @@ feed.handleEvent(event);                       // 放进 onEvent
 - `onEntry` 只回调新到的事件，初始历史不会触发。
 - 不挂 `mount` 时是 headless，自己画 HUD 也可以。
 
-### 7.2 聊天（平台桥已通，面板在实现）
+### 7.2 聊天（已提供）
 
-平台已经会把房间聊天和座位信息送进游戏 iframe，事件名是：
+平台会把房间聊天和座位信息送进游戏 iframe，事件名是：
 
 - `bp:chat-history`：最近 100 条聊天，内容变化时重推；**没有增量 `bp:chat`，以 history 为准**。
 - `bp:room`：`{ code, phase, seats } | null`，座位或阶段变化时重推。
 - `bp:chat`：已预留单条事件，父页面暂不发送。
 
-当前可以直接监听：
+直接用面板：
+
+```ts
+import { ChatPanel } from '@bp/game-sdk/kit';
+
+const chat = new ChatPanel({
+  mount: chatEl,
+  showSystem: true,
+});
+```
+
+- 面板自动监听 `bp:chat-history`，整表替换；历史以平台为准。
+- 输入提交后默认在 iframe 里 `parent.postMessage({ type: 'chat', text })`；也可以用 `onSend` 换成自己的发送方式。
+- 纯文本渲染，系统行可过滤，自动滚动；`onLine` 只回调新消息。
+- 不挂 `mount` 时是 headless，自己画聊天也可以。
+
+自己画时直接监听桥：
 
 ```ts
 window.addEventListener('bp:chat-history', (event) => {
   renderChat((event as CustomEvent).detail);
 });
 
-window.addEventListener('bp:room', (event) => {
-  renderSeats((event as CustomEvent).detail);
-});
-
 parent.postMessage({ type: 'chat', text }, '*');   // 只发文本
 ```
 
-父页面会校验 1..300 字、对局阶段和连接状态，发送者身份由服务端座位决定，游戏不能伪造。
+父页面会校验 1..300 字、对局阶段和连接状态，发送者身份由服务端座位决定，游戏不能伪造。聊天复用平台房间聊天：200 条历史、落盘、限流都在平台侧，不要自己再存一份。
 
-聊天复用平台房间聊天：200 条历史、落盘、限流都在平台侧，不要自己再存一份。`ui.chat: 'game'` 协议字段已预留，但 SDK 还没把它带进 manifest；当前父页面仍显示平台聊天卡，等后续接入 `ChatPanel` 后再用这个开关。
+`ui.chat: 'game'` 协议字段已预留，但 SDK 还没把它带进 manifest；当前父页面仍显示平台聊天卡，等后续接入 `ui.chat` 后再用这个开关。现在用 `ChatPanel` 会出现平台聊天卡和游戏内聊天两份，接入前先接受这个重复，或者暂不挂 `ChatPanel`。
 
-`ChatPanel` 会封装 history、发送、纯文本渲染和系统行过滤；在它落地前，按上面的桥自己画即可。
-
-### 7.3 记分板（组件在实现）
+### 7.3 记分板（已提供）
 
 记分板完全由游戏定义列和值，平台只提供座位元数据（名字、队伍、颜色、连接状态、房主标记）。没有固定的“击杀/死亡”列。
 
-目标接口：
-
 ```ts
-new ScoreboardPanel({
+import { ScoreboardPanel } from '@bp/game-sdk/kit';
+
+const board = new ScoreboardPanel({
   mount: el,
   rows: view.scoreboard.rows,   // [{ seatId, values: { ... } }]
   columns: [
@@ -348,9 +358,12 @@ new ScoreboardPanel({
 });
 ```
 
-- `value` 可以是字段名或函数；`format` 只返回文本，需要图标时用 `render` 返回 DOM。
+- 面板自动监听 `bp:room`，用平台座位表补齐玩家名、队伍、连接状态和房主标记；每次游戏视图更新时调用 `board.setRows(view.scoreboard.rows)`。
+- 座位是主列表：没有游戏行的玩家也会显示，有行但没座位的排在后面。
+- `value` 可以是字段名或函数；`format` 只返回文本，需要图标时用 `render` 返回 DOM 节点。
+- 点表头可以切换排序；也可以在初始化时给 `sort`。没有 `sortValue` 时按列值比较，缺值始终排最后。
 - 行和值按视角给，观战/对手不能看到隐藏数据。
-- 自己的 RTT 暂未通过桥传给 iframe；第一版只显示连接状态，不假装有全员 ping。
+- 自己的 RTT 暂未通过桥传给 iframe；当前只显示连接状态，不假装有全员 ping。
 
 ### 7.4 座位颜色（已提供）
 
