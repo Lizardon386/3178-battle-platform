@@ -70,15 +70,18 @@ CLI 需要 Node 24+；游戏客户端本身跑在浏览器里。
 
 ```text
 mygame/
-  src/server.ts          # GameModule
-  src/client.ts          # 可选：客户端入口
-  src/assets/            # 图片、音频等
-  dist-pack/             # 只放构建产物，给 bpmap pack 用
-    bpmap.json
-    server.js
-    client/client.js
-    client/assets/
-  dist/mygame.bpmap      # 最终分发包
+├─ src/
+│  ├─ server.ts          # GameModule
+│  ├─ client.ts          # 可选：客户端入口
+│  └─ assets/            # 图片、音频等
+├─ dist-pack/            # 只放构建产物，给 bpmap pack 用
+│  ├─ bpmap.json
+│  ├─ server.js
+│  └─ client/
+│     ├─ client.js
+│     └─ assets/
+└─ dist/
+   └─ mygame.bpmap       # 最终分发包
 ```
 
 步骤：
@@ -131,9 +134,11 @@ node packages/hostd/dist/cli.js host --port 3178 --lan-port 3000
 
 打开 `http://127.0.0.1:3178`，建房时应该能在游戏列表里看到它。宿主只在启动时扫描 `games/`，换包后要重启。
 
-7. 迭代：重新构建、重新 `bpmap pack`、替换 `games/` 里的同名包、重启宿主。不要同时留同一个 `id` 的两个包，加载器会跳过后面的。
+7. 迭代：重新构建、重新 `bpmap pack`、替换 `games/` 里的同名包、重启宿主。
 
-打包前先测规则：用 `node:test` 直接调用 `create()` / `begin()` / `handle()`，注入固定时钟和随机源；这比每次都起宿主快。
+   不要同时留同一个 `id` 的两个包，加载器会跳过后面的。
+
+   打包前先测规则：用 `node:test` 直接调用 `create()` / `begin()` / `handle()`，注入固定时钟和随机源；这比每次都起宿主快。
 
 ### 1.5 模式与适用边界
 
