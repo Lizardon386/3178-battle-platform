@@ -39,7 +39,14 @@ export function isGameModule(value: unknown): value is GameModule {
   if (typeof m.normalizeConfig !== 'function' || typeof m.rulesHashOf !== 'function') return false;
   if (typeof m.create !== 'function' || typeof m.resume !== 'function') return false;
   const seats = m.seats as { min?: unknown; max?: unknown } | undefined;
-  return typeof seats?.min === 'number' && typeof seats?.max === 'number';
+  if (typeof seats?.min !== 'number' || typeof seats?.max !== 'number') return false;
+  if (m.ui !== undefined) {
+    if (typeof m.ui !== 'object' || m.ui === null || Array.isArray(m.ui)) return false;
+    const ui = m.ui as Record<string, unknown>;
+    if (Object.keys(ui).some((key) => key !== 'chat')) return false;
+    if (ui.chat !== undefined && ui.chat !== 'platform' && ui.chat !== 'game') return false;
+  }
+  return true;
 }
 
 function pickExport(loaded: Record<string, unknown>): GameModule | null {

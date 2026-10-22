@@ -26,7 +26,7 @@
 | 座位颜色 | 已提供 `seatColor` |
 | 游戏内聊天 | 已提供 `ChatPanel`，复用平台房间聊天 |
 | Tab 记分板 | 已提供 `ScoreboardPanel`，列由游戏定义 |
-| 版本自检、一键升级 | `/api/version` 已可用；`bpmap doctor` / `upgrade` 规划中 |
+| 版本自检、一键升级 | `/api/version` 和 `bpmap doctor` 已可用；`bpmap upgrade` 规划中 |
 
 纯单机游戏接入平台不会简化玩法开发：平台只提供房间、传输、打包、沙箱和少量通用组件，不提供引擎、渲染、物理、动画、关卡编辑器或 AI。单机游戏应该先问自己为什么要经过 3178；如果答案只是“想有个启动器”，普通静态站或现成发行渠道更直接。
 
@@ -115,7 +115,11 @@ cp -r src/assets/* dist-pack/client/assets/
 ```bash
 npx bpmap pack dist-pack --out dist/mygame.bpmap
 npx bpmap inspect dist/mygame.bpmap
+npx bpmap doctor dist-pack
+npx bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 ```
+
+`doctor` 检查入口文件、包格式，以及 `--host` 时宿主的模式/API 版本；当前包里还没有 `mode`/`apiVersion` 字段，`doctor` 对成品包按 `turn` / `apiVersion 1` 检查。
 
 6. 把包放进平台并启动宿主：
 
@@ -157,6 +161,14 @@ export const myModule: GameModule = {
 ```
 
 `id` 要匹配 `^[a-z0-9][a-z0-9-]{0,31}$`，并与 `bpmap.json` 的 `id` 一致。`version` 同理。
+
+可选 `ui` 声明客户端界面由谁负责：
+
+```ts
+ui: { chat: 'game' }   // 游戏自带聊天面板；缺省 platform，显示平台聊天卡
+```
+
+`ui.chat === 'game'` 时，父页面在对局阶段隐藏平台聊天卡。声明后记得在客户端挂 `ChatPanel`，否则玩家会看不到聊天。
 
 `rulesHashOf` 只摘要影响玩法的字段。房主改房名不应该让客人看到“房规不同”。`ctx` 里的 `now()` 和 `random()` 是平台注入的，测试可以按固定节奏推进，不用等真计时器。
 
@@ -335,7 +347,7 @@ parent.postMessage({ type: 'chat', text }, '*');   // 只发文本
 
 父页面会校验 1..300 字、对局阶段和连接状态，发送者身份由服务端座位决定，游戏不能伪造。聊天复用平台房间聊天：200 条历史、落盘、限流都在平台侧，不要自己再存一份。
 
-`ui.chat: 'game'` 协议字段已预留，但 SDK 还没把它带进 manifest；当前父页面仍显示平台聊天卡，等后续接入 `ui.chat` 后再用这个开关。现在用 `ChatPanel` 会出现平台聊天卡和游戏内聊天两份，接入前先接受这个重复，或者暂不挂 `ChatPanel`。
+在 `GameModule` 里声明 `ui: { chat: 'game' }` 后，父页面在对局阶段隐藏平台聊天卡；缺省值 `platform` 保持现状。声明了 `game` 就必须自己挂 `ChatPanel` 或画聊天，否则玩家没有聊天入口。
 
 ### 7.3 记分板（已提供）
 
@@ -398,16 +410,23 @@ const color = seatColor({ seatId: 's1', slot: 1, team: 1 });
 
 - 包内 `id` / `version` 必须和模块导出一致；
 - 宿主的包版本是 `模块版本+包哈希前 12 位`，客户端版本不一致会被版本闸挡住；
-- `GET /api/version` 返回平台版本、支持的包格式/协议/API/模式清单，可用于诊断。
+- `GET /api/version` 返回平台版本、支持的包格式/协议/API/模式清单，可用于诊断；
+- `bpmap doctor` 检查入口文件、包格式，带 `--host` 时再查宿主的 `packFormats`、`apiVersions`、`modes`：
+
+```bash
+npx bpmap doctor dist-pack
+npx bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
+```
+
+`doctor` 当前对源目录会读取可选的 `mode`/`apiVersion` 字段；成品 `.bpmap` 包头还没有这两个字段，所以按 `turn` / `apiVersion 1` 检查。
 
 规划中：
 
-- `GameModule.apiVersion`、`mode`、`profileVersion`，宿主只加载自己支持的版本；
-- `bpmap doctor` 在打包前检查清单、模块、宿主能力；
+- `GameModule.apiVersion`、`mode`、`profileVersion` 进入包清单，宿主只加载自己支持的版本；
 - `bpmap upgrade` 对有源码的旧工程做机械 codemod 和清单升级；编译后的 `.bpmap` 无法还原源码，只能靠宿主适配器或让作者重发；
 - 宿主保留“当前 + 上一个主版本”的适配器。
 
-在这些落地前，不要依赖 `bpmap doctor` / `upgrade` 命令。
+`bpmap upgrade` 还没实现前，不要依赖它。
 
 ## 10. 明确不做
 

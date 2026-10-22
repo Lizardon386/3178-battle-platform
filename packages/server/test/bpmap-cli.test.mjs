@@ -56,6 +56,35 @@ test('bpmap CLI：pack / inspect / unpack 往返', () => {
   assert.equal(readFileSync(join(target, 'client.js'), 'utf8'), 'export default {};\n');
 });
 
+test('bpmap doctor：源目录和单文件包都能检查入口', () => {
+  const source = sourceDir();
+  const sourceResult = run(['doctor', source]);
+  assert.equal(sourceResult.status, 0, sourceResult.stderr);
+  assert.match(sourceResult.stdout, /clisample 0\.1\.0/);
+  assert.match(sourceResult.stdout, /\[ok\] 服务端入口/);
+  assert.match(sourceResult.stdout, /\[ok\] 客户端入口/);
+
+  const out = join(tempDir('bp-cli-doctor-'), 'clisample.bpmap');
+  const packed = run(['pack', source, '--out', out]);
+  assert.equal(packed.status, 0, packed.stderr);
+  const packResult = run(['doctor', out]);
+  assert.equal(packResult.status, 0, packResult.stderr);
+  assert.match(packResult.stdout, /类型：单文件包/);
+  assert.match(packResult.stdout, /\[ok\] 包格式 1/);
+});
+
+test('bpmap doctor：入口缺失时退出码非 0', () => {
+  const source = tempDir('bp-cli-bad-doctor-');
+  writeFileSync(
+    join(source, 'bpmap.json'),
+    JSON.stringify({ id: 'clisample', version: '0.1.0', server: 'missing.js' }),
+    'utf8',
+  );
+  const result = run(['doctor', source]);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /doctor 发现/);
+});
+
 test('bpmap CLI：输出放在源目录里会被拒绝', () => {
   const source = sourceDir();
   const result = run(['pack', source, '--out', join(source, 'x.bpmap')]);

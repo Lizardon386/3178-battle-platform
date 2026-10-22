@@ -1,4 +1,4 @@
-import type { GameManifest, NoticeCode, PlatformCode, RoomPhase, SeatRole } from '@bp/protocol';
+import type { GameManifest, GameUiOptions, NoticeCode, PlatformCode, RoomPhase, SeatRole } from '@bp/protocol';
 
 /**
  * 平台与游戏模块之间的唯一契约。
@@ -92,6 +92,8 @@ export interface GameModule {
   resume(snapshot: unknown, ctx: GameContext): GameInstance;
   /** 落盘快照的兼容性闸；返回 false 则平台丢弃快照并报错给房主。 */
   acceptsSnapshot?(snapshot: unknown): boolean;
+  /** 可选 UI 声明；例如让游戏自己的聊天面板替代平台聊天卡。 */
+  ui?: GameUiOptions;
 }
 
 /** 平台侧组装 manifest。rulesHash 由模块从规范化 config 算出，平台不参与玩法判断。 */
@@ -106,5 +108,6 @@ export function manifestOf(module: GameModule, config: Record<string, unknown>):
     soloFill: module.soloFill,
     roles: module.roles,
     entry: module.entry,
+    ...(module.ui ? { ui: { ...module.ui } } : {}),
   };
 }
