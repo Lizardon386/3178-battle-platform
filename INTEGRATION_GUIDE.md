@@ -440,7 +440,7 @@ export interface GameActions {
 
 game-kit 在同一个 SDK 包里，按需导入；全部是可选的跨游戏组件。下面的客户端 `import` 写在游戏客户端源码里，构建时由 esbuild 等打包器内联成单文件；最终交给沙箱的 `client.js` 不能保留 `import`。
 
-#### 事件流
+#### 3.8.1 事件流
 
 服务端：
 
@@ -500,7 +500,7 @@ feed.handleEvent(event);   // 放进 onEvent
 
 方法：`setEntries(entries)` 整体替换；`append(entry)` 按 `seq` 去重；`handleEvent(event)` 只处理 `name === 'bp.feed'`，payload 可以是单条或数组，返回是否处理；`clear()`；`destroy()` 会清空挂载点和状态。DOM 类名是 `bp-feed`、`bp-feed-item`、`bp-feed-time`、`bp-feed-text`、`bp-feed-empty`。
 
-#### 聊天
+#### 3.8.2 聊天
 
 `ChatPanel` 监听 3.7 里的 `bp:chat-history`；`ScoreboardPanel` 监听 `bp:room`。
 
@@ -518,7 +518,7 @@ const chat = new ChatPanel({ mount: chatEl, showSystem: true });
 
 如果声明了 `GameModule.ui.chat = 'game'`，父页面会对局阶段隐藏平台聊天卡；这时游戏必须自己挂 `ChatPanel` 或画聊天。
 
-#### 记分板
+#### 3.8.3 记分板
 
 ```ts
 import { ScoreboardPanel } from '@bp/game-sdk/kit';
@@ -548,7 +548,7 @@ const board = new ScoreboardPanel({
 
 方法：`setRows(rows)`、`setSeats(seats)`、`setRoom(room)`、`setSort(sort)`、`clear()`、`destroy()`。行顺序以座位为主：座位按 `slot` 排序，没有游戏行的座位也显示；有行但没有座位的排在后面。排序时空值永远排最后，字符串按 `zh-CN` 比较。内置列是“玩家”“队伍”“连接”，连接列显示“在线 / 离线 / 电脑 / 观战 / —”。
 
-#### 座位颜色
+#### 3.8.4 座位颜色
 
 ```ts
 import { seatColor } from '@bp/game-sdk/kit';
