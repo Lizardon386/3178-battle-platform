@@ -282,6 +282,7 @@ const OUT = args.out;
 mkdirSync(OUT, { recursive: true });
 
 step(`装配便携包 → ${OUT}`);
+copy('package.json');
 copy('packages/protocol/dist');
 copy('packages/protocol/package.json');
 copy('packages/server/dist');

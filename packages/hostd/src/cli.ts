@@ -32,6 +32,16 @@ const runFileFor = (port: number): string => join(DATA_DIR, `run-${port}.json`);
 const DEFAULT_UI_PORT = 3178;
 const DEFAULT_LAN_PORT = 3000;
 
+function readPlatformVersion(): string {
+  try {
+    const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as { version?: unknown };
+    return typeof pkg.version === 'string' ? pkg.version : '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+const PLATFORM_VERSION = readPlatformVersion();
+
 interface Options {
   mode: 'host' | 'join' | 'stop' | 'diagnose';
   /** 本机界面端口，永远只绑 127.0.0.1。 */
@@ -220,11 +230,11 @@ async function startShell(options: Options, role: 'host' | 'join'): Promise<void
   });
 
   const privateTransport = new WsTransport(engine, {});
-  const privateServer = createWebServer({ root: ROOT, modules, gameRoots: roots, gameAssets: assets, getRooms: () => browser?.list() ?? [], selfInfo });
+  const privateServer = createWebServer({ root: ROOT, modules, gameRoots: roots, gameAssets: assets, platformVersion: PLATFORM_VERSION, getRooms: () => browser?.list() ?? [], selfInfo });
   privateTransport.attach(privateServer);
 
   const publicTransport = useLan ? new WsTransport(engine, {}) : null;
-  const publicServer = useLan ? createWebServer({ root: ROOT, modules, gameRoots: roots, gameAssets: assets, getRooms: () => [], selfInfo }) : null;
+  const publicServer = useLan ? createWebServer({ root: ROOT, modules, gameRoots: roots, gameAssets: assets, platformVersion: PLATFORM_VERSION, getRooms: () => [], selfInfo }) : null;
   if (publicTransport && publicServer) publicTransport.attach(publicServer);
 
   const announcer = useLan && options.announce

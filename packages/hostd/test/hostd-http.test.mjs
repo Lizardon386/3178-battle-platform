@@ -72,6 +72,19 @@ test('/api/games 报出本机装的游戏，含房规摘要与入口', async () 
   assert.ok(!fixture.entry.includes('..'), '入口路径不许越界');
 });
 
+test('/api/version 报出平台版本与支持的包/协议/接口版本', async () => {
+  const { status, body } = await get('/api/version');
+  assert.equal(status, 200);
+  const version = JSON.parse(body);
+  const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+  assert.equal(version.platform, pkg.version);
+  assert.deepEqual(version.packFormats, [1]);
+  assert.deepEqual(version.protocolVersions, [1]);
+  assert.deepEqual(version.apiVersions, [1]);
+  assert.deepEqual(version.modes, { turn: [1] });
+  assert.deepEqual(version.clientCaps, []);
+});
+
 test('页面、客户端模块与协议包都能取到，且 MIME 是对的', async () => {
   const page = await get('/');
   assert.equal(page.status, 200);

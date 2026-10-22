@@ -12,6 +12,7 @@ import type { DiscoveryRoom, GameAsset } from '@bp/protocol';
  *   /vendor/protocol/     → 协议包编译产物（给 import map 用）
  *   /games/<id>/          → 游戏模块产物（模块下发位）
  *   /api/games            → 本机装了哪些游戏
+ *   /api/version          → 平台版本与支持的包/协议/接口版本
  *   /discovery/rooms      → 局域网房间列表（由本地壳代浏览器收组播）
  */
 
@@ -30,6 +31,8 @@ export interface WebRootOptions {
   gameRoots?: Map<string, string>;
   /** 游戏 id → 包内文件哈希；单文件包用它把客户端入口的哈希下发给浏览器。 */
   gameAssets?: Map<string, GameAsset[]>;
+  /** 平台版本；没有时用 0.0.0，绝不编一个看起来像真的版本号。 */
+  platformVersion?: string;
   /** 组播浏览结果；没有本地壳时返回空表。 */
   getRooms?: () => DiscoveryRoom[];
   /** 页面用它生成邀请链接；老壳没有这个端点时客户端会退回 selfOrigin。 */
@@ -128,6 +131,17 @@ export function createWebServer(opts: WebRootOptions): Server {
     }
     if (path === '/api/self') {
       sendJson(res, opts.selfInfo?.() ?? { uiOrigin: null, publicOrigin: null });
+      return;
+    }
+    if (path === '/api/version') {
+      sendJson(res, {
+        platform: opts.platformVersion ?? '0.0.0',
+        packFormats: [1],
+        protocolVersions: [1],
+        apiVersions: [1],
+        modes: { turn: [1] },
+        clientCaps: [],
+      });
       return;
     }
     if (path === '/health') {
