@@ -5,7 +5,7 @@ import { AddressBook, NickName, SessionVault, type KeyValueStore, type SessionRe
 import { ServerClock } from './clock.js';
 import { parseHostAddress, parseInviteLink, wouldBeBlocked, type Endpoint } from './endpoint.js';
 import { aiFillBlocker, emptyViewModel, inviteLink, accessHints, isHost, mySeat, reduce, resumeCodeFor, seatLabel, seatPickerBlocker, seatPickerCandidates, startBlockers, emptySlots, type ViewModel } from './view-model.js';
-import { fetchGameList, loadGameClientSource, placeholderClient, sandboxedClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
+import { fetchGameList, loadGameClientSource, placeholderClient, sandboxChatText, sandboxedClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
 import { SelectListboxes } from './listbox.js';
 
 /**
@@ -274,6 +274,13 @@ export class PlatformApp {
     if (result.ok) {
       this.client = sandboxedClient(manifest, result.source, {
         baseUrl: result.baseUrl,
+        platform: {
+          chat: () => this.view.chat.slice(-100),
+          room: () => this.view.room
+            ? { code: this.view.room.code, phase: this.view.phase, seats: this.view.seats }
+            : null,
+        },
+        onChat: (text) => this.sendSandboxChat(text),
         onError: (message) => {
           if (attempt !== this.attachSeq) return;
           const currentHost = el(this.doc, 'game-host');
@@ -453,6 +460,12 @@ export class PlatformApp {
     input!.value = '';
   }
 
+  private sendSandboxChat(value: unknown): void {
+    const text = sandboxChatText(value, this.view.phase, this.connState.status);
+    if (!text) return;
+    this.conn?.send({ type: 'chat', text });
+  }
+
   /**
    * 邀请链接该用哪个地址：host 模式由壳给出局域网/隧道入口。
    * 老壳没有 /api/self 时保持页面自己的来源——行为与以前一致，不会因为升级前端就发不出链接。
@@ -532,6 +545,10 @@ export class PlatformApp {
   }
 
   private renderRoom(): void {
+    const chatPanel = el(this.doc, 'chat-panel');
+    if (chatPanel) {
+      chatPanel.classList.toggle('hidden', this.view.manifest?.ui?.chat === 'game' && this.view.phase === 'playing');
+    }
     const title = el(this.doc, 'room-title');
     const codeChip = el(this.doc, 'room-code-hud');
     if (title && this.view.room) {

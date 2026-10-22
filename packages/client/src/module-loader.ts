@@ -1,4 +1,5 @@
-import type { GameManifest } from '@bp/protocol';
+import type { GameManifest, RoomPhase, SeatView } from '@bp/protocol';
+import type { ChatLine } from './view-model.js';
 import type { GameActions, GameClientContract } from '@bp/game-sdk/client';
 
 export type { GameActions, GameClientContract } from '@bp/game-sdk/client';
@@ -110,8 +111,30 @@ export async function loadGameClientSource(
 export interface SandboxOptions {
   baseUrl: string;
   onError?: (message: string) => void;
+  /** 父页面同步给游戏 iframe 的平台状态：聊天历史与房间/座位。 */
+  platform?: {
+    chat: () => ChatLine[];
+    room: () => SandboxRoomInfo | null;
+  };
+  /** iframe 请求发聊天；文本、阶段、连接状态由父页面校验。 */
+  onChat?: (text: unknown) => void;
   /** 仅供测试替换；默认走平台自己的静态页。 */
   frameUrl?: string;
+}
+
+export interface SandboxRoomInfo {
+  code: string;
+  phase: RoomPhase | 'none';
+  seats: SeatView[];
+}
+
+/** 跨沙箱边界只接受纯文本；空、超长、非游戏中、连接未开都直接丢掉。 */
+export function sandboxChatText(value: unknown, phase: string, status: string): string | null {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  if (text.length < 1 || text.length > 300) return null;
+  if (phase !== 'playing' || status !== 'open') return null;
+  return text;
 }
 
 /**
@@ -128,9 +151,28 @@ export function sandboxedClient(manifest: GameManifest, source: string, options:
   let disposed = false;
   let timer: number | null = null;
   let pendingEvents: Array<{ name: string; payload?: unknown }> = [];
+  let lastChatJson = '';
+  let lastRoomJson = '';
 
   const post = (data: unknown): void => {
     frame?.contentWindow?.postMessage(data, '*');
+  };
+
+  const syncPlatform = (force = false): void => {
+    const bridge = options.platform;
+    if (!bridge) return;
+    const lines = bridge.chat().slice(-100);
+    const chatJson = JSON.stringify(lines);
+    if (force || chatJson !== lastChatJson) {
+      lastChatJson = chatJson;
+      post({ type: 'chat-history', lines });
+    }
+    const room = bridge.room();
+    const roomJson = JSON.stringify(room);
+    if (force || roomJson !== lastRoomJson) {
+      lastRoomJson = roomJson;
+      post({ type: 'room', room });
+    }
   };
 
   const cleanup = (): void => {
@@ -154,7 +196,7 @@ export function sandboxedClient(manifest: GameManifest, source: string, options:
 
   const onMessage = (event: MessageEvent): void => {
     if (disposed || !frame || event.source !== frame.contentWindow) return;
-    const data = event.data as { type?: unknown; name?: unknown; payload?: unknown; message?: unknown } | null;
+    const data = event.data as { type?: unknown; name?: unknown; payload?: unknown; text?: unknown; message?: unknown } | null;
     if (!data || typeof data !== 'object') return;
     if (data.type === 'ready') {
       ready = true;
@@ -165,10 +207,15 @@ export function sandboxedClient(manifest: GameManifest, source: string, options:
       post({ type: 'mount', source, baseUrl: options.baseUrl, view, seatId });
       for (const queued of pendingEvents) post({ type: 'event', name: queued.name, payload: queued.payload });
       pendingEvents = [];
+      syncPlatform(true);
       return;
     }
     if (data.type === 'action') {
       if (typeof data.name === 'string') actions?.send(data.name, data.payload);
+      return;
+    }
+    if (data.type === 'chat') {
+      options.onChat?.(data.text);
       return;
     }
     if (data.type === 'error') fail(String(data.message ?? '游戏界面加载失败'));
@@ -181,7 +228,10 @@ export function sandboxedClient(manifest: GameManifest, source: string, options:
       view = nextView;
       seatId = nextActions.seatId();
       if (frame) {
-        if (ready) post({ type: 'view', view, seatId });
+        if (ready) {
+          post({ type: 'view', view, seatId });
+          syncPlatform();
+        }
         return;
       }
       win = host.ownerDocument.defaultView;

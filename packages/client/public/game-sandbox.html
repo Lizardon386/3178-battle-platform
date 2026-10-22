@@ -28,6 +28,16 @@
     let seatId = null;
     let lastView = null;
     let pendingEvents = [];
+    let platformReady = false;
+    let pendingPlatform = [];
+
+    function emitPlatform(name, detail) {
+      if (!platformReady) {
+        pendingPlatform.push({ name, detail });
+        return;
+      }
+      window.dispatchEvent(new CustomEvent(name, { detail }));
+    }
 
     const actions = {
       send(name, payload) {
@@ -66,11 +76,29 @@
       next.mount(root, lastView, actions);
       for (const queued of pendingEvents) next.onEvent?.(queued, actions);
       pendingEvents = [];
+      platformReady = true;
+      for (const item of pendingPlatform) {
+        window.dispatchEvent(new CustomEvent(item.name, { detail: item.detail }));
+      }
+      pendingPlatform = [];
     }
 
     window.addEventListener('message', (event) => {
+      if (event.source !== parent) return;
       const data = event.data;
       if (!data || typeof data !== 'object') return;
+      if (data.type === 'chat-history') {
+        emitPlatform('bp:chat-history', Array.isArray(data.lines) ? data.lines : []);
+        return;
+      }
+      if (data.type === 'chat') {
+        emitPlatform('bp:chat', data.line);
+        return;
+      }
+      if (data.type === 'room') {
+        emitPlatform('bp:room', data.room);
+        return;
+      }
       if (data.type === 'mount') {
         void mount(data).catch(showError);
         return;
@@ -112,6 +140,8 @@
         client = null;
         lastView = null;
         pendingEvents = [];
+        platformReady = false;
+        pendingPlatform = [];
       }
     });
 

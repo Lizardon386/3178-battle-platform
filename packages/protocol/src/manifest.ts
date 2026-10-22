@@ -1,6 +1,11 @@
 import { stableDigest } from './hash.js';
 import type { SeatRole } from './seats.js';
 
+export interface GameUiOptions {
+  /** 游戏内聊天由平台聊天卡提供，还是由游戏自己的界面提供。 */
+  chat?: 'platform' | 'game';
+}
+
 /** 游戏模块对外声明的自己：房主建房、客户端校验、模块下发三处都要用它。 */
 export interface GameManifest {
   id: string;
@@ -19,6 +24,8 @@ export interface GameManifest {
   entry: string;
   /** 下发给客户端的资源清单；hash 为 'sha256:<hex>' 或裸 hex。 */
   assets?: GameAsset[];
+  /** 可选 UI 能力；缺省时按平台默认（聊天卡由平台显示）。 */
+  ui?: GameUiOptions;
 }
 
 export interface GameAsset {
@@ -46,6 +53,12 @@ export function isGameManifest(value: unknown): value is GameManifest {
   if (!seats || typeof seats.min !== 'number' || typeof seats.max !== 'number') return false;
   if (!(seats.min >= 1 && seats.max >= seats.min && seats.max <= 16)) return false;
   if (typeof m.entry !== 'string' || m.entry.includes('..') || /^https?:/i.test(m.entry)) return false;
+  if (m.ui !== undefined) {
+    if (typeof m.ui !== 'object' || m.ui === null || Array.isArray(m.ui)) return false;
+    const ui = m.ui as Record<string, unknown>;
+    if (Object.keys(ui).some((key) => key !== 'chat')) return false;
+    if (ui.chat !== undefined && ui.chat !== 'platform' && ui.chat !== 'game') return false;
+  }
   return true;
 }
 

@@ -19,6 +19,7 @@ import {
   seatPickerBlocker,
 } from '@bp/client/view-model.js';
 import { PlatformConnection } from '@bp/client/connection.js';
+import { sandboxChatText } from '@bp/client/module-loader.js';
 import { nextIndex, rowsOf, signatureOf } from '@bp/client/listbox.js';
 
 /** 客户端里"不碰 DOM 也能错"的那几块：地址解析、时钟、地址簿、视图归约、退避重连。 */
@@ -456,4 +457,14 @@ test('房主页的局域网入口：地址可照抄，多网卡全列且不重�
   assert.equal(hints.length, 2);
   assert.equal(hints[0], '局域网地址：http://10.0.0.5:3000、http://192.168.1.20:3000');
   assert.equal(hints[1], '手动加入：房主地址填 10.0.0.5:3000，房号 AB12');
+});
+
+test('沙箱聊天：只接受游戏中、连接已开、1..300 字的纯文本', () => {
+  assert.equal(sandboxChatText('  你好  ', 'playing', 'open'), '你好');
+  assert.equal(sandboxChatText('', 'playing', 'open'), null);
+  assert.equal(sandboxChatText('   ', 'playing', 'open'), null);
+  assert.equal(sandboxChatText('x'.repeat(301), 'playing', 'open'), null);
+  assert.equal(sandboxChatText('你好', 'lobby', 'open'), null);
+  assert.equal(sandboxChatText('你好', 'playing', 'closed'), null);
+  assert.equal(sandboxChatText({ text: '你好' }, 'playing', 'open'), null);
 });

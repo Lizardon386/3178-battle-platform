@@ -21,10 +21,16 @@ test('客户端沙箱：iframe 只给 allow-scripts，不给 same-origin', () =>
   const loader = stripComments(read('../src/module-loader.ts'));
   assert.match(loader, /setAttribute\('sandbox', 'allow-scripts'\)/);
   assert.doesNotMatch(loader, /allow-same-origin/);
+  assert.match(loader, /chat-history/);
+  assert.match(loader, /sandboxChatText/);
 
   const sandbox = read('../public/game-sandbox.html');
   assert.match(sandbox, /addEventListener\('message'/);
   assert.match(sandbox, /parent\.postMessage/);
+  assert.match(sandbox, /bp:chat-history/);
+  assert.match(sandbox, /bp:chat/);
+  assert.match(sandbox, /bp:room/);
+  assert.match(sandbox, /data\.type === 'chat'/);
   assert.doesNotMatch(sandbox, /localStorage|document\.cookie/);
 });
 

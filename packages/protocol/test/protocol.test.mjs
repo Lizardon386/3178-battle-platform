@@ -94,4 +94,9 @@ test('manifest 形状检查挡住越界声明', () => {
   assert.ok(!isGameManifest({ ...base, seats: { min: 0, max: 4 } }));
   assert.ok(!isGameManifest({ ...base, entry: 'https://evil/x.js' }));
   assert.ok(!isGameManifest({ ...base, entry: '../../etc/passwd' }));
+  assert.ok(isGameManifest({ ...base, ui: { chat: 'game' } }));
+  assert.ok(isGameManifest({ ...base, ui: {} }));
+  assert.ok(!isGameManifest({ ...base, ui: { chat: 'both' } }));
+  assert.ok(!isGameManifest({ ...base, ui: 'game' }));
+  assert.ok(!isGameManifest({ ...base, ui: { chat: 'game', extra: 1 } }));
 });
