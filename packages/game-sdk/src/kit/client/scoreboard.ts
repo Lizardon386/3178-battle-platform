@@ -118,6 +118,13 @@ function teamText(team: string | number | null): string {
   return team === null || team === undefined ? '—' : String(team);
 }
 
+export function connectionLabel(seat: SeatView | undefined): string {
+  if (!seat) return '—';
+  if (seat.role === 'ai') return '电脑';
+  if (seat.role === 'spectator') return '观战';
+  return seat.connected ? '在线' : '离线';
+}
+
 function styleCell(cell: HTMLTableCellElement, align: 'left' | 'center' | 'right' | undefined, width: string | number | undefined): void {
   cell.style.padding = '6px 8px';
   cell.style.borderTop = '1px solid rgba(127,127,127,.22)';
@@ -307,8 +314,8 @@ export class ScoreboardPanel {
       }
       if (this.options.showConnection ?? true) {
         const connection = doc.createElement('td');
-        connection.textContent = seat ? (seat.connected ? '在线' : '离线') : '—';
-        connection.style.opacity = seat?.connected === false ? '0.6' : '1';
+        connection.textContent = connectionLabel(seat);
+        connection.style.opacity = seat && (seat.role === 'ai' || seat.connected) ? '1' : '0.6';
         styleCell(connection, 'left', undefined);
         tr.append(connection);
       }

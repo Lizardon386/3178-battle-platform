@@ -18,6 +18,7 @@ export {
 export {
   ScoreboardPanel,
   buildScoreboardRows,
+  connectionLabel,
   formatColumnValue,
   normalizeScoreboardRows,
   resolveColumnValue,

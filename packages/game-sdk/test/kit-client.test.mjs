@@ -6,6 +6,7 @@ import {
   buildScoreboardRows,
   chatLineKey,
   chatText,
+  connectionLabel,
   formatColumnValue,
   mergeChatLines,
   normalizeChatLine,
@@ -100,6 +101,14 @@ test('记分板：排序只对已知列生效，升降序稳定，缺值排最�
     sortScoreboardRows(rows, columns, { key: 'missing', dir: 'asc' }).map((row) => row.seatId),
     ['s1', 's2', 's3', 's4'],
   );
+});
+
+test('记分板：电脑座位显示“电脑”，不显示离线；观战显示“观战”', () => {
+  assert.equal(connectionLabel(seat({ role: 'ai', connected: false })), '电脑');
+  assert.equal(connectionLabel(seat({ role: 'spectator', connected: true })), '观战');
+  assert.equal(connectionLabel(seat({ role: 'player', connected: true })), '在线');
+  assert.equal(connectionLabel(seat({ role: 'player', connected: false })), '离线');
+  assert.equal(connectionLabel(undefined), '—');
 });
 
 test('记分板面板：无 DOM 时也能更新状态，不抛异常', () => {
