@@ -23,36 +23,38 @@
 - 提供 `.bpmap` 打包库和 `bpmap` CLI；
 - 提供客户端沙箱契约；
 - 提供可选的 game-kit：事件流、聊天、记分板、座位颜色；
-- 之后提供版本自检和升级工具。
+- 提供版本自检工具（`/api/version`、`bpmap doctor`）；升级工具规划中。
 
 SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不是游戏引擎。游戏服务端入口在房主进程里执行，导出 `GameModule` 对象；宿主加载它，按房间创建 `GameInstance`。客户端入口在浏览器沙箱 iframe 里执行，不直接碰 socket、票据或宿主存储。
 
 ### 1.2 设计原则
 
-1. **平台管边界，游戏管玩法**。房间、座位、权限、传输、存盘由平台负责；牌堆、回合、移动、碰撞、胜负由游戏负责。
+1. **平台管边界，游戏开发者管玩法**。房间、座位、权限、传输、存盘由平台负责；牌堆、回合、移动、碰撞、胜负由游戏开发者负责。
 2. **游戏状态对平台不透明**。平台只保存和转发 `snapshot()` / `serialize(viewer)` 的结果，不解析里面的字段。
 3. **宿主权威**。每个房间有一个房主进程；客户端只发动作，不直接改房间状态。
 4. **对外消息走 `Effect[]`**。游戏不能直接发 socket 消息，也不能改房间相位、座位表或房主权限。
-5. **模式分开**。回合制走事件驱动路径；实时动作是另一套 profile，不把 60Hz 需求塞进回合制内核。
-6. **薄核心，可选扩展**。核心 SDK 只放契约、打包、版本；聊天/事件流/记分板等跨游戏 UI 放进可选 game-kit；引擎、渲染、物理留在游戏侧。
+5. **模式分开**。回合制走事件驱动路径；实时动作走另一套执行模型（profile），不把 60Hz 需求塞进回合制内核。
+6. **薄核心，可选扩展**。核心 SDK 只放契约、打包、版本；聊天/事件流/记分板等跨游戏 UI 放进可选 game-kit；引擎、渲染、物理留在游戏工程或现成引擎里。
 7. **包和版本可验证**。`.bpmap` 有清单和哈希；宿主校验 id、版本和入口，坏包只跳过、不挡启动。
 
 ### 1.3 能力边界
 
-| SDK 提供 | SDK 不提供 |
+| SDK 交付的接入能力 | 游戏开发者负责 |
 |---|---|
-| 房间/座位/票据/观战/重连的接入契约 | 游戏引擎、渲染器、物理、动画 |
-| 动作投递、视角裁剪、快照、落盘恢复 | 关卡编辑器、通用地图编辑器 |
-| `.bpmap` 打包、校验、缓存 | 寻路、AI 行为树、数值系统 |
-| 客户端沙箱和资源下发 | 账号、成就、全局排行榜、跨房间聊天 |
-| game-kit：聊天、事件流、记分板、座位颜色 | 纯单机游戏的独立运行时 |
-| 版本检查、`/api/version`、`bpmap doctor` | 原生 exe/移动端宿主 |
+| 房间、座位、票据、观战、重连的接入契约 | 玩法、规则、状态设计 |
+| 动作投递、视角裁剪、快照、落盘恢复的接入方式 | 渲染、物理、动画、AI |
+| `.bpmap` 打包、校验、缓存的流程和规范 | 关卡、数值、内容 |
+| 客户端沙箱、资源下发的接入规范 | 游戏自己的 UI、美术、音频 |
+| game-kit：聊天、事件流、记分板、座位颜色 | 账号、成就、排行榜等产品能力（不在平台） |
+| 版本检查、`/api/version`、`bpmap doctor` | 原生宿主、移动端运行时 |
+
+输入、音频、存档、资源管线这些游戏功能当前不在 SDK 里；game-kit 只覆盖跨游戏的聊天、事件流、记分板和座位颜色，不扩展成引擎或游戏框架。
 
 **单机游戏不是 SDK 模式。** 单机体验用“建房 + 电脑位”实现：`seats.min = 1`，游戏自己实现电脑行动。没有联机计划、只想做一个普通单机游戏的项目，不应该经过 3178；普通 Web 分发更直接。
 
 **没有 `client-only` 模式。** 平台不把“只挂一个客户端、不跑服务端模拟”作为 SDK 契约。以后如果要做单机游戏目录，会另做“web 启动器”，不混进游戏契约。
 
-**不抄 war3 的 World Editor。** war3 的地图编辑器建立在固定 RTS 引擎上；3178 是游戏无关平台。以后如果做 UGC，先做“内容包/地图包”，由具体游戏定义数据和编辑器，不先造通用编辑器。
+**不提供通用地图编辑器。** UGC 以后先做“内容包/地图包”，由具体游戏定义数据和编辑器；通用编辑器等于自研引擎，单独立项，不塞进 SDK。
 
 ### 1.4 当前支持状态
 
@@ -68,7 +70,9 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 
 ### 2.1 获取 SDK
 
-SDK 还没有发布到 npm，当前是 `private` 包。外部工程从平台仓库打成 tarball 安装；`@bp/game-sdk` 依赖 `@bp/protocol`，两个要一起装：
+SDK 还没有发布到 npm，当前是 `private` 包。外部工程从平台仓库打成 tarball 安装；`@bp/game-sdk` 依赖 `@bp/protocol`，两个要一起装。
+
+下面用 Git Bash 示例；把 `<3178 仓库>`、`<SDK 产物目录>`、`<你的游戏工程>` 换成实际路径。tarball 文件名带版本号，按 `npm pack` 的实际输出替换。
 
 ```bash
 cd <3178 仓库>
@@ -111,7 +115,7 @@ mygame/
 
 ### 2.3 写服务端模块
 
-实现 [GameModule](#32-gamemodule) 和 [GameInstance](#33-gameinstance)，导出 `default` 或具名对象：
+实现 [GameModule](#32-gamemodule) 和 [GameInstance](#33-gameinstance)，导出 `default` 或具名对象。下面只列 `GameModule` 对象；`MyGame` 是你要实现的 `GameInstance`，方法见 3.3，`fromSnapshot` 也由你实现。
 
 ```ts
 import { stableDigest, type GameModule } from '@bp/game-sdk';
@@ -148,11 +152,11 @@ export default {
 };
 ```
 
-客户端入口必须是单文件 ESM，不能有相对 `import`；包内资源用 `fetch('assets/...')`，iframe 的 base 已指向入口目录。不写客户端也能运行，平台会显示原始状态占位面板；但 `GameModule.entry` 仍要填一个字符串。
+客户端入口必须是单文件 ESM，不能有任何 `import`（相对路径和裸包名都不行）；所有依赖都要打进这一个文件。包内资源用 `fetch('assets/...')`，iframe 的 base 已指向入口目录。不写客户端也能运行，平台会显示原始状态占位面板；但 `GameModule.entry` 仍要填一个字符串。
 
 ### 2.5 构建、打包、安装
 
-构建到 `dist-pack/`。服务端入口可以把 `@bp/game-sdk` / `@bp/protocol` 交给宿主解析；其他依赖要打进产物或随包携带：
+构建到 `dist-pack/`。服务端入口可以把 `@bp/game-sdk` / `@bp/protocol` 交给宿主解析；这是通过 `--external` 实现的，宿主版本要和构建时一致。其他第三方依赖不要 external，应该打进 `server.js`：
 
 ```bash
 npx esbuild src/server.ts --bundle --platform=node --format=esm \
@@ -186,6 +190,7 @@ npx bpmap doctor dist-pack
 
 cp dist/mygame.bpmap <3178 仓库>/games/
 cd <3178 仓库>
+# 先确保平台已经 npm run build，dist/cli.js 不存在时先构建
 node packages/hostd/dist/cli.js host --port 3178 --lan-port 3000
 ```
 
@@ -253,10 +258,13 @@ export interface GameModule {
   create(config: Record<string, unknown>, ctx: GameContext): GameInstance;
   resume(snapshot: unknown, ctx: GameContext): GameInstance;
   acceptsSnapshot?(snapshot: unknown): boolean;
-  ui?: GameUiOptions;
+  ui?: { chat?: 'platform' | 'game' };
 }
 ```
 
+- `seats` / `allowSpectate` / `soloFill`：座位范围、是否允许观战、是否允许电脑位。
+- `roles`：允许的座位角色；平台会拒绝模块声明之外的角色。
+- `entry`：客户端入口路径；没有客户端时仍要填一个字符串，父页面会回退到占位面板。
 - `normalizeConfig`：把房主原始设置整理成固定形状，决定 `rulesHash` 和 `create` 的输入。
 - `rulesHashOf`：只摘要真正影响玩法的字段；改房名不应该让客人看到“房规不同”。
 - `create` / `resume`：创建一个新对局 / 从落盘快照恢复。
@@ -283,10 +291,12 @@ export interface GameInstance {
 }
 ```
 
+`Outcome` 是 `Effect[] | Reject`；`Reject` 是 `{ reject: string; code?: PlatformCode }`。
+
 - `begin()`：开局初始化，返回 `Effect[]`。
 - `handle(action, by)`：处理玩家动作；不合法时用 `reject('中文说明', 'PHASE')` 返回，不要抛异常或静默忽略。
 - `serialize(viewer)`：按视角返回状态；`viewer === null` 是观战视角。哪些信息该藏起来由游戏决定。
-- `snapshot()` / `resume()`：完整状态落盘和恢复。
+- `snapshot()`：返回完整状态，供平台落盘；恢复时平台调用 `GameModule.resume()`，不是实例的 `resume()`。
 - `tick(now)`：平台心跳调用，用于计时窗口；当前回合制宿主是 4Hz。
 - 座位回调：玩家离开、超时等事件由游戏决定怎么处理。
 
@@ -333,13 +343,13 @@ export interface GameActions {
 
 - **每次新快照都会再次调用 `mount`**，不是只调用一次；渲染时要替换内容，不要反复 append。
 - 事件可能先于 `mount` 到达，平台会排队；`onEvent` 里不要假设界面已经渲染。
-- 游戏拿不到 socket、票据、其他座位的私有信息；动作只能走 `actions.send`。
+- 游戏拿不到 socket、票据、其他座位的私有信息；动作只能走 `actions.send`，`actions.seatId()` 返回当前座位。
 - 客户端入口在 `sandbox="allow-scripts"` 的 iframe 里执行，不带 `allow-same-origin`：读不到宿主的 `localStorage`、cookie 和 DOM。
-- 入口要打成单文件，资源用 `fetch('assets/...')`；当前沙箱没有指针锁定/全屏，实时动作需要的这些能力在规划中。
+- 入口要打成单文件，不能有任何 `import`；资源用 `fetch('assets/...')`。当前沙箱没有指针锁定/全屏，实时动作需要的这些能力在规划中。
 
 ### 3.6 game-kit
 
-game-kit 在同一个 SDK 包里，按需导入；全部是可选的跨游戏组件。
+game-kit 在同一个 SDK 包里，按需导入；全部是可选的跨游戏组件。下面的客户端 `import` 写在游戏客户端源码里，构建时由 esbuild 等打包器内联成单文件；最终交给沙箱的 `client.js` 不能保留 `import`。
 
 #### 事件流
 
@@ -365,9 +375,10 @@ feed.emit({
 return [...otherEffects, ...feed.drainEffects()];
 ```
 
-- `visibility` 支持 `all`、`{ seatId }`、`{ team }`。
+- `visibility` 支持 `all`、`{ seatId }`、`{ team }`；`{ team }` 需要在构造 `FeedLog` 时传 `seatTeams`。
 - `viewFor(viewer)` 按视角裁剪历史；放进 `serialize` 可以在重连后恢复。
 - `snapshot()` / `restore()` 把事件历史放进游戏快照。
+- 客户端示例里的 `view.feed` 是游戏自己在 `serialize` 里返回的字段，不是平台内置结构。
 
 客户端：
 
@@ -414,6 +425,7 @@ const board = new ScoreboardPanel({
 });
 ```
 
+- `view.scoreboard` 是游戏自己在 `serialize` 里返回的结构，不是平台内置字段。
 - 列完全由游戏定义；`value` 支持字段名或函数，`format` 返回文本，复杂单元格用 `render` 返回 DOM。
 - 面板自动监听 `bp:room`，补齐玩家名、队伍、连接状态和房主标记。
 - 行和值按视角给，观战/对手不能看到隐藏数据。
@@ -454,7 +466,7 @@ bpmap doctor dist-pack
 
 宿主启动时扫描 `games/*.bpmap`，校验、解包并 `import()` 包内服务端入口，拿到 `GameModule`；建房时调用 `create()`。平台源码不 import 任何 `games/` 路径，运行时按 id 动态加载。
 
-包里服务端代码在房主进程里执行，等同于安装一个程序，只装来源可信的包。客户端入口在沙箱 iframe 中执行，源码先按清单哈希校验再交给沙箱。
+包里服务端代码在房主进程里执行，等同于安装一个程序，只装来源可信的包。客户端入口在沙箱 iframe 中执行；如果包清单声明了入口资源的哈希，父页面会先校验再把源码交给沙箱。
 
 ## 4. SDK 版本、自检与升级
 
@@ -473,7 +485,7 @@ bpmap doctor dist-pack
 GET /api/version
 ```
 
-返回平台版本、支持的包格式、协议版本、API 版本、模式和客户端能力。当前实际返回：
+返回平台版本、支持的包格式、协议版本、API 版本、模式和客户端能力。下面是当前返回示例，`platform` 会随平台版本变化：
 
 ```json
 {
@@ -533,7 +545,7 @@ bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 - 游戏设置 `configSchema`：让大厅自动渲染房主设置表单，不再每个游戏手写。
 - 赛后结果面板和“再来一局”流程。
 - 房主设置队伍 UI；game-kit 已有队伍颜色。
-- game-kit 继续补输入/显示、音频、循环、存档、资源、指标等浏览器样板；这些现在还没有。
+- game-kit 暂无新增组件计划；先做现有四个组件的沙箱集成验证和文档，不把它扩展成引擎或游戏框架。
 
 ### 5.2 实时模式
 
