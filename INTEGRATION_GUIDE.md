@@ -13,60 +13,83 @@
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条问题（4 高 / 9 中 / 2 低）、修法、实测证据、复跑次数、猴测台自身 9 个缺陷与未覆盖范围 |
 
-## 1. SDK 接入总则
+## 1. SDK 设计思路、作用与边界
 
-### 1.1 当前能接什么
+### 1.1 这个 SDK 解决什么问题
+
+3178 平台负责房间、座位、房主权限、准备、聊天、观战、掉线宽限、落盘和传输。SDK 负责把这些能力交到游戏手里：
+
+- 定义游戏和平台之间的唯一契约：`GameModule` / `GameInstance` / `Effect` / `GameContext`；
+- 提供 `.bpmap` 打包库和 `bpmap` CLI；
+- 提供客户端沙箱契约；
+- 提供可选的 game-kit：事件流、聊天、记分板、座位颜色；
+- 之后提供版本自检和升级工具。
+
+SDK 不是一个运行时，也不是游戏引擎。游戏服务端入口在房主进程里执行，导出 `GameModule` 对象；宿主加载它，按房间创建 `GameInstance`。客户端入口在浏览器沙箱 iframe 里执行，不直接碰 socket、票据或宿主存储。
+
+### 1.2 设计原则
+
+1. **平台管边界，游戏管玩法**。房间、座位、权限、传输、存盘由平台负责；牌堆、回合、移动、碰撞、胜负由游戏负责。
+2. **游戏状态对平台不透明**。平台只保存和转发 `snapshot()` / `serialize(viewer)` 的结果，不解析里面的字段。
+3. **宿主权威**。每个房间有一个房主进程；客户端只发动作，不直接改房间状态。
+4. **对外消息走 `Effect[]`**。游戏不能直接发 socket 消息，也不能改房间相位、座位表或房主权限。
+5. **模式分开**。回合制走事件驱动路径；实时动作是另一套 profile，不把 60Hz 需求塞进回合制内核。
+6. **薄核心，可选扩展**。核心 SDK 只放契约、打包、版本；聊天/事件流/记分板等跨游戏 UI 放进可选 game-kit；引擎、渲染、物理留在游戏侧。
+7. **包和版本可验证**。`.bpmap` 有清单和哈希；宿主校验 id、版本和入口，坏包只跳过、不挡启动。
+
+### 1.3 能力边界
+
+| SDK 提供 | SDK 不提供 |
+|---|---|
+| 房间/座位/票据/观战/重连的接入契约 | 游戏引擎、渲染器、物理、动画 |
+| 动作投递、视角裁剪、快照、落盘恢复 | 关卡编辑器、通用地图编辑器 |
+| `.bpmap` 打包、校验、缓存 | 寻路、AI 行为树、数值系统 |
+| 客户端沙箱和资源下发 | 账号、成就、全局排行榜、跨房间聊天 |
+| game-kit：聊天、事件流、记分板、座位颜色 | 纯单机游戏的独立运行时 |
+| 版本检查、`/api/version`、`bpmap doctor` | 原生 exe/移动端宿主 |
+
+**单机游戏不是 SDK 模式。** 单机体验用“建房 + 电脑位”实现：`seats.min = 1`，游戏自己实现电脑行动。没有联机计划、只想做一个普通单机游戏的项目，不应该经过 3178；普通 Web 分发更直接。
+
+**没有 `client-only` 模式。** 平台不把“只挂一个客户端、不跑服务端模拟”作为 SDK 契约。以后如果要做单机游戏目录，会另做“web 启动器”，不混进游戏契约。
+
+**不抄 war3 的 World Editor。** war3 的地图编辑器建立在固定 RTS 引擎上；3178 是游戏无关平台。以后如果做 UGC，先做“内容包/地图包”，由具体游戏定义数据和编辑器，不先造通用编辑器。
+
+### 1.4 当前支持状态
 
 | 能力 | 状态 |
 |---|---|
 | 回合制、卡牌、棋类（事件驱动，4Hz tick） | 可用 |
-| 实时动作、需要连续输入和高频同步 | 规划中，当前不提供 |
-| 纯单机、没有联机计划的游戏 | 不作为 SDK 模式；单机用“建房 + 电脑位”；纯单机不建议接平台 |
-| 游戏内事件流（谁死了/回城/轮到谁） | 已提供 `FeedLog` / `FeedPanel` |
-| 座位颜色 | 已提供 `seatColor` |
-| 游戏内聊天 | 已提供 `ChatPanel`，复用平台房间聊天 |
-| Tab 记分板 | 已提供 `ScoreboardPanel`，列由游戏定义 |
-| 版本自检、一键升级 | `/api/version` 和 `bpmap doctor` 已可用；`bpmap upgrade` 规划中 |
+| 实时动作、连续输入和高频同步 | 规划中，当前不提供 |
+| game-kit：事件流、聊天、记分板、座位颜色 | 可用 |
+| `/api/version`、`bpmap doctor` | 可用 |
+| `apiVersion` / `mode` 包字段、`bpmap upgrade`、旧包适配器 | 规划中 |
 
-纯单机游戏接入平台不会简化玩法开发：平台只提供房间、传输、打包、沙箱和少量通用组件，不提供引擎、渲染、物理、动画、关卡编辑器或 AI。单机游戏应该先问自己为什么要经过 3178；如果答案只是“想有个启动器”，普通静态站或现成发行渠道更直接。
+## 2. SDK 接入完整流程
 
-### 1.2 SDK 是什么
-
-`@bp/game-sdk` 提供：
-
-- `GameModule` / `GameInstance` / `Effect` / `GameContext` 契约；
-- `stableDigest` 与客户端契约类型；
-- `.bpmap` 打包库和 `bpmap` CLI；
-- 可选的 game-kit：事件流、聊天、记分板、座位颜色。
-
-它不提供引擎、渲染器、物理、动画、关卡编辑器、寻路、AI 行为、账号、成就或排行榜。房间、座位、权威、传输、重连和落盘由平台负责。
-
-### 1.3 获取 SDK
+### 2.1 获取 SDK
 
 SDK 还没有发布到 npm，当前是 `private` 包。外部工程从平台仓库打成 tarball 安装；`@bp/game-sdk` 依赖 `@bp/protocol`，两个要一起装：
 
 ```bash
-cd D:/agent_workspace/3178-battle-platform
-mkdir -p D:/agent_workspace/sdk-tarballs
-npm pack ./packages/protocol --pack-destination D:/agent_workspace/sdk-tarballs
-npm pack ./packages/game-sdk --pack-destination D:/agent_workspace/sdk-tarballs
+cd <3178 仓库>
+mkdir -p <SDK 产物目录>
+npm pack ./packages/protocol --pack-destination <SDK 产物目录>
+npm pack ./packages/game-sdk --pack-destination <SDK 产物目录>
 
-cd D:/agent_workspace/mygame
+cd <你的游戏工程>
 npm init -y
 npm pkg set type=module
 npm install --save-dev \
-  D:/agent_workspace/sdk-tarballs/bp-protocol-0.1.0.tgz \
-  D:/agent_workspace/sdk-tarballs/bp-game-sdk-0.1.0.tgz \
+  <SDK 产物目录>/bp-protocol-0.1.0.tgz \
+  <SDK 产物目录>/bp-game-sdk-0.1.0.tgz \
   esbuild
 ```
 
-平台更新 SDK 后重新打包、重新安装。以后如果发布到 registry，改成普通 `npm install @bp/game-sdk` 即可。
+平台更新 SDK 后重新打包、重新安装。以后发布到 registry 后改成 `npm install @bp/game-sdk` 即可。
 
 CLI 需要 Node 24+；游戏客户端本身跑在浏览器里。
 
-### 1.4 从零走一遍
-
-自己的游戏工程建议这样分层：
+### 2.2 工程结构
 
 ```text
 mygame/
@@ -84,11 +107,52 @@ mygame/
    └─ mygame.bpmap       # 最终分发包
 ```
 
-步骤：
+`dist-pack/` 只放运行产物。不要把 `bpmap pack` 指向 `src/`，否则 TypeScript 源码、测试和不需要的文件都会进包。
 
-1. 写服务端模块，实现 [GameModule](#2-gamemodule) 和 [GameInstance](#3-gameinstance)，导出 `default` 或具名对象。
-2. 写客户端入口，实现 [客户端界面](#4-客户端界面可选)；不写也能跑，平台会显示原始状态占位面板。
-3. 构建到 `dist-pack/`。服务端入口可以用相对 import，`@bp/game-sdk` / `@bp/protocol` 交给宿主解析；其他依赖要打进产物或随包携带。客户端入口必须是单文件 ESM，不能有相对 import。
+### 2.3 写服务端模块
+
+实现 [GameModule](#32-gamemodule) 和 [GameInstance](#33-gameinstance)，导出 `default` 或具名对象：
+
+```ts
+import { stableDigest, type GameModule } from '@bp/game-sdk';
+
+export const myGame: GameModule = {
+  id: 'mygame',
+  name: '我的游戏',
+  version: '0.1.0',
+  entry: 'client/client.js',
+  seats: { min: 2, max: 4 },
+  allowSpectate: true,
+  soloFill: false,
+  roles: ['host', 'player', 'ai', 'spectator'],
+  normalizeConfig: (raw) => ({ target: Number(raw?.target) || 10 }),
+  rulesHashOf: (config) => stableDigest(config),
+  create: (config, ctx) => new MyGame(config, ctx),
+  resume: (snapshot, ctx) => MyGame.fromSnapshot(snapshot, ctx),
+};
+
+export default myGame;
+```
+
+`id` 要匹配 `^[a-z0-9][a-z0-9-]{0,31}$`，并与 `bpmap.json` 的 `id` 一致。`version` 同理。
+
+### 2.4 写客户端入口
+
+`entry` 会解析成 `<房主地址>/games/<id>/<entry>`。入口导出 `default` 或 `client`：
+
+```js
+export default {
+  mount(host, view, actions) { /* 渲染 view；按钮里调用 actions.send('动作名', payload) */ },
+  unmount(host) {},
+  onEvent({ name, payload }, actions) { /* 接收服务端 broadcast 的事件 */ },
+};
+```
+
+客户端入口必须是单文件 ESM，不能有相对 `import`；包内资源用 `fetch('assets/...')`，iframe 的 base 已指向入口目录。不写客户端也能运行，平台会显示原始状态占位面板；但 `GameModule.entry` 仍要填一个字符串。
+
+### 2.5 构建、打包、安装
+
+构建到 `dist-pack/`。服务端入口可以把 `@bp/game-sdk` / `@bp/protocol` 交给宿主解析；其他依赖要打进产物或随包携带：
 
 ```bash
 npx esbuild src/server.ts --bundle --platform=node --format=esm \
@@ -102,7 +166,7 @@ mkdir -p dist-pack/client/assets
 cp -r src/assets/* dist-pack/client/assets/
 ```
 
-4. 在 `dist-pack/` 根目录写 `bpmap.json`：
+在 `dist-pack/` 根目录写 `bpmap.json`：
 
 ```json
 {
@@ -113,162 +177,171 @@ cp -r src/assets/* dist-pack/client/assets/
 }
 ```
 
-5. 打包并检查：
+打包、检查、安装：
 
 ```bash
 npx bpmap pack dist-pack --out dist/mygame.bpmap
 npx bpmap inspect dist/mygame.bpmap
 npx bpmap doctor dist-pack
-npx bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
-```
 
-`doctor` 检查入口文件、包格式，以及 `--host` 时宿主的模式/API 版本；当前包里还没有 `mode`/`apiVersion` 字段，`doctor` 对成品包按 `turn` / `apiVersion 1` 检查。
-
-6. 把包放进平台并启动宿主：
-
-```bash
-cp dist/mygame.bpmap D:/agent_workspace/3178-battle-platform/games/
-cd D:/agent_workspace/3178-battle-platform
+cp dist/mygame.bpmap <3178 仓库>/games/
+cd <3178 仓库>
 node packages/hostd/dist/cli.js host --port 3178 --lan-port 3000
 ```
 
-打开 `http://127.0.0.1:3178`，建房时应该能在游戏列表里看到它。宿主只在启动时扫描 `games/`，换包后要重启。
+打开 `http://127.0.0.1:3178`，建房时应该能在游戏列表里看到它。宿主只在启动时扫描 `games/`，换包后要重启。宿主启动后可以再用 `bpmap doctor <包> --host http://127.0.0.1:3178` 检查兼容性，见 4.3。
 
-7. 迭代：重新构建、重新 `bpmap pack`、替换 `games/` 里的同名包、重启宿主。
+### 2.6 迭代和测试
 
-   不要同时留同一个 `id` 的两个包，加载器会跳过后面的。
+迭代：重新构建、重新 `bpmap pack`、替换 `games/` 里的同名包、重启宿主。
 
-   打包前先测规则：用 `node:test` 直接调用 `create()` / `begin()` / `handle()`，注入固定时钟和随机源；这比每次都起宿主快。
+不要同时留同一个 `id` 的两个包，加载器会跳过后面的。
 
-### 1.5 模式与适用边界
+打包前先测规则：用 `node:test` 直接调用 `create()` / `begin()` / `handle()`，注入固定时钟和随机源；这比每次都起宿主快。
 
-- **当前只有回合制/事件驱动模式**：一次动作、一次快照，平台 4Hz 推进游戏时钟。卡牌、棋类、桌游、回合制 RPG 都适合。
-- **实时动作模式是规划中**：固定 Tick、输入帧、二进制快照、客户端循环，尚未实现。当前不要把实时游戏按“已经能跑”来设计。
-- **没有 client-only 模式**：单机需求用 `seats.min = 1` + 电脑位；游戏必须自己实现电脑行动。纯单机、没有联机计划的项目，不建议接平台。
-- **对标 war3 的是房间和内容分发，不是 World Editor**：平台不提供通用地图编辑器或引擎；以后如果做 UGC，会先做“内容包/地图包”，由具体游戏定义数据格式和编辑器。
+## 3. SDK 内部模块详解
 
-## 2. GameModule
+### 3.1 包与导出路径
+
+当前 SDK 源码结构：
+
+```text
+packages/game-sdk/src/
+├─ contract/
+│  ├─ module-api.ts      # GameModule / GameInstance / Effect / GameContext
+│  └─ client.ts          # 客户端 mount / onEvent / actions 类型
+├─ cli/
+│  ├─ index.ts           # bpmap pack / inspect / unpack / doctor
+│  └─ doctor.ts          # 入口与宿主兼容检查
+├─ node/
+│  └─ pack.ts            # .bpmap 读取、打包、校验、解包缓存
+└─ kit/
+   ├─ palette.ts         # 座位颜色
+   ├─ server/feed.ts     # FeedLog
+   └─ client/            # FeedPanel / ChatPanel / ScoreboardPanel
+```
+
+公共导入路径：
+
+| 导入 | 内容 |
+|---|---|
+| `@bp/game-sdk` | `GameModule` / `GameInstance` / `Effect` / `GameContext` / `stableDigest` |
+| `@bp/game-sdk/client` | `GameClientContract` / `GameActions` |
+| `@bp/game-sdk/node` | `packDirectory` / `readPack` / `readPackSource` / `extractPack` |
+| `@bp/game-sdk/kit` | `ChatPanel` / `FeedPanel` / `ScoreboardPanel` / `seatColor` |
+| `@bp/game-sdk/kit/server` | `FeedLog` / 事件类型 |
+| `bpmap` bin | `pack` / `inspect` / `unpack` / `doctor` |
+
+`index.ts` 保留在源码根目录作为包入口；内部目录调整不改变上面的公共路径。
+
+### 3.2 GameModule
+
+`GameModule` 是游戏的“出厂说明书”，平台启动/加载时读一次，长期存在。它不保存某一局的状态。
 
 ```ts
-export const myModule: GameModule = {
-  id: 'mygame', name: '我的游戏', version: '0.1.0',
-  entry: 'client/client.js',          // 相对包根的地址，不能含 '..' 或 http
-  seats: { min: 2, max: 8 },          // max 不超过 16
-  allowSpectate: true,
-  soloFill: true,
-  roles: ['host', 'player', 'ai', 'spectator'],
-  normalizeConfig: (raw) => ({ /* 把房主填的设置整理成固定形状 */ }),
-  rulesHashOf: (config) => stableDigest(config), // 只算真的影响玩法的字段
-  create: (config, ctx) => new MyInstance(config, ctx),
-  resume: (snapshot, ctx) => { /* 从快照恢复 */ },
-  acceptsSnapshot: (snapshot) => snapshot?.version === 1,
-};
-```
-
-`id` 要匹配 `^[a-z0-9][a-z0-9-]{0,31}$`，并与 `bpmap.json` 的 `id` 一致。`version` 同理。
-
-可选 `ui` 声明客户端界面由谁负责：
-
-```ts
-ui: { chat: 'game' }   // 游戏自带聊天面板；缺省 platform，显示平台聊天卡
-```
-
-`ui.chat === 'game'` 时，父页面在对局阶段隐藏平台聊天卡。声明后记得在客户端挂 `ChatPanel`，否则玩家会看不到聊天。
-
-`rulesHashOf` 只摘要影响玩法的字段。房主改房名不应该让客人看到“房规不同”。`ctx` 里的 `now()` 和 `random()` 是平台注入的，测试可以按固定节奏推进，不用等真计时器。
-
-`soloFill` 只表示允许加电脑位，不代表电脑会行动。设为 true 的游戏要自己实现电脑出招（例如在 `tick` 或动作处理里推进），否则单机局会卡在电脑回合。
-
-## 3. GameInstance
-
-必须实现：
-
-- `serialize(viewer)`：按视角返回状态。`viewer === null` 表示观战；哪些信息该藏起来由游戏决定。
-- `handle(action, by)` 和 `begin()`：返回 `Effect[]`。动作不合法时用 `reject('中文说明', 'PHASE')` 返回，不要抛异常，也不要静默忽略。提示会直接显示给玩家。
-- `snapshot()`：返回要落盘和恢复的完整状态。
-
-按需实现：`tick(now)`、`onSeatJoin`、`onSeatLeave`、`onTimeout`、`dispose`。
-
-`Effect` 有六种：`broadcast`、`toSeat`、`notice`、`system`、`end`、`kick`。
-
-## 4. 客户端界面（可选）
-
-`entry` 会解析成 `<房主地址>/games/<id>/<entry>`。入口导出 `default` 或 `client`：
-
-```js
-export default {
-  mount(host, view, actions) { /* 渲染 view；按钮里调用 actions.send('动作名', payload) */ },
-  unmount(host) {},
-  onEvent({ name, payload }, actions) { /* 接收服务端 broadcast 的事件 */ },
-};
-```
-
-游戏界面拿不到 socket，也拿不到别人的座位，只能用 `actions.send()` 和 `actions.seatId()`。不写界面也能运行，平台会显示一个简单的占位面板；但 `GameModule.entry` 仍要填一个字符串，父页面取不到入口时会走这个降级路径。
-
-客户端入口在 `sandbox="allow-scripts"` 的 iframe 里执行，不带 `allow-same-origin`：读不到宿主的 `localStorage`、票据和 DOM。入口源码先在父页面按清单哈希校验，再交给沙箱。入口要写成单文件模块，不要用相对 `import`；包内资源用 `fetch('assets/...')`，iframe 的 base 已指向入口目录。
-
-当前沙箱只有 `allow-scripts`，指针锁定和全屏还没有开放；实时动作游戏需要的这些能力在规划中。
-
-## 5. 目录与构建
-
-平台仓库里的目录式模块只用于测试夹具：`tools/testkit/src/test-games/`，由 testkit 的 `tsconfig` 编译；`games/` 里只放生成的 `.bpmap`。第三方游戏在自己的工程里构建，打成 `.bpmap` 分发，不要把源码加进平台 monorepo。
-
-不要直接把 `bpmap pack` 指向 `src/`。准备一个只含构建产物的目录（上面的 `dist-pack/`），否则 TypeScript 源码、测试和不需要的文件都会进包。
-
-`bash tools/checks/check-seam.sh` 扫运行时平台包和 testkit 的工具代码：运行时包里不能出现玩法词，也不能 import `games/`；测试夹具在 testkit 里，按测试资产处理。
-
-参考夹具：[turn-based](tools/testkit/src/test-games/turn-based/index.ts)、[simultaneous](tools/testkit/src/test-games/simultaneous/index.ts)。
-
-## 6. 单文件游戏包（.bpmap）
-
-游戏分发用 `.bpmap` 单文件；目录式只用于平台自己的测试夹具和开发。把 `.bpmap` 丢进 `games/`，宿主启动时会扫描、校验、解包，并像目录游戏一样加载。
-
-源目录里放一个 `bpmap.json`：
-
-```json
-{
-  "id": "mygame",
-  "version": "0.1.0",
-  "server": "server.js",
-  "client": "client/client.js"
+export interface GameModule {
+  id: string;
+  name: string;
+  version: string;
+  entry: string;
+  seats: { min: number; max: number };
+  allowSpectate: boolean;
+  soloFill: boolean;
+  roles: SeatRole[];
+  normalizeConfig(raw: Record<string, unknown> | undefined): Record<string, unknown>;
+  rulesHashOf(config: Record<string, unknown>): string;
+  create(config: Record<string, unknown>, ctx: GameContext): GameInstance;
+  resume(snapshot: unknown, ctx: GameContext): GameInstance;
+  acceptsSnapshot?(snapshot: unknown): boolean;
+  ui?: GameUiOptions;
 }
 ```
 
-- `id` 和模块导出的 `id` 一致，`version` 和模块导出的 `version` 一致；不一致时宿主跳过这个包并在控制台说明原因。
-- `server` 是包内服务端入口；`client` 可选，填了就必须在包内，并和模块导出的 `entry` 一致。
-- 源目录里除 `bpmap.json` 外的普通文件都会进包。不允许符号链接、`..` 和绝对路径。单文件上限 64MB，总量上限 256MB，最多 512 个文件。
-- 服务端入口可以直接 `import '@bp/game-sdk'` 或 `'@bp/protocol'`，宿主按自己装的版本解析，不要求把 SDK 打进包。除此之外的裸包名，宿主不会替你在它的 `node_modules` 里找：要么打进包内（例如源目录里的 `node_modules/`），要么改成相对路径。
-- `mode`、`apiVersion`、`ui` 等字段还在规划中，当前打包器不会校验它们；先不要依赖。
+- `normalizeConfig`：把房主原始设置整理成固定形状，决定 `rulesHash` 和 `create` 的输入。
+- `rulesHashOf`：只摘要真正影响玩法的字段；改房名不应该让客人看到“房规不同”。
+- `create` / `resume`：创建一个新对局 / 从落盘快照恢复。
+- `acceptsSnapshot`：快照兼容性闸；返回 false 时平台丢弃快照。
+- `ui.chat`：可选。`platform`（默认）由平台显示聊天卡；`game` 表示游戏自带聊天面板，父页面在对局阶段隐藏平台聊天卡。
 
-打包、检查、调试解包：
+`soloFill` 只表示允许加电脑位，不代表电脑会行动。设为 true 的游戏要自己实现电脑出招，否则单机局会卡在电脑回合。
 
-```bash
-node tools/packaging/bpmap.mjs pack dist-pack --out dist/mygame.bpmap
-node tools/packaging/bpmap.mjs inspect dist/mygame.bpmap
-node tools/packaging/bpmap.mjs unpack dist/mygame.bpmap ./mygame-unpacked
+### 3.3 GameInstance
 
-# 外部工程装 @bp/game-sdk 后也可以直接用 bpmap 这个 bin
-bpmap pack dist-pack --out dist/mygame.bpmap
-```
-
-把 `mygame.bpmap` 放进 `games/`，重启宿主即可。宿主把包解到数据目录下的 `packs/<id>/<包哈希>/`：开发目录是 `data/packs`，便携包是 `%LOCALAPPDATA%\3178-battle-platform\data\packs`。缓存的文件集合必须和包清单完全一致；多一个文件、少一个文件或改一个字节都会重新解包。
-
-同一个 id 只加载一个包：和目录游戏或其他包重名时，后面的包会被跳过并在控制台报错。包版本在入房握手里是 `模块版本+包哈希前 12 位`，两边不一致会被版本闸挡住。
-
-包里的服务端代码会在房主进程里执行，和安装一个程序一样，只装来源可信的包。客户端入口在沙箱 iframe 中执行，源码先按包清单的 sha256 校验（清单随 `/api/games` 下发）再交给沙箱；它不继承宿主的 localStorage 和票据。
-
-## 7. game-kit（可选）
-
-game-kit 在同一个 SDK 包里，通过子路径导入：
+`GameInstance` 是**某一局**游戏本身，每个房间一份，互相隔离。
 
 ```ts
-import { FeedLog } from '@bp/game-sdk/kit/server';                 // 服务端
-import { ChatPanel, FeedPanel, ScoreboardPanel, seatColor } from '@bp/game-sdk/kit'; // 客户端
+export interface GameInstance {
+  serialize(viewer: ViewerId): unknown;
+  handle(action: GameAction, by: string): Outcome;
+  begin(): Outcome;
+  snapshot(): unknown;
+  tick?(now: number): Effect[];
+  onSeatJoin?(seat: GameSeatInfo): Effect[];
+  onSeatLeave?(seat: GameSeatInfo, phase: RoomPhase): Effect[];
+  onTimeout?(seat: GameSeatInfo): Effect[];
+  dispose?(): void;
+}
 ```
 
-它只提供跨游戏的展示/数据组件，不提供引擎。
+- `begin()`：开局初始化，返回 `Effect[]`。
+- `handle(action, by)`：处理玩家动作；不合法时用 `reject('中文说明', 'PHASE')` 返回，不要抛异常或静默忽略。
+- `serialize(viewer)`：按视角返回状态；`viewer === null` 是观战视角。哪些信息该藏起来由游戏决定。
+- `snapshot()` / `resume()`：完整状态落盘和恢复。
+- `tick(now)`：平台心跳调用，用于计时窗口；当前回合制宿主是 4Hz。
+- 座位回调：玩家离开、超时等事件由游戏决定怎么处理。
 
-### 7.1 事件流（已提供）
+平台不直接改游戏状态；玩家动作和游戏事件都通过 `Effect[]` 交给平台投递。
+
+### 3.4 GameContext、座位和 Effect
+
+`GameContext` 是平台注入给游戏的只读上下文：
+
+| 字段/方法 | 用途 |
+|---|---|
+| `roomCode` | 房号 |
+| `config` | 规范化后的房规 |
+| `now()` | 平台注入的时钟 |
+| `random()` | 平台注入的随机源，测试可固定 |
+| `seats()` | 当前座位列表 |
+| `seat(seatId)` | 单个座位 |
+
+`GameSeatInfo` 只含 `seatId`、`slot`、`name`、`role`、`team`、`ready`、`connected`，不含 socket 或票据。
+
+`Effect` 有六种：
+
+- `broadcast`：广播给房间；
+- `toSeat`：只发给某个座位；
+- `notice`：平台通知；
+- `system`：系统消息；
+- `end`：结束对局；
+- `kick`：踢出座位。
+
+### 3.5 客户端契约与沙箱
+
+```ts
+export interface GameClientContract {
+  mount(host: HTMLElement, view: unknown, actions: GameActions): void;
+  unmount?(host: HTMLElement): void;
+  onEvent?(event: { name: string; payload?: unknown }, actions: GameActions): void;
+}
+
+export interface GameActions {
+  send(name: string, payload?: unknown): void;
+  seatId(): string | null;
+}
+```
+
+- **每次新快照都会再次调用 `mount`**，不是只调用一次；渲染时要替换内容，不要反复 append。
+- 事件可能先于 `mount` 到达，平台会排队；`onEvent` 里不要假设界面已经渲染。
+- 游戏拿不到 socket、票据、其他座位的私有信息；动作只能走 `actions.send`。
+- 客户端入口在 `sandbox="allow-scripts"` 的 iframe 里执行，不带 `allow-same-origin`：读不到宿主的 `localStorage`、cookie 和 DOM。
+- 入口要打成单文件，资源用 `fetch('assets/...')`；当前沙箱没有指针锁定/全屏，实时动作需要的这些能力在规划中。
+
+### 3.6 game-kit
+
+game-kit 在同一个 SDK 包里，按需导入；全部是可选的跨游戏组件。
+
+#### 事件流
 
 服务端：
 
@@ -281,88 +354,55 @@ const feed = new FeedLog({
   seatTeams: () => ctx.seats().map((seat) => ({ seatId: seat.seatId, team: seat.team })),
 });
 
-// 在动作/开局/掉线等地方
 feed.emit({
-  type: 'death',                 // 游戏自定义分类
-  text: '甲 被 乙 击杀',        // 游戏自己填文本
+  type: 'death',
+  text: '甲 被 乙 击杀',
   actor: 's1',
   target: 's2',
-  visibility: 'all',             // all | { seatId } | { team }
+  visibility: 'all',
 });
 
 return [...otherEffects, ...feed.drainEffects()];
 ```
 
-- `viewFor(viewer)` 按视角裁剪历史；`serialize` 里带上它，重连能恢复。
-- `snapshot()` / `restore()` 用于把事件历史放进游戏快照。
-- `visibility: { seatId }` 只发给本人；`{ team }` 需要 `seatTeams`。
+- `visibility` 支持 `all`、`{ seatId }`、`{ team }`。
+- `viewFor(viewer)` 按视角裁剪历史；放进 `serialize` 可以在重连后恢复。
+- `snapshot()` / `restore()` 把事件历史放进游戏快照。
 
 客户端：
 
 ```ts
-import { FeedPanel, seatColor } from '@bp/game-sdk/kit';
+import { FeedPanel } from '@bp/game-sdk/kit';
 
-const feed = new FeedPanel({
-  mount: feedEl,
-  max: 100,
-  colorOf: (seatId) => seatColor({ seatId }).value,
-});
-
-feed.setEntries(view.feed);                    // 每次 mount/快照
-feed.handleEvent(event);                       // 放进 onEvent
+const feed = new FeedPanel({ mount: feedEl, max: 100 });
+feed.setEntries(view.feed);
+feed.handleEvent(event);   // 放进 onEvent
 ```
 
-- 事件用纯文本渲染，不执行 HTML。
-- `onEntry` 只回调新到的事件，初始历史不会触发。
-- 不挂 `mount` 时是 headless，自己画 HUD 也可以。
+#### 聊天
 
-### 7.2 聊天（已提供）
+平台会把房间聊天和座位信息送进 iframe：
 
-平台会把房间聊天和座位信息送进游戏 iframe，事件名是：
-
-- `bp:chat-history`：最近 100 条聊天，内容变化时重推；**没有增量 `bp:chat`，以 history 为准**。
+- `bp:chat-history`：最近 100 条，内容变化时重推；没有增量 `bp:chat`，以 history 为准。
 - `bp:room`：`{ code, phase, seats } | null`，座位或阶段变化时重推。
-- `bp:chat`：已预留单条事件，父页面暂不发送。
-
-直接用面板：
 
 ```ts
 import { ChatPanel } from '@bp/game-sdk/kit';
 
-const chat = new ChatPanel({
-  mount: chatEl,
-  showSystem: true,
-});
+const chat = new ChatPanel({ mount: chatEl, showSystem: true });
 ```
 
-- 面板自动监听 `bp:chat-history`，整表替换；历史以平台为准。
-- 输入提交后默认在 iframe 里 `parent.postMessage({ type: 'chat', text })`；也可以用 `onSend` 换成自己的发送方式。
-- 纯文本渲染，系统行可过滤，自动滚动；`onLine` 只回调新消息。
-- 不挂 `mount` 时是 headless，自己画聊天也可以。
+`ChatPanel` 自动监听 history，输入后默认通过 `parent.postMessage({ type: 'chat', text })` 发送；父页面校验 1..300 字、对局阶段和连接状态，发送者身份由服务端座位决定。
 
-自己画时直接监听桥：
+如果声明了 `GameModule.ui.chat = 'game'`，父页面会对局阶段隐藏平台聊天卡；这时游戏必须自己挂 `ChatPanel` 或画聊天。
 
-```ts
-window.addEventListener('bp:chat-history', (event) => {
-  renderChat((event as CustomEvent).detail);
-});
-
-parent.postMessage({ type: 'chat', text }, '*');   // 只发文本
-```
-
-父页面会校验 1..300 字、对局阶段和连接状态，发送者身份由服务端座位决定，游戏不能伪造。聊天复用平台房间聊天：200 条历史、落盘、限流都在平台侧，不要自己再存一份。
-
-在 `GameModule` 里声明 `ui: { chat: 'game' }` 后，父页面在对局阶段隐藏平台聊天卡；缺省值 `platform` 保持现状。声明了 `game` 就必须自己挂 `ChatPanel` 或画聊天，否则玩家没有聊天入口。
-
-### 7.3 记分板（已提供）
-
-记分板完全由游戏定义列和值，平台只提供座位元数据（名字、队伍、颜色、连接状态、房主标记）。没有固定的“击杀/死亡”列。
+#### 记分板
 
 ```ts
 import { ScoreboardPanel } from '@bp/game-sdk/kit';
 
 const board = new ScoreboardPanel({
-  mount: el,
+  mount: boardEl,
   rows: view.scoreboard.rows,   // [{ seatId, values: { ... } }]
   columns: [
     { key: 'hand', label: '手牌', value: 'hand' },
@@ -371,18 +411,15 @@ const board = new ScoreboardPanel({
   ],
   showTeam: true,
   showConnection: true,
-  sort: { key: 'score', dir: 'desc' },
 });
 ```
 
-- 面板自动监听 `bp:room`，用平台座位表补齐玩家名、队伍、连接状态和房主标记；每次游戏视图更新时调用 `board.setRows(view.scoreboard.rows)`。
-- 座位是主列表：没有游戏行的玩家也会显示，有行但没座位的排在后面。
-- `value` 可以是字段名或函数；`format` 只返回文本，需要图标时用 `render` 返回 DOM 节点。
-- 点表头可以切换排序；也可以在初始化时给 `sort`。没有 `sortValue` 时按列值比较，缺值始终排最后。
+- 列完全由游戏定义；`value` 支持字段名或函数，`format` 返回文本，复杂单元格用 `render` 返回 DOM。
+- 面板自动监听 `bp:room`，补齐玩家名、队伍、连接状态和房主标记。
 - 行和值按视角给，观战/对手不能看到隐藏数据。
-- 自己的 RTT 暂未通过桥传给 iframe；当前只显示连接状态，不假装有全员 ping。
+- 当前只显示连接状态，没有全员 ping；自己的 RTT 也还没有通过桥传入。
 
-### 7.4 座位颜色（已提供）
+#### 座位颜色
 
 ```ts
 import { seatColor } from '@bp/game-sdk/kit';
@@ -391,51 +428,135 @@ const color = seatColor({ seatId: 's1', slot: 1, team: 1 });
 // { index: 0, name: 'red', value: '#e05d5d' }
 ```
 
-队伍优先、座位号兜底，同一输入稳定。聊天、事件流、记分板共用同一套颜色；游戏可以覆盖 CSS 或自己调色。
+队伍优先、座位号兜底，同一输入稳定。聊天、事件流、记分板共用同一套颜色。
 
-### 7.5 game-kit 不做什么
+### 3.7 打包库与 CLI
 
-不做引擎、渲染器、物理、动画、关卡编辑器、寻路、AI 行为树、资源导入器。不做跨房间全局聊天、私聊、盟友聊天（需要身份和可见性，后续再定）。不做成就、排行榜、账号体系（需要后端和防作弊，另立项）。
-
-## 8. 实时游戏（规划中）
-
-当前不可用，不要按它来设计接入。现状和规划如下：
-
-- 现状：宿主 250ms 一次游戏 Tick（4Hz），JSON 消息，全量视图，没有输入帧、预测、回滚或二进制快照。
-- 规划：独立实时 profile，固定 Tick 20–30Hz，输入带序号，快照 10–20Hz，客户端自己跑循环并插值；第一版只做 2–4 人局域网合作/简单对抗。
-- 传输先用 WebSocket；局域网休闲够不够，要量 RTT、抖动和包大小后再决定是否上 WebTransport/WebRTC。
-- 指针锁定在局域网 HTTP 下受安全上下文限制；3D 鼠标视角需要 HTTPS 或改控制方式，这个成本要提前算。
-- 实时 profile 不会改变现有回合制路径；两种模式各自调度。
-
-在实时契约落地前，不要在游戏里用 `tick(now)` 模拟 60Hz 动作，平台不会按那个频率调用。
-
-## 9. 版本、自检与升级
-
-当前可用：
-
-- 包内 `id` / `version` 必须和模块导出一致；
-- 宿主的包版本是 `模块版本+包哈希前 12 位`，客户端版本不一致会被版本闸挡住；
-- `GET /api/version` 返回平台版本、支持的包格式/协议/API/模式清单，可用于诊断；
-- `bpmap doctor` 检查入口文件、包格式，带 `--host` 时再查宿主的 `packFormats`、`apiVersions`、`modes`：
+`@bp/game-sdk/node` 提供 `.bpmap` 的读取、校验、打包和解包缓存；`bpmap` CLI 封装了常用操作：
 
 ```bash
-npx bpmap doctor dist-pack
-npx bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
+bpmap pack dist-pack --out dist/mygame.bpmap
+bpmap inspect dist/mygame.bpmap
+bpmap unpack dist/mygame.bpmap ./unpacked
+bpmap doctor dist-pack
 ```
 
-`doctor` 当前对源目录会读取可选的 `mode`/`apiVersion` 字段；成品 `.bpmap` 包头还没有这两个字段，所以按 `turn` / `apiVersion 1` 检查。
+包的规则：
 
-规划中：
+- 源目录除 `bpmap.json` 外的普通文件都会进包；不允许符号链接、`..` 和绝对路径。
+- 单文件上限 64MB，总量上限 256MB，最多 512 个文件。
+- 宿主把包解到数据目录下的 `packs/<id>/<包哈希>/`：开发目录是 `data/packs`，便携包是 `%LOCALAPPDATA%\3178-battle-platform\data\packs`。
+- 缓存文件集合必须和包清单完全一致；多一个、少一个或改一个字节都会重新解包。
+- 同一个 id 只加载一个包；重名时后面的包会被跳过并在控制台报错。
+- 包版本在入房握手里是 `模块版本+包哈希前 12 位`，两边不一致会被版本闸挡住。
 
-- `GameModule.apiVersion`、`mode`、`profileVersion` 进入包清单，宿主只加载自己支持的版本；
-- `bpmap upgrade` 对有源码的旧工程做机械 codemod 和清单升级；编译后的 `.bpmap` 无法还原源码，只能靠宿主适配器或让作者重发；
-- 宿主保留“当前 + 上一个主版本”的适配器。
+### 3.8 宿主怎么加载
 
-`bpmap upgrade` 还没实现前，不要依赖它。
+宿主启动时扫描 `games/*.bpmap`，校验、解包并 `import()` 包内服务端入口，拿到 `GameModule`；建房时调用 `create()`。平台源码不 import 任何 `games/` 路径，运行时按 id 动态加载。
 
-## 10. 明确不做
+包里服务端代码在房主进程里执行，等同于安装一个程序，只装来源可信的包。客户端入口在沙箱 iframe 中执行，源码先按清单哈希校验再交给沙箱。
+
+## 4. SDK 版本、自检与升级
+
+### 4.1 当前版本模型
+
+- 游戏包里的 `id` / `version` 必须和模块导出一致；
+- 宿主加载后把模块版本变成 `模块版本+包哈希前 12 位`；
+- 客户端握手发现版本不一致会被版本闸挡住；
+- 当前还没有独立的 `apiVersion` / `mode` 包字段；这些是下一步。
+
+### 4.2 `/api/version`
+
+宿主提供只读接口：
+
+```http
+GET /api/version
+```
+
+返回平台版本、支持的包格式、协议版本、API 版本、模式和客户端能力。当前实际返回：
+
+```json
+{
+  "platform": "0.1.0",
+  "packFormats": [1],
+  "protocolVersions": [1],
+  "apiVersions": [1],
+  "modes": { "turn": [1] },
+  "clientCaps": []
+}
+```
+
+### 4.3 bpmap doctor
+
+```bash
+bpmap doctor dist-pack
+# 先启动宿主，再查宿主兼容性
+bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
+```
+
+- 源目录：检查 `bpmap.json`、服务端/客户端入口；读取可选的 `mode` / `apiVersion`。
+- 单文件包：检查包格式、入口和清单。
+- `--host`：请求 `/api/version`，比对 `packFormats`、`apiVersions`、`modes`。
+
+当前成品 `.bpmap` 包头还没有 `mode` / `apiVersion` 字段，因此包目标按 `turn` / `apiVersion 1` 检查。宿主不支持时 `doctor` 会列出失败项并退出码 1。
+
+### 4.4 规划中的版本层
+
+后续会把版本拆成五层：
+
+| 版本 | 作用 |
+|---|---|
+| `packFormat` | `.bpmap` 容器格式 |
+| `protocolVersion` | 线协议消息集 |
+| `apiVersion` | 游戏契约 |
+| `profileVersion` | 执行模型（turn/realtime） |
+| `sdkVersion` | SDK 包自身 |
+
+规则：
+
+- 加字段、加可选方法不升 `apiVersion`；
+- 删字段、改签名、改语义才升；
+- 宿主保留“当前 + 上一个主版本”的适配器；
+- 宿主不认识的新版本直接拒绝，并给出升级提示。
+
+### 4.5 升级策略
+
+- **有源码**：后续提供 `bpmap upgrade`，按版本做机械 codemod、更新清单和依赖，输出无法自动处理的 TODO。
+- **只有成品包**：无法从编译后的 JS 还原源码，只能靠宿主适配器，或者让作者重新发包。
+- 当前 `bpmap upgrade` 还没实现，不要依赖它。
+
+## 5. 后续更新计划
+
+### 5.1 近期
+
+- 用真实临时客户端做一遍 game-kit 沙箱集成验证，包括 `ui.chat='game'` 隐藏平台聊天。
+- 游戏设置 `configSchema`：让大厅自动渲染房主设置表单，不再每个游戏手写。
+- 赛后结果面板和“再来一局”流程。
+- 房主设置队伍 UI；game-kit 已有队伍颜色。
+- game-kit 继续补输入/显示、音频、循环、存档、资源、指标等浏览器样板；这些现在还没有。
+
+### 5.2 实时模式
+
+- 独立实时 profile：固定 Tick 20–30Hz，输入帧带序号，快照 10–20Hz，客户端自己跑循环并插值。
+- 第一版只做 2–4 人局域网合作/简单对抗，传输先用 WebSocket；测 RTT、抖动、包大小后再决定 WebTransport/WebRTC。
+- 指针锁定在局域网 HTTP 下受安全上下文限制；3D 鼠标视角需要 HTTPS 或改控制方式。
+- 实时 profile 不改变现有回合制路径，两者各自调度。
+
+### 5.3 内容包和 UGC
+
+- 先做“内容包/地图包”：只有数据，绑定某个游戏 id 和版本；schema 和编辑器由具体游戏提供。
+- 平台负责分发、版本校验和房间选择，不做通用地图编辑器。
+- 通用编辑器等于自研引擎，单独立项，不塞进 SDK。
+
+### 5.4 SDK 分发和生态
+
+- 当前 SDK 还是 `private`，靠 tarball；下一步定 registry/tarball、版本范围和 `apiVersion`。
+- 如果要真正支持“开发者不拉平台仓库就能开发”，最终需要一个独立分发的 SDK 包；这仍不是二进制文件，Node/TS 生态交付的是 JS + 类型声明 + CLI。
+- 成就、全局排行榜、跨房间聊天需要账号、后端和防作弊，属于另一个后端产品，不在当前 SDK 范围。
+
+### 5.5 暂不启动
 
 - 通用游戏引擎、渲染器、物理、动画、关卡编辑器、寻路、AI 行为树；
 - 单独的 `client-only` 模式；纯单机游戏用普通 Web 分发更合适；
-- 跨房间全局聊天、私聊、账号、成就、全局排行榜；
+- 全局账号、成就、排行榜；
 - 未经作者授权或来源不明的 `.bpmap`。
