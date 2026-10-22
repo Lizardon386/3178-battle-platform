@@ -1,6 +1,6 @@
 # 3178-battle-platform（3178 对战平台）· 游戏接入指南
 
-> 面向准备把游戏接入 3178 的开发者：内容覆盖 SDK 获取、从零接入、GameModule / GameInstance、客户端沙箱、.bpmap 打包、game-kit，以及回合制与实时模式的边界和当前可用范围。
+> 面向准备把游戏接入 3178 的开发者。内容覆盖 SDK 获取、从零接入、GameModule / GameInstance、客户端沙箱、.bpmap 打包、game-kit，以及回合制与实时模式的边界和当前可用范围。
 > 最近更新：2026-10-22
 
 ## 文档
