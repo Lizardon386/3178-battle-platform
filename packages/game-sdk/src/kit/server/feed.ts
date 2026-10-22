@@ -1,4 +1,4 @@
-import type { Effect, ViewerId } from '../../module-api.js';
+import type { Effect, ViewerId } from '../../contract/module-api.js';
 import { FEED_EVENT, FeedError, type FeedEntry, type FeedVisibility } from '../shared.js';
 
 export interface FeedSeat {

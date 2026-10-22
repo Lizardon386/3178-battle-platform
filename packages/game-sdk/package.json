@@ -11,8 +11,8 @@
       "default": "./dist/index.js"
     },
     "./client": {
-      "types": "./dist/client.d.ts",
-      "default": "./dist/client.js"
+      "types": "./dist/contract/client.d.ts",
+      "default": "./dist/contract/client.js"
     },
     "./node": {
       "types": "./dist/node/pack.d.ts",
@@ -29,7 +29,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "bpmap": "dist/cli.js"
+    "bpmap": "dist/cli/index.js"
   },
   "dependencies": {
     "@bp/protocol": "*"

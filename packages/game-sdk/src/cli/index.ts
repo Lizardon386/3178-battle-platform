@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
-import { packDirectory, readPack, readPackSource } from './node/pack.js';
+import { packDirectory, readPack, readPackSource } from '../node/pack.js';
 
 function usage(): void {
   console.log(`用法：
