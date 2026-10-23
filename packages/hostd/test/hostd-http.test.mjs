@@ -91,11 +91,14 @@ test('页面、客户端模块与协议包都能取到，且 MIME 是对的', as
   assert.match(page.headers.get('content-type'), /text\/html/);
   assert.match(page.body, /对战平台/);
   assert.match(page.body, /"imports"/);
+  assert.match(page.body, /@bp\/core-abi/);
 
   const app = await get('/app/app.js');
   assert.equal(app.status, 200);
   assert.match(app.headers.get('content-type'), /javascript/);
 
+  const coreAbi = await get('/vendor/core-abi/index.js');
+  assert.equal(coreAbi.status, 200);
   const protocol = await get('/vendor/protocol/index.js');
   assert.equal(protocol.status, 200);
   const css = await get('/style.css');
@@ -123,6 +126,7 @@ test('路径穿越：../ 编码变形一律 404', async () => {
   for (const attempt of [
     '/app/../../../package.json',
     '/app/%2e%2e%2f%2e%2e%2fpackage.json',
+    '/vendor/core-abi/../../package.json',
     '/vendor/protocol/../../package.json',
     '/vendor/tabler/../../../package.json',
     '/games/fixture-turn/../../package.json',

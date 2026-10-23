@@ -103,6 +103,7 @@ function sendJson(res: ServerResponse, data: unknown, cors = true): void {
 export function createWebServer(opts: WebRootOptions): Server {
   const publicDir = join(opts.root, 'packages', 'client', 'public');
   const clientDist = join(opts.root, 'packages', 'client', 'dist');
+  const coreAbiDist = join(opts.root, 'packages', 'core-abi', 'dist');
   const protocolDist = join(opts.root, 'packages', 'protocol', 'dist');
   const gamesDir = join(opts.root, 'games');
   // 第三方样式从 node_modules 直接挂出去：不把 635KB 产物复制进仓库，
@@ -159,6 +160,10 @@ export function createWebServer(opts: WebRootOptions): Server {
 
     if (path.startsWith('/app/')) {
       const absolute = safeJoin(clientDist, path.slice('/app/'.length));
+      return absolute && existsSync(absolute) ? sendFile(res, absolute, false) : notFound(res, opts, path);
+    }
+    if (path.startsWith('/vendor/core-abi/')) {
+      const absolute = safeJoin(coreAbiDist, path.slice('/vendor/core-abi/'.length));
       return absolute && existsSync(absolute) ? sendFile(res, absolute, false) : notFound(res, opts, path);
     }
     if (path.startsWith('/vendor/protocol/')) {
