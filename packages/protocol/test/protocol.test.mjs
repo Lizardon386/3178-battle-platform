@@ -1,8 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  canonicalJson,
-  stableDigest,
   computeRulesHash,
   checkProtocol,
   checkHandshake,
@@ -14,6 +12,7 @@ import {
   MESSAGE_CATALOG,
   PROTOCOL_VERSION,
 } from '@bp/protocol';
+import { canonicalJson, stableDigest } from '@bp/core-abi';
 
 test('稳定摘要与键顺序无关（旧 deckVersion 的泛化）', () => {
   const a = { stack: true, peng: false, cap: 20 };

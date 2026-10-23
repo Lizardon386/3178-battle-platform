@@ -11,6 +11,7 @@
     }
   },
   "dependencies": {
+    "@bp/core-abi": "*",
     "@bp/game-sdk": "*",
     "@bp/protocol": "*",
     "ws": "^8.18.0"

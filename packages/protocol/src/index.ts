@@ -1,5 +1,4 @@
 export * from './version.js';
-export * from './hash.js';
 export * from './codes.js';
 export * from './seats.js';
 export * from './manifest.js';

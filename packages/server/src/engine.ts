@@ -1,8 +1,8 @@
-import type { ClientMessage, GameManifest, ServerMessage } from '@bp/protocol';
+import type { ClientMessage, ServerMessage } from '@bp/protocol';
 import { checkHandshake, isHostCommand } from '@bp/protocol';
 import { canBegin, canJoinAs, requireHost, requirePlayerSeat, requireSeat, requireTicket } from './authority.js';
 import { newConnId } from './ids.js';
-import { manifestOf, isReject, type Effect, type GameContext, type GameModule, type GameSeatInfo } from './module-api.js';
+import { manifestOf, isReject, type Effect, type GameContext, type GameManifest, type GameModule, type GameSeatInfo } from './module-api.js';
 import type { SeatRecord, TransportHandle } from './room.js';
 import { Room } from './room.js';
 import { RoomRegistry } from './registry.js';

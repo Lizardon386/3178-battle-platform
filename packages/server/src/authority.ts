@@ -1,4 +1,4 @@
-import type { PlatformCode } from '@bp/protocol';
+import type { PlatformCode } from '@bp/core-abi';
 import type { Room, SeatRecord } from './room.js';
 
 /**

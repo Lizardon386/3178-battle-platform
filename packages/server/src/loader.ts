@@ -2,7 +2,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { GameAsset } from '@bp/protocol';
+import type { GameAsset } from '@bp/core-abi';
 import type { GameModule } from './module-api.js';
 import { extractPack, listPackFiles, readPack } from '@bp/game-sdk/node';
 
@@ -10,7 +10,7 @@ import { extractPack, listPackFiles, readPack } from '@bp/game-sdk/node';
  * 解包缓存可能落在程序目录之外（便携包的数据目录在用户目录），那里向上找不到
  * node_modules/@bp。包内服务端入口的裸导入一律按宿主自己的依赖解析。
  */
-const PACK_IMPORTS = ['@bp/game-sdk', '@bp/game-sdk/node', '@bp/protocol'];
+const PACK_IMPORTS = ['@bp/game-sdk', '@bp/game-sdk/node', '@bp/core-abi', '@bp/protocol'];
 const packImportUrls = new Map<string, string>();
 for (const specifier of PACK_IMPORTS) {
   try {

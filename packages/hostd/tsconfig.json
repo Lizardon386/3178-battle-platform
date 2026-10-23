@@ -8,6 +8,7 @@
   },
   "include": ["src/**/*.ts"],
   "references": [
+    { "path": "../core-abi" },
     { "path": "../protocol" },
     { "path": "../server" },
     { "path": "../client" }

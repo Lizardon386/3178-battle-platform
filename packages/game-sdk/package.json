@@ -32,7 +32,7 @@
     "bpmap": "dist/cli/index.js"
   },
   "dependencies": {
-    "@bp/protocol": "*"
+    "@bp/core-abi": "*"
   },
   "files": [
     "dist",

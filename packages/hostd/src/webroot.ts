@@ -3,7 +3,8 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import type { GameModule } from '@bp/server';
 import { manifestOf } from '@bp/server';
-import type { DiscoveryRoom, GameAsset } from '@bp/protocol';
+import type { DiscoveryRoom } from '@bp/protocol';
+import type { GameAsset } from '@bp/core-abi';
 
 /**
  * 宿主壳的静态与接口层。路由前缀就是"三方来源"的分工：

@@ -8,5 +8,5 @@
     "types": []
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../protocol" }, { "path": "../game-sdk" }]
+  "references": [{ "path": "../core-abi" }, { "path": "../protocol" }]
 }

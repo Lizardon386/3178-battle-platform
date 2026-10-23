@@ -63,7 +63,7 @@ await build({
   bundle: true,
   platform: 'node',
   format: 'esm',
-  external: ['@bp/game-sdk', '@bp/game-sdk/node', '@bp/protocol'],
+  external: ['@bp/game-sdk', '@bp/game-sdk/node', '@bp/core-abi'],
   outfile: join(outDir, 'server.js'),
   logLevel: 'info',
 });

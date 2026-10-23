@@ -1,6 +1,5 @@
-import type { NoticeCode, PlatformCode } from './codes.js';
-import type { GameManifest } from './manifest.js';
-import type { RoomPhase, RoomView, SeatRole, SeatView } from './seats.js';
+import type { GameManifest, NoticeCode, PlatformCode, RoomPhase, SeatRole, SeatView } from '@bp/core-abi';
+import type { RoomView } from './seats.js';
 
 /**
  * 线协议：所有消息都是扁平 JSON 对象，靠 `type` 分支。
@@ -275,4 +274,4 @@ export const MESSAGE_CATALOG: MessageCatalogEntry[] = [
 ];
 
 /** 房间视图由平台组装，玩法无关。 */
-export type { RoomView, SeatView };
+export type { RoomView };

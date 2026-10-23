@@ -1,0 +1,15 @@
+{
+  "name": "@bp/core-abi",
+  "version": "0.1.0",
+  "description": "3178 游戏接口层：GameModule / GameInstance / Effect 等宿主与游戏共同遵守的 ABI 和数据类型",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"]
+}

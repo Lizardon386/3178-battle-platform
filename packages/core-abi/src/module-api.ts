@@ -1,11 +1,12 @@
-import type { GameManifest, GameUiOptions, NoticeCode, PlatformCode, RoomPhase, SeatRole } from '@bp/protocol';
+import type { NoticeCode, PlatformCode } from './codes.js';
+import type { GameUiOptions } from './manifest.js';
+import type { RoomPhase, SeatRole } from './seats.js';
 
 /**
- * 平台与游戏模块之间的唯一契约。
- * 三条硬规矩：
- *  1. 游戏状态不进平台对象——平台只搬 opaque blob。
- *  2. 游戏不许直接碰 socket——一切对外投递都通过返回 Effect[]。
- *  3. 游戏不许改房间相位、座位表或房主权限——那要经过平台（Ready 闸、TTL、审计都在平台）。
+ * 宿主与游戏模块之间的 ABI。
+ * 1. 游戏状态不进平台对象，平台只搬 opaque blob。
+ * 2. 游戏不直接碰 socket，对外投递只通过 Effect[]。
+ * 3. 游戏不改房间相位、座位表或房主权限。
  */
 
 export type ViewerId = string | null;
@@ -90,24 +91,8 @@ export interface GameModule {
   rulesHashOf(config: Record<string, unknown>): string;
   create(config: Record<string, unknown>, ctx: GameContext): GameInstance;
   resume(snapshot: unknown, ctx: GameContext): GameInstance;
-  /** 落盘快照的兼容性闸；返回 false 则平台丢弃快照并报错给房主。 */
+  /** 存档快照的兼容性闸；返回 false 则平台丢弃快照并报错给房主。 */
   acceptsSnapshot?(snapshot: unknown): boolean;
   /** 可选 UI 声明；例如让游戏自己的聊天面板替代平台聊天卡。 */
   ui?: GameUiOptions;
-}
-
-/** 平台侧组装 manifest。rulesHash 由模块从规范化 config 算出，平台不参与玩法判断。 */
-export function manifestOf(module: GameModule, config: Record<string, unknown>): GameManifest {
-  return {
-    id: module.id,
-    name: module.name,
-    version: module.version,
-    rulesHash: module.rulesHashOf(config),
-    seats: module.seats,
-    allowSpectate: module.allowSpectate,
-    soloFill: module.soloFill,
-    roles: module.roles,
-    entry: module.entry,
-    ...(module.ui ? { ui: { ...module.ui } } : {}),
-  };
 }

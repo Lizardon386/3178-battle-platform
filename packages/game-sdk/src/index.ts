@@ -1,3 +1,20 @@
-export * from './contract/module-api.js';
-export { stableDigest } from '@bp/protocol';
-export type { GameAsset, GameManifest } from '@bp/protocol';
+export type {
+  Effect,
+  GameAction,
+  GameAsset,
+  GameContext,
+  GameInstance,
+  GameManifest,
+  GameModule,
+  GameSeatInfo,
+  GameUiOptions,
+  NoticeCode,
+  Outcome,
+  PlatformCode,
+  Reject,
+  RoomPhase,
+  SeatRole,
+  SeatView,
+  ViewerId,
+} from '@bp/core-abi';
+export { isReject, reject, stableDigest } from '@bp/core-abi';

@@ -1,7 +1,7 @@
 import { hashSecret, newSeatId, newTicket, secretMatches } from './ids.js';
-import type { GameInstance, GameModule, GameSeatInfo } from './module-api.js';
+import type { GameInstance, GameManifest, GameModule, GameSeatInfo, RoomPhase, SeatRole, SeatView } from './module-api.js';
 import { manifestOf } from './module-api.js';
-import type { GameManifest, RoomPhase, RoomView, SeatRole, SeatView } from '@bp/protocol';
+import type { RoomView } from '@bp/protocol';
 
 /** 传输层的最小投影：房间不许知道 ws 的存在。 */
 export interface TransportHandle {

@@ -1,8 +1,7 @@
-import type { GameManifest, RoomPhase, SeatView } from '@bp/protocol';
+import type { GameActions, GameClientContract, GameManifest, RoomPhase, SeatView } from '@bp/core-abi';
 import type { ChatLine } from './view-model.js';
-import type { GameActions, GameClientContract } from '@bp/game-sdk/client';
 
-export type { GameActions, GameClientContract } from '@bp/game-sdk/client';
+export type { GameActions, GameClientContract } from '@bp/core-abi';
 
 /**
  * 游戏模块的客户端侧加载（war3 对战平台的"地图自动下载"位）：

@@ -163,8 +163,9 @@ stateDiagram-v2
 ```text
 3178-battle-platform/
 ├─ packages/                         平台源码
-│  ├─ game-sdk/                      GameModule 契约、.bpmap 打包/读取、客户端入口类型
-│  ├─ protocol/                      线消息、错误码、摘要、入站形状闸
+│  ├─ core-abi/                      游戏 ABI：GameModule / GameInstance / Effect / 游戏可见类型
+│  ├─ game-sdk/                      游戏公共 SDK：re-export core-abi、game-kit、.bpmap 工具
+│  ├─ protocol/                      线消息、房间视图、入站形状闸、握手
 │  ├─ server/                        引擎、房间、权限、落盘、传输、发现
 │  ├─ client/                        浏览器端连接、视图、界面、沙箱挂载
 │  └─ hostd/                         宿主壳 host/join/diagnose/stop、静态路由
@@ -184,25 +185,30 @@ stateDiagram-v2
 
 ```mermaid
 flowchart TD
-  P["@bp/protocol<br/>线消息 / 错误码 / 摘要 / 形状闸"]
-  K["@bp/game-sdk<br/>GameModule 契约 / bpmap / 客户端入口类型"]
+  A["@bp/core-abi<br/>GameModule / GameInstance / Effect / 游戏可见类型"]
+  P["@bp/protocol<br/>线消息 / 房间视图 / 形状闸 / 握手"]
+  K["@bp/game-sdk<br/>公共 SDK / bpmap / game-kit"]
   S["@bp/server<br/>Engine / Room / Authority / Store / Transport"]
   C["@bp/client<br/>连接 / 视图 / 界面 / 沙箱"]
   H["@bp/hostd<br/>host / join / 静态路由"]
   G["games/*.bpmap<br/>运行时游戏包"]
   H --> S
   H --> P
+  H --> A
+  S --> A
   S --> P
   S --> K
+  C --> A
   C --> P
-  C --> K
+  P --> A
+  K --> A
   G -. "loader 按 id 加载；只通过 Effect[] 出站" .-> S
 ```
 
 ### 4.2 三处接缝
 
-- **线协议**（`packages/protocol`）：消息目录与错误码是客户端/服务端唯一的字据。
-- **`GameModule` / `GameInstance` 接口**（`packages/game-sdk/src/contract/module-api.ts`；`packages/server/src/module-api.ts` 转出）：运行时按 id 动态加载目录游戏或单文件包，平台源码不 import 游戏。
+- **线协议**（`packages/protocol`）：消息目录、房间视图和形状闸是客户端/服务端唯一的字据。
+- **`GameModule` / `GameInstance` 接口**（`packages/core-abi/src/module-api.ts`；`packages/server/src/module-api.ts` 转出并组装 manifest）：运行时按 id 动态加载目录游戏或单文件包，平台源码不 import 游戏。
 - **`Effect[]` 出口**：游戏碰不到 socket；投递、限流、视角裁剪、审计都在平台。
 
 > 接一个新游戏（GameModule / GameInstance / 客户端入口 / 目录与构建）见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。
@@ -217,17 +223,21 @@ flowchart TD
 |---|---|
 | [package.json](package.json) | npm workspaces 与 `build/test/seam/portable` 脚本 |
 | [tsconfig.json](tsconfig.json) / [tsconfig.base.json](tsconfig.base.json) | 项目引用（`tsc -b`）与共享编译选项 |
+| [packages/core-abi/src/module-api.ts](packages/core-abi/src/module-api.ts) | `GameModule` / `GameInstance` / `Effect` 接口（游戏 ABI 源） |
+| [packages/core-abi/src/client.ts](packages/core-abi/src/client.ts) | 客户端 `mount` / `onEvent` / `actions` 契约 |
+| [packages/core-abi/src/manifest.ts](packages/core-abi/src/manifest.ts) | `GameManifest` / `GameAsset` / `GameUiOptions` 类型 |
+| [packages/core-abi/src/seats.ts](packages/core-abi/src/seats.ts) | `SeatRole` / `RoomPhase` / `SeatView` |
+| [packages/core-abi/src/codes.ts](packages/core-abi/src/codes.ts) | `PlatformCode` / `NoticeCode` 取值 |
+| [packages/core-abi/src/hash.ts](packages/core-abi/src/hash.ts) | 稳定摘要（房规/版本闸） |
 | [packages/protocol/src/wire.ts](packages/protocol/src/wire.ts) | 消息目录与房主命令表 |
-| [packages/protocol/src/codes.ts](packages/protocol/src/codes.ts) | 平台错误码与通知码文案 |
-| [packages/protocol/src/hash.ts](packages/protocol/src/hash.ts) | 稳定摘要（房规/版本闸） |
-| [packages/protocol/src/manifest.ts](packages/protocol/src/manifest.ts) | `GameManifest` 形状检查与握手比对 |
-| [packages/protocol/src/seats.ts](packages/protocol/src/seats.ts) | 座位/相位/房间视图与组播条目形状 |
+| [packages/protocol/src/codes.ts](packages/protocol/src/codes.ts) | 平台错误码/通知码的默认文案与校验 |
+| [packages/protocol/src/manifest.ts](packages/protocol/src/manifest.ts) | manifest 形状检查与握手比对 |
+| [packages/protocol/src/seats.ts](packages/protocol/src/seats.ts) | 房间视图、组播条目、座位/相位校验 |
 | [packages/protocol/src/guard.ts](packages/protocol/src/guard.ts) | 入站消息形状闸门 |
 | [packages/server/src/engine.ts](packages/server/src/engine.ts) | 引擎：线消息 → 房间/游戏操作 → 出站编排 |
 | [packages/server/src/room.ts](packages/server/src/room.ts) | 座位表、房主标记、聊天、revision、落盘导出/恢复 |
 | [packages/server/src/authority.ts](packages/server/src/authority.ts) | 权限判定集中处 |
-| [packages/game-sdk/src/contract/module-api.ts](packages/game-sdk/src/contract/module-api.ts) | `GameModule` / `GameInstance` / `Effect` 接口（契约源） |
-| [packages/server/src/module-api.ts](packages/server/src/module-api.ts) | 转出 SDK 契约，兼容服务端现有 import |
+| [packages/server/src/module-api.ts](packages/server/src/module-api.ts) | 转出 core-abi，并提供 `manifestOf` |
 | [packages/server/src/loader.ts](packages/server/src/loader.ts) | 运行时按 id 动态加载目录游戏或单文件包 |
 | [packages/game-sdk/src/node/pack.ts](packages/game-sdk/src/node/pack.ts) | 单文件游戏包的读取、校验、解包与缓存 |
 | [packages/server/src/pack.ts](packages/server/src/pack.ts) | 转出 SDK 的单文件包实现 |
@@ -246,7 +256,7 @@ flowchart TD
 | [packages/client/src/clock.ts](packages/client/src/clock.ts) | 服务端时间轴：`serverNow` + 单调钟外推 |
 | [packages/client/src/local-store.ts](packages/client/src/local-store.ts) | 地址簿、昵称、票据保管 |
 | [packages/client/src/view-model.ts](packages/client/src/view-model.ts) | 帧流 → UI 状态归约（revision 去重等） |
-| [packages/game-sdk/src/contract/client.ts](packages/game-sdk/src/contract/client.ts) | 游戏客户端入口的 `mount` / `unmount` / `onEvent` 类型 |
+| [packages/game-sdk/src/contract/client.ts](packages/game-sdk/src/contract/client.ts) | re-export core-abi 的客户端入口类型 |
 | [packages/client/src/module-loader.ts](packages/client/src/module-loader.ts) | 游戏模块拉取、哈希校验、沙箱挂载、占位渲染 |
 | [packages/client/public/game-sandbox.html](packages/client/public/game-sandbox.html) | 沙箱 iframe 页面：执行游戏客户端源码，用 postMessage 桥接 view/action |
 | [packages/client/src/app.ts](packages/client/src/app.ts) | 界面装配：大厅 / 房间内 / 对局挂载点 |
@@ -283,7 +293,7 @@ flowchart TD
 
 | 文件 | 用途 |
 |---|---|
-| [packages/protocol/test/protocol.test.mjs](packages/protocol/test/protocol.test.mjs) | 协议与摘要 |
+| [packages/protocol/test/protocol.test.mjs](packages/protocol/test/protocol.test.mjs) | 协议、manifest 与形状闸 |
 | [packages/server/test/room-authority.test.mjs](packages/server/test/room-authority.test.mjs) | 房主权限/票据/座位模型 |
 | [tools/testkit/test/contract.test.mjs](tools/testkit/test/contract.test.mjs) | 两个测试夹具共用同一套接口断言 |
 | [packages/server/test/ws-live.test.mjs](packages/server/test/ws-live.test.mjs) | 真 socket 端到端 |

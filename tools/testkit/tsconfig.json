@@ -8,6 +8,7 @@
   },
   "include": ["src/**/*.ts"],
   "references": [
+    { "path": "../../packages/core-abi" },
     { "path": "../../packages/protocol" },
     { "path": "../../packages/game-sdk" },
     { "path": "../../packages/server" }

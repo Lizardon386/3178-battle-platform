@@ -1,4 +1,5 @@
-import type { ClientMessage, GameManifest, SeatView, ServerMessage } from '@bp/protocol';
+import type { ClientMessage, ServerMessage } from '@bp/protocol';
+import type { GameManifest, SeatView } from '@bp/core-abi';
 import { NOTICE_MESSAGES } from '@bp/protocol';
 import { PlatformConnection, browserSocketFactory, type ConnectionHandlers, type ConnectionOptions, type SocketFactory, type Timers, type ConnectionState } from './connection.js';
 import { AddressBook, NickName, SessionVault, type KeyValueStore, type SessionRecord } from './local-store.js';

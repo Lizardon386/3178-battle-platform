@@ -1,23 +1,4 @@
-/** 平台错误码。玩法自己的错误必须走 `event` 通道，不许挤进这里。 */
-export const PLATFORM_CODES = [
-  'PROTOCOL',
-  'VERSION',
-  'RULES',
-  'UNKNOWN_GAME',
-  'NOROOM',
-  'NOSEAT',
-  'FULL',
-  'NOTHOST',
-  'HOSTONLY',
-  'PASSWORD',
-  'PHASE',
-  'RATE',
-  'SEATLOST',
-  'BADMSG',
-  'INTERNAL',
-] as const;
-
-export type PlatformCode = (typeof PLATFORM_CODES)[number];
+import { NOTICE_CODES, PLATFORM_CODES, type NoticeCode, type PlatformCode } from '@bp/core-abi';
 
 export function isPlatformCode(value: unknown): value is PlatformCode {
   return typeof value === 'string' && (PLATFORM_CODES as readonly string[]).includes(value);
@@ -43,18 +24,6 @@ export const CODE_MESSAGES: Record<PlatformCode, string> = {
 };
 
 /** 一次性通知码（不是一行聊天，是要玩家看见的事件）。 */
-export const NOTICE_CODES = [
-  'HOSTLEFT',
-  'HOST_CHANGED',
-  'ROOM_CLOSED',
-  'SEAT_EJECTED',
-  'RULES_MISMATCH',
-  'REJOINED',
-  'TOO_FEW',
-] as const;
-
-export type NoticeCode = (typeof NOTICE_CODES)[number];
-
 export const NOTICE_MESSAGES: Record<NoticeCode, string> = {
   HOSTLEFT: '主机已退出，本局结束',
   HOST_CHANGED: '房主已移交给别的玩家',

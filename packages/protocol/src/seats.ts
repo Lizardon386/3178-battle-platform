@@ -1,29 +1,6 @@
-/** 座位与房间相位：平台的通用形状，不含任何玩法。 */
+import { ROOM_PHASES, SEAT_ROLES, type RoomPhase, type SeatRole } from '@bp/core-abi';
 
-export const SEAT_ROLES = ['host', 'player', 'spectator', 'ai'] as const;
-export type SeatRole = (typeof SEAT_ROLES)[number];
-
-export const ROOM_PHASES = ['lobby', 'playing', 'ended'] as const;
-export type RoomPhase = (typeof ROOM_PHASES)[number];
-
-/**
- * 座位视图（下发给客户端的最小形状）。
- * `team` 对平台是不透明标识：war3 式队伍/颜色由游戏模块解释与渲染，
- * 平台只负责存储、按槽位摆放和权限。
- */
-export interface SeatView {
-  seatId: string;
-  slot: number;
-  name: string;
-  role: SeatRole;
-  ready: boolean;
-  connected: boolean;
-  /** 距上次心跳的毫秒数；离线座位为 null。 */
-  ageMs: number | null;
-  team: string | number | null;
-  /** 是否为房主座位（role==='host' 的冗余标记，便于前端画 🎮）。 */
-  isHost: boolean;
-}
+/** 房间视图和局域网发现条目；座位/相位的基础类型在 @bp/core-abi。 */
 
 export interface RoomView {
   code: string;
