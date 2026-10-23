@@ -111,7 +111,7 @@
 - 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
 ## 5. 变更记录
-- 2026-10-23 Qoder：**拆出 `@bp/pack-format`**：`.bpmap` 读写/打包/解包从 `@bp/game-sdk/node` 移到 `packages/pack-format`；SDK 的 `/node` 保留 re-export，server 改依赖 pack-format 并去掉 game-sdk 依赖；hostd 负责解析 `@bp/game-sdk` / `@bp/game-sdk/node` / `@bp/core-abi` / `@bp/protocol` 的 URL 并传给 loader；`/api/version` 的 packFormats 改用 `PACK_FORMAT`。SDK 安装脚本和文档改为 core-abi + pack-format + SDK 三个 tarball。测试 170（pack 测试迁到 pack-format）。未做：独立 `@bp/game-tools` / `@bp/sdk-testkit`。
+- 2026-10-23 Qoder：**拆出 `@bp/pack-format`**（`4f74bad`）：`.bpmap` 读写/打包/解包从 `@bp/game-sdk/node` 移到 `packages/pack-format`；SDK 的 `/node` 保留 re-export，server 改依赖 pack-format 并去掉 game-sdk 依赖；hostd 负责解析 `@bp/game-sdk` / `@bp/game-sdk/node` / `@bp/core-abi` / `@bp/protocol` 的 URL 并传给 loader；`/api/version` 的 packFormats 改用 `PACK_FORMAT`。SDK 安装脚本和文档改为 core-abi + pack-format + SDK 三个 tarball。测试 170（pack 测试迁到 pack-format）。未做：独立 `@bp/game-tools` / `@bp/sdk-testkit`。
 - 2026-10-23 Qoder：**`mode` / `apiVersion` 包兼容闸**（`a70ba58`）：`@bp/core-abi` 增加 `API_VERSION=1`、`GAME_MODES`、`SUPPORTED_MODES`；`bpmap.json` 和 `.bpmap` 包头读写 `mode` / `apiVersion`（旧包头默认 `turn` / `1`）；宿主 `loadPackGame` 在解包前检查，当前只加载 `turn` / `1`；`/api/version` 和 `bpmap doctor` 用同一组常量；`inspect` / `pack` / 构建模板输出和写入字段。测试 167 → 170（pack 字段、旧包头默认、unsupported mode/apiVersion、doctor 显示）。
 - 2026-10-23 Qoder：**G4 测试夹具落地**（`6e09208`）：新增 `fixture-kit`（`tools/testkit/src/test-games/kit-client/`，显示名“测试夹具·game-kit 界面”），服务端带 `ui.chat='game'`，客户端用 ChatPanel / ScoreboardPanel；`pack-test-games.mjs` 用 esbuild 把它打成单文件 `client.js` 并写入包清单，`games/fixture-kit.bpmap` 由 `npm test` 生成。hostd-http 增加 `/api/games` 的 `ui.chat`/入口断言和 `/games/fixture-kit/client.js` 下发断言；测试 166 → 167，README/DESIGN/CONTEXT 的夹具数量同步为三个。另补 [fixture-kit.page.js](tools/checks/fixture-kit.page.js)：在真实大厅注入后建房、开局、探测 ChatPanel/ScoreboardPanel、发聊天、下一手、加电脑位并返回逐项结果；已用实际 `fixture-kit` 包跑通（平台聊天卡隐藏、聊天回显、电脑行出现）。
 - 2026-10-23 Qoder：**G4 game-kit 真实沙箱联调完成**（`a2fe494`）。用临时客户端（`ui.chat='game'`，挂 `ChatPanel` / `ScoreboardPanel`）跑真实宿主 + 沙箱 iframe：平台聊天卡在对局中隐藏；游戏聊天发送到平台、历史回灌到游戏；记分板显示玩家/队伍/连接/自定义列，加电脑位后显示“电脑”，点“下一手”后分数和系统事件更新。抓到一个 core-abi 拆分后的真实回归：首页 importmap 没映射 `@bp/core-abi`，`/vendor/core-abi/` 路由也没挂，`PlatformApp` 整个没启动；已补 importmap、hostd 静态路由和 hostd-http 断言。166/166、seam OK。剩余：`apiVersion` / `mode` 闸门、`@bp/pack` 第二刀、UNO。
@@ -242,7 +242,7 @@
 
 - 2026-10-23 Qoder：**`mode` / `apiVersion` 闸门完成**：包头、源清单、宿主加载、`/api/version`、`bpmap doctor` 已对齐；当前支持 `turn` / `1`，测试 170 例。下一步是可选 `@bp/pack` 第二刀、SDK 发布准备、UNO。
 
-- 2026-10-23 Qoder：**拆出 `@bp/pack-format`**：`.bpmap` 库从 SDK 移到 `packages/pack-format`；SDK `/node` 保留 re-export；server 去掉 game-sdk 依赖，hostd 负责解析游戏包裸导入 URL 并传给 loader；测试 170。下一步 SDK 发布准备。
+- 2026-10-23 Qoder：**拆出 `@bp/pack-format`**（`4f74bad`）：`.bpmap` 库从 SDK 移到 `packages/pack-format`；SDK `/node` 保留 re-export；server 去掉 game-sdk 依赖，hostd 负责解析游戏包裸导入 URL 并传给 loader；测试 170。下一步 SDK 发布准备。
 
 - 2026-10-21 Qoder：**文档去掉行话**：`dogfood-output` 的实际内容写成“猴测报告：随机操作跑出的问题记录”；`finding` / `High` / `Medium` / `Low` 改成“问题 / 高 / 中 / 低”；testkit 描述改成“接口测试脚手架、模拟上下文”；checks 描述改成“架构检查、随机操作测试、存档与重连问题复现”。
 
