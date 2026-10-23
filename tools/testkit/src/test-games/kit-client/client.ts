@@ -4,6 +4,35 @@ let board: ScoreboardPanel | null = null;
 let chat: ChatPanel | null = null;
 let title: HTMLHeadingElement | null = null;
 
+function report(): void {
+  const root = document.querySelector('[data-fixture="game-kit"]');
+  parent.postMessage({
+    type: 'fixture-kit-report',
+    payload: {
+      title: title?.textContent ?? '',
+      hasBoard: Boolean(root?.querySelector('.bp-scoreboard')),
+      hasChat: Boolean(root?.querySelector('.bp-chat')),
+      boardRows: [...(root?.querySelectorAll('.bp-scoreboard tbody tr') ?? [])].map((row) => row.textContent ?? ''),
+      chatLines: [...(root?.querySelectorAll('.bp-chat-line') ?? [])].map((line) => line.textContent ?? ''),
+    },
+  }, '*');
+}
+
+window.addEventListener('message', (event) => {
+  if (event.source !== parent) return;
+  const data = event.data as { type?: string; text?: string } | null;
+  if (!data) return;
+  if (data.type === 'fixture-kit-probe') report();
+  if (data.type === 'fixture-kit-chat' && typeof data.text === 'string') {
+    const input = document.querySelector<HTMLInputElement>('.bp-chat-input');
+    if (input) input.value = data.text;
+    chat?.send();
+  }
+  if (data.type === 'fixture-kit-bump') {
+    document.querySelector<HTMLButtonElement>('#fixture-kit-bump')?.click();
+  }
+});
+
 export default {
   mount(host: HTMLElement, view: unknown, actions: { send(name: string): void }) {
     const state = view as {
@@ -45,6 +74,7 @@ export default {
     }
     if (title) title.textContent = `${state.title ?? ''}${state.viewer ? ` · ${state.viewer}` : ''}`;
     board.setRows(state.scoreboard?.rows ?? []);
+    setTimeout(report, 80);
   },
   unmount(host: HTMLElement) {
     board?.destroy();

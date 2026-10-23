@@ -282,6 +282,7 @@ flowchart TD
 | [tools/testkit/src/test-games/simultaneous/index.ts](tools/testkit/src/test-games/simultaneous/index.ts) | 测试夹具·同时操作（id `fixture-simultaneous`）：无游标 + 无隐私 |
 | [tools/testkit/src/test-games/kit-client/index.ts](tools/testkit/src/test-games/kit-client/index.ts) / [client.ts](tools/testkit/src/test-games/kit-client/client.ts) | 测试夹具·game-kit 界面（id `fixture-kit`）：服务端 + 用 ChatPanel/ScoreboardPanel 的客户端入口，`ui.chat='game'` |
 | [tools/checks/check-seam.sh](tools/checks/check-seam.sh) | 架构检查：平台代码里不许出现玩法词 |
+| [tools/checks/fixture-kit.page.js](tools/checks/fixture-kit.page.js) | 在真实大厅检查 fixture-kit：建房、开局、聊天、记分板和电脑位 |
 | [tools/packaging/build-portable.mjs](tools/packaging/build-portable.mjs) | 绿色便携包装配与自检 |
 | [tools/checks/monkey.mjs](tools/checks/monkey.mjs) | 协议层猴测 |
 | [tools/packaging/bpmap.mjs](tools/packaging/bpmap.mjs) | .bpmap 打包/检查入口，调用 `@bp/game-sdk` CLI |
