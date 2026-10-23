@@ -90,7 +90,7 @@ npm install --save-dev \
 
 平台更新 SDK 后重新打包、重新安装。以后发布到 registry 后改成 `npm install @bp/game-sdk` 即可。
 
-不想手敲的话，SDK 仓库的 `packages/game-sdk/templates/game/scripts/` 下有现成的 [setup-sdk.mjs](packages/game-sdk/templates/game/scripts/setup-sdk.mjs)：复制到游戏工程的 `scripts/`，运行 `node scripts/setup-sdk.mjs --platform <3178 仓库>`，效果和上面的命令一样。这个目录也会随 SDK tarball 发布，安装后在 `node_modules/@bp/game-sdk/templates/game/scripts/`。
+不想手敲的话，SDK 仓库的 `packages/game-sdk/templates/scripts/` 下有现成的 [setup-sdk.mjs](packages/game-sdk/templates/scripts/setup-sdk.mjs)：复制到游戏工程的 `scripts/`，运行 `node scripts/setup-sdk.mjs --platform <3178 仓库>`，效果和上面的命令一样。这个目录也会随 SDK tarball 发布，安装后在 `node_modules/@bp/game-sdk/templates/scripts/`。
 
 CLI 需要 Node 24+；游戏客户端本身跑在浏览器里。
 
@@ -199,7 +199,7 @@ node packages/hostd/dist/cli.js host --port 3178 --lan-port 3000
 
 打开 `http://127.0.0.1:3178`，建房时应该能在游戏列表里看到它。宿主只在启动时扫描 `games/`，换包后要重启。宿主启动后可以再用 `bpmap doctor <包> --host http://127.0.0.1:3178` 检查兼容性，见 4.3。
 
-不想手敲构建命令的话，SDK 模板里还有 [build.mjs](packages/game-sdk/templates/game/scripts/build.mjs)：复制到 `scripts/` 后跑 `node scripts/build.mjs --platform <3178 仓库>`。它做上面这些事，并额外支持 `--start`、`--host`、`--port`、`--lan-port`、`--out`，参数说明写在脚本开头。用脚本时在 `package.json` 里加 `"bp": { "id": "mygame", "entry": "client/client.js" }`，`bpmap.json` 由脚本生成，不用手写。
+不想手敲构建命令的话，SDK 模板里还有 [build.mjs](packages/game-sdk/templates/scripts/build.mjs)：复制到 `scripts/` 后跑 `node scripts/build.mjs --platform <3178 仓库>`。它做上面这些事，并额外支持 `--start`、`--host`、`--port`、`--lan-port`、`--out`，参数说明写在脚本开头。用脚本时在 `package.json` 里加 `"bp": { "id": "mygame", "entry": "client/client.js" }`，`bpmap.json` 由脚本生成，不用手写。
 
 ### 2.6 迭代和测试
 
@@ -578,7 +578,7 @@ bpmap unpack dist/mygame.bpmap ./unpacked
 bpmap doctor dist-pack
 ```
 
-日常构建也可以用 2.5 的 [build.mjs](packages/game-sdk/templates/game/scripts/build.mjs)，这些子命令留给单独排查和手工检查。
+日常构建也可以用 2.5 的 [build.mjs](packages/game-sdk/templates/scripts/build.mjs)，这些子命令留给单独排查和手工检查。
 
 `@bp/game-sdk/node` 的公共函数：
 
@@ -678,7 +678,7 @@ bpmap doctor dist-pack
 bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 ```
 
-用 [build.mjs](packages/game-sdk/templates/game/scripts/build.mjs) 时，跑 `node scripts/build.mjs --host http://127.0.0.1:3178` 就行，同样要先启动宿主。
+用 [build.mjs](packages/game-sdk/templates/scripts/build.mjs) 时，跑 `node scripts/build.mjs --host http://127.0.0.1:3178` 就行，同样要先启动宿主。
 
 - 源目录：检查 `bpmap.json`、服务端/客户端入口；读取可选的 `mode` / `apiVersion`（缺省 `turn` / `1`）。
 - 单文件包：检查包格式、服务端入口和清单；成品包没有 `mode` / `apiVersion`，固定按 `turn` / `1` 检查。
