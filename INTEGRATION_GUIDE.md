@@ -71,6 +71,10 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 
 SDK 还没有发布到 npm，当前是 `private` 包。外部工程从平台仓库打成 tarball 安装；`@bp/game-sdk` 依赖 `@bp/protocol`，两个要一起装。
 
+有两套做法：2.1.1 手动执行命令，2.1.2 用现成脚本。两者结果一样，选一种即可。
+
+#### 2.1.1 手动安装（命令）
+
 下面用 Git Bash 示例；把 `<3178 仓库>`、`<SDK 产物目录>`、`<你的游戏工程>` 换成实际路径。tarball 文件名带版本号，按 `npm pack` 的实际输出替换。
 
 ```bash
@@ -88,11 +92,60 @@ npm install --save-dev \
   esbuild
 ```
 
+这些命令分别做什么：
+
+| 命令 | 作用 |
+|---|---|
+| `npm pack ./packages/protocol` | 把 `@bp/protocol` 打成 tarball |
+| `npm pack ./packages/game-sdk` | 把 `@bp/game-sdk` 打成 tarball |
+| `npm init -y` | 没有 `package.json` 时创建一个 |
+| `npm pkg set type=module` | 让工程按 ESM 解析 |
+| `npm install --save-dev` | 同时安装两个 tarball 和 esbuild；SDK 依赖 protocol，必须一起装 |
+
 平台更新 SDK 后重新打包、重新安装。以后发布到 registry 后改成 `npm install @bp/game-sdk` 即可。
 
-不想手敲的话，SDK 仓库的 `packages/game-sdk/templates/scripts/` 下有现成的 [setup-sdk.mjs](packages/game-sdk/templates/scripts/setup-sdk.mjs)：复制到游戏工程的 `scripts/`，运行 `node scripts/setup-sdk.mjs --platform <3178 仓库>`，效果和上面的命令一样。这个目录也会随 SDK tarball 发布，安装后在 `node_modules/@bp/game-sdk/templates/scripts/`。
+#### 2.1.2 用 setup-sdk.mjs 安装（脚本）
 
-CLI 需要 Node 24+；游戏客户端本身跑在浏览器里。
+脚本在 SDK 仓库的 [setup-sdk.mjs](packages/game-sdk/templates/scripts/setup-sdk.mjs)，复制到游戏工程的 `scripts/`。安装 SDK 后，同一份也在 `node_modules/@bp/game-sdk/templates/scripts/`。
+
+前置条件：Node 24+、npm、能访问平台仓库。游戏工程可以还没有 `package.json`，脚本会创建一个最小版本。
+
+用法：
+
+```bash
+node scripts/setup-sdk.mjs --platform ../3178-battle-platform
+```
+
+参数：
+
+| 参数 | 必填 | 默认值 | 说明 |
+|---|---|---|---|
+| `--platform <路径>` | 否 | `../3178-battle-platform` | 平台仓库路径；脚本会确认 `packages/game-sdk/package.json` 存在，缺 `dist/index.js` 时先跑 `npm run build` |
+| `--sdk-dir <目录>` | 否 | `sdk` | tarball 存放目录；每次重跑会先删掉这个目录里的旧 `.tgz` |
+
+脚本做的事：
+
+1. 没有 `package.json` 就创建一个最小的；有但缺 `"type": "module"` 就补上。
+2. 检查平台是否已构建；`packages/game-sdk/dist/index.js` 不存在时在平台仓库跑 `npm run build`。
+3. 把 `@bp/protocol` 和 `@bp/game-sdk` 打进 `sdk/`，清掉旧的 tarball。
+4. 在游戏工程执行 `npm install --save-dev sdk/*.tgz esbuild`。
+5. 打印安装的 tarball 文件名和下一步命令。
+
+跑完后会得到：
+
+| 位置 | 内容 |
+|---|---|
+| `sdk/bp-protocol-<版本>.tgz` | protocol tarball |
+| `sdk/bp-game-sdk-<版本>.tgz` | SDK tarball |
+| `package.json` 的 `devDependencies` | 两个 tarball 和 esbuild |
+| `node_modules/@bp/game-sdk/` | 已安装的 SDK |
+
+注意：
+
+- 平台更新 SDK 后重跑一次，脚本会重新打包并覆盖安装。
+- 脚本用 npm 安装依赖；工程如果改用 pnpm/yarn，需要自己把两个 tarball 装上。
+- 脚本只负责装 SDK，不写 `bp` 配置；`bp.id` / `bp.entry` 在 2.8 里配。
+- `--sdk-dir` 是相对游戏工程根目录的路径；不要指到会被打包的目录里。
 
 ### 2.2 工程结构
 
@@ -114,7 +167,7 @@ mygame/
    └─ mygame.bpmap       # 最终分发包
 ```
 
-`dist-pack/` 只放运行产物。不要把 `bpmap pack` 指向 `src/`，否则 TypeScript 源码、测试和不需要的文件都会进包。
+`sdk/` 和 `node_modules/` 是安装/构建生成的，不进包。`dist-pack/` 只放运行产物；不要把 `bpmap pack` 指向 `src/`，否则 TypeScript 源码、测试和不需要的文件都会进包。
 
 ### 2.3 写服务端模块
 
@@ -157,7 +210,7 @@ export default {
 
 客户端入口必须是单文件 ESM，不能有任何 `import`（相对路径和裸包名都不行）；所有依赖都要打进这一个文件。包内资源用 `fetch('assets/...')`，iframe 的 base 已指向入口目录。不写客户端也能运行，平台会显示原始状态占位面板；但 `GameModule.entry` 仍要填一个字符串。
 
-### 2.5 构建、打包、安装
+### 2.5 构建
 
 构建到 `dist-pack/`。服务端入口可以把 `@bp/game-sdk` / `@bp/game-sdk/node` / `@bp/protocol` 交给宿主解析；这是通过 `--external` 实现的，宿主版本要和构建时一致。其他第三方依赖不要 external，应该打进 `server.js`：
 
@@ -173,6 +226,20 @@ mkdir -p dist-pack/client/assets
 cp -r src/assets/* dist-pack/client/assets/
 ```
 
+构建结果：
+
+| 路径 | 内容 |
+|---|---|
+| `dist-pack/server.js` | 服务端入口，宿主加载它拿 `GameModule` |
+| `dist-pack/client/client.js` | 客户端单文件 ESM，交给沙箱 |
+| `dist-pack/client/assets/` | 客户端资源，用 `fetch('assets/...')` 取 |
+
+没有客户端时跳过第二条 esbuild 和资源复制；`GameModule.entry` 仍要填字符串，父页面会回退到占位面板。没有 `src/assets/` 时也不需要 `cp`。`dist-pack/` 每次构建前建议清空，避免旧文件混进包。
+
+也可以用 2.8 的 `build.mjs` 一次完成构建、打包和安装。
+
+### 2.6 打包
+
 在 `dist-pack/` 根目录写 `bpmap.json`：
 
 ```json
@@ -184,32 +251,142 @@ cp -r src/assets/* dist-pack/client/assets/
 }
 ```
 
-打包、检查、安装：
+字段：
+
+| 字段 | 说明 |
+|---|---|
+| `id` | 和 `GameModule.id` 一致，匹配 `^[a-z0-9][a-z0-9-]{0,31}$` |
+| `version` | 和 `GameModule.version` 一致；非空白、最多 64 字符 |
+| `server` | 包内服务端入口，通常是 `server.js` |
+| `client` | 包内客户端入口，通常是 `client/client.js`；无客户端时可以省略 |
+
+路径都相对 `dist-pack/`，不能是绝对路径，也不能含 `..`。打包、检查、本地校验：
 
 ```bash
 npx bpmap pack dist-pack --out dist/mygame.bpmap
 npx bpmap inspect dist/mygame.bpmap
 npx bpmap doctor dist-pack
+```
 
+`pack` 会跳过 `bpmap.json`，把其他普通文件按清单打进 `.bpmap`；`inspect` 打印包头、每个文件大小和 sha256；`doctor dist-pack` 检查源目录的入口是否存在。包的格式、上限和缓存规则见 3.9。
+
+也可以用 2.8 的 `build.mjs` 自动生成 `bpmap.json` 并打包。
+
+### 2.7 安装到平台
+
+把包复制到平台的 `games/`，再启动宿主：
+
+```bash
 cp dist/mygame.bpmap <3178 仓库>/games/
 cd <3178 仓库>
 # 先确保平台已经 npm run build，dist/cli.js 不存在时先构建
 node packages/hostd/dist/cli.js host --port 3178 --lan-port 3000
 ```
 
-打开 `http://127.0.0.1:3178`，建房时应该能在游戏列表里看到它。宿主只在启动时扫描 `games/`，换包后要重启。宿主启动后可以再用 `bpmap doctor <包> --host http://127.0.0.1:3178` 检查兼容性，见 4.3。
+打开 `http://127.0.0.1:3178`，建房时应该能在游戏列表里看到它。
 
-不想手敲构建命令的话，SDK 模板里还有 [build.mjs](packages/game-sdk/templates/scripts/build.mjs)：复制到 `scripts/` 后跑 `node scripts/build.mjs --platform <3178 仓库>`。它做上面这些事，并额外支持 `--start`、`--host`、`--port`、`--lan-port`、`--out`，参数说明写在脚本开头。用脚本时在 `package.json` 里加 `"bp": { "id": "mygame", "entry": "client/client.js" }`，`bpmap.json` 由脚本生成，不用手写。
+宿主只在启动时扫描 `games/`，换包后要重启；同一个 `id` 不要同时留两个包，加载器会跳过后面的。宿主启动后可以查兼容性：
 
-### 2.6 迭代和测试
+```bash
+bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
+```
 
-迭代：重新构建、重新 `bpmap pack`、替换 `games/` 里的同名包、重启宿主。
+也可以用 2.8 的 `build.mjs --platform ... --start` 完成复制和启动。
+
+### 2.8 用 build.mjs 一键完成
+
+`build.mjs` 在 SDK 仓库的 [build.mjs](packages/game-sdk/templates/scripts/build.mjs)，复制到游戏工程的 `scripts/`。它把 2.5–2.7 串起来：构建、生成清单、打包、校验，可选复制到平台、查宿主、启动宿主。
+
+前置条件：
+
+- 已经按 2.1 装好 SDK 和 esbuild。
+- `src/server.ts` 存在；`src/client.ts` 和 `src/assets/` 可选。
+- `package.json` 里有包 id 和客户端入口，`bp.id` 要和 `GameModule.id` 一致：
+
+```json
+{
+  "name": "mygame",
+  "version": "0.1.0",
+  "type": "module",
+  "bp": { "id": "mygame", "entry": "client/client.js" }
+}
+```
+
+完整用法：
+
+```bash
+node scripts/build.mjs [--platform <3178 仓库>] [--start] [--host <地址>] [--port 3178] [--lan-port 3000] [--out dist/<id>.bpmap]
+```
+
+参数：
+
+| 参数 | 必填 | 默认值 | 作用 |
+|---|---|---|---|
+| `--platform <路径>` | 否 | 无 | 把 `.bpmap` 复制到 `<路径>/games/`；`--start` 也用它 |
+| `--start` | 否 | 关 | 安装后启动宿主；必须同时给 `--platform` |
+| `--port <端口>` | 否 | `3178` | 宿主界面端口，只在 `--start` 时用 |
+| `--lan-port <端口>` | 否 | `3000` | 局域网/隧道端口，只在 `--start` 时用 |
+| `--host <地址>` | 否 | 无 | 打包后跑 `bpmap doctor --host`；宿主必须已经启动 |
+| `--out <文件>` | 否 | `dist/<id>.bpmap` | 输出包路径；不能放在 `dist-pack/` 里 |
+
+常见用法：
+
+```bash
+# 只构建和打包，不安装
+node scripts/build.mjs
+
+# 构建、打包、复制到平台 games/
+node scripts/build.mjs --platform ../3178-battle-platform
+
+# 复制后直接启动宿主
+node scripts/build.mjs --platform ../3178-battle-platform --start
+
+# 改宿主端口
+node scripts/build.mjs --platform ../3178-battle-platform --start --port 3180 --lan-port 3001
+
+# 宿主已经在跑，检查它和包的兼容性
+node scripts/build.mjs --host http://127.0.0.1:3178
+
+# 改输出文件
+node scripts/build.mjs --out build/mygame.bpmap
+```
+
+脚本按这个顺序执行：
+
+1. 读 `package.json`，校验 `bp.id` / `version` / `bp.entry`；没有 `bp.id` 时退回 `package.json` 的 `name`。
+2. 清空 `dist-pack/`；构建服务端，三个 SDK 包标成 external。
+3. 如果存在 `src/client.ts`，构建客户端到 `bp.entry` 指定的位置，并复制 `src/assets/` 到入口目录的 `assets/`。
+4. 写 `dist-pack/bpmap.json`；没有客户端时不写 `client`。
+5. 打包、校验、打印 id/version、文件数、总字节和包哈希。
+6. 有 `--platform` 时复制到 `<平台>/games/<id>.bpmap`；有 `--host` 时调 `bpmap doctor --host`；有 `--start` 时启动宿主。
+
+它会打印这些结果：
+
+| 输出 | 含义 |
+|---|---|
+| `已生成 <路径>` | `.bpmap` 的最终位置 |
+| `id/version` | 包 id 和版本 |
+| `文件` | 打进包的文件数和总字节 |
+| `包哈希` | 整包的 sha256，宿主用它区分同名版本 |
+| `已安装到 <路径>` | 只有给了 `--platform` 才有 |
+| `检查宿主兼容性` | 只有给了 `--host` 才有 |
+| `启动宿主` | 只有给了 `--start` 才有 |
+
+注意：
+
+- `dist-pack/` 是生成目录，每次都会删掉重建；不要把源文件或手写配置放进去。
+- 宿主只在启动时扫描 `games/`。`--start` 会新起一个宿主；端口被占用时先停掉旧宿主，或者去掉 `--start` 手动重启。
+- `--host` 不能和第一次 `--start` 一起用，因为检查时宿主还没起来。
+- 没有 `src/client.ts` 时脚本按无客户端游戏打包；`bp.entry` 只作为占位，不要求文件存在。
+- 脚本是模板；SDK 以后更新模板，不会自动改你工程里已经复制的那份。
+
+### 2.9 迭代和测试
+
+迭代：重新构建、重新 `bpmap pack`、替换 `games/` 里的同名包、重启宿主。用 `build.mjs` 就是改完重跑 `node scripts/build.mjs --platform <3178 仓库> --start`；宿主已经在跑时先停掉，或者去掉 `--start` 手动重启。
 
 不要同时留同一个 `id` 的两个包，加载器会跳过后面的。
 
 打包前先测规则：用 `node:test` 直接调用 `create()` / `begin()` / `handle()`，注入固定时钟和随机源；这比每次都起宿主快。
-
-如果用了 `build.mjs`，迭代就是重跑 `node scripts/build.mjs --platform <3178 仓库> --start`；宿主已经在跑时先停掉，或者去掉 `--start` 手动重启。
 
 ## 3. SDK 内部模块详解
 
@@ -578,7 +755,7 @@ bpmap unpack dist/mygame.bpmap ./unpacked
 bpmap doctor dist-pack
 ```
 
-日常构建也可以用 2.5 的 [build.mjs](packages/game-sdk/templates/scripts/build.mjs)，这些子命令留给单独排查和手工检查。
+日常构建也可以用 2.8 的 [build.mjs](packages/game-sdk/templates/scripts/build.mjs)，这些子命令留给单独排查和手工检查。
 
 `@bp/game-sdk/node` 的公共函数：
 
@@ -678,7 +855,7 @@ bpmap doctor dist-pack
 bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 ```
 
-用 [build.mjs](packages/game-sdk/templates/scripts/build.mjs) 时，跑 `node scripts/build.mjs --host http://127.0.0.1:3178` 就行，同样要先启动宿主。
+用 2.8 的 [build.mjs](packages/game-sdk/templates/scripts/build.mjs) 时，跑 `node scripts/build.mjs --host http://127.0.0.1:3178` 就行，同样要先启动宿主。
 
 - 源目录：检查 `bpmap.json`、服务端/客户端入口；读取可选的 `mode` / `apiVersion`（缺省 `turn` / `1`）。
 - 单文件包：检查包格式、服务端入口和清单；成品包没有 `mode` / `apiVersion`，固定按 `turn` / `1` 检查。
