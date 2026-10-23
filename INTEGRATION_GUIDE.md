@@ -69,102 +69,28 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 
 ### 2.1 获取 SDK
 
-SDK 还没有发布到 npm，当前是 `private` 包。外部工程从平台仓库打成 tarball 安装；`@bp/game-sdk` 依赖 `@bp/protocol`，两个要一起装。把下面的脚本存成 `scripts/setup-sdk.mjs`：
+SDK 还没有发布到 npm，当前是 `private` 包。外部工程从平台仓库打成 tarball 安装；`@bp/game-sdk` 依赖 `@bp/protocol`，两个要一起装。
 
-```js
-#!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
-
-const args = process.argv.slice(2);
-const argValue = (name, fallback) => {
-  const index = args.indexOf(name);
-  if (index < 0) return fallback;
-  const value = args[index + 1];
-  if (!value || value.startsWith('--')) fail(`${name} 后面要跟一个值`);
-  return value;
-};
-
-const gameRoot = process.cwd();
-const platformRoot = resolve(argValue('--platform', '../3178-battle-platform'));
-const sdkDir = resolve(argValue('--sdk-dir', 'sdk'));
-const npmCli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
-
-function fail(message) {
-  console.error(`[x] ${message}`);
-  process.exit(1);
-}
-
-function run(command, commandArgs, cwd) {
-  const result = spawnSync(command, commandArgs, { cwd, stdio: 'inherit' });
-  if (result.error) fail(result.error.message);
-  if (result.status !== 0) process.exit(result.status ?? 1);
-}
-
-function npm(commandArgs, cwd) {
-  if (existsSync(npmCli)) {
-    run(process.execPath, [npmCli, ...commandArgs], cwd);
-    return;
-  }
-  const result = spawnSync('npm', commandArgs, { cwd, stdio: 'inherit', shell: true });
-  if (result.error) fail(result.error.message);
-  if (result.status !== 0) process.exit(result.status ?? 1);
-}
-
-if (!existsSync(join(platformRoot, 'packages', 'game-sdk', 'package.json'))) {
-  fail(`找不到平台仓库：${platformRoot}，用 --platform 指向 3178-battle-platform`);
-}
-
-const packagePath = join(gameRoot, 'package.json');
-if (!existsSync(packagePath)) {
-  writeFileSync(packagePath, JSON.stringify({
-    name: basename(gameRoot).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'mygame',
-    version: '0.1.0',
-    private: true,
-    type: 'module',
-  }, null, 2) + '\n');
-  console.log('没有 package.json，已生成一个最小版本');
-} else {
-  const pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
-  if (pkg.type !== 'module') {
-    pkg.type = 'module';
-    writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + '\n');
-    console.log('package.json 已补上 "type": "module"');
-  }
-}
-
-if (!existsSync(join(platformRoot, 'packages', 'game-sdk', 'dist', 'index.js'))) {
-  console.log('平台还没构建，先跑 npm run build');
-  npm(['run', 'build'], platformRoot);
-}
-
-mkdirSync(sdkDir, { recursive: true });
-for (const name of readdirSync(sdkDir)) {
-  if (name.endsWith('.tgz')) rmSync(join(sdkDir, name));
-}
-
-npm(['pack', './packages/protocol', '--pack-destination', sdkDir], platformRoot);
-npm(['pack', './packages/game-sdk', '--pack-destination', sdkDir], platformRoot);
-
-const tarballs = readdirSync(sdkDir)
-  .filter((name) => name.endsWith('.tgz'))
-  .map((name) => join(sdkDir, name));
-npm(['install', '--save-dev', ...tarballs, 'esbuild'], gameRoot);
-
-console.log('');
-console.log(`SDK 已安装到 ${gameRoot}`);
-console.log(`  ${tarballs.map((file) => basename(file)).join('、')}`);
-console.log('下一步：node scripts/build.mjs');
-```
-
-在游戏工程根目录跑：
+下面用 Git Bash 示例；把 `<3178 仓库>`、`<SDK 产物目录>`、`<你的游戏工程>` 换成实际路径。tarball 文件名带版本号，按 `npm pack` 的实际输出替换。
 
 ```bash
-node scripts/setup-sdk.mjs --platform ../3178-battle-platform
+cd <3178 仓库>
+mkdir -p <SDK 产物目录>
+npm pack ./packages/protocol --pack-destination <SDK 产物目录>
+npm pack ./packages/game-sdk --pack-destination <SDK 产物目录>
+
+cd <你的游戏工程>
+npm init -y
+npm pkg set type=module
+npm install --save-dev \
+  <SDK 产物目录>/bp-protocol-0.1.0.tgz \
+  <SDK 产物目录>/bp-game-sdk-0.1.0.tgz \
+  esbuild
 ```
 
-脚本会确保平台已构建，把两个包打成 tarball 放进 `sdk/`，安装 SDK 和 esbuild，并补上 `package.json` 的 `"type": "module"`。`--sdk-dir` 可以换 tarball 目录。平台更新 SDK 后重跑一次即可；以后发布到 registry 后改成 `npm install @bp/game-sdk`。
+平台更新 SDK 后重新打包、重新安装。以后发布到 registry 后改成 `npm install @bp/game-sdk` 即可。
+
+不想手敲的话，SDK 仓库的 `packages/game-sdk/templates/game/scripts/` 下有现成的 [setup-sdk.mjs](packages/game-sdk/templates/game/scripts/setup-sdk.mjs)：复制到游戏工程的 `scripts/`，运行 `node scripts/setup-sdk.mjs --platform <3178 仓库>`，效果和上面的命令一样。这个目录也会随 SDK tarball 发布，安装后在 `node_modules/@bp/game-sdk/templates/game/scripts/`。
 
 CLI 需要 Node 24+；游戏客户端本身跑在浏览器里。
 
@@ -172,15 +98,13 @@ CLI 需要 Node 24+；游戏客户端本身跑在浏览器里。
 
 ```text
 mygame/
-├─ scripts/
-│  ├─ setup-sdk.mjs      # 一次性安装 SDK 和 esbuild
-│  └─ build.mjs          # 构建、打包、安装、可选启动宿主
+├─ scripts/              # 可选：从 SDK templates 复制的 setup/build
 ├─ package.json
 ├─ src/
 │  ├─ server.ts          # GameModule
 │  ├─ client.ts          # 可选：客户端入口
 │  └─ assets/            # 图片、音频等
-├─ dist-pack/            # build 脚本生成的运行产物
+├─ dist-pack/            # 只放构建产物，给 bpmap pack 用
 │  ├─ bpmap.json
 │  ├─ server.js
 │  └─ client/
@@ -190,7 +114,7 @@ mygame/
    └─ mygame.bpmap       # 最终分发包
 ```
 
-`sdk/` 和 `node_modules/` 也是脚本生成的，但不进包。`dist-pack/` 只放运行产物；打包脚本只扫这个目录，不会把 TypeScript 源码、测试和无关文件装进去。
+`dist-pack/` 只放运行产物。不要把 `bpmap pack` 指向 `src/`，否则 TypeScript 源码、测试和不需要的文件都会进包。
 
 ### 2.3 写服务端模块
 
@@ -235,190 +159,57 @@ export default {
 
 ### 2.5 构建、打包、安装
 
-把下面的脚本存成 `scripts/build.mjs`：
+构建到 `dist-pack/`。服务端入口可以把 `@bp/game-sdk` / `@bp/game-sdk/node` / `@bp/protocol` 交给宿主解析；这是通过 `--external` 实现的，宿主版本要和构建时一致。其他第三方依赖不要 external，应该打进 `server.js`：
 
-```js
-#!/usr/bin/env node
-import { createRequire } from 'node:module';
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
-import { spawnSync } from 'node:child_process';
-import { build } from 'esbuild';
-import { packDirectory, readPack, readPackSource } from '@bp/game-sdk/node';
+```bash
+npx esbuild src/server.ts --bundle --platform=node --format=esm \
+  --external:@bp/game-sdk --external:@bp/game-sdk/node --external:@bp/protocol \
+  --outfile=dist-pack/server.js
 
-const args = process.argv.slice(2);
-const argValue = (name, fallback) => {
-  const index = args.indexOf(name);
-  if (index < 0) return fallback;
-  const value = args[index + 1];
-  if (!value || value.startsWith('--')) fail(`${name} 后面要跟一个值`);
-  return value;
-};
-const hasFlag = (name) => args.includes(name);
+npx esbuild src/client.ts --bundle --platform=browser --format=esm \
+  --outfile=dist-pack/client/client.js
 
-const gameRoot = process.cwd();
-const packagePath = join(gameRoot, 'package.json');
-if (!existsSync(packagePath)) fail('没有 package.json，先跑 node scripts/setup-sdk.mjs');
-
-const pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
-const id = pkg.bp?.id ?? pkg.name;
-const version = pkg.version;
-const entry = pkg.bp?.entry ?? 'client/client.js';
-const outDir = join(gameRoot, 'dist-pack');
-const packFile = resolve(gameRoot, argValue('--out', `dist/${id}.bpmap`));
-const platformRoot = argValue('--platform', null);
-const hostUrl = argValue('--host', null);
-const shouldStart = hasFlag('--start');
-
-if (!/^[a-z0-9][a-z0-9-]{0,31}$/.test(String(id))) {
-  fail(`package.json 的 bp.id 不合法：${id}（只允许小写字母、数字、连字符）`);
-}
-if (typeof version !== 'string' || !/^\S{1,64}$/.test(version)) {
-  fail(`package.json 的 version 不合法：${version}`);
-}
-if (typeof entry !== 'string' || entry.includes('..') || isAbsolute(entry) || entry.includes('\\')) {
-  fail(`package.json 的 bp.entry 必须是包内相对路径：${entry}`);
-}
-if (packFile === outDir || packFile.startsWith(`${outDir}${sep}`)) {
-  fail('--out 不能放在 dist-pack 里，否则下次打包会把旧包也装进去');
-}
-if (shouldStart && !platformRoot) fail('--start 需要同时给 --platform <3178 仓库>');
-
-const hasClient = existsSync(join(gameRoot, 'src', 'client.ts'));
-if (!hasClient && entry !== 'client/client.js') {
-  log(`没有 src/client.ts，忽略 bp.entry=${entry}，按无客户端游戏打包`);
-}
-
-rmSync(outDir, { recursive: true, force: true });
-mkdirSync(outDir, { recursive: true });
-
-await build({
-  entryPoints: [join(gameRoot, 'src', 'server.ts')],
-  bundle: true,
-  platform: 'node',
-  format: 'esm',
-  external: ['@bp/game-sdk', '@bp/game-sdk/node', '@bp/protocol'],
-  outfile: join(outDir, 'server.js'),
-  logLevel: 'info',
-});
-
-if (hasClient) {
-  const clientOut = join(outDir, entry);
-  await build({
-    entryPoints: [join(gameRoot, 'src', 'client.ts')],
-    bundle: true,
-    platform: 'browser',
-    format: 'esm',
-    outfile: clientOut,
-    logLevel: 'info',
-  });
-  if (existsSync(join(gameRoot, 'src', 'assets'))) {
-    cpSync(join(gameRoot, 'src', 'assets'), join(dirname(clientOut), 'assets'), { recursive: true });
-  }
-}
-
-const manifest = {
-  id,
-  version,
-  server: 'server.js',
-  ...(hasClient ? { client: entry } : {}),
-};
-writeFileSync(join(outDir, 'bpmap.json'), JSON.stringify(manifest, null, 2) + '\n');
-
-const source = readPackSource(outDir);
-const packed = packDirectory(outDir, packFile, source);
-const pack = readPack(packFile);
-const bytes = packed.files.reduce((sum, file) => sum + file.size, 0);
-
-console.log('');
-console.log(`已生成 ${packFile}`);
-console.log(`  id/version：${packed.id} ${packed.version}`);
-console.log(`  文件：${packed.files.length} 个，${bytes} 字节`);
-console.log(`  包哈希：${pack.packageHash}`);
-
-if (platformRoot) {
-  const platform = resolve(gameRoot, platformRoot);
-  const gamesDir = join(platform, 'games');
-  if (!existsSync(gamesDir)) fail(`平台里没有 games 目录：${gamesDir}`);
-  const target = join(gamesDir, `${id}.bpmap`);
-  copyFileSync(packFile, target);
-  console.log(`已安装到 ${target}`);
-}
-
-if (hostUrl) {
-  const require = createRequire(import.meta.url);
-  const cli = join(dirname(require.resolve('@bp/game-sdk/package.json')), 'dist', 'cli', 'index.js');
-  console.log(`检查宿主兼容性：${hostUrl}`);
-  const result = spawnSync(process.execPath, [cli, 'doctor', packFile, '--host', hostUrl], { stdio: 'inherit' });
-  if (result.status !== 0) process.exit(result.status ?? 1);
-}
-
-if (shouldStart) {
-  const platform = resolve(gameRoot, platformRoot);
-  const hostCli = join(platform, 'packages', 'hostd', 'dist', 'cli.js');
-  if (!existsSync(hostCli)) fail('平台还没构建：先在平台仓库跑 npm run build');
-  const port = argValue('--port', '3178');
-  const lanPort = argValue('--lan-port', '3000');
-  console.log(`启动宿主：http://127.0.0.1:${port}`);
-  const result = spawnSync(process.execPath, [hostCli, 'host', '--port', port, '--lan-port', lanPort], {
-    cwd: platform,
-    stdio: 'inherit',
-  });
-  process.exit(result.status ?? 0);
-}
-
-console.log('下一步：重启宿主，建房时就能在列表里看到它。');
-
-function fail(message) {
-  console.error(`[x] ${message}`);
-  process.exit(1);
-}
-
-function log(message) {
-  console.log(`[i] ${message}`);
-}
+mkdir -p dist-pack/client/assets
+cp -r src/assets/* dist-pack/client/assets/
 ```
 
-在 `package.json` 里声明包 id 和客户端入口，`bp.id` 要和 `src/server.ts` 导出的 `id` 一致：
+在 `dist-pack/` 根目录写 `bpmap.json`：
 
 ```json
 {
-  "name": "mygame",
+  "id": "mygame",
   "version": "0.1.0",
-  "type": "module",
-  "bp": { "id": "mygame", "entry": "client/client.js" }
+  "server": "server.js",
+  "client": "client/client.js"
 }
 ```
 
-以后构建、打包、安装只跑一条命令：
+打包、检查、安装：
 
 ```bash
-node scripts/build.mjs --platform ../3178-battle-platform
+npx bpmap pack dist-pack --out dist/mygame.bpmap
+npx bpmap inspect dist/mygame.bpmap
+npx bpmap doctor dist-pack
+
+cp dist/mygame.bpmap <3178 仓库>/games/
+cd <3178 仓库>
+# 先确保平台已经 npm run build，dist/cli.js 不存在时先构建
+node packages/hostd/dist/cli.js host --port 3178 --lan-port 3000
 ```
 
-脚本会清空 `dist-pack/`，用 esbuild 构建 `server.js` 和客户端、复制 `src/assets`、生成 `dist-pack/bpmap.json`、打包并校验，最后把 `.bpmap` 复制到平台的 `games/`。服务端入口把 `@bp/game-sdk`、`@bp/game-sdk/node`、`@bp/protocol` 标成 external，其他第三方依赖会打进 `server.js`；要改构建参数就改脚本里的 esbuild 配置。
+打开 `http://127.0.0.1:3178`，建房时应该能在游戏列表里看到它。宿主只在启动时扫描 `games/`，换包后要重启。宿主启动后可以再用 `bpmap doctor <包> --host http://127.0.0.1:3178` 检查兼容性，见 4.3。
 
-常用参数：
-
-| 参数 | 作用 |
-|---|---|
-| `--platform <路径>` | 复制到 `<路径>/games/`；`--start` 也用它 |
-| `--start` | 安装后启动平台宿主，默认 3178 / 3000 |
-| `--port` / `--lan-port` | 改宿主端口，配合 `--start` |
-| `--host <地址>` | 打包后跑 `bpmap doctor --host`，需要宿主已启动 |
-| `--out <文件>` | 改输出包路径，默认 `dist/<id>.bpmap` |
-
-宿主只在启动时扫描 `games/`。用 `--start` 时脚本会启动宿主；如果宿主已经在跑，先停掉，或者去掉 `--start` 手动重启。`--host` 不能和第一次 `--start` 一起用，因为检查时宿主还没起来。
-
-打开 `http://127.0.0.1:3178`，建房时应该能在游戏列表里看到它。
+不想手敲构建命令的话，SDK 模板里还有 [build.mjs](packages/game-sdk/templates/game/scripts/build.mjs)：复制到 `scripts/` 后跑 `node scripts/build.mjs --platform <3178 仓库>`。它做上面这些事，并额外支持 `--start`、`--host`、`--port`、`--lan-port`、`--out`，参数说明写在脚本开头。用脚本时在 `package.json` 里加 `"bp": { "id": "mygame", "entry": "client/client.js" }`，`bpmap.json` 由脚本生成，不用手写。
 
 ### 2.6 迭代和测试
 
-迭代：改完重跑 `node scripts/build.mjs --platform ../3178-battle-platform --start`。宿主只在启动时扫描 `games/`；`--start` 会新起一个宿主，端口被占用时先停掉旧宿主，或者去掉 `--start` 手动重启。
+迭代：重新构建、重新 `bpmap pack`、替换 `games/` 里的同名包、重启宿主。
 
 不要同时留同一个 `id` 的两个包，加载器会跳过后面的。
 
 打包前先测规则：用 `node:test` 直接调用 `create()` / `begin()` / `handle()`，注入固定时钟和随机源；这比每次都起宿主快。
+
+如果用了 `build.mjs`，迭代就是重跑 `node scripts/build.mjs --platform <3178 仓库> --start`；宿主已经在跑时先停掉，或者去掉 `--start` 手动重启。
 
 ## 3. SDK 内部模块详解
 
@@ -778,16 +569,16 @@ const color = seatColor({ seatId: 's1', slot: 1, team: 1 });
 
 ### 3.9 打包库与 CLI
 
-`@bp/game-sdk/node` 提供 `.bpmap` 的读取、校验、打包和解包缓存；`bpmap` CLI 封装了常用操作。日常构建用 2.5 的 `scripts/build.mjs`，下面这些只在单独调试或手工检查时用：
+`@bp/game-sdk/node` 提供 `.bpmap` 的读取、校验、打包和解包缓存；`bpmap` CLI 封装了常用操作：
 
-| 子命令 | 作用 |
-|---|---|
-| `bpmap pack <源目录> [--out <文件>]` | 打包；默认输出当前目录 `<id>.bpmap`，输出不能放在源目录 |
-| `bpmap inspect <文件.bpmap>` | 打印包头、每个文件的大小和 sha256 |
-| `bpmap unpack <文件.bpmap> <目录>` | 解包，拒绝路径越界 |
-| `bpmap doctor <源目录或文件.bpmap> [--host <地址>]` | 本地检查；给了 host 再比对 `/api/version` |
+```bash
+bpmap pack dist-pack --out dist/mygame.bpmap
+bpmap inspect dist/mygame.bpmap
+bpmap unpack dist/mygame.bpmap ./unpacked
+bpmap doctor dist-pack
+```
 
-参数错误或检查失败退出码 1，`--help` / `-h` 打印用法。
+日常构建也可以用 2.5 的 [build.mjs](packages/game-sdk/templates/game/scripts/build.mjs)，这些子命令留给单独排查和手工检查。
 
 `@bp/game-sdk/node` 的公共函数：
 
@@ -801,6 +592,13 @@ const color = seatColor({ seatId: 's1', slot: 1, team: 1 });
 | `sha256Hex(data)` | 算 `Buffer` / 字符串的 sha256 十六进制；打包和校验内部用 |
 
 常量是 `PACK_FORMAT = 1`、`PACK_MAGIC = 'BPMAP1\n'`、`PACK_EXTENSION = '.bpmap'`、`PACK_MARKER = '.bpmap-ok'`。失败抛 `PackError`，`message` 可以直接显示给开发者。
+
+CLI 行为：
+
+- `pack` 默认输出到当前目录的 `<id>.bpmap`；输出不能放在源目录里；成功后打印 id/version、文件数、总字节和包哈希。
+- `inspect` 打印包头和每个文件的 size / sha256。
+- `unpack` 解到指定目录，路径越界会被拒绝。
+- `doctor` 见 4.3；参数错误或检查失败退出码 1，`--help` / `-h` 打印用法。
 
 包的规则：
 
@@ -874,13 +672,13 @@ GET /api/version
 
 ### 4.3 bpmap doctor
 
-日常用构建脚本的 `--host`，先启动宿主再查兼容性：
-
 ```bash
-node scripts/build.mjs --host http://127.0.0.1:3178
+bpmap doctor dist-pack
+# 先启动宿主，再查宿主兼容性
+bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 ```
 
-单独检查已经生成的包时，用 `bpmap doctor <源目录或文件.bpmap> [--host <地址>]`，子命令见 3.9。
+用 [build.mjs](packages/game-sdk/templates/game/scripts/build.mjs) 时，跑 `node scripts/build.mjs --host http://127.0.0.1:3178` 就行，同样要先启动宿主。
 
 - 源目录：检查 `bpmap.json`、服务端/客户端入口；读取可选的 `mode` / `apiVersion`（缺省 `turn` / `1`）。
 - 单文件包：检查包格式、服务端入口和清单；成品包没有 `mode` / `apiVersion`，固定按 `turn` / `1` 检查。

@@ -35,6 +35,7 @@
     "@bp/protocol": "*"
   },
   "files": [
-    "dist"
+    "dist",
+    "templates"
   ]
 }
