@@ -51,6 +51,34 @@ function rawPack(manifest, bodies) {
 
 const serverBytes = Buffer.from('export const server = true;\n');
 
+test('单文件包：mode/apiVersion 进包头，旧包头默认 turn/1', () => {
+  const plain = packOf(sourceDir());
+  assert.equal(plain.manifest.mode, 'turn');
+  assert.equal(plain.manifest.apiVersion, 1);
+
+  const custom = packOf(sourceDir({ mode: 'realtime', apiVersion: 2 }));
+  assert.equal(custom.manifest.mode, 'realtime');
+  assert.equal(custom.manifest.apiVersion, 2);
+  assert.equal(custom.pack.manifest.mode, 'realtime');
+  assert.equal(custom.pack.manifest.apiVersion, 2);
+
+  const legacyFile = join(tempDir(), 'legacy.bpmap');
+  const legacyManifest = {
+    format: 1,
+    id: 'legacy',
+    version: '0.1.0',
+    server: 'server.js',
+    files: [entry('server.js', serverBytes)],
+  };
+  writeFileSync(legacyFile, rawPack(legacyManifest, [serverBytes]));
+  const legacy = readPack(legacyFile);
+  assert.equal(legacy.manifest.mode, 'turn');
+  assert.equal(legacy.manifest.apiVersion, 1);
+
+  assert.throws(() => readPackSource(sourceDir({ mode: '' })), /mode/);
+  assert.throws(() => readPackSource(sourceDir({ apiVersion: 0 })), /apiVersion/);
+});
+
 test('单文件包：打包、校验、解包往返', () => {
   const dir = sourceDir();
   const { out, manifest, pack } = packOf(dir);

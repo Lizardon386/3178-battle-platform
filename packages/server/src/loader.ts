@@ -3,6 +3,7 @@ import { registerHooks } from 'node:module';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { GameAsset } from '@bp/core-abi';
+import { SUPPORTED_API_VERSIONS, SUPPORTED_MODES, type GameMode } from '@bp/core-abi';
 import type { GameModule } from './module-api.js';
 import { extractPack, listPackFiles, readPack } from '@bp/game-sdk/node';
 
@@ -106,6 +107,13 @@ export interface GameSet {
 /** 读包、解包、加载包内服务端入口；版本字符串带包哈希，避免两个不同包同版本混用。 */
 export async function loadPackGame(packPath: string, cacheRoot: string): Promise<GameSource> {
   const pack = readPack(packPath);
+  const modeProfiles = SUPPORTED_MODES[pack.manifest.mode as GameMode];
+  if (!modeProfiles || modeProfiles.length === 0) {
+    throw new Error(`包声明模式 ${pack.manifest.mode}，宿主当前不支持`);
+  }
+  if (!SUPPORTED_API_VERSIONS.includes(pack.manifest.apiVersion)) {
+    throw new Error(`包声明 apiVersion ${pack.manifest.apiVersion}，宿主支持 ${SUPPORTED_API_VERSIONS.join('、')}`);
+  }
   const extracted = extractPack(pack, cacheRoot);
   const entry = join(extracted.dir, ...pack.manifest.server.split('/'));
   if (!existsSync(entry)) throw new Error(`包内服务端入口不存在：${pack.manifest.server}`);

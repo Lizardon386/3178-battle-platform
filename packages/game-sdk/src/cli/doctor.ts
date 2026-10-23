@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { API_VERSION, DEFAULT_MODE } from '@bp/core-abi';
 import { PACK_FORMAT, readPack, readPackSource } from '../node/pack.js';
 
 export interface HostInfo {
@@ -53,10 +54,10 @@ function readSourceTarget(dir: string): DoctorTarget {
     server: source.server,
     ...(source.client ? { client: source.client } : {}),
     format: PACK_FORMAT,
-    mode: typeof raw.mode === 'string' && raw.mode ? raw.mode : 'turn',
+    mode: typeof raw.mode === 'string' && raw.mode ? raw.mode : DEFAULT_MODE,
     apiVersion: typeof raw.apiVersion === 'number' && Number.isSafeInteger(raw.apiVersion) && raw.apiVersion > 0
       ? raw.apiVersion
-      : 1,
+      : API_VERSION,
   };
 }
 
@@ -70,8 +71,8 @@ function readPackTarget(file: string): DoctorTarget {
     server: pack.manifest.server,
     ...(pack.manifest.client ? { client: pack.manifest.client } : {}),
     format: pack.manifest.format,
-    mode: 'turn',
-    apiVersion: 1,
+    mode: pack.manifest.mode,
+    apiVersion: pack.manifest.apiVersion,
   };
 }
 

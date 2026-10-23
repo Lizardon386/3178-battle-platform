@@ -63,7 +63,7 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 | 实时动作、连续输入和高频同步 | 规划中，当前不提供 |
 | game-kit：事件流、聊天、记分板、座位颜色 | 可用 |
 | `/api/version`、`bpmap doctor` | 可用 |
-| `apiVersion` / `mode` 包字段、`bpmap upgrade`、旧包适配器 | 规划中 |
+| `bpmap upgrade`、旧包适配器 | 规划中 |
 
 ## 2. SDK 接入完整流程
 
@@ -246,6 +246,8 @@ cp -r src/assets/* dist-pack/client/assets/
 {
   "id": "mygame",
   "version": "0.1.0",
+  "mode": "turn",
+  "apiVersion": 1,
   "server": "server.js",
   "client": "client/client.js"
 }
@@ -257,10 +259,12 @@ cp -r src/assets/* dist-pack/client/assets/
 |---|---|
 | `id` | 和 `GameModule.id` 一致，匹配 `^[a-z0-9][a-z0-9-]{0,31}$` |
 | `version` | 和 `GameModule.version` 一致；非空白、最多 64 字符 |
+| `mode` | 执行模式；当前宿主只支持 `turn`，省略时默认 `turn` |
+| `apiVersion` | 游戏 ABI 版本；当前宿主支持 `1`，省略时默认 `1` |
 | `server` | 包内服务端入口，通常是 `server.js` |
 | `client` | 包内客户端入口，通常是 `client/client.js`；无客户端时可以省略 |
 
-路径都相对 `dist-pack/`，不能是绝对路径，也不能含 `..`。打包、检查、本地校验：
+路径都相对 `dist-pack/`，不能是绝对路径，也不能含 `..`。宿主启动时会按 `mode` / `apiVersion` 做兼容闸，不支持就跳过这个包。打包、检查、本地校验：
 
 ```bash
 npx bpmap pack dist-pack --out dist/mygame.bpmap
@@ -308,9 +312,11 @@ bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
   "name": "mygame",
   "version": "0.1.0",
   "type": "module",
-  "bp": { "id": "mygame", "entry": "client/client.js" }
+  "bp": { "id": "mygame", "entry": "client/client.js", "mode": "turn", "apiVersion": 1 }
 }
 ```
+
+`bp.mode` / `bp.apiVersion` 可省略，默认 `turn` / `1`；当前宿主只支持 `turn` 和 `1`，其他值会被加载闸挡住。
 
 完整用法：
 
@@ -356,7 +362,7 @@ node scripts/build.mjs --out build/mygame.bpmap
 1. 读 `package.json`，校验 `bp.id` / `version` / `bp.entry`；没有 `bp.id` 时退回 `package.json` 的 `name`。
 2. 清空 `dist-pack/`；构建服务端，三个 SDK 包标成 external。
 3. 如果存在 `src/client.ts`，构建客户端到 `bp.entry` 指定的位置，并复制 `src/assets/` 到入口目录的 `assets/`。
-4. 写 `dist-pack/bpmap.json`；没有客户端时不写 `client`。
+4. 写 `dist-pack/bpmap.json`，带 id/version/mode/apiVersion；没有客户端时不写 `client`。
 5. 打包、校验、打印 id/version、文件数、总字节和包哈希。
 6. 有 `--platform` 时复制到 `<平台>/games/<id>.bpmap`；有 `--host` 时调 `bpmap doctor --host`；有 `--start` 时启动宿主。
 
@@ -562,7 +568,7 @@ export interface GameInstance {
 
 `realtime` 固定 60Hz，不提供玩家可调档位。Tick 是服务端模拟频率，不是客户端渲染帧率：客户端仍按显示器刷新率渲染，在快照之间插值。游戏逻辑要按 `now` 的时间推进，不能按“每 Tick 走一格”设计。快照配比和传输方案见 5.2。
 
-当前 `GameModule` 没有 `mode` 字段，宿主一律按 `turn` 加载。`bpmap doctor` 会读源目录 `bpmap.json` 里可选的 `mode`，成品 `.bpmap` 还没有这个字段，所以按 `turn` / `apiVersion 1` 检查，见 4.3。
+模式由包清单的 `mode` 声明，不是 `GameModule` 字段。宿主启动时检查包的 `mode` 和 `apiVersion`：当前支持 `turn` / `1`，不支持的包直接跳过并在控制台报原因；目录游戏没有包清单，按 `turn` / `1` 加载。`bpmap doctor` 对源目录和成品包都读这两个字段并和宿主 `/api/version` 比对，见 4.3。
 
 **没有 `client-only` 模式。** 平台不把“只挂客户端、服务端不做模拟”当成一种模式：房间状态必须由房主进程里的游戏实例产生，客户端只发动作。以后如果真要做单机游戏目录，会另做启动器，不混进游戏契约。
 
@@ -761,7 +767,7 @@ bpmap doctor dist-pack
 
 | 函数 | 作用 |
 |---|---|
-| `readPackSource(root)` | 读 `bpmap.json`，校验 id/version/server/client 的类型和路径；其他字段忽略 |
+| `readPackSource(root)` | 读 `bpmap.json`，校验 id/version/mode/apiVersion/server/client 的类型和路径；其他字段忽略 |
 | `packDirectory(root, outFile, source)` | 把源目录打成 `.bpmap`，返回包头 manifest；先写临时文件再 rename |
 | `readPack(filePath, { maxTotalBytes? })` | 读包并逐文件校验 sha256，返回 `{ manifest, files, packageHash, source }` |
 | `extractPack(pack, cacheRoot)` | 解到 `<cacheRoot>/<id>/<packageHash>/`，返回 `{ dir, packageHash, reused }`；缓存不完整会重新解 |
@@ -772,7 +778,7 @@ bpmap doctor dist-pack
 
 CLI 行为：
 
-- `pack` 默认输出到当前目录的 `<id>.bpmap`；输出不能放在源目录里；成功后打印 id/version、文件数、总字节和包哈希。
+- `pack` 默认输出到当前目录的 `<id>.bpmap`；输出不能放在源目录里；成功后打印 id/version、mode/apiVersion、文件数、总字节和包哈希。
 - `inspect` 打印包头和每个文件的 size / sha256。
 - `unpack` 解到指定目录，路径越界会被拒绝。
 - `doctor` 见 4.3；参数错误或检查失败退出码 1，`--help` / `-h` 打印用法。
@@ -781,7 +787,7 @@ CLI 行为：
 
 - 源目录除 `bpmap.json` 外的普通文件都会进包；不允许符号链接、`..` 和绝对路径。
 - `.bpmap` 布局是 `BPMAP1\n` + 4 字节小端包头长度 + JSON 包头 + 按清单顺序拼接的文件段；不压缩，包头上限 1MB。
-- `bpmap.json` 只认 `id`、`version`、`server`、`client` 四个字段；其他字段打包时忽略，`mode` / `apiVersion` 还没进包头。`client` 只用于打包时确认入口文件存在；运行时客户端地址取模块导出的 `entry`，两者通常写同一个路径。
+- `bpmap.json` 认 `id`、`version`、`mode`、`apiVersion`、`server`、`client` 六个字段；其他字段打包时忽略。`mode` / `apiVersion` 省略时默认 `turn` / `1`。`client` 只用于打包时确认入口文件存在；运行时客户端地址取模块导出的 `entry`，两者通常写同一个路径。
 - 单文件上限 64MB，总量上限 256MB，最多 512 个文件；`readPack` 会校验魔数、包头、每个文件的 sha256 和包尾多余字节。
 - 宿主把包解到数据目录下的 `packs/<id>/<包哈希>/`：开发目录是 `data/packs`，便携包是 `%LOCALAPPDATA%\3178-battle-platform\data\packs`。
 - 缓存文件集合必须和包清单完全一致；多一个、少一个或改一个字节都会重新解包。
@@ -793,7 +799,7 @@ CLI 行为：
 宿主启动时按顺序加载两类游戏：
 
 1. 目录游戏：`games/<id>/dist/index.js`，模块 id 必须和目录名一致。
-2. 单文件包：`games/*.bpmap`，读包、解到缓存、`import()` 包里的 `server` 入口。包的 id/version 必须和模块导出一致，否则这个包跳过。同一个 id 已被目录游戏或前一个包占用时，后面的包跳过并记录错误；坏包只记错误，不挡启动。加载完按 id 排序。
+2. 单文件包：`games/*.bpmap`，先检查包头 `mode` / `apiVersion`，再读包、解到缓存、`import()` 包里的 `server` 入口。当前宿主支持 `turn` / `1`，不支持的包跳过并记录原因。包的 id/version 必须和模块导出一致，否则这个包跳过。同一个 id 已被目录游戏或前一个包占用时，后面的包跳过并记录错误；坏包只记错误，不挡启动。加载完按 id 排序。目录游戏没有包清单，按 `turn` / `1` 处理。
 
 包内服务端入口的裸导入只解析 `@bp/game-sdk`、`@bp/game-sdk/node`、`@bp/core-abi`，它们指向宿主自己的依赖；`@bp/protocol` 只保留给旧包过渡。其他第三方依赖要打进 `server.js`，不要指望宿主有。
 
@@ -810,10 +816,10 @@ CLI 行为：
 ### 4.1 当前版本模型
 
 - 游戏包里的 `id` / `version` 必须和模块导出一致；
+- 包清单带 `mode` / `apiVersion`，宿主启动时按支持范围检查，不支持就不加载；
 - 宿主加载后把模块版本变成 `模块版本+包哈希前 12 位`；
 - 客户端在 `hello` 里声明自己装的 `gameId`、`version`、`rulesHash`，入房前房主先比对版本再比对房规，不一致返回 `VERSION` / `RULES`；
-- 恢复存档时再比对 `gameVersion`、`rulesHash` 和 `acceptsSnapshot`，任何一项不一致就丢弃这个房；
-- 当前还没有独立的 `apiVersion` / `mode` 包字段；这些是下一步。
+- 恢复存档时再比对 `gameVersion`、`rulesHash` 和 `acceptsSnapshot`，任何一项不一致就丢弃这个房。
 
 ### 4.2 `/api/version`
 
@@ -857,12 +863,12 @@ bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 
 用 2.8 的 [build.mjs](packages/game-sdk/templates/scripts/build.mjs) 时，跑 `node scripts/build.mjs --host http://127.0.0.1:3178` 就行，同样要先启动宿主。
 
-- 源目录：检查 `bpmap.json`、服务端/客户端入口；读取可选的 `mode` / `apiVersion`（缺省 `turn` / `1`）。
-- 单文件包：检查包格式、服务端入口和清单；成品包没有 `mode` / `apiVersion`，固定按 `turn` / `1` 检查。
+- 源目录：检查 `bpmap.json`、服务端/客户端入口；读取 `mode` / `apiVersion`（缺省 `turn` / `1`）。
+- 单文件包：检查包格式、服务端入口和清单；从包头读 `mode` / `apiVersion`，旧包头缺字段时按 `turn` / `1`。
 - `--host`：请求 `/api/version`（5 秒超时），比对 `packFormats` 是否包含包格式、`apiVersions` 是否包含目标 API 版本、`modes[目标模式]` 是否包含 profile 1。`platform`、`protocolVersions`、`clientCaps` 目前不参与比对。
 - 失败的检查打印 `[x]`，只要有一项失败退出码就是 1；全部通过退出码 0。
 
-因此当前成品包目标一律按 `turn` / `apiVersion 1` 检查；规划中的包字段见 4.4。
+当前宿主支持 `turn` / `apiVersion 1`；`realtime` 和更高 API 版本会报不兼容。规划中的版本层见 4.4。
 
 ### 4.4 规划中的版本层
 
@@ -919,7 +925,7 @@ bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 
 ### 5.4 SDK 分发和生态
 
-- 当前 SDK 还是 `private`，靠 tarball；下一步定 registry/tarball、版本范围和 `apiVersion`。
+- 当前 SDK 还是 `private`，靠 tarball；下一步定 registry/tarball 和版本范围。
 - 如果要真正支持“开发者不拉平台仓库就能开发”，最终需要一个独立分发的 SDK 包；这仍不是二进制文件，Node/TS 生态交付的是 JS + 类型声明 + CLI。
 - 成就、全局排行榜、跨房间聊天需要账号、后端和防作弊，属于另一个后端产品，不在当前 SDK 范围。
 

@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { API_VERSION, DEFAULT_MODE } from '@bp/core-abi';
 import {
   existsSync,
   mkdirSync,
@@ -46,6 +47,8 @@ export interface PackManifest {
   format: number;
   id: string;
   version: string;
+  mode: string;
+  apiVersion: number;
   server: string;
   client?: string;
   files: PackFileEntry[];
@@ -66,6 +69,8 @@ export interface LoadedPack {
 export interface PackSource {
   id: string;
   version: string;
+  mode?: string;
+  apiVersion?: number;
   server: string;
   client?: string;
 }
@@ -98,12 +103,31 @@ function assertPath(value: unknown): string {
   return value;
 }
 
+function readMode(value: unknown): string {
+  if (value === undefined) return DEFAULT_MODE;
+  if (typeof value !== 'string' || value.trim().length === 0 || value.length > 32) fail('包 mode 不合法');
+  return value.trim();
+}
+
+function readApiVersion(value: unknown): number {
+  if (value === undefined) return API_VERSION;
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) fail('包 apiVersion 不合法');
+  return value;
+}
+
 function assertSource(source: PackSource): PackSource {
   if (!ID_PATTERN.test(source.id)) fail('包 id 不合法（只允许小写字母、数字、连字符）');
   if (!VERSION_PATTERN.test(source.version)) fail('包 version 不合法');
   const server = assertPath(source.server);
   const client = source.client === undefined ? undefined : assertPath(source.client);
-  return { id: source.id, version: source.version, server, ...(client ? { client } : {}) };
+  return {
+    id: source.id,
+    version: source.version,
+    ...(source.mode === undefined ? {} : { mode: readMode(source.mode) }),
+    ...(source.apiVersion === undefined ? {} : { apiVersion: readApiVersion(source.apiVersion) }),
+    server,
+    ...(client ? { client } : {}),
+  };
 }
 
 function validateManifest(value: unknown): PackManifest {
@@ -112,6 +136,8 @@ function validateManifest(value: unknown): PackManifest {
   if (raw.format !== PACK_FORMAT) fail(`不支持的包格式：${String(raw.format)}`);
   if (typeof raw.id !== 'string' || !ID_PATTERN.test(raw.id)) fail('包 id 不合法');
   if (typeof raw.version !== 'string' || !VERSION_PATTERN.test(raw.version)) fail('包 version 不合法');
+  const mode = readMode(raw.mode);
+  const apiVersion = readApiVersion(raw.apiVersion);
   const server = assertPath(raw.server);
   const client = raw.client === undefined ? undefined : assertPath(raw.client);
   if (!Array.isArray(raw.files) || raw.files.length === 0) fail('包内没有文件');
@@ -145,6 +171,8 @@ function validateManifest(value: unknown): PackManifest {
     format: PACK_FORMAT,
     id: raw.id,
     version: raw.version,
+    mode,
+    apiVersion,
     server,
     ...(client ? { client } : {}),
     files,
@@ -213,6 +241,8 @@ export function readPackSource(root: string): PackSource {
     id: typeof raw.id === 'string' ? raw.id : '',
     version: typeof raw.version === 'string' ? raw.version : '',
     server: typeof raw.server === 'string' ? raw.server : '',
+    ...(raw.mode !== undefined ? { mode: raw.mode as string } : {}),
+    ...(raw.apiVersion !== undefined ? { apiVersion: raw.apiVersion as number } : {}),
     ...(typeof raw.client === 'string' ? { client: raw.client } : {}),
   });
 }
@@ -269,6 +299,8 @@ export function packDirectory(root: string, outFile: string, source: PackSource)
     format: PACK_FORMAT,
     id: clean.id,
     version: clean.version,
+    mode: clean.mode ?? DEFAULT_MODE,
+    apiVersion: clean.apiVersion ?? API_VERSION,
     server: collected.server,
     ...(collected.client ? { client: collected.client } : {}),
     files: entries,

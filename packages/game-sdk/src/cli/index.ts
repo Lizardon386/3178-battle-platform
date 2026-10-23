@@ -77,6 +77,7 @@ try {
     const bytes = packed.files.reduce((sum, file) => sum + file.size, 0);
     console.log(`已生成 ${outAbs}`);
     console.log(`  id/version：${packed.id} ${packed.version}`);
+    console.log(`  模式/apiVersion：${packed.mode} / ${packed.apiVersion}`);
     console.log(`  文件：${packed.files.length} 个，${bytes} 字节`);
     console.log(`  包哈希：${pack.packageHash}`);
     console.log('把文件丢进 games/，下次启动宿主就会加载。');
@@ -102,6 +103,7 @@ try {
     const bytes = pack.manifest.files.reduce((sum, entry) => sum + entry.size, 0);
     console.log(`包：${resolve(file)}`);
     console.log(`  id/version：${pack.manifest.id} ${pack.manifest.version}`);
+    console.log(`  模式/apiVersion：${pack.manifest.mode} / ${pack.manifest.apiVersion}`);
     console.log(`  服务端入口：${pack.manifest.server}`);
     console.log(`  客户端入口：${pack.manifest.client ?? '（没有）'}`);
     console.log(`  文件：${pack.manifest.files.length} 个，${bytes} 字节`);

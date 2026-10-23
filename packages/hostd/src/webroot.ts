@@ -5,6 +5,7 @@ import type { GameModule } from '@bp/server';
 import { manifestOf } from '@bp/server';
 import type { DiscoveryRoom } from '@bp/protocol';
 import type { GameAsset } from '@bp/core-abi';
+import { SUPPORTED_API_VERSIONS, SUPPORTED_MODES } from '@bp/core-abi';
 
 /**
  * 宿主壳的静态与接口层。路由前缀就是"三方来源"的分工：
@@ -140,8 +141,12 @@ export function createWebServer(opts: WebRootOptions): Server {
         platform: opts.platformVersion ?? '0.0.0',
         packFormats: [1],
         protocolVersions: [1],
-        apiVersions: [1],
-        modes: { turn: [1] },
+        apiVersions: [...SUPPORTED_API_VERSIONS],
+        modes: Object.fromEntries(
+          Object.entries(SUPPORTED_MODES)
+            .filter(([, versions]) => versions.length > 0)
+            .map(([mode, versions]) => [mode, [...versions]]),
+        ),
         clientCaps: [],
       });
       return;

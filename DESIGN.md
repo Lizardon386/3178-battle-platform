@@ -27,7 +27,7 @@
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 
-怎么算做成了（都能用工具验证）：`tools/checks/check-seam.sh` 在平台包内没有命中玩法词；仓库自带三个测试夹具（`测试夹具·回合制` + 隐私 / `测试夹具·同时操作` 无游标 + 无隐私 + 同时操作 / `测试夹具·game-kit 界面` 带客户端入口，在 `tools/testkit/src/test-games/`），前两个证明接口与玩法无关，第三个用来联调聊天和记分板；协议层与 UI 层两层猴测无违规。当前 `npm test` **167 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+怎么算做成了（都能用工具验证）：`tools/checks/check-seam.sh` 在平台包内没有命中玩法词；仓库自带三个测试夹具（`测试夹具·回合制` + 隐私 / `测试夹具·同时操作` 无游标 + 无隐私 + 同时操作 / `测试夹具·game-kit 界面` 带客户端入口，在 `tools/testkit/src/test-games/`），前两个证明接口与玩法无关，第三个用来联调聊天和记分板；协议层与 UI 层两层猴测无违规。当前 `npm test` **170 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
 
 ## 2. 运行模式
 
@@ -209,6 +209,7 @@ flowchart TD
 
 - **线协议**（`packages/protocol`）：消息目录、房间视图和形状闸是客户端/服务端唯一的字据。
 - **`GameModule` / `GameInstance` 接口**（`packages/core-abi/src/module-api.ts`；`packages/server/src/module-api.ts` 转出并组装 manifest）：运行时按 id 动态加载目录游戏或单文件包，平台源码不 import 游戏。
+- **包兼容闸**（`packages/server/src/loader.ts`）：加载前检查包头 `mode` / `apiVersion`；当前支持 `turn` / `1`，不支持的包跳过并记录原因。
 - **`Effect[]` 出口**：游戏碰不到 socket；投递、限流、视角裁剪、审计都在平台。
 
 > 接一个新游戏（GameModule / GameInstance / 客户端入口 / 目录与构建）见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。
@@ -229,6 +230,7 @@ flowchart TD
 | [packages/core-abi/src/seats.ts](packages/core-abi/src/seats.ts) | `SeatRole` / `RoomPhase` / `SeatView` |
 | [packages/core-abi/src/codes.ts](packages/core-abi/src/codes.ts) | `PlatformCode` / `NoticeCode` 取值 |
 | [packages/core-abi/src/hash.ts](packages/core-abi/src/hash.ts) | 稳定摘要（房规/版本闸） |
+| [packages/core-abi/src/version.ts](packages/core-abi/src/version.ts) | `API_VERSION`、`GAME_MODES`、宿主支持的 `apiVersion` / 模式 |
 | [packages/protocol/src/wire.ts](packages/protocol/src/wire.ts) | 消息目录与房主命令表 |
 | [packages/protocol/src/codes.ts](packages/protocol/src/codes.ts) | 平台错误码/通知码的默认文案与校验 |
 | [packages/protocol/src/manifest.ts](packages/protocol/src/manifest.ts) | manifest 形状检查与握手比对 |

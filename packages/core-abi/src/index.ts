@@ -4,3 +4,4 @@ export * from './seats.js';
 export * from './manifest.js';
 export * from './codes.js';
 export * from './hash.js';
+export * from './version.js';

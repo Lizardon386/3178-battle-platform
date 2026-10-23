@@ -73,6 +73,19 @@ test('bpmap doctor：源目录和单文件包都能检查入口', () => {
   assert.match(packResult.stdout, /\[ok\] 包格式 1/);
 });
 
+test('bpmap doctor：显示源清单的 mode/apiVersion', () => {
+  const source = tempDir('bp-cli-mode-');
+  writeFileSync(
+    join(source, 'bpmap.json'),
+    JSON.stringify({ id: 'clisample', version: '0.1.0', mode: 'realtime', apiVersion: 2, server: 'server.js' }),
+    'utf8',
+  );
+  writeFileSync(join(source, 'server.js'), 'export const ok = true;\n', 'utf8');
+  const result = run(['doctor', source]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /realtime \/ 2/);
+});
+
 test('bpmap doctor：入口缺失时退出码非 0', () => {
   const source = tempDir('bp-cli-bad-doctor-');
   writeFileSync(

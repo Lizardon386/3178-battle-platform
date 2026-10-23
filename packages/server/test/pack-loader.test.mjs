@@ -103,3 +103,24 @@ test('单文件包：包清单版本与模块不符时跳过', async () => {
   assert.equal(set.errors.length, 1);
   assert.match(set.errors[0].message, /版本/);
 });
+
+test('单文件包：不支持的模式或 apiVersion 在解包前跳过', async () => {
+  const gamesRoot = tempDir('bp-games-');
+  const source = moduleSourceDir('sample', '0.1.0');
+  packDirectory(source, join(gamesRoot, 'realtime.bpmap'), {
+    ...readPackSource(source),
+    mode: 'realtime',
+    apiVersion: 1,
+  });
+  packDirectory(source, join(gamesRoot, 'api2.bpmap'), {
+    ...readPackSource(source),
+    mode: 'turn',
+    apiVersion: 2,
+  });
+
+  const set = await loadGameSet(gamesRoot, tempDir('bp-cache-'));
+  assert.equal(set.modules.length, 0);
+  assert.equal(set.errors.length, 2);
+  assert.ok(set.errors.some((error) => /模式 realtime/.test(error.message)));
+  assert.ok(set.errors.some((error) => /apiVersion 2/.test(error.message)));
+});
