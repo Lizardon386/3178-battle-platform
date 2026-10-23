@@ -1,8 +1,8 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 本文件是任务交接档案，供后续 agent 跟进；改动产物后请更新「当前状态」「变更记录」。
-> 最近更新：2026-10-22
-<!-- 日期必须留在这个 blockquote 里：check-docs.sh 的 [新]/[旧]/[期] 只读这里。改日期时 README、DESIGN、CONTEXT 顶部要同一天。 -->
+> 最近更新：2026-10-23
+<!-- 日期要保持 README、DESIGN、CONTEXT 顶部同一天；原 check-docs.sh 随交接工具卸载。 -->
 
 ## 文档
 
@@ -27,15 +27,16 @@
 
 ## 2. 当前状态
 
-**P0–P7 完成（P8.5 通道已通、游戏自带界面未做；本机入口已统一到 `127.0.0.1:3178`；R1 便携包已能构建，数据落在用户目录），`npm test` 145/145 全绿；`tools/checks/check-seam.sh` 零命中；界面在 in-app Browser 里真点过。** 表现层底座已换成 `@tabler/core` + `@tabler/icons-webfont`（MIT，从 node_modules 同源挂 `/vendor/`）。代码全部在本目录，`uno-online` 的代码未动一行（HEAD 仍是 `e9ad2cc`，只有两档文档因改名被授权修改，仍是未提交状态）。
+**2026-10-23 当前：`npm test` 166/166 全绿，`tools/checks/check-seam.sh` 零命中，`tsc -b` 通过。** 包边界已拆成 `@bp/core-abi`（游戏 ABI 和游戏可见类型）、`@bp/protocol`（wire / guard / 握手 / 房间视图）、`@bp/game-sdk`（公共门面 + game-kit + pack/CLI + 模板）：`game-sdk` 只依赖 core-abi，`protocol` 依赖 core-abi，`server` / `client` 依赖 core-abi + protocol；client 不再依赖 game-sdk，server 仍依赖 `@bp/game-sdk/node` 的 pack 库（第二刀可拆 `@bp/pack`）。game-kit G1–G3（事件流、聊天、记分板、座位颜色、`ui.chat`）已落地；`/api/version`、`bpmap doctor`、SDK 脚本模板可用。P8 真游戏接入、G4 沙箱联调、`apiVersion` / `mode` 闸门仍未做。代码全部在本目录，`uno-online` 未动。
 
 浏览器实测（`hostd host --port 3289 --no-lan`，页面内 `evaluate_script` 驱动；2026-10-21 复测时 in-app Browser 有 831px 视口，几何和版式可以直接量）走过的路径：大厅取到 `/api/games` 两个游戏 → 建房坐 1 号位 → 客人 ws 入座 2 号、观战入 901 → 加电脑位 → 未准备时开局按钮写"等准备：客人乙"且 `disabled` → 客人准备后变"开始对局" → 开局后牌桌区渲染按视角裁剪的状态、倒计时 `剩 58 秒 → 剩 56 秒`（服务端时间轴生效）→ 房主点"离开房间"被中文提示挡住 → 踢观战生效 → 移交后 👑 跳到 2 号位、房主面板自动隐藏、通知条"房主已移交给 客人乙" → 此后离席成功回到大厅。
 
 | 已交付 | 位置 | 凭据 |
 |---|---|---|
-| 协议包（消息目录、错误码、握手、稳定摘要、形状闸门） | [packages/protocol/src](packages/protocol/src/wire.ts) | [protocol.test.mjs](packages/protocol/test/protocol.test.mjs) 9 例 |
+| 游戏 ABI + 线协议（core-abi / protocol） | [packages/core-abi/src](packages/core-abi/src/module-api.ts) / [packages/protocol/src](packages/protocol/src/wire.ts) | [protocol.test.mjs](packages/protocol/test/protocol.test.mjs) 9 例 |
+| game-kit：事件流 / 聊天 / 记分板 / 座位颜色 | [packages/game-sdk/src/kit](packages/game-sdk/src/kit) | [kit.test.mjs](packages/game-sdk/test/kit.test.mjs) 8 例 + [kit-client.test.mjs](packages/game-sdk/test/kit-client.test.mjs) 7 例 |
 | 座位模型 + 房主权限 + 票据 + Ready 闸 | [room.ts](packages/server/src/room.ts) / [authority.ts](packages/server/src/authority.ts) | [room-authority.test.mjs](packages/server/test/room-authority.test.mjs) 14 例 |
-| `GameModule` 契约 + 两个测试夹具 + 同一断言集 | [module-api.ts](packages/game-sdk/src/contract/module-api.ts) / [engine.ts](packages/server/src/engine.ts) | [contract.test.mjs](tools/testkit/test/contract.test.mjs) 19 例 |
+| `GameModule` 契约 + 两个测试夹具 + 同一断言集 | [module-api.ts](packages/core-abi/src/module-api.ts) / [engine.ts](packages/server/src/engine.ts) | [contract.test.mjs](tools/testkit/test/contract.test.mjs) 19 例 |
 | ws 传输、限流、Origin 策略、心跳、真 socket 双游戏 | [transport.ts](packages/server/src/transport.ts) | [ws-live.test.mjs](packages/server/test/ws-live.test.mjs) 4 例 |
 | 房主侧落盘/恢复（原子写、版本闸、票据幸存、坏文件不挡启动）+ 局域网组播信标（编解码/过期表；真网卡未实测） | [store.ts](packages/server/src/store.ts) / [discovery.ts](packages/server/src/discovery.ts) | [store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) 11 例 |
 | 客户端 SDK + 房间界面（地址可配、地址簿、票据、退避、校时、槽位、聊天、房主面板、邀请链接） | [packages/client/src/app.ts](packages/client/src/app.ts) | [client-logic.test.mjs](packages/client/test/client-logic.test.mjs) 12 例 + 上面的浏览器实测 |
@@ -56,6 +57,10 @@
 
 ## 3. 计划 / 待办
 
+- [x] 拆出 `@bp/core-abi`，`protocol` 只留 wire/guard/握手/房间视图（`8b8e832`）
+- [x] game-kit G1–G3、`/api/version`、`bpmap doctor`、SDK 脚本模板
+- [ ] G4：ChatPanel / ScoreboardPanel / `ui.chat='game'` 真实沙箱联调
+- [ ] `apiVersion` / `mode` 闸门；可选的 `@bp/pack` 第二刀；UNO 接入
 - [x] P0 工程骨架 + 接缝闸门 + `node --test`
 - [x] P1 协议包
 - [x] P2 房主身份与座位模型
@@ -76,6 +81,7 @@
 
 ## 4. 关键约束与注意事项
 
+- **包边界**：`@bp/core-abi` 只放游戏 ABI 和游戏可见类型；`@bp/protocol` 只放 wire / guard / 握手 / 房间视图；`@bp/game-sdk` 是游戏公共门面。游戏只依赖 game-sdk，server/client 不 import game-sdk（pack 第二刀后）；不要把 wire 类型塞回 core-abi，也不要把 `GameModule` 塞回 protocol。
 - **接缝闸门必须保持绿**：`bash tools/checks/check-seam.sh` 扫 `packages/*/src` 里的玩法词与 `games/` import。重构中最容易发生的退化就是"顺手把旧 `room.js` 搬过来"，这条是唯一的机械防线。**不要在闸门里加例外**（例外一旦存在就形同不存在）；平台代码的注释也不要提旧游戏名字，历史来源写在本档案里。
 - **revision 不变式**：任何可见状态变更都要推进 revision（`Room.addSeat/removeSeat/attach/detach/pushChat/bump` 已内置）。新加变更点时忘了 bump 的表现是"客户端收到了却不更新"，排查成本很高——本会话就是靠端到端测试抓到这个 bug 的。
 - **出站目标在创建时解析成 connIds**：任何"先改会话表再投递"的写法都会让最后一条通知丢掉（`hostClose`、`shutdown` 两处踩过）。新增广播入口时用 `Engine.toRoom/toSeat`，别自己拼 target。
@@ -96,9 +102,10 @@
 - 环境事实：本机 Smart App Control = `On`（`VerifiedAndReputablePolicyState=1`），官方 `node.exe` 签名有效；node v24.19.0 / npm 11.17.0；registry 可达；无全局 `tsc`（走 `npx tsc -b`）。
 - 测试写法：`node --test` 跑目录参数在 Windows 下不可靠，**必须用引号包住的 glob**（`node --test "packages/*/test/*.test.mjs"`），并带 `--test-timeout`，否则未决的 await 会让整轮挂死。测试里"等一条消息"要用 predicate 等**符合条件的那一帧**，在途的旧快照会先到。
 - **版本管理**：本目录是 GitHub 仓库（`origin`，公开），`.bat` 由 `.gitattributes` 锁 CRLF；提交前跑 `npm test` 与 `npm run seam`。便携包产物 `dist-portable/` 不入库。
-- 收工跑 `bash /d/agent_workspace/multi-agent-task-handoff/check-docs.sh`（**不加管道**，`[链]`/`[期]` 是失败项），exit 0 才算收尾。
+- 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
 ## 5. 变更记录
+- 2026-10-23 Qoder：**拆出 `@bp/core-abi`，`protocol` 只留线协议**（`8b8e832`）。`GameModule` / `GameInstance` / `Effect` / `GameContext` / `GameSeatInfo` / 客户端契约 / `SeatRole` / `RoomPhase` / `SeatView` / `GameManifest` / `GameAsset` / `GameUiOptions` / `PlatformCode` / `NoticeCode` / `stableDigest` 进 core-abi；protocol 依赖 core-abi，只保留 wire、guard、协议版本、房间视图、握手和默认文案；game-sdk 依赖 core-abi 并在根入口 re-export，`/client` 变成兼容路径；client 去掉 game-sdk 依赖；`manifestOf` 移到 server；loader 裸导入和构建模板加 core-abi，docs/DESIGN 同步。验证：166/166、seam OK、`tsc -b` 通过；外部临时工程跑通 core-abi + SDK tarball 安装、构建、打包、inspect。未做：`@bp/pack` 第二刀、`apiVersion` / `mode` 闸门、G4 真实沙箱联调、UNO 接入。
 - 2026-10-10 Qoder：**目录改名 `game-host-platform` → `3178-battle-platform`，并由评估档转为实施档**（用户指令：本会话就在本目录继续开发对战平台）。同时改判两项：计划 D2「代码落新目录 battle-platform」作废，代码就落本目录；D6「房间列表/大厅」用户不接受"只做地址簿 + 邀请链接"，要求**尽量贴合 war3 的房间设计**，发现层级改为 B+A（见 README「房间形态」）。顺带修掉本档 4 处 `[链]` 违规。
 - 2026-10-10 Qoder：**开工 P0–P5，交付平台内核第一版**（用户"选 B+A，其他默认，直接开工"）。新建 npm workspaces + TS 工程（`tsc -b` 项目引用、`node --test`），`packages/protocol`（消息目录/错误码/握手/稳定摘要/形状闸门）、`packages/server`（`Engine` 引擎、`Room` 座位与 revision 不变式、`authority` 权限集中处、`HostStore` 房主侧落盘、`WsTransport`、`discovery` 组播信标、`loader` 运行时动态加载）、`games/echo` + `games/turncount` 两个形状不同的合成游戏。测试 57 例全绿：19 例契约套件用**同一组断言**跑两个游戏，4 例真 socket 端到端跨游戏换房，含落盘重启后旧票据回座。**修掉两个实现缺陷**：① 出站按房间寻址会在 `hostClose`/`shutdown` 清空会话表后丢掉最后一条通知 → 改为创建时即解析 connIds；② 入座/连接/聊天不推进 revision → 按版本号去重的客户端会把新状态当重复帧丢弃。新增 `tools/checks/check-seam.sh`（平台包禁玩法词与 `games/` import）。改名遗留：本档与 [uno-online/CONTEXT.md](../uno-online/CONTEXT.md)、[uno-online/README.md](../uno-online/README.md) 内引用已全部替换为新名（uno-online 那两处经用户授权后修改，其工作树现为未提交状态）。
 - 2026-10-10 Qoder：**P6 客户端 + P7 宿主壳，界面在浏览器里跑通**。`packages/client`（地址解析 / 地址簿+票据 / 指数退避 / 服务端时间轴 / 帧归约 / 模块下发与 sha256 校验 / 大厅+房间内+对局三层界面）与 `packages/hostd`（host/join/diagnose/stop、静态与接口路由、cloudflared 解析、`房主建房.bat` + `玩家本机壳.bat` 双击入口 + `.gitattributes` 锁 CRLF）。测试从 57 涨到 **77 例全绿**（新增 12 例客户端逻辑 + 6 例宿主壳集成，含路径穿越与真 ws）。**修掉四个真实缺陷**：① `this.fetchImpl(...)` 丢接收者 → 浏览器 `Illegal invocation`，表现为局域网列表永远空白，且被静默 `catch` 吞掉（现在把原因写进提示）；② `safeJoin` 用正斜杠比前缀，Windows 上 `resolve` 给反斜杠 → `/app/`、`/games/` 全部误判越界 404；③ `server.close()`/`wss.close()` 在有 keep-alive 与 WS 连接时回调不触发 → 收尾挂死，改 `closeAllConnections()` + 超时竞速、`terminate()` 先行；④ 客户端 `until('snapshot')` 拿到的是在途旧帧 → 测试助手改成带 predicate 等"符合条件的那一帧"。**验证方式**：in-app Browser 无可见视口，用 `evaluate_script` 真点：建房→客人入座→观战入座→加电脑位→未准备时开局按钮写明"等准备：客人乙"并 `disabled`→准备后变亮→开局后倒计时 58→56 秒（服务端时间轴生效）→房主离席被中文提示挡住→踢观战→移交后 👑 换位、房主面板隐藏、通知条正确→离席回大厅。
@@ -170,7 +177,7 @@
 | 阶段 | 内容 | 状态 | 验收凭据 |
 |---|---|---|---|
 | P0 | monorepo + TS 构建 + `node --test` + 接缝闸门 | 已完成 | `npm test` exit 0；`check-seam.sh` 零命中 |
-| P1 | 协议包：消息目录、错误码、握手、`rulesHash` 稳定摘要 | 已完成 | [protocol.test.mjs](packages/protocol/test/protocol.test.mjs) 9 例 |
+| P1 | `@bp/core-abi` 游戏 ABI/类型/摘要 + `@bp/protocol` 线协议/形状闸/握手 | 已完成 | [protocol.test.mjs](packages/protocol/test/protocol.test.mjs) 9 例 |
 | P2 | 座位模型与房主权限：`hostId`、票据、Ready 闸、kick/transfer/close | 已完成 | [room-authority.test.mjs](packages/server/test/room-authority.test.mjs) 14 例 |
 | P3 | `GameModule` 契约 + 两个测试夹具 + 契约测试 | 已完成 | [contract.test.mjs](tools/testkit/test/contract.test.mjs) 20 例（同一断言集跑两个夹具） |
 | P4 | 传输（ws/限流/Origin/心跳）、房间聊天、局域网信标 | 已完成（信标未双机实测） | [ws-live.test.mjs](packages/server/test/ws-live.test.mjs) 4 例；[store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) 12 例 |
@@ -219,7 +226,9 @@
 
 - 2026-10-21 Qoder：**DESIGN 4.1 目录树收回到包一级**：只列 `packages/*`、`tools/{testkit,checks,packaging}`、`games/` 和根文档，不再展开 `src/`、`test/`、`public/`；各目录的职责写在同行说明里。
 
+- 2026-10-23 Qoder：**拆出 `@bp/core-abi`**（`8b8e832`）：`GameModule` / `GameInstance` / `Effect` / 客户端契约 / 座位类型 / manifest / 错误码 / `stableDigest` 进 core-abi；protocol 只留 wire/guard/握手/房间视图；game-sdk 只依赖 core-abi，client 不再依赖 game-sdk；`manifestOf` 移到 server；loader 和构建模板加 core-abi。166/166、seam OK、`tsc -b` 通过。下一步见本档「下一步顺序建议」。
+
 - 2026-10-21 Qoder：**文档去掉行话**：`dogfood-output` 的实际内容写成“猴测报告：随机操作跑出的问题记录”；`finding` / `High` / `Medium` / `Low` 改成“问题 / 高 / 中 / 低”；testkit 描述改成“接口测试脚手架、模拟上下文”；checks 描述改成“架构检查、随机操作测试、存档与重连问题复现”。
 
-**下一步顺序建议**：① **M3 试点**：拿一个具体回合制游戏（uno 或其他，或先把 `测试夹具·回合制` 补成带 AI 和客户端的测试夹具），验证“1 人 + 电脑打完整局”和 `.bpmap` 端到端；接入步骤写进 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。② **便携包上第二台真正没装 Node 的电脑实测**（本机只验了剥离 PATH）；③ **双机实测**组播发现与隧道，目前只在一台机器上证伪了编解码与 HTTP 路由；④ 单文件 exe 之前先跑 SAC 实验。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
+**下一步顺序建议（2026-10-23）**：① **G4 真沙箱联调**：ChatPanel / ScoreboardPanel / `ui.chat='game'` 在真实客户端里跑一遍；② **`apiVersion` / `mode` 闸门**：包清单、宿主加载闸和 `bpmap doctor` 对齐；③ **可选 `@bp/pack` 第二刀**：把 pack 库从 game-sdk 拆出，server 不再依赖 SDK；④ **SDK 发布准备**：定 registry/scope/license、core-abi + game-sdk 发布顺序和版本范围；⑤ **真游戏 UNO 接入**（先定改名/IP 和 MVP）；⑥ 平台老待办：便携包上第二台无 Node 机器、双机组播/隧道实测。**别先去弄单文件 exe**：SAC 实验还没跑，且就算通过也不解决别人机器的问题。
 参考入口：README 阶段表 → 本档案「关键约束」→ [engine.ts](packages/server/src/engine.ts) 与 [app.ts](packages/client/src/app.ts)。双击入口是 `房主建房.bat` / `玩家进房.bat`，**别手写**：改 [tools/packaging/gen-bat.mjs](tools/packaging/gen-bat.mjs) 再 `node tools/packaging/gen-bat.mjs`，两个不变式（编码见上；必须是启动器——`start "…" node …` 后 `exit /b 0`，这样 Ctrl+C 落在 node 上、收尾后窗口自关而不出 Y/N 提示）都由 `bat-entries.test.mjs` 钉着。
