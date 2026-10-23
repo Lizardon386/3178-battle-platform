@@ -69,7 +69,7 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 
 ### 2.1 获取 SDK
 
-SDK 还没有发布到 npm，当前是 `private` 包。外部工程从平台仓库打成 tarball 安装；`@bp/game-sdk` 依赖 `@bp/core-abi` 和 `@bp/pack-format`，三个要一起装。
+SDK 还没有发布到 npm，当前是 `private` 包。外部工程从平台仓库打成 tarball 安装；`@bp/game-sdk` 依赖 `@bp/core-abi` 和 `@bp/pack-format`，构建/打包还要 `@bp/sdk-tools`，四个要一起装。
 
 有两套做法：2.1.1 手动执行命令，2.1.2 用现成脚本。两者结果一样，选一种即可。
 
@@ -83,6 +83,7 @@ mkdir -p <SDK 产物目录>
 npm pack ./packages/core-abi --pack-destination <SDK 产物目录>
 npm pack ./packages/pack-format --pack-destination <SDK 产物目录>
 npm pack ./packages/game-sdk --pack-destination <SDK 产物目录>
+npm pack ./packages/sdk-tools --pack-destination <SDK 产物目录>
 
 cd <你的游戏工程>
 npm init -y
@@ -91,6 +92,7 @@ npm install --save-dev \
   <SDK 产物目录>/bp-core-abi-0.1.0.tgz \
   <SDK 产物目录>/bp-pack-format-0.1.0.tgz \
   <SDK 产物目录>/bp-game-sdk-0.1.0.tgz \
+  <SDK 产物目录>/bp-sdk-tools-0.1.0.tgz \
   esbuild
 ```
 
@@ -101,15 +103,16 @@ npm install --save-dev \
 | `npm pack ./packages/core-abi` | 把 `@bp/core-abi` 打成 tarball |
 | `npm pack ./packages/pack-format` | 把 `@bp/pack-format` 打成 tarball |
 | `npm pack ./packages/game-sdk` | 把 `@bp/game-sdk` 打成 tarball |
+| `npm pack ./packages/sdk-tools` | 把 `@bp/sdk-tools` 打成 tarball |
 | `npm init -y` | 没有 `package.json` 时创建一个 |
 | `npm pkg set type=module` | 让工程按 ESM 解析 |
-| `npm install --save-dev` | 同时安装三个 tarball 和 esbuild；SDK 依赖 core-abi / pack-format，必须一起装 |
+| `npm install --save-dev` | 同时安装四个 tarball 和 esbuild；SDK 依赖 core-abi / pack-format，构建和打包还要 sdk-tools |
 
-平台更新 SDK 后重新打包、重新安装。以后发布到 registry 后改成 `npm install @bp/game-sdk` 即可。
+平台更新 SDK 后重新打包、重新安装。以后发布到 registry 后改成 `npm install @bp/game-sdk @bp/sdk-tools` 即可。
 
 #### 2.1.2 用 setup-sdk.mjs 安装（脚本）
 
-脚本在 SDK 仓库的 [setup-sdk.mjs](packages/game-sdk/templates/scripts/setup-sdk.mjs)，复制到游戏工程的 `scripts/`。安装 SDK 后，同一份也在 `node_modules/@bp/game-sdk/templates/scripts/`。
+脚本在 SDK 仓库的 [setup-sdk.mjs](packages/sdk-tools/templates/scripts/setup-sdk.mjs)，复制到游戏工程的 `scripts/`。安装后同一份也在 `node_modules/@bp/sdk-tools/templates/scripts/`。
 
 前置条件：Node 24+、npm、能访问平台仓库。游戏工程可以还没有 `package.json`，脚本会创建一个最小版本。
 
@@ -129,8 +132,8 @@ node scripts/setup-sdk.mjs --platform ../3178-battle-platform
 脚本做的事：
 
 1. 没有 `package.json` 就创建一个最小的；有但缺 `"type": "module"` 就补上。
-2. 检查平台是否已构建；`packages/game-sdk/dist/index.js`、`packages/core-abi/dist/index.js` 或 `packages/pack-format/dist/index.js` 不存在时在平台仓库跑 `npm run build`。
-3. 把 `@bp/core-abi`、`@bp/pack-format` 和 `@bp/game-sdk` 打进 `sdk/`，清掉旧的 tarball。
+2. 检查平台是否已构建；`packages/game-sdk/dist/index.js`、`packages/core-abi/dist/index.js`、`packages/pack-format/dist/index.js` 或 `packages/sdk-tools/dist/cli/index.js` 不存在时在平台仓库跑 `npm run build`。
+3. 把 `@bp/core-abi`、`@bp/pack-format`、`@bp/game-sdk` 和 `@bp/sdk-tools` 打进 `sdk/`，清掉旧的 tarball。
 4. 在游戏工程执行 `npm install --save-dev sdk/*.tgz esbuild`。
 5. 打印安装的 tarball 文件名和下一步命令。
 
@@ -140,14 +143,16 @@ node scripts/setup-sdk.mjs --platform ../3178-battle-platform
 |---|---|
 | `sdk/bp-core-abi-<版本>.tgz` | core-abi tarball |
 | `sdk/bp-pack-format-<版本>.tgz` | pack-format tarball |
+| `sdk/bp-sdk-tools-<版本>.tgz` | sdk-tools tarball |
 | `sdk/bp-game-sdk-<版本>.tgz` | SDK tarball |
-| `package.json` 的 `devDependencies` | 三个 tarball 和 esbuild |
+| `package.json` 的 `devDependencies` | 四个 tarball 和 esbuild |
 | `node_modules/@bp/game-sdk/` | 已安装的 SDK |
+| `node_modules/@bp/sdk-tools/` | CLI 和模板，`npx bpmap` 从这里来 |
 
 注意：
 
 - 平台更新 SDK 后重跑一次，脚本会重新打包并覆盖安装。
-- 脚本用 npm 安装依赖；工程如果改用 pnpm/yarn，需要自己把三个 tarball 装上。
+- 脚本用 npm 安装依赖；工程如果改用 pnpm/yarn，需要自己把四个 tarball 装上。
 - 脚本只负责装 SDK，不写 `bp` 配置；`bp.id` / `bp.entry` 在 2.8 里配。
 - `--sdk-dir` 是相对游戏工程根目录的路径；不要指到会被打包的目录里。
 
@@ -155,7 +160,7 @@ node scripts/setup-sdk.mjs --platform ../3178-battle-platform
 
 ```text
 mygame/
-├─ scripts/              # 可选：从 SDK templates 复制的 setup/build
+├─ scripts/              # 可选：从 sdk-tools templates 复制的 setup/build
 ├─ package.json
 ├─ src/
 │  ├─ server.ts          # GameModule
@@ -303,7 +308,7 @@ bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 
 ### 2.8 用 build.mjs 一键完成
 
-`build.mjs` 在 SDK 仓库的 [build.mjs](packages/game-sdk/templates/scripts/build.mjs)，复制到游戏工程的 `scripts/`。它把 2.5–2.7 串起来：构建、生成清单、打包、校验，可选复制到平台、查宿主、启动宿主。
+`build.mjs` 在 SDK 工具包的 [build.mjs](packages/sdk-tools/templates/scripts/build.mjs)，复制到游戏工程的 `scripts/`。它把 2.5–2.7 串起来：构建、生成清单、打包、校验，可选复制到平台、查宿主、启动宿主。
 
 前置条件：
 
@@ -407,17 +412,20 @@ node scripts/build.mjs --out build/mygame.bpmap
 ```text
 packages/game-sdk/src/
 ├─ contract/
-│  ├─ module-api.ts      # GameModule / GameInstance / Effect / GameContext
+│  ├─ module-api.ts      # re-export @bp/core-abi
 │  └─ client.ts          # 客户端 mount / onEvent / actions 类型
-├─ cli/
-│  ├─ index.ts           # bpmap pack / inspect / unpack / doctor
-│  └─ doctor.ts          # 入口与宿主兼容检查
 ├─ node/
-│  └─ pack.ts            # .bpmap 读取、打包、校验、解包缓存
+│  └─ pack.ts            # re-export @bp/pack-format，保留 /node 路径
 └─ kit/
    ├─ palette.ts         # 座位颜色
    ├─ server/feed.ts     # FeedLog
    └─ client/            # FeedPanel / ChatPanel / ScoreboardPanel
+
+packages/sdk-tools/
+├─ src/cli/
+│  ├─ index.ts           # bpmap pack / inspect / unpack / doctor
+│  └─ doctor.ts          # 入口与宿主兼容检查
+└─ templates/scripts/    # setup-sdk.mjs / build.mjs
 ```
 
 公共导入路径：
@@ -426,12 +434,12 @@ packages/game-sdk/src/
 |---|---|
 | `@bp/game-sdk` | `GameModule` / `GameInstance` / `GameContext` / `GameSeatInfo` / `GameAction` / `Effect` / `Outcome` / `Reject` / `reject()` / `isReject()` / `ViewerId` / `stableDigest` / `GameManifest` / `GameAsset` / `GameUiOptions` / `SeatRole` / `RoomPhase` / `SeatView` / `PlatformCode` / `NoticeCode` |
 | `@bp/game-sdk/client` | `GameClientContract` / `GameActions`（只有类型，没有运行时） |
-| `@bp/game-sdk/node` | `packDirectory` / `readPack` / `readPackSource` / `extractPack` / `listPackFiles` / `PACK_FORMAT` / `PACK_MAGIC` / `PACK_EXTENSION` / `PackError` 和对应类型 |
+| `@bp/game-sdk/node` | re-export `@bp/pack-format`，保留 `packDirectory` / `readPack` / `readPackSource` / `extractPack` / `listPackFiles` / 包格式常量和类型 |
 | `@bp/game-sdk/kit` | `ChatPanel` / `FeedPanel` / `ScoreboardPanel` / `seatColor`，以及 `normalizeFeedEntry`、`mergeFeedEntries`、`formatFeedTime`、`normalizeChatLine`、`mergeChatLines`、`chatText`、`resolveColumnValue`、`formatColumnValue`、`sortScoreboardRows`、`buildScoreboardRows`、`connectionLabel` 等纯函数 |
 | `@bp/game-sdk/kit/server` | `FeedLog` / `FeedLogOptions` / `FeedEmitInput` / `FeedSeat` / `FeedEntry` / `FeedVisibility` / `FeedError` / `FEED_EVENT` |
-| `bpmap` bin | `pack` / `inspect` / `unpack` / `doctor` |
+| `bpmap` bin（`@bp/sdk-tools`） | `pack` / `inspect` / `unpack` / `doctor` |
 
-`reject()` 是构造 `Reject` 的助手；`stableDigest` 是确定性摘要，只用于“两端配置是否一致”，不是签名或安全哈希。`@bp/core-abi` 是 SDK 底层的游戏 ABI 包，`@bp/pack-format` 是 `.bpmap` 读写库；两者都由 `@bp/game-sdk` 作为依赖安装并重新导出，游戏工程不需要直接 import。
+`reject()` 是构造 `Reject` 的助手；`stableDigest` 是确定性摘要，只用于“两端配置是否一致”，不是签名或安全哈希。`@bp/core-abi` 是 SDK 底层的游戏 ABI 包，`@bp/pack-format` 是 `.bpmap` 读写库；两者都由 `@bp/game-sdk` 作为依赖安装并重新导出，游戏工程不需要直接 import。`@bp/sdk-tools` 是独立工具包，提供 `bpmap` CLI 和工程模板，运行时代码不 import 它。
 
 `index.ts` 保留在源码根目录作为包入口；内部目录调整不改变上面的公共路径。
 
@@ -756,7 +764,7 @@ const color = seatColor({ seatId: 's1', slot: 1, team: 1 });
 
 ### 3.9 打包库与 CLI
 
-`@bp/game-sdk/node` re-export `@bp/pack-format`，提供 `.bpmap` 的读取、校验、打包和解包缓存；`bpmap` CLI 封装了常用操作：
+`@bp/game-sdk/node` re-export `@bp/pack-format`，提供 `.bpmap` 的读取、校验、打包和解包缓存；`bpmap` CLI 由独立工具包 `@bp/sdk-tools` 提供：
 
 ```bash
 bpmap pack dist-pack --out dist/mygame.bpmap
@@ -765,7 +773,7 @@ bpmap unpack dist/mygame.bpmap ./unpacked
 bpmap doctor dist-pack
 ```
 
-日常构建也可以用 2.8 的 [build.mjs](packages/game-sdk/templates/scripts/build.mjs)，这些子命令留给单独排查和手工检查。
+日常构建也可以用 2.8 的 [build.mjs](packages/sdk-tools/templates/scripts/build.mjs)，这些子命令留给单独排查和手工检查。
 
 `@bp/game-sdk/node` 的公共函数：
 
@@ -865,7 +873,7 @@ bpmap doctor dist-pack
 bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 ```
 
-用 2.8 的 [build.mjs](packages/game-sdk/templates/scripts/build.mjs) 时，跑 `node scripts/build.mjs --host http://127.0.0.1:3178` 就行，同样要先启动宿主。
+用 2.8 的 [build.mjs](packages/sdk-tools/templates/scripts/build.mjs) 时，跑 `node scripts/build.mjs --host http://127.0.0.1:3178` 就行，同样要先启动宿主。
 
 - 源目录：检查 `bpmap.json`、服务端/客户端入口；读取 `mode` / `apiVersion`（缺省 `turn` / `1`）。
 - 单文件包：检查包格式、服务端入口和清单；从包头读 `mode` / `apiVersion`，旧包头缺字段时按 `turn` / `1`。

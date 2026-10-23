@@ -167,6 +167,7 @@ stateDiagram-v2
 │  ├─ protocol/                      线消息、房间视图、入站形状闸、握手
 │  ├─ pack-format/                   .bpmap 包头、读写、校验、打包和解包缓存
 │  ├─ game-sdk/                      游戏公共 SDK：re-export core-abi / pack-format、game-kit
+│  ├─ sdk-tools/                     独立 SDK 工具：bpmap CLI、doctor、工程模板
 │  ├─ server/                        引擎、房间、权限、落盘、传输、发现
 │  ├─ client/                        浏览器端连接、视图、界面、沙箱挂载
 │  └─ hostd/                         宿主壳 host/join/diagnose/stop、静态路由
@@ -189,7 +190,8 @@ flowchart TD
   A["@bp/core-abi<br/>GameModule / GameInstance / Effect / 游戏可见类型"]
   P["@bp/protocol<br/>线消息 / 房间视图 / 形状闸 / 握手"]
   F["@bp/pack-format<br/>.bpmap 包头 / 读写 / 打包 / 解包缓存"]
-  K["@bp/game-sdk<br/>公共 SDK / game-kit / bpmap CLI"]
+  K["@bp/game-sdk<br/>公共 SDK / game-kit"]
+  T["@bp/sdk-tools<br/>bpmap CLI / doctor / 工程模板"]
   S["@bp/server<br/>Engine / Room / Authority / Store / Transport"]
   C["@bp/client<br/>连接 / 视图 / 界面 / 沙箱"]
   H["@bp/hostd<br/>host / join / 静态路由"]
@@ -206,6 +208,8 @@ flowchart TD
   P --> A
   K --> A
   K --> F
+  T --> A
+  T --> F
   G -. "loader 按 id 加载；只通过 Effect[] 出站" .-> S
 ```
 
@@ -292,8 +296,8 @@ flowchart TD
 | [tools/checks/fixture-kit.page.js](tools/checks/fixture-kit.page.js) | 在真实大厅检查 fixture-kit：建房、开局、聊天、记分板和电脑位 |
 | [tools/packaging/build-portable.mjs](tools/packaging/build-portable.mjs) | 绿色便携包装配与自检 |
 | [tools/checks/monkey.mjs](tools/checks/monkey.mjs) | 协议层猴测 |
-| [tools/packaging/bpmap.mjs](tools/packaging/bpmap.mjs) | .bpmap 打包/检查入口，调用 `@bp/game-sdk` CLI |
-| [packages/game-sdk/src/cli/index.ts](packages/game-sdk/src/cli/index.ts) | `pack` / `inspect` / `unpack` 的 CLI 实现 |
+| [tools/packaging/bpmap.mjs](tools/packaging/bpmap.mjs) | .bpmap 打包/检查入口，调用 `@bp/sdk-tools` CLI |
+| [packages/sdk-tools/src/cli/index.ts](packages/sdk-tools/src/cli/index.ts) | `pack` / `inspect` / `unpack` 的 CLI 实现 |
 | [tools/checks/monkey-ui.page.js](tools/checks/monkey-ui.page.js) | 页内 UI 猴测 |
 | [tools/checks/repro-persist.mjs](tools/checks/repro-persist.mjs) / [tools/checks/repro-resume.mjs](tools/checks/repro-resume.mjs) | 落盘窗口与票据重连复现 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 猴测报告：15 条问题、修法与复跑次数 |

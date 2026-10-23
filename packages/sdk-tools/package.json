@@ -1,0 +1,14 @@
+{
+  "name": "@bp/sdk-tools",
+  "version": "0.1.0",
+  "description": "3178 SDK 工具：bpmap CLI、doctor 和游戏工程脚本模板",
+  "type": "module",
+  "bin": {
+    "bpmap": "dist/cli/index.js"
+  },
+  "files": ["dist", "templates"],
+  "dependencies": {
+    "@bp/core-abi": "*",
+    "@bp/pack-format": "*"
+  }
+}

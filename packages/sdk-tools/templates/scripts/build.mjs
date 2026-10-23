@@ -11,7 +11,7 @@ import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { build } from 'esbuild';
 import { API_VERSION, DEFAULT_MODE } from '@bp/core-abi';
-import { packDirectory, readPack, readPackSource } from '@bp/game-sdk/node';
+import { packDirectory, readPack, readPackSource } from '@bp/pack-format';
 
 const args = process.argv.slice(2);
 const argValue = (name, fallback) => {

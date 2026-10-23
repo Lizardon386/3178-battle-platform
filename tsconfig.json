@@ -5,6 +5,7 @@
     { "path": "packages/pack-format" },
     { "path": "packages/protocol" },
     { "path": "packages/game-sdk" },
+    { "path": "packages/sdk-tools" },
     { "path": "packages/server" },
     { "path": "packages/client" },
     { "path": "packages/hostd" },

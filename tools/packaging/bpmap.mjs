@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-import '../../packages/game-sdk/dist/cli/index.js';
+import '../../packages/sdk-tools/dist/cli/index.js';

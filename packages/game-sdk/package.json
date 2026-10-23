@@ -28,15 +28,11 @@
     },
     "./package.json": "./package.json"
   },
-  "bin": {
-    "bpmap": "dist/cli/index.js"
-  },
   "dependencies": {
     "@bp/core-abi": "*",
     "@bp/pack-format": "*"
   },
   "files": [
-    "dist",
-    "templates"
+    "dist"
   ]
 }

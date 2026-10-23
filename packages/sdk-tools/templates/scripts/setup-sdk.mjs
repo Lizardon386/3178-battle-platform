@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 用法：node scripts/setup-sdk.mjs [--platform <3178 仓库>] [--sdk-dir sdk]
- * 把 core-abi、pack-format 和 game-sdk 打成 tarball，安装到当前游戏工程，并补上 package.json 的 type=module。
+ * 把 core-abi、pack-format、game-sdk 和 sdk-tools 打成 tarball，安装到当前游戏工程，并补上 package.json 的 type=module。
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -66,7 +66,8 @@ if (!existsSync(packagePath)) {
 
 if (!existsSync(join(platformRoot, 'packages', 'game-sdk', 'dist', 'index.js')) ||
     !existsSync(join(platformRoot, 'packages', 'core-abi', 'dist', 'index.js')) ||
-    !existsSync(join(platformRoot, 'packages', 'pack-format', 'dist', 'index.js'))) {
+    !existsSync(join(platformRoot, 'packages', 'pack-format', 'dist', 'index.js')) ||
+    !existsSync(join(platformRoot, 'packages', 'sdk-tools', 'dist', 'cli', 'index.js'))) {
   console.log('平台还没构建，先跑 npm run build');
   npm(['run', 'build'], platformRoot);
 }
@@ -79,6 +80,7 @@ for (const name of readdirSync(sdkDir)) {
 npm(['pack', './packages/core-abi', '--pack-destination', sdkDir], platformRoot);
 npm(['pack', './packages/pack-format', '--pack-destination', sdkDir], platformRoot);
 npm(['pack', './packages/game-sdk', '--pack-destination', sdkDir], platformRoot);
+npm(['pack', './packages/sdk-tools', '--pack-destination', sdkDir], platformRoot);
 
 const tarballs = readdirSync(sdkDir)
   .filter((name) => name.endsWith('.tgz'))
