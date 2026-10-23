@@ -27,7 +27,7 @@
 
 ## 2. 当前状态
 
-**2026-10-23 当前：`npm test` 166/166 全绿，`tools/checks/check-seam.sh` 零命中，`tsc -b` 通过。** 包边界已拆成 `@bp/core-abi`（游戏 ABI 和游戏可见类型）、`@bp/protocol`（wire / guard / 握手 / 房间视图）、`@bp/game-sdk`（公共门面 + game-kit + pack/CLI + 模板）：`game-sdk` 只依赖 core-abi，`protocol` 依赖 core-abi，`server` / `client` 依赖 core-abi + protocol；client 不再依赖 game-sdk，server 仍依赖 `@bp/game-sdk/node` 的 pack 库（第二刀可拆 `@bp/pack`）。game-kit G1–G3 已落地；G4 已用真实沙箱客户端验证 ChatPanel / ScoreboardPanel / `ui.chat='game'`：对局中平台聊天卡隐藏，游戏内聊天发送/接收、记分板列、电脑位和“下一手”更新都通；同时修掉首页 importmap 缺 core-abi 和 `/vendor/core-abi/` 路由。P8 真游戏接入、`apiVersion` / `mode` 闸门仍未做。代码全部在本目录，`uno-online` 未动。
+**2026-10-23 当前：`npm test` 167/167 全绿，`tools/checks/check-seam.sh` 零命中，`tsc -b` 通过。** 包边界已拆成 `@bp/core-abi`（游戏 ABI 和游戏可见类型）、`@bp/protocol`（wire / guard / 握手 / 房间视图）、`@bp/game-sdk`（公共门面 + game-kit + pack/CLI + 模板）：`game-sdk` 只依赖 core-abi，`protocol` 依赖 core-abi，`server` / `client` 依赖 core-abi + protocol；client 不再依赖 game-sdk，server 仍依赖 `@bp/game-sdk/node` 的 pack 库（第二刀可拆 `@bp/pack`）。game-kit G1–G4 已完成，并有 `fixture-kit` 测试夹具（带 ChatPanel / ScoreboardPanel 客户端入口、`ui.chat='game'`）做真实沙箱回归；平台聊天卡隐藏、游戏聊天双向、记分板列/电脑位/下一手更新都通；同时修掉首页 importmap 缺 core-abi 和 `/vendor/core-abi/` 路由。P8 真游戏接入、`apiVersion` / `mode` 闸门仍未做。代码全部在本目录，`uno-online` 未动。
 
 浏览器实测（`hostd host --port 3289 --no-lan`，页面内 `evaluate_script` 驱动；2026-10-21 复测时 in-app Browser 有 831px 视口，几何和版式可以直接量）走过的路径：大厅取到 `/api/games` 两个游戏 → 建房坐 1 号位 → 客人 ws 入座 2 号、观战入 901 → 加电脑位 → 未准备时开局按钮写"等准备：客人乙"且 `disabled` → 客人准备后变"开始对局" → 开局后牌桌区渲染按视角裁剪的状态、倒计时 `剩 58 秒 → 剩 56 秒`（服务端时间轴生效）→ 房主点"离开房间"被中文提示挡住 → 踢观战生效 → 移交后 👑 跳到 2 号位、房主面板自动隐藏、通知条"房主已移交给 客人乙" → 此后离席成功回到大厅。
 
@@ -36,6 +36,7 @@
 | 游戏 ABI + 线协议（core-abi / protocol） | [packages/core-abi/src](packages/core-abi/src/module-api.ts) / [packages/protocol/src](packages/protocol/src/wire.ts) | [protocol.test.mjs](packages/protocol/test/protocol.test.mjs) 9 例 |
 | game-kit：事件流 / 聊天 / 记分板 / 座位颜色 | [packages/game-sdk/src/kit](packages/game-sdk/src/kit) | [kit.test.mjs](packages/game-sdk/test/kit.test.mjs) 8 例 + [kit-client.test.mjs](packages/game-sdk/test/kit-client.test.mjs) 7 例 |
 | game-kit 沙箱联调（ChatPanel / ScoreboardPanel / `ui.chat='game'`） | 临时客户端 + 真实宿主 | 2026-10-23 浏览器实测：平台聊天卡隐藏、游戏聊天双向、记分板列/电脑位/下一手更新；修复 importmap 与 `/vendor/core-abi/` |
+| game-kit 测试夹具（id `fixture-kit`） | [tools/testkit/src/test-games/kit-client](tools/testkit/src/test-games/kit-client) | 带客户端入口，`pack-test-games.mjs` 用 esbuild 打成单文件；hostd-http 断言入口和 `ui.chat='game'`（测试 167 例） |
 | 座位模型 + 房主权限 + 票据 + Ready 闸 | [room.ts](packages/server/src/room.ts) / [authority.ts](packages/server/src/authority.ts) | [room-authority.test.mjs](packages/server/test/room-authority.test.mjs) 14 例 |
 | `GameModule` 契约 + 两个测试夹具 + 同一断言集 | [module-api.ts](packages/core-abi/src/module-api.ts) / [engine.ts](packages/server/src/engine.ts) | [contract.test.mjs](tools/testkit/test/contract.test.mjs) 19 例 |
 | ws 传输、限流、Origin 策略、心跳、真 socket 双游戏 | [transport.ts](packages/server/src/transport.ts) | [ws-live.test.mjs](packages/server/test/ws-live.test.mjs) 4 例 |
@@ -106,6 +107,7 @@
 - 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
 ## 5. 变更记录
+- 2026-10-23 Qoder：**G4 测试夹具落地**：新增 `fixture-kit`（`tools/testkit/src/test-games/kit-client/`，显示名“测试夹具·game-kit 界面”），服务端带 `ui.chat='game'`，客户端用 ChatPanel / ScoreboardPanel；`pack-test-games.mjs` 用 esbuild 把它打成单文件 `client.js` 并写入包清单，`games/fixture-kit.bpmap` 由 `npm test` 生成。hostd-http 增加 `/api/games` 的 `ui.chat`/入口断言和 `/games/fixture-kit/client.js` 下发断言；测试 166 → 167，README/DESIGN/CONTEXT 的夹具数量同步为三个。
 - 2026-10-23 Qoder：**G4 game-kit 真实沙箱联调完成**（`a2fe494`）。用临时客户端（`ui.chat='game'`，挂 `ChatPanel` / `ScoreboardPanel`）跑真实宿主 + 沙箱 iframe：平台聊天卡在对局中隐藏；游戏聊天发送到平台、历史回灌到游戏；记分板显示玩家/队伍/连接/自定义列，加电脑位后显示“电脑”，点“下一手”后分数和系统事件更新。抓到一个 core-abi 拆分后的真实回归：首页 importmap 没映射 `@bp/core-abi`，`/vendor/core-abi/` 路由也没挂，`PlatformApp` 整个没启动；已补 importmap、hostd 静态路由和 hostd-http 断言。166/166、seam OK。剩余：`apiVersion` / `mode` 闸门、`@bp/pack` 第二刀、UNO。
 - 2026-10-23 Qoder：**拆出 `@bp/core-abi`，`protocol` 只留线协议**（`8b8e832`）。`GameModule` / `GameInstance` / `Effect` / `GameContext` / `GameSeatInfo` / 客户端契约 / `SeatRole` / `RoomPhase` / `SeatView` / `GameManifest` / `GameAsset` / `GameUiOptions` / `PlatformCode` / `NoticeCode` / `stableDigest` 进 core-abi；protocol 依赖 core-abi，只保留 wire、guard、协议版本、房间视图、握手和默认文案；game-sdk 依赖 core-abi 并在根入口 re-export，`/client` 变成兼容路径；client 去掉 game-sdk 依赖；`manifestOf` 移到 server；loader 裸导入和构建模板加 core-abi，docs/DESIGN 同步。验证：166/166、seam OK、`tsc -b` 通过；外部临时工程跑通 core-abi + SDK tarball 安装、构建、打包、inspect。未做：`@bp/pack` 第二刀、`apiVersion` / `mode` 闸门、G4 真实沙箱联调、UNO 接入。
 - 2026-10-10 Qoder：**目录改名 `game-host-platform` → `3178-battle-platform`，并由评估档转为实施档**（用户指令：本会话就在本目录继续开发对战平台）。同时改判两项：计划 D2「代码落新目录 battle-platform」作废，代码就落本目录；D6「房间列表/大厅」用户不接受"只做地址簿 + 邀请链接"，要求**尽量贴合 war3 的房间设计**，发现层级改为 B+A（见 README「房间形态」）。顺带修掉本档 4 处 `[链]` 违规。
@@ -230,7 +232,7 @@
 
 - 2026-10-23 Qoder：**拆出 `@bp/core-abi`**（`8b8e832`）：`GameModule` / `GameInstance` / `Effect` / 客户端契约 / 座位类型 / manifest / 错误码 / `stableDigest` 进 core-abi；protocol 只留 wire/guard/握手/房间视图；game-sdk 只依赖 core-abi，client 不再依赖 game-sdk；`manifestOf` 移到 server；loader 和构建模板加 core-abi。166/166、seam OK、`tsc -b` 通过。下一步见本档「下一步顺序建议」。
 
-- 2026-10-23 Qoder：**G4 完成**（`a2fe494`）：真实沙箱客户端验证 ChatPanel / ScoreboardPanel / `ui.chat='game'`；修掉首页 importmap 缺 core-abi 和 `/vendor/core-abi/` 路由。当前下一步是 `apiVersion` / `mode` 闸门。
+- 2026-10-23 Qoder：**G4 完成并落成测试夹具**（`a2fe494`）：真实沙箱客户端验证 ChatPanel / ScoreboardPanel / `ui.chat='game'`；新增 `fixture-kit` 带客户端入口，由 `npm test` 打包，测试 167 例；修掉首页 importmap 缺 core-abi 和 `/vendor/core-abi/` 路由。当前下一步是 `apiVersion` / `mode` 闸门。
 
 - 2026-10-21 Qoder：**文档去掉行话**：`dogfood-output` 的实际内容写成“猴测报告：随机操作跑出的问题记录”；`finding` / `High` / `Medium` / `Low` 改成“问题 / 高 / 中 / 低”；testkit 描述改成“接口测试脚手架、模拟上下文”；checks 描述改成“架构检查、随机操作测试、存档与重连问题复现”。
 

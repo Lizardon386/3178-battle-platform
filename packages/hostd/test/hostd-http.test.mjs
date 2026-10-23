@@ -65,11 +65,15 @@ test('/api/games 报出本机装的游戏，含房规摘要与入口', async () 
   const { status, body } = await get('/api/games');
   assert.equal(status, 200);
   const games = JSON.parse(body).games;
-  assert.deepEqual(games.map((g) => g.id).sort(), ['fixture-simultaneous', 'fixture-turn']);
+  assert.deepEqual(games.map((g) => g.id).sort(), ['fixture-kit', 'fixture-simultaneous', 'fixture-turn']);
   const fixture = games.find((g) => g.id === 'fixture-turn');
   assert.equal(fixture.seats.min, 2);
   assert.equal(fixture.rulesHash.length, 16);
   assert.ok(!fixture.entry.includes('..'), '入口路径不许越界');
+  const kit = games.find((g) => g.id === 'fixture-kit');
+  assert.equal(kit.ui.chat, 'game');
+  assert.equal(kit.entry, 'client.js');
+  assert.ok(kit.assets?.some((a) => a.path === 'client.js'), 'game-kit 测试夹具要带客户端入口');
 });
 
 test('/api/version 报出平台版本与支持的包/协议/接口版本', async () => {
@@ -145,6 +149,14 @@ test('游戏模块产物可跨源取（模块下发位）', async () => {
   assert.equal(headers.get('access-control-allow-origin'), '*');
 });
 
+test('game-kit 测试夹具的客户端入口可下发', async () => {
+  const { status, body, headers } = await get('/games/fixture-kit/client.js');
+  assert.equal(status, 200);
+  assert.match(body, /bp-chat/);
+  assert.match(body, /bp-scoreboard/);
+  assert.equal(headers.get('access-control-allow-origin'), '*');
+});
+
 test('真 WebSocket 经宿主壳连上并拿到 welcome', async () => {
   const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws`);
   const frames = [];
@@ -160,7 +172,7 @@ test('真 WebSocket 经宿主壳连上并拿到 welcome', async () => {
   }
   const welcome = frames.find((f) => f.type === 'welcome');
   assert.ok(welcome, `没拿到 welcome：${JSON.stringify(frames)}`);
-  assert.deepEqual(welcome.availableGames.map((g) => g.id).sort(), ['fixture-simultaneous', 'fixture-turn']);
+  assert.deepEqual(welcome.availableGames.map((g) => g.id).sort(), ['fixture-kit', 'fixture-simultaneous', 'fixture-turn']);
   ws.close();
 });
 

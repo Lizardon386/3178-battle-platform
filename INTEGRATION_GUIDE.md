@@ -893,7 +893,7 @@ bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 
 ### 5.1 近期
 
-- game-kit 沙箱集成验证已完成（2026-10-23）：真实沙箱客户端验证 ChatPanel / ScoreboardPanel / `ui.chat='game'`，平台聊天卡在对局中隐藏，游戏聊天和记分板更新正常。
+- game-kit 沙箱集成验证已完成（2026-10-23）：真实沙箱客户端验证 ChatPanel / ScoreboardPanel / `ui.chat='game'`，并落成 `fixture-kit` 测试夹具（带客户端入口）做回归。
 - 游戏设置 `configSchema`：让大厅自动渲染房主设置表单，不再每个游戏手写。
 - 赛后结果面板和“再来一局”流程。
 - 房主设置队伍 UI；game-kit 已有队伍颜色。

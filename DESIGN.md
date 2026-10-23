@@ -27,7 +27,7 @@
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 
-怎么算做成了（都能用工具验证）：`tools/checks/check-seam.sh` 在平台包内没有命中玩法词；仓库自带两个形状不同的测试夹具（`测试夹具·回合制` + 隐私 / `测试夹具·同时操作` 无游标 + 无隐私 + 同时操作，在 `tools/testkit/src/test-games/`），用来证明接口与玩法无关；协议层与 UI 层两层猴测无违规。当前 `npm test` **145 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+怎么算做成了（都能用工具验证）：`tools/checks/check-seam.sh` 在平台包内没有命中玩法词；仓库自带三个测试夹具（`测试夹具·回合制` + 隐私 / `测试夹具·同时操作` 无游标 + 无隐私 + 同时操作 / `测试夹具·game-kit 界面` 带客户端入口，在 `tools/testkit/src/test-games/`），前两个证明接口与玩法无关，第三个用来联调聊天和记分板；协议层与 UI 层两层猴测无违规。当前 `npm test` **167 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
 
 ## 2. 运行模式
 
@@ -280,6 +280,7 @@ flowchart TD
 | [games/](games/.gitkeep) | 运行时游戏包目录，只放生成的 `.bpmap` |
 | [tools/testkit/src/test-games/turn-based/index.ts](tools/testkit/src/test-games/turn-based/index.ts) | 测试夹具·回合制（id `fixture-turn`）：回合游标 + 隐私 |
 | [tools/testkit/src/test-games/simultaneous/index.ts](tools/testkit/src/test-games/simultaneous/index.ts) | 测试夹具·同时操作（id `fixture-simultaneous`）：无游标 + 无隐私 |
+| [tools/testkit/src/test-games/kit-client/index.ts](tools/testkit/src/test-games/kit-client/index.ts) / [client.ts](tools/testkit/src/test-games/kit-client/client.ts) | 测试夹具·game-kit 界面（id `fixture-kit`）：服务端 + 用 ChatPanel/ScoreboardPanel 的客户端入口，`ui.chat='game'` |
 | [tools/checks/check-seam.sh](tools/checks/check-seam.sh) | 架构检查：平台代码里不许出现玩法词 |
 | [tools/packaging/build-portable.mjs](tools/packaging/build-portable.mjs) | 绿色便携包装配与自检 |
 | [tools/checks/monkey.mjs](tools/checks/monkey.mjs) | 协议层猴测 |

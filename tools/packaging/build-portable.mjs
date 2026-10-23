@@ -211,7 +211,7 @@ async function smoke(nodeExe, nodeVersionText) {
   };
   const diag = spawnSync(nodeExe, ['packages/hostd/dist/cli.js', 'diagnose'], { cwd: OUT, env: cleanEnv, encoding: 'utf8' });
   if (diag.status !== 0) fail(`diagnose 失败（退出码 ${diag.status}）：\n${diag.stdout}\n${diag.stderr}`);
-  for (const needle of ['fixture-turn@0.1.0', 'fixture-simultaneous@0.1.0', nodeVersionText]) {
+  for (const needle of ['fixture-turn@0.1.0', 'fixture-simultaneous@0.1.0', 'fixture-kit@0.1.0', nodeVersionText]) {
     if (!diag.stdout.includes(needle)) fail(`diagnose 输出里没有 ${needle}：\n${diag.stdout}`);
   }
   if (!diag.stdout.includes('更新程序目录不会丢')) fail(`diagnose 没说明便携包的数据落点：\n${diag.stdout}`);
@@ -254,7 +254,7 @@ async function smoke(nodeExe, nodeVersionText) {
     fail(`便携包里的 host 没起来：\n${log}`);
   }
   const ids = (health.games ?? []).slice().sort();
-  if (ids.join(',') !== 'fixture-simultaneous,fixture-turn') fail(`/health 的游戏清单不对：${JSON.stringify(ids)}\n${log}`);
+  if (ids.join(',') !== 'fixture-kit,fixture-simultaneous,fixture-turn') fail(`/health 的游戏清单不对：${JSON.stringify(ids)}\n${log}`);
 
   const stop = spawnSync(nodeExe, ['packages/hostd/dist/cli.js', 'stop', '--port', String(port)], { cwd: OUT, env: smokeEnv, encoding: 'utf8' });
   if (stop.status !== 0) fail(`stop 失败：\n${stop.stdout}\n${stop.stderr}`);
