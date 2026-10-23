@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@bp/core-abi": "*",
-    "@bp/game-sdk": "*",
+    "@bp/pack-format": "*",
     "@bp/protocol": "*",
     "ws": "^8.18.0"
   },

@@ -2,7 +2,7 @@ import { createServer, type Server, type IncomingMessage, type ServerResponse } 
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import type { GameModule } from '@bp/server';
-import { manifestOf } from '@bp/server';
+import { manifestOf, PACK_FORMAT } from '@bp/server';
 import type { DiscoveryRoom } from '@bp/protocol';
 import type { GameAsset } from '@bp/core-abi';
 import { SUPPORTED_API_VERSIONS, SUPPORTED_MODES } from '@bp/core-abi';
@@ -139,7 +139,7 @@ export function createWebServer(opts: WebRootOptions): Server {
     if (path === '/api/version') {
       sendJson(res, {
         platform: opts.platformVersion ?? '0.0.0',
-        packFormats: [1],
+        packFormats: [PACK_FORMAT],
         protocolVersions: [1],
         apiVersions: [...SUPPORTED_API_VERSIONS],
         modes: Object.fromEntries(

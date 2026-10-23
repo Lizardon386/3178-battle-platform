@@ -1,1 +1,1 @@
-export * from '@bp/game-sdk/node';
+export * from '@bp/pack-format';

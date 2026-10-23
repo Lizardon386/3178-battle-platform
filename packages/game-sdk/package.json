@@ -32,7 +32,8 @@
     "bpmap": "dist/cli/index.js"
   },
   "dependencies": {
-    "@bp/core-abi": "*"
+    "@bp/core-abi": "*",
+    "@bp/pack-format": "*"
   },
   "files": [
     "dist",

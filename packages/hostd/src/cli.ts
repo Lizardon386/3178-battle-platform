@@ -139,8 +139,14 @@ function banner(lines: string[]): void {
   console.log(`${'='.repeat(width + 4)}\n`);
 }
 
+const PACK_IMPORTS = ['@bp/game-sdk', '@bp/game-sdk/node', '@bp/core-abi', '@bp/protocol'];
+
+function packImportUrls(): Record<string, string> {
+  return Object.fromEntries(PACK_IMPORTS.map((specifier) => [specifier, import.meta.resolve(specifier)]));
+}
+
 async function loadAllGames(): Promise<GameSet> {
-  const loaded = await loadGameSet(join(ROOT, 'games'), join(DATA_DIR, 'packs'));
+  const loaded = await loadGameSet(join(ROOT, 'games'), join(DATA_DIR, 'packs'), packImportUrls());
   for (const error of loaded.errors) console.error(`[包] 跳过 ${error.source}：${error.message}`);
   return loaded;
 }

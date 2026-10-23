@@ -5,21 +5,14 @@ import { pathToFileURL } from 'node:url';
 import type { GameAsset } from '@bp/core-abi';
 import { SUPPORTED_API_VERSIONS, SUPPORTED_MODES, type GameMode } from '@bp/core-abi';
 import type { GameModule } from './module-api.js';
-import { extractPack, listPackFiles, readPack } from '@bp/game-sdk/node';
+import { extractPack, listPackFiles, readPack } from '@bp/pack-format';
 
 /**
  * 解包缓存可能落在程序目录之外（便携包的数据目录在用户目录），那里向上找不到
- * node_modules/@bp。包内服务端入口的裸导入一律按宿主自己的依赖解析。
+ * node_modules/@bp。包内服务端入口的裸导入由宿主壳传入的 URL 表解析。
  */
-const PACK_IMPORTS = ['@bp/game-sdk', '@bp/game-sdk/node', '@bp/core-abi', '@bp/protocol'];
+export type PackImports = Record<string, string>;
 const packImportUrls = new Map<string, string>();
-for (const specifier of PACK_IMPORTS) {
-  try {
-    packImportUrls.set(specifier, import.meta.resolve(specifier));
-  } catch {
-    // 打包产物始终带着这三个包；解析不到就让包加载时报原本的错误
-  }
-}
 registerHooks({
   resolve(specifier, context, nextResolve) {
     const url = packImportUrls.get(specifier);
@@ -27,6 +20,11 @@ registerHooks({
     return nextResolve(specifier, context);
   },
 });
+
+export function setPackImports(imports: PackImports): void {
+  packImportUrls.clear();
+  for (const [specifier, url] of Object.entries(imports)) packImportUrls.set(specifier, url);
+}
 
 /**
  * 游戏模块在运行时按 id 动态加载——平台源码里不许 import 任何 games/ 路径，
@@ -105,7 +103,12 @@ export interface GameSet {
 }
 
 /** 读包、解包、加载包内服务端入口；版本字符串带包哈希，避免两个不同包同版本混用。 */
-export async function loadPackGame(packPath: string, cacheRoot: string): Promise<GameSource> {
+export async function loadPackGame(
+  packPath: string,
+  cacheRoot: string,
+  imports?: PackImports,
+): Promise<GameSource> {
+  if (imports) setPackImports(imports);
   const pack = readPack(packPath);
   const modeProfiles = SUPPORTED_MODES[pack.manifest.mode as GameMode];
   if (!modeProfiles || modeProfiles.length === 0) {
@@ -139,7 +142,12 @@ export async function loadPackGame(packPath: string, cacheRoot: string): Promise
 /**
  * 目录游戏与单文件包一起加载。坏包只记错误、不挡启动；同 id 的包不覆盖已加载的游戏。
  */
-export async function loadGameSet(gamesRoot: string, cacheRoot: string): Promise<GameSet> {
+export async function loadGameSet(
+  gamesRoot: string,
+  cacheRoot: string,
+  imports: PackImports = {},
+): Promise<GameSet> {
+  setPackImports(imports);
   const modules: GameModule[] = [];
   const roots = new Map<string, string>();
   const assets = new Map<string, GameAsset[]>();

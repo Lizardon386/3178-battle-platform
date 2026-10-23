@@ -164,8 +164,9 @@ stateDiagram-v2
 3178-battle-platform/
 ├─ packages/                         平台源码
 │  ├─ core-abi/                      游戏 ABI：GameModule / GameInstance / Effect / 游戏可见类型
-│  ├─ game-sdk/                      游戏公共 SDK：re-export core-abi、game-kit、.bpmap 工具
 │  ├─ protocol/                      线消息、房间视图、入站形状闸、握手
+│  ├─ pack-format/                   .bpmap 包头、读写、校验、打包和解包缓存
+│  ├─ game-sdk/                      游戏公共 SDK：re-export core-abi / pack-format、game-kit
 │  ├─ server/                        引擎、房间、权限、落盘、传输、发现
 │  ├─ client/                        浏览器端连接、视图、界面、沙箱挂载
 │  └─ hostd/                         宿主壳 host/join/diagnose/stop、静态路由
@@ -187,7 +188,8 @@ stateDiagram-v2
 flowchart TD
   A["@bp/core-abi<br/>GameModule / GameInstance / Effect / 游戏可见类型"]
   P["@bp/protocol<br/>线消息 / 房间视图 / 形状闸 / 握手"]
-  K["@bp/game-sdk<br/>公共 SDK / bpmap / game-kit"]
+  F["@bp/pack-format<br/>.bpmap 包头 / 读写 / 打包 / 解包缓存"]
+  K["@bp/game-sdk<br/>公共 SDK / game-kit / bpmap CLI"]
   S["@bp/server<br/>Engine / Room / Authority / Store / Transport"]
   C["@bp/client<br/>连接 / 视图 / 界面 / 沙箱"]
   H["@bp/hostd<br/>host / join / 静态路由"]
@@ -195,13 +197,15 @@ flowchart TD
   H --> S
   H --> P
   H --> A
+  H --> K
   S --> A
   S --> P
-  S --> K
+  S --> F
   C --> A
   C --> P
   P --> A
   K --> A
+  K --> F
   G -. "loader 按 id 加载；只通过 Effect[] 出站" .-> S
 ```
 
@@ -241,8 +245,9 @@ flowchart TD
 | [packages/server/src/authority.ts](packages/server/src/authority.ts) | 权限判定集中处 |
 | [packages/server/src/module-api.ts](packages/server/src/module-api.ts) | 转出 core-abi，并提供 `manifestOf` |
 | [packages/server/src/loader.ts](packages/server/src/loader.ts) | 运行时按 id 动态加载目录游戏或单文件包 |
-| [packages/game-sdk/src/node/pack.ts](packages/game-sdk/src/node/pack.ts) | 单文件游戏包的读取、校验、解包与缓存 |
-| [packages/server/src/pack.ts](packages/server/src/pack.ts) | 转出 SDK 的单文件包实现 |
+| [packages/pack-format/src/pack.ts](packages/pack-format/src/pack.ts) | 单文件游戏包的读取、校验、解包与缓存 |
+| [packages/game-sdk/src/node/pack.ts](packages/game-sdk/src/node/pack.ts) | re-export `@bp/pack-format`，保持 SDK 的 `/node` 公共路径 |
+| [packages/server/src/pack.ts](packages/server/src/pack.ts) | re-export `@bp/pack-format` |
 | [packages/server/src/transport.ts](packages/server/src/transport.ts) | ws 薄壳：握手、编码、Origin、心跳 |
 | [packages/server/src/store.ts](packages/server/src/store.ts) | 房主侧原子落盘与坏文件处理 |
 | [packages/server/src/discovery.ts](packages/server/src/discovery.ts) | 组播信标：广播与过期表 |

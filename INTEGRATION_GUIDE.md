@@ -69,7 +69,7 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 
 ### 2.1 获取 SDK
 
-SDK 还没有发布到 npm，当前是 `private` 包。外部工程从平台仓库打成 tarball 安装；`@bp/game-sdk` 依赖 `@bp/core-abi`，两个要一起装。
+SDK 还没有发布到 npm，当前是 `private` 包。外部工程从平台仓库打成 tarball 安装；`@bp/game-sdk` 依赖 `@bp/core-abi` 和 `@bp/pack-format`，三个要一起装。
 
 有两套做法：2.1.1 手动执行命令，2.1.2 用现成脚本。两者结果一样，选一种即可。
 
@@ -81,6 +81,7 @@ SDK 还没有发布到 npm，当前是 `private` 包。外部工程从平台仓�
 cd <3178 仓库>
 mkdir -p <SDK 产物目录>
 npm pack ./packages/core-abi --pack-destination <SDK 产物目录>
+npm pack ./packages/pack-format --pack-destination <SDK 产物目录>
 npm pack ./packages/game-sdk --pack-destination <SDK 产物目录>
 
 cd <你的游戏工程>
@@ -88,6 +89,7 @@ npm init -y
 npm pkg set type=module
 npm install --save-dev \
   <SDK 产物目录>/bp-core-abi-0.1.0.tgz \
+  <SDK 产物目录>/bp-pack-format-0.1.0.tgz \
   <SDK 产物目录>/bp-game-sdk-0.1.0.tgz \
   esbuild
 ```
@@ -97,10 +99,11 @@ npm install --save-dev \
 | 命令 | 作用 |
 |---|---|
 | `npm pack ./packages/core-abi` | 把 `@bp/core-abi` 打成 tarball |
+| `npm pack ./packages/pack-format` | 把 `@bp/pack-format` 打成 tarball |
 | `npm pack ./packages/game-sdk` | 把 `@bp/game-sdk` 打成 tarball |
 | `npm init -y` | 没有 `package.json` 时创建一个 |
 | `npm pkg set type=module` | 让工程按 ESM 解析 |
-| `npm install --save-dev` | 同时安装两个 tarball 和 esbuild；SDK 依赖 core-abi，必须一起装 |
+| `npm install --save-dev` | 同时安装三个 tarball 和 esbuild；SDK 依赖 core-abi / pack-format，必须一起装 |
 
 平台更新 SDK 后重新打包、重新安装。以后发布到 registry 后改成 `npm install @bp/game-sdk` 即可。
 
@@ -126,8 +129,8 @@ node scripts/setup-sdk.mjs --platform ../3178-battle-platform
 脚本做的事：
 
 1. 没有 `package.json` 就创建一个最小的；有但缺 `"type": "module"` 就补上。
-2. 检查平台是否已构建；`packages/game-sdk/dist/index.js` 或 `packages/core-abi/dist/index.js` 不存在时在平台仓库跑 `npm run build`。
-3. 把 `@bp/core-abi` 和 `@bp/game-sdk` 打进 `sdk/`，清掉旧的 tarball。
+2. 检查平台是否已构建；`packages/game-sdk/dist/index.js`、`packages/core-abi/dist/index.js` 或 `packages/pack-format/dist/index.js` 不存在时在平台仓库跑 `npm run build`。
+3. 把 `@bp/core-abi`、`@bp/pack-format` 和 `@bp/game-sdk` 打进 `sdk/`，清掉旧的 tarball。
 4. 在游戏工程执行 `npm install --save-dev sdk/*.tgz esbuild`。
 5. 打印安装的 tarball 文件名和下一步命令。
 
@@ -136,14 +139,15 @@ node scripts/setup-sdk.mjs --platform ../3178-battle-platform
 | 位置 | 内容 |
 |---|---|
 | `sdk/bp-core-abi-<版本>.tgz` | core-abi tarball |
+| `sdk/bp-pack-format-<版本>.tgz` | pack-format tarball |
 | `sdk/bp-game-sdk-<版本>.tgz` | SDK tarball |
-| `package.json` 的 `devDependencies` | 两个 tarball 和 esbuild |
+| `package.json` 的 `devDependencies` | 三个 tarball 和 esbuild |
 | `node_modules/@bp/game-sdk/` | 已安装的 SDK |
 
 注意：
 
 - 平台更新 SDK 后重跑一次，脚本会重新打包并覆盖安装。
-- 脚本用 npm 安装依赖；工程如果改用 pnpm/yarn，需要自己把两个 tarball 装上。
+- 脚本用 npm 安装依赖；工程如果改用 pnpm/yarn，需要自己把三个 tarball 装上。
 - 脚本只负责装 SDK，不写 `bp` 配置；`bp.id` / `bp.entry` 在 2.8 里配。
 - `--sdk-dir` 是相对游戏工程根目录的路径；不要指到会被打包的目录里。
 
@@ -427,7 +431,7 @@ packages/game-sdk/src/
 | `@bp/game-sdk/kit/server` | `FeedLog` / `FeedLogOptions` / `FeedEmitInput` / `FeedSeat` / `FeedEntry` / `FeedVisibility` / `FeedError` / `FEED_EVENT` |
 | `bpmap` bin | `pack` / `inspect` / `unpack` / `doctor` |
 
-`reject()` 是构造 `Reject` 的助手；`stableDigest` 是确定性摘要，只用于“两端配置是否一致”，不是签名或安全哈希。`@bp/core-abi` 是 SDK 底层的游戏 ABI 包，由 `@bp/game-sdk` 作为依赖安装并重新导出，游戏工程不需要直接 import。
+`reject()` 是构造 `Reject` 的助手；`stableDigest` 是确定性摘要，只用于“两端配置是否一致”，不是签名或安全哈希。`@bp/core-abi` 是 SDK 底层的游戏 ABI 包，`@bp/pack-format` 是 `.bpmap` 读写库；两者都由 `@bp/game-sdk` 作为依赖安装并重新导出，游戏工程不需要直接 import。
 
 `index.ts` 保留在源码根目录作为包入口；内部目录调整不改变上面的公共路径。
 
@@ -752,7 +756,7 @@ const color = seatColor({ seatId: 's1', slot: 1, team: 1 });
 
 ### 3.9 打包库与 CLI
 
-`@bp/game-sdk/node` 提供 `.bpmap` 的读取、校验、打包和解包缓存；`bpmap` CLI 封装了常用操作：
+`@bp/game-sdk/node` re-export `@bp/pack-format`，提供 `.bpmap` 的读取、校验、打包和解包缓存；`bpmap` CLI 封装了常用操作：
 
 ```bash
 bpmap pack dist-pack --out dist/mygame.bpmap
@@ -801,7 +805,7 @@ CLI 行为：
 1. 目录游戏：`games/<id>/dist/index.js`，模块 id 必须和目录名一致。
 2. 单文件包：`games/*.bpmap`，先检查包头 `mode` / `apiVersion`，再读包、解到缓存、`import()` 包里的 `server` 入口。当前宿主支持 `turn` / `1`，不支持的包跳过并记录原因。包的 id/version 必须和模块导出一致，否则这个包跳过。同一个 id 已被目录游戏或前一个包占用时，后面的包跳过并记录错误；坏包只记错误，不挡启动。加载完按 id 排序。目录游戏没有包清单，按 `turn` / `1` 处理。
 
-包内服务端入口的裸导入只解析 `@bp/game-sdk`、`@bp/game-sdk/node`、`@bp/core-abi`，它们指向宿主自己的依赖；`@bp/protocol` 只保留给旧包过渡。其他第三方依赖要打进 `server.js`，不要指望宿主有。
+包内服务端入口的裸导入只解析 `@bp/game-sdk`、`@bp/game-sdk/node`、`@bp/core-abi`，URL 由宿主壳在启动时解析并传给 loader；`@bp/protocol` 只保留给旧包过渡。其他第三方依赖要打进 `server.js`，不要指望宿主有。
 
 宿主把模块版本改成 `模块版本+包哈希前 12 位`，并把包内所有文件作为 `assets` 挂到 manifest 上（`path`、`hash: sha256:<hex>`、`bytes`）。`hash` 允许带 `sha256:` 前缀，也接受裸十六进制。目录游戏没有包哈希，也就没有这组自动 `assets`。`/api/games` 返回各模块用 `normalizeConfig({})` 生成的默认 manifest；`/games/<id>/<路径>` 直接从解包目录取文件。客户端入口的哈希校验和局域网 HTTP 的限制见 3.7。
 

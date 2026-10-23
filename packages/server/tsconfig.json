@@ -7,5 +7,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../core-abi" }, { "path": "../protocol" }, { "path": "../game-sdk" }]
+  "references": [{ "path": "../core-abi" }, { "path": "../pack-format" }, { "path": "../protocol" }]
 }

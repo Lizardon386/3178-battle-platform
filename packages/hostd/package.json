@@ -9,6 +9,7 @@
   "dependencies": {
     "@bp/client": "*",
     "@bp/core-abi": "*",
+    "@bp/game-sdk": "*",
     "@bp/protocol": "*",
     "@bp/server": "*"
   },
