@@ -166,7 +166,7 @@ stateDiagram-v2
 │  ├─ core-abi/                      游戏 ABI：GameModule / GameInstance / Effect / 游戏可见类型
 │  ├─ protocol/                      线消息、房间视图、入站形状闸、握手
 │  ├─ pack-format/                   .bpmap 包头、读写、校验、打包和解包缓存
-│  ├─ game-sdk/                      游戏公共 SDK：re-export core-abi / pack-format、game-kit
+│  ├─ game-sdk/                      游戏公共 SDK：re-export core-abi / pack-format；game-kit 在 src/kit，导出 /kit、/kit/server
 │  ├─ sdk-tools/                     独立 SDK 工具：bpmap CLI、doctor、工程模板
 │  ├─ server/                        引擎、房间、权限、落盘、传输、发现
 │  ├─ client/                        浏览器端连接、视图、界面、沙箱挂载
