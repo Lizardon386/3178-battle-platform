@@ -39,6 +39,7 @@
 | game-kit 测试夹具（id `fixture-kit`） | [tools/testkit/src/test-games/kit-client](tools/testkit/src/test-games/kit-client) | 服务端 FeedLog、客户端 ChatPanel/FeedPanel/ScoreboardPanel；带 `assets/notice.json`；`bpmap` CLI 打包；hostd-http 断言入口、资源和 `ui.chat='game'` |
 | fixture-kit 真实沙箱复验（事件流 / 资源 / 拒绝） | 真实宿主 + in-app Browser | 2026-10-27 实测：FeedPanel 显示开局与“推进到第 1 手”，资源文案加载成功，非法动作在平台状态栏显示拒绝 |
 | 局域网客户端源码校验 | [module-loader.ts](packages/client/src/module-loader.ts) / [sha256.ts](packages/client/src/sha256.ts) / [engine.ts](packages/server/src/engine.ts) | 无 `crypto.subtle` 时纯 JS SHA-256 回退；`seatGranted` 带 assets；局域网 IP 实测 `isSecureContext=false`，fixture-kit 仍挂载并显示“哈希校验通过”；测试 176 例 |
+| 外部消费者 smoke | [smoke-sdk.mjs](tools/checks/smoke-sdk.mjs) | 临时工程装四个 tarball、用模板构建/打包/doctor，宿主 `/api/games` 能加载；2026-10-27 实测 `[smoke] OK` |
 | `mode` / `apiVersion` 包兼容闸 | [core-abi/version.ts](packages/core-abi/src/version.ts) / [pack-format/src/pack.ts](packages/pack-format/src/pack.ts) / [loader.ts](packages/server/src/loader.ts) | 包头/源清单读写；宿主只加载 `turn` / `1`；`/api/version` 和 `bpmap doctor` 使用同一组常量；测试 176 例 |
 | `@bp/pack-format` 包格式库 | [packages/pack-format](packages/pack-format) | `.bpmap` 读写/打包/解包；server 和 SDK 依赖，game-sdk `/node` 保持 re-export |
 | `@bp/sdk-tools` SDK 工具包 | [packages/sdk-tools](packages/sdk-tools) | `bpmap` CLI、doctor、setup/build 模板；独立依赖 core-abi + pack-format，不依赖 game-sdk |
@@ -71,7 +72,8 @@
 - [x] 拆出 `@bp/pack-format`，server 不再依赖 game-sdk
 - [x] 拆出 `@bp/sdk-tools`，CLI/模板独立发版
 - [x] SDK 夹具扩展：fixture-kit 覆盖事件流 / 资源 / 拒绝，改走 `bpmap` CLI；补随机动作猴测
-- [ ] 外部消费者 smoke（tarball 安装 + 模板构建）
+- [x] 外部消费者 smoke：tarball 安装 + 模板构建 + doctor + 宿主加载
+- [ ] SDK 发布准备：定 scope/license，补发布元数据；UNO 接入
 - [ ] SDK 发布准备；`@bp/sdk-testkit`（可选）；UNO 接入
 - [x] P0 工程骨架 + 接缝闸门 + `node --test`
 - [x] P1 协议包
@@ -117,6 +119,7 @@
 - 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
 ## 6. 变更记录
+- 2026-10-27 Qoder：**外部消费者 smoke**：新增 [smoke-sdk.mjs](tools/checks/smoke-sdk.mjs)，在临时工程里用 `setup-sdk.mjs` 安装四个 tarball，复制 `build.mjs` 完成构建/打包，跑 `bpmap doctor --host`，再把包复制到 `games/` 确认宿主 `/api/games` 能加载。实测 `[smoke] OK`；脚本自动清理临时目录和 `games/sdk-smoke-game.bpmap`。下一步 SDK 发布准备。
 - 2026-10-27 Qoder：**开源校验补上局域网路径**：`module-loader` 在 `crypto.subtle` 不可用时回退到纯 JS SHA-256（[sha256.ts](packages/client/src/sha256.ts)），不再因为“不是安全上下文”拒绝执行；`seatGranted` 的房间 manifest 通过 `EngineOptions.assets` 带上包内 assets，正常入房路径也能校验。新增 SHA-256 标准向量、无 Web Crypto 校验、`seatGranted` assets 三条测试；局域网 IP 实测 `isSecureContext=false`、`hasSubtle=false`，fixture-kit 仍挂载并显示“哈希校验通过”。测试 173 → 176。
 - 2026-10-27 Qoder：**README 截图改为独立图片段**：MD Human Review 能渲染表格但收集不到表格内的相对图片路径，导致实机截图显示破图；把房主/玩家两张图移出表格，改成标准 Markdown 图片 + 图注。文件仍在 `docs/images/`。
 - 2026-10-27 Qoder：**README 接入提示纠正**：不再写“实现两个接口即可”，改成按接入指南安装 SDK、实现 `GameModule` / `GameInstance`、按需写客户端入口和 game-kit、再用 `bpmap` 打包；明确当前回合制可用、实时模式规划中。

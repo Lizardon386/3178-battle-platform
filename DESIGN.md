@@ -93,7 +93,15 @@ node tools/checks/monkey.mjs --seed 20261027 --users 3 --steps 300 --restarts 1 
 - 在 in-app Browser 的 `evaluate_script` 里执行 [fixture-kit.page.js](tools/checks/fixture-kit.page.js) 的函数；在 DevTools 里先粘贴整个文件，再调用 `bpFixtureKitCheck()`
 - 预期：能建房、开局；聊天、事件流、记分板、包内资源、拒绝提示和加电脑位逐项通过
 
-6. 未自动化的验收：
+6. 外部消费者 smoke：
+
+```bash
+node tools/checks/smoke-sdk.mjs
+```
+
+临时工程从四个 tarball 安装 SDK，用模板跑 `build.mjs`、`bpmap doctor`，再把包交给真实宿主加载。预期最后输出 `[smoke] OK`；会联网安装 esbuild，跑完自动清理临时工程和 `games/sdk-smoke-game.bpmap`。
+
+7. 未自动化的验收：
 
 - 双机组播 / 隧道：两台机器同 WiFi 互相发现、防火墙弹窗行为。
 - 便携包：真正没有 Node 的电脑上双击启动。
@@ -373,6 +381,7 @@ flowchart TD
 | [tools/packaging/bpmap.mjs](tools/packaging/bpmap.mjs) | .bpmap 打包/检查入口，调用 `@bp/sdk-tools` CLI |
 | [packages/sdk-tools/src/cli/index.ts](packages/sdk-tools/src/cli/index.ts) | `pack` / `inspect` / `unpack` 的 CLI 实现 |
 | [tools/checks/monkey-ui.page.js](tools/checks/monkey-ui.page.js) | 页内 UI 猴测 |
+| [tools/checks/smoke-sdk.mjs](tools/checks/smoke-sdk.mjs) | 外部消费者 smoke：tarball 安装、模板构建、doctor、宿主加载 |
 | [tools/checks/repro-persist.mjs](tools/checks/repro-persist.mjs) / [tools/checks/repro-resume.mjs](tools/checks/repro-resume.mjs) | 落盘窗口与票据重连复现 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 猴测报告：15 条问题、修法与复跑次数 |
 | [docs/images/readme-host-room.png](docs/images/readme-host-room.png) / [readme-join-room.png](docs/images/readme-join-room.png) | README 建房 / 进房实机截图；裁剪掉游戏选择器，避免测试夹具名进入玩家文档 |
