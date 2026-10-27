@@ -186,6 +186,33 @@ test('真 WebSocket 经宿主壳连上并拿到 welcome', async () => {
   ws.close();
 });
 
+test('seatGranted 的 manifest 带包内 assets，正常入房路径能校验', async () => {
+  const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws`);
+  const frames = [];
+  ws.on('message', (data) => frames.push(JSON.parse(data.toString())));
+  await new Promise((resolve, reject) => {
+    ws.once('open', resolve);
+    ws.once('error', reject);
+  });
+  ws.send(JSON.stringify({ type: 'hello', protocol: 1, nick: '资产检查', gameId: 'fixture-kit', version: '0.1.0' }));
+  const deadline = Date.now() + 4_000;
+  while (!frames.some((f) => f.type === 'welcome') && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  ws.send(JSON.stringify({ type: 'roomCreate', gameId: 'fixture-kit', roomName: '资产检查', seatSlots: 1, allowSpectate: true, config: {} }));
+  const roomDeadline = Date.now() + 4_000;
+  while (!frames.some((f) => f.type === 'seatGranted') && Date.now() < roomDeadline) {
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  const granted = frames.find((f) => f.type === 'seatGranted');
+  assert.ok(granted, `没拿到 seatGranted：${JSON.stringify(frames)}`);
+  const assets = granted.manifest.assets ?? [];
+  assert.ok(assets.some((asset) => asset.path === 'client.js'), '入房清单要带客户端入口哈希');
+  assert.ok(assets.some((asset) => asset.path === 'assets/notice.json'), '入房清单要带包内资源哈希');
+  assert.ok(assets.every((asset) => asset.hash.startsWith('sha256:')), '每个 asset 都要带 sha256');
+  ws.close();
+});
+
 test('hostd 按端口写 run-<port>.json，供 stop 精确收尾', async () => {
   const file = join(DATA_DIR, `run-${PORT}.json`);
   assert.ok(existsSync(file), '应该记录 pid 与端口');

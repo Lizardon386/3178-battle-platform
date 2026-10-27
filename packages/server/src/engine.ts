@@ -2,7 +2,7 @@ import type { ClientMessage, ServerMessage } from '@bp/protocol';
 import { checkHandshake, isHostCommand } from '@bp/protocol';
 import { canBegin, canJoinAs, requireHost, requirePlayerSeat, requireSeat, requireTicket } from './authority.js';
 import { newConnId } from './ids.js';
-import { manifestOf, isReject, type Effect, type GameContext, type GameManifest, type GameModule, type GameSeatInfo } from './module-api.js';
+import { manifestOf, isReject, type Effect, type GameAsset, type GameContext, type GameManifest, type GameModule, type GameSeatInfo } from './module-api.js';
 import type { SeatRecord, TransportHandle } from './room.js';
 import { Room } from './room.js';
 import { RoomRegistry } from './registry.js';
@@ -28,6 +28,8 @@ export const DEFAULT_TTL: TtlConfig = {
 
 export interface EngineOptions {
   modules: Iterable<GameModule>;
+  /** 单文件包的游戏 id → 文件清单；目录游戏没有。 */
+  assets?: ReadonlyMap<string, readonly GameAsset[]>;
   now?: () => number;
   random?: () => number;
   ttl?: Partial<TtlConfig>;
@@ -80,6 +82,7 @@ const PRE_SEAT_TYPES: ReadonlySet<string> = new Set([
 export class Engine {
   readonly registry: RoomRegistry;
   private readonly modules = new Map<string, GameModule>();
+  private readonly assetsByGame: ReadonlyMap<string, readonly GameAsset[]>;
   private readonly defaultManifests = new Map<string, GameManifest>();
   private readonly conns = new Map<string, Conn>();
   private readonly clock: () => number;
@@ -100,9 +103,10 @@ export class Engine {
     this.onTicketIssued = opts.onTicketIssued ?? null;
     this.burst = opts.burst ?? 40;
     this.registry = new RoomRegistry(this.clock);
+    this.assetsByGame = opts.assets ?? new Map();
     for (const module of opts.modules) {
       this.modules.set(module.id, module);
-      this.defaultManifests.set(module.id, manifestOf(module, module.normalizeConfig({})));
+      this.defaultManifests.set(module.id, manifestOf(module, module.normalizeConfig({}), this.assetsByGame.get(module.id)));
     }
   }
 
@@ -251,6 +255,7 @@ export class Engine {
         code,
         name: entry.room.name,
         module,
+        assets: this.assetsByGame.get(module.id),
         rawConfig: entry.config,
         seatSlots: entry.room.seatSlots,
         password: null,
@@ -389,6 +394,7 @@ export class Engine {
     const room = this.registry.create({
       name: msg.roomName,
       module,
+      assets: this.assetsByGame.get(module.id),
       rawConfig: msg.config,
       seatSlots: msg.seatSlots,
       password: msg.password ?? null,

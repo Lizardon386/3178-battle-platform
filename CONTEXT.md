@@ -27,7 +27,7 @@
 
 ## 3. 当前状态
 
-**2026-10-27 当前：`npm test` 173/173 全绿，`tools/checks/check-seam.sh` 零命中，`tsc -b` 通过。** 包边界已拆成 `@bp/core-abi`（游戏 ABI 和游戏可见类型）、`@bp/protocol`（wire / guard / 握手 / 房间视图）、`@bp/pack-format`（.bpmap 格式库）、`@bp/game-sdk`（公共门面 + game-kit）、`@bp/sdk-tools`（bpmap CLI + doctor + 模板，独立发版）：`game-sdk` 依赖 core-abi + pack-format，`protocol` 依赖 core-abi，`server` / `client` 依赖 core-abi + protocol，server 还依赖 pack-format；server/client 不再依赖 game-sdk，hostd 依赖 game-sdk 并在启动时把包内裸导入的 URL 表传给 loader；CLI/模板不再在 game-sdk 里。game-kit G1–G4 已完成，`fixture-kit` 现在覆盖 FeedLog / FeedPanel、包内资源、拒绝动作，并由 `bpmap` CLI 打包（包头带 `turn` / `1`）；真实沙箱验证过事件流、资源、拒绝提示、聊天、记分板和电脑位。宿主 loader 的裸导入表补上了 `@bp/game-sdk/kit/server`，构建模板补了同名 external，并修正 `--host` 指向 `@bp/sdk-tools` 的 CLI。`apiVersion` / `mode` 闸门已落地：包头字段、宿主加载闸、`/api/version`、`bpmap doctor` 对齐，当前支持 `turn` / `1`。P8 真游戏接入仍未做。代码全部在本目录，`uno-online` 未动。
+**2026-10-27 当前：`npm test` 176/176 全绿，`tools/checks/check-seam.sh` 零命中，`tsc -b` 通过。** 包边界已拆成 `@bp/core-abi`（游戏 ABI 和游戏可见类型）、`@bp/protocol`（wire / guard / 握手 / 房间视图）、`@bp/pack-format`（.bpmap 格式库）、`@bp/game-sdk`（公共门面 + game-kit）、`@bp/sdk-tools`（bpmap CLI + doctor + 模板，独立发版）：`game-sdk` 依赖 core-abi + pack-format，`protocol` 依赖 core-abi，`server` / `client` 依赖 core-abi + protocol，server 还依赖 pack-format；server/client 不再依赖 game-sdk，hostd 依赖 game-sdk 并在启动时把包内裸导入的 URL 表传给 loader；CLI/模板不再在 game-sdk 里。game-kit G1–G4 已完成，`fixture-kit` 现在覆盖 FeedLog / FeedPanel、包内资源、拒绝动作，并由 `bpmap` CLI 打包（包头带 `turn` / `1`）；真实沙箱验证过事件流、资源、拒绝提示、聊天、记分板和电脑位。宿主 loader 的裸导入表补上了 `@bp/game-sdk/kit/server`，构建模板补了同名 external，并修正 `--host` 指向 `@bp/sdk-tools` 的 CLI。客户端源码校验在非安全上下文没有 `crypto.subtle` 时回退纯 JS SHA-256；`seatGranted` 的房间 manifest 也带 `assets`，正常入房路径能校验。`apiVersion` / `mode` 闸门已落地：包头字段、宿主加载闸、`/api/version`、`bpmap doctor` 对齐，当前支持 `turn` / `1`。P8 真游戏接入仍未做。代码全部在本目录，`uno-online` 未动。
 
 浏览器实测（`hostd host --port 3289 --no-lan`，页面内 `evaluate_script` 驱动；2026-10-21 复测时 in-app Browser 有 831px 视口，几何和版式可以直接量）走过的路径：大厅取到 `/api/games` 两个游戏 → 建房坐 1 号位 → 客人 ws 入座 2 号、观战入 901 → 加电脑位 → 未准备时开局按钮写"等准备：客人乙"且 `disabled` → 客人准备后变"开始对局" → 开局后牌桌区渲染按视角裁剪的状态、倒计时 `剩 58 秒 → 剩 56 秒`（服务端时间轴生效）→ 房主点"离开房间"被中文提示挡住 → 踢观战生效 → 移交后 👑 跳到 2 号位、房主面板自动隐藏、通知条"房主已移交给 客人乙" → 此后离席成功回到大厅。
 
@@ -38,7 +38,8 @@
 | game-kit 沙箱联调（ChatPanel / ScoreboardPanel / `ui.chat='game'`） | 临时客户端 + 真实宿主 | 2026-10-23 浏览器实测：平台聊天卡隐藏、游戏聊天双向、记分板列/电脑位/下一手更新；修复 importmap 与 `/vendor/core-abi/` |
 | game-kit 测试夹具（id `fixture-kit`） | [tools/testkit/src/test-games/kit-client](tools/testkit/src/test-games/kit-client) | 服务端 FeedLog、客户端 ChatPanel/FeedPanel/ScoreboardPanel；带 `assets/notice.json`；`bpmap` CLI 打包；hostd-http 断言入口、资源和 `ui.chat='game'` |
 | fixture-kit 真实沙箱复验（事件流 / 资源 / 拒绝） | 真实宿主 + in-app Browser | 2026-10-27 实测：FeedPanel 显示开局与“推进到第 1 手”，资源文案加载成功，非法动作在平台状态栏显示拒绝 |
-| `mode` / `apiVersion` 包兼容闸 | [core-abi/version.ts](packages/core-abi/src/version.ts) / [pack-format/src/pack.ts](packages/pack-format/src/pack.ts) / [loader.ts](packages/server/src/loader.ts) | 包头/源清单读写；宿主只加载 `turn` / `1`；`/api/version` 和 `bpmap doctor` 使用同一组常量；测试 173 例 |
+| 局域网客户端源码校验 | [module-loader.ts](packages/client/src/module-loader.ts) / [sha256.ts](packages/client/src/sha256.ts) / [engine.ts](packages/server/src/engine.ts) | 无 `crypto.subtle` 时纯 JS SHA-256 回退；`seatGranted` 带 assets；局域网 IP 实测 `isSecureContext=false`，fixture-kit 仍挂载并显示“哈希校验通过”；测试 176 例 |
+| `mode` / `apiVersion` 包兼容闸 | [core-abi/version.ts](packages/core-abi/src/version.ts) / [pack-format/src/pack.ts](packages/pack-format/src/pack.ts) / [loader.ts](packages/server/src/loader.ts) | 包头/源清单读写；宿主只加载 `turn` / `1`；`/api/version` 和 `bpmap doctor` 使用同一组常量；测试 176 例 |
 | `@bp/pack-format` 包格式库 | [packages/pack-format](packages/pack-format) | `.bpmap` 读写/打包/解包；server 和 SDK 依赖，game-sdk `/node` 保持 re-export |
 | `@bp/sdk-tools` SDK 工具包 | [packages/sdk-tools](packages/sdk-tools) | `bpmap` CLI、doctor、setup/build 模板；独立依赖 core-abi + pack-format，不依赖 game-sdk |
 | 座位模型 + 房主权限 + 票据 + Ready 闸 | [room.ts](packages/server/src/room.ts) / [authority.ts](packages/server/src/authority.ts) | [room-authority.test.mjs](packages/server/test/room-authority.test.mjs) 14 例 |
@@ -116,6 +117,7 @@
 - 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
 ## 6. 变更记录
+- 2026-10-27 Qoder：**开源校验补上局域网路径**：`module-loader` 在 `crypto.subtle` 不可用时回退到纯 JS SHA-256（[sha256.ts](packages/client/src/sha256.ts)），不再因为“不是安全上下文”拒绝执行；`seatGranted` 的房间 manifest 通过 `EngineOptions.assets` 带上包内 assets，正常入房路径也能校验。新增 SHA-256 标准向量、无 Web Crypto 校验、`seatGranted` assets 三条测试；局域网 IP 实测 `isSecureContext=false`、`hasSubtle=false`，fixture-kit 仍挂载并显示“哈希校验通过”。测试 173 → 176。
 - 2026-10-27 Qoder：**README 截图改为独立图片段**：MD Human Review 能渲染表格但收集不到表格内的相对图片路径，导致实机截图显示破图；把房主/玩家两张图移出表格，改成标准 Markdown 图片 + 图注。文件仍在 `docs/images/`。
 - 2026-10-27 Qoder：**README 接入提示纠正**：不再写“实现两个接口即可”，改成按接入指南安装 SDK、实现 `GameModule` / `GameInstance`、按需写客户端入口和 game-kit、再用 `bpmap` 打包；明确当前回合制可用、实时模式规划中。
 - 2026-10-27 Qoder：**文档目录标注当前文档**：README / DESIGN / INTEGRATION_GUIDE / CONTEXT 的文档目录里，本文件那一行都标“（本文）”，和 README 的写法一致；四份文档的章节编号保持 `1. 文档目录` + 后续顺延。

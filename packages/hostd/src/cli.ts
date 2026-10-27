@@ -216,7 +216,7 @@ async function startShell(options: Options, role: 'host' | 'join'): Promise<void
     console.error(`没在 ${join(ROOT, 'games')} 找到可用的游戏模块或单文件包，先跑 npm run build，或检查 .bpmap`);
     process.exit(1);
   }
-  const engine = new Engine({ modules });
+  const engine = new Engine({ modules, assets });
   const store = new HostStore(DATA_DIR);
   // 票据发出前先落盘：syncStore 会跳过内容没变的房，所以这一刀只在"有人入座/重连坐回"时真的写盘
   engine.onTicketIssued = () => engine.syncStore(store);

@@ -1,5 +1,6 @@
 import type { GameActions, GameClientContract, GameManifest, RoomPhase, SeatView } from '@bp/core-abi';
 import type { ChatLine } from './view-model.js';
+import { sha256Hex as sha256HexSync } from './sha256.js';
 
 export type { GameActions, GameClientContract } from '@bp/core-abi';
 
@@ -31,8 +32,16 @@ export async function fetchGameList(httpOrigin: string, fetchImpl: FetchImpl = f
 }
 
 async function sha256Hex(buffer: ArrayBuffer): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', buffer);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const subtle = globalThis.crypto?.subtle;
+  if (subtle) {
+    try {
+      const digest = await subtle.digest('SHA-256', buffer);
+      return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch {
+      // 有些环境暴露了 subtle 但拒绝非安全上下文；退回纯 JS 实现
+    }
+  }
+  return sha256HexSync(new Uint8Array(buffer));
 }
 
 /** 哈希可以是 'sha256:<hex>' 或裸 hex。 */
@@ -84,15 +93,6 @@ export async function loadGameClientSource(
 
   let verified = false;
   if (declared?.hash) {
-    if (!globalThis.crypto?.subtle) {
-      return {
-        ok: false,
-        source: '',
-        verified: false,
-        baseUrl: '',
-        reason: '当前页面不是安全上下文，无法校验客户端代码；请用 http://127.0.0.1:3178 打开。',
-      };
-    }
     try {
       const bytes = new TextEncoder().encode(source);
       const digest = await sha256Hex(bytes.buffer as ArrayBuffer);

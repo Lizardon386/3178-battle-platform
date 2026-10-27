@@ -49,8 +49,9 @@
 | 落盘与重连 | 重启后房号、座位、票据、对局状态都回来；坏文件不挡启动 | [store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) 11 例 |
 | 单文件包 | 往返、篡改拒绝、路径穿越拒绝、坏包跳过、版本不符跳过 | `pack-format` / `pack-loader` / `bpmap-cli` 测试 |
 | 沙箱客户端 | `fixture-kit` 在真实宿主里显示聊天、事件流、记分板，加载包内资源，非法动作有拒绝提示 | [fixture-kit.page.js](tools/checks/fixture-kit.page.js) + 浏览器实测 |
+| 局域网源码校验 | 非安全上下文（局域网 HTTP）没有 `crypto.subtle` 时，仍能按 `seatGranted` 的 assets 校验客户端源码并执行 | 纯 JS SHA-256 测试 + 局域网 IP 浏览器实测 |
 | 版本闸 | 当前只加载 `turn` / `1`；`/api/version` 与 `bpmap doctor` 用同一组常量 | `pack-loader` / `bpmap-cli` 测试 |
-| 当前回归门禁 | `npm test` 173 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
+| 当前回归门禁 | `npm test` 176 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
 
 #### 2.3.2 测试手顺
 
@@ -67,7 +68,7 @@ npm run build
 npm test
 ```
 
-预期 173 例全绿。这一轮会重新生成三个测试夹具，并跑单元、契约、宿主集成和夹具猴测。
+预期 176 例全绿。这一轮会重新生成三个测试夹具，并跑单元、契约、宿主集成和夹具猴测。
 
 3. 接缝检查：
 

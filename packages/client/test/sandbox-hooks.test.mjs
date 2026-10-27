@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadGameClientSource } from '../dist/module-loader.js';
+import { sha256Hex as sha256HexFallback } from '../dist/sha256.js';
 
 function read(rel) {
   return readFileSync(new URL(rel, import.meta.url), 'utf8');
@@ -74,4 +75,32 @@ test('客户端源码：入口 404 返回占位提示', async () => {
   assert.equal(result.ok, false);
   assert.match(result.reason, /没带自己的界面/);
   assert.match(result.reason, /404/);
+});
+
+test('纯 JS SHA-256：标准向量与 Web Crypto 一致', async () => {
+  const vectors = ['', 'abc', '中文源码\n', 'x'.repeat(1000)];
+  for (const text of vectors) {
+    assert.equal(sha256HexFallback(new TextEncoder().encode(text)), await digest(text), text.slice(0, 20));
+  }
+});
+
+test('客户端源码：没有 Web Crypto 时仍能校验并通过', async () => {
+  const source = 'export default { mount() {} };\n';
+  const hash = `sha256:${await digest(source)}`;
+  const manifest = {
+    id: 'sample',
+    name: '样本',
+    version: '0.1.0',
+    entry: 'client.js',
+    assets: [{ path: 'client.js', hash }],
+  };
+  const real = globalThis.crypto;
+  Object.defineProperty(globalThis, 'crypto', { value: undefined, configurable: true });
+  try {
+    const result = await loadGameClientSource(manifest, 'http://192.168.1.20:3000', async () => new Response(source, { status: 200 }));
+    assert.equal(result.ok, true);
+    assert.equal(result.verified, true);
+  } finally {
+    Object.defineProperty(globalThis, 'crypto', { value: real, configurable: true });
+  }
 });

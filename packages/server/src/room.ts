@@ -1,5 +1,5 @@
 import { hashSecret, newSeatId, newTicket, secretMatches } from './ids.js';
-import type { GameInstance, GameManifest, GameModule, GameSeatInfo, RoomPhase, SeatRole, SeatView } from './module-api.js';
+import type { GameAsset, GameInstance, GameManifest, GameModule, GameSeatInfo, RoomPhase, SeatRole, SeatView } from './module-api.js';
 import { manifestOf } from './module-api.js';
 import type { RoomView } from '@bp/protocol';
 
@@ -37,6 +37,8 @@ export interface RoomSpec {
   code: string;
   name: string;
   module: GameModule;
+  /** 单文件包下发的文件清单；目录游戏没有。 */
+  assets?: readonly GameAsset[];
   rawConfig: Record<string, unknown> | undefined;
   seatSlots: number;
   password: string | null;
@@ -106,7 +108,7 @@ export class Room {
     this.gameId = spec.module.id;
     this.gameName = spec.module.name;
     this.config = spec.module.normalizeConfig(spec.rawConfig);
-    this.manifest = manifestOf(spec.module, this.config);
+    this.manifest = manifestOf(spec.module, this.config, spec.assets);
     this.rulesHash = this.manifest.rulesHash;
     this.seatSlots = Math.max(spec.module.seats.min, Math.min(spec.seatSlots, spec.module.seats.max));
     this.secretRef = spec.password ? hashSecret(spec.password) : null;

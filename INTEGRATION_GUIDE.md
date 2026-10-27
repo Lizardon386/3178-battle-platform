@@ -632,7 +632,7 @@ export interface GameActions {
 - 入口在 `sandbox="allow-scripts"` 的 iframe 里执行，不带 `allow-same-origin`：读不到宿主的 `localStorage`、cookie 和 DOM。
 - 入口是 Blob ESM，必须是单文件，不能保留任何 `import`；资源用 `fetch('assets/...')`，base 指向入口目录。
 - 沙箱加载超时 8 秒；超时或入口抛错时回退到占位面板。
-- 入口源码的哈希校验发生在 `manifest.assets` 带入口记录时；`loadGameClientSource` 会先算 sha256。当前 `/api/games` 会给单文件包补 `assets`，但 `seatGranted` 下发的房间 manifest 不带，正常入房路径还没有真正校验，这块接缝待补。校验依赖 Web Crypto，只在安全上下文可用（`http://127.0.0.1` 或 HTTPS）；局域网普通 HTTP 下即使带哈希也会拒绝执行。没有哈希时照跑，界面会标记“未校验”。
+- 入口源码的哈希校验发生在 `manifest.assets` 带入口记录时；`/api/games` 和 `seatGranted` 都会给单文件包下发 `assets`。`loadGameClientSource` 先算 sha256：安全上下文用 Web Crypto，局域网普通 HTTP 用内置纯 JS 实现，不再拒绝执行。没有哈希时照跑，界面会标记“未校验”。
 - `bp:chat-history`：最近 100 条聊天，每条是 `{ seatId, name, text, at, kind: 'say' | 'system' }`，内容变化时整包重推。
 - `bp:room`：`{ code, phase, seats }` 或 `null`；`seats` 是 `SeatView[]`，含 `seatId`、`slot`、`name`、`role`、`team`、`ready`、`connected`、`ageMs`、`isHost`。
 - 聊天发送：iframe 发 `{ type: 'chat', text }`，父页面校验 1..300 字、阶段为 `playing`、连接状态为 `open`；发送者身份由服务端座位决定。
@@ -815,9 +815,9 @@ CLI 行为：
 
 包内服务端入口的裸导入只解析 `@bp/game-sdk`、`@bp/game-sdk/node`、`@bp/game-sdk/kit/server`、`@bp/core-abi`，URL 由宿主壳在启动时解析并传给 loader；`@bp/protocol` 只保留给旧包过渡。其他第三方依赖要打进 `server.js`，不要指望宿主有。
 
-宿主把模块版本改成 `模块版本+包哈希前 12 位`，并把包内所有文件作为 `assets` 挂到 manifest 上（`path`、`hash: sha256:<hex>`、`bytes`）。`hash` 允许带 `sha256:` 前缀，也接受裸十六进制。目录游戏没有包哈希，也就没有这组自动 `assets`。`/api/games` 返回各模块用 `normalizeConfig({})` 生成的默认 manifest；`/games/<id>/<路径>` 直接从解包目录取文件。客户端入口的哈希校验和局域网 HTTP 的限制见 4.7。
+宿主把模块版本改成 `模块版本+包哈希前 12 位`，并把包内所有文件作为 `assets` 挂到 manifest 上（`path`、`hash: sha256:<hex>`、`bytes`）。`hash` 允许带 `sha256:` 前缀，也接受裸十六进制。目录游戏没有包哈希，也就没有这组自动 `assets`。`/api/games` 返回各模块用 `normalizeConfig({})` 生成的默认 manifest；`/games/<id>/<路径>` 直接从解包目录取文件。客户端入口的哈希校验见 4.7；局域网 HTTP 也能算摘要。
 
-下发给客户端的 manifest 包含 `id`、`name`、`version`、`rulesHash`、`seats`、`allowSpectate`、`soloFill`、`roles`、`entry`，有 UI 声明时再带 `ui`。`/api/games` 的 manifest 会给单文件包补 `assets`；`seatGranted` 下发的是房间 manifest，目前不带 `assets`，客户端校验现状见 4.7。
+下发给客户端的 manifest 包含 `id`、`name`、`version`、`rulesHash`、`seats`、`allowSpectate`、`soloFill`、`roles`、`entry`，有 UI 声明时再带 `ui`。`/api/games` 和 `seatGranted` 的 manifest 都会给单文件包补 `assets`。
 
 平台源码不 import 任何 `games/` 路径，运行时按 id 动态加载。宿主只在启动时扫描，替换包后要重启。
 
