@@ -27,7 +27,7 @@
 - **按座位裁剪状态**：快照按座位生成，观战看不到别人的秘密。
 - **不用打包**：浏览器直接吃原生 ESM，离线可用；界面覆盖大厅、房间内和对局挂载点，键盘可完整操作。
 
-> 想接新游戏？实现 `GameModule` / `GameInstance` 两个接口即可；完整规则、线协议和开发命令见上方「文档目录」。
+> 想接新游戏？按 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) 安装 SDK，实现 `GameModule` / `GameInstance`，按需写客户端入口和 game-kit 面板，再用 `bpmap` 打包。当前回合制接入可用，实时模式在规划中。
 
 ## 3. 快速开始
 
