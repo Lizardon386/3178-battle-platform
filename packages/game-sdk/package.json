@@ -1,6 +1,6 @@
 {
   "name": "@bp/game-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "3178 游戏接入 SDK：游戏 ABI、客户端契约、单文件包和 game-kit",
   "license": "MIT",
   "author": "3178-battle-platform contributors",
@@ -16,7 +16,12 @@
   "engines": {
     "node": ">=20.19.0"
   },
-  "keywords": ["3178", "game-platform", "game-sdk", "game-kit"],
+  "keywords": [
+    "3178",
+    "game-platform",
+    "game-sdk",
+    "game-kit"
+  ],
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -44,10 +49,13 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@bp/core-abi": "^0.1.0",
-    "@bp/pack-format": "^0.1.0"
+    "@bp/core-abi": "^0.1.1",
+    "@bp/pack-format": "^0.1.1"
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "publishConfig": {
     "access": "public"
   }

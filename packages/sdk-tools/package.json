@@ -1,6 +1,6 @@
 {
   "name": "@bp/sdk-tools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "3178 SDK 工具：bpmap CLI、doctor 和游戏工程脚本模板",
   "license": "MIT",
   "author": "3178-battle-platform contributors",
@@ -16,15 +16,24 @@
   "engines": {
     "node": ">=20.19.0"
   },
-  "keywords": ["3178", "game-platform", "bpmap", "sdk-tools"],
+  "keywords": [
+    "3178",
+    "game-platform",
+    "bpmap",
+    "sdk-tools"
+  ],
   "type": "module",
   "bin": {
     "bpmap": "dist/cli/index.js"
   },
-  "files": ["dist", "templates", "src"],
+  "files": [
+    "dist",
+    "templates",
+    "src"
+  ],
   "dependencies": {
-    "@bp/core-abi": "^0.1.0",
-    "@bp/pack-format": "^0.1.0"
+    "@bp/core-abi": "^0.1.1",
+    "@bp/pack-format": "^0.1.1"
   },
   "publishConfig": {
     "access": "public"

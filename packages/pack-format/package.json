@@ -1,6 +1,6 @@
 {
   "name": "@bp/pack-format",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "3178 单文件游戏包格式：BPMAP 包头、读写、校验、打包和解包缓存",
   "license": "MIT",
   "author": "3178-battle-platform contributors",
@@ -16,7 +16,12 @@
   "engines": {
     "node": ">=20.19.0"
   },
-  "keywords": ["3178", "game-platform", "bpmap", "pack-format"],
+  "keywords": [
+    "3178",
+    "game-platform",
+    "bpmap",
+    "pack-format"
+  ],
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,11 +29,15 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "dependencies": {
-    "@bp/core-abi": "^0.1.0"
+    "@bp/core-abi": "^0.1.1"
   },
   "publishConfig": {
     "access": "public"

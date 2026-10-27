@@ -1,6 +1,6 @@
 {
   "name": "@bp/core-abi",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "3178 游戏接口层：GameModule / GameInstance / Effect 等宿主与游戏共同遵守的 ABI 和数据类型",
   "license": "MIT",
   "author": "3178-battle-platform contributors",
@@ -16,7 +16,12 @@
   "engines": {
     "node": ">=20.19.0"
   },
-  "keywords": ["3178", "game-platform", "game-abi", "types"],
+  "keywords": [
+    "3178",
+    "game-platform",
+    "game-abi",
+    "types"
+  ],
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,9 +29,13 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "publishConfig": {
     "access": "public"
   }

@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /**
- * 用法：node scripts/setup-sdk.mjs [--platform <3178 仓库>] [--tarballs <Release 目录>] [--sdk-dir sdk]
- * 两种来源二选一：
+ * 用法：node setup-sdk.mjs [--release sdk-v0.1.0] [--tarballs <Release 目录>] [--platform <3178 仓库>] [--sdk-dir sdk]
+ * 三种来源按顺序选一个：
+ *   --release   从 GitHub Release 下载四个 tarball、验 SHA256，再安装（外部接入一条命令）
+ *   --tarballs  直接安装 Release 下载目录里的四个 tarball
  *   --platform  从平台仓库打四个 tarball 再安装（开发时用）
- *   --tarballs  直接安装 Release 下载目录里的四个 tarball（外部接入用）
  */
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -20,6 +22,8 @@ const argValue = (name, fallback) => {
 
 const gameRoot = process.cwd();
 const releaseDir = argValue('--tarballs', null);
+const releaseTag = argValue('--release', null);
+const releaseBase = argValue('--release-base', 'https://github.com/Lizardon386/3178-battle-platform/releases/download');
 const platformRoot = resolve(argValue('--platform', '../3178-battle-platform'));
 const sdkDir = resolve(argValue('--sdk-dir', 'sdk'));
 const npmCli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
@@ -46,8 +50,8 @@ function npm(commandArgs, cwd) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-if (!releaseDir && !existsSync(join(platformRoot, 'packages', 'game-sdk', 'package.json'))) {
-  fail(`找不到平台仓库：${platformRoot}，用 --platform 指向 3178-battle-platform；或用 --tarballs 指向 Release 目录`);
+if (!releaseDir && !releaseTag && !existsSync(join(platformRoot, 'packages', 'game-sdk', 'package.json'))) {
+  fail(`找不到平台仓库：${platformRoot}，用 --platform 指向 3178-battle-platform；或用 --release sdk-v0.1.0 / --tarballs`);
 }
 
 const packagePath = join(gameRoot, 'package.json');
@@ -68,7 +72,7 @@ if (!existsSync(packagePath)) {
   }
 }
 
-if (!releaseDir &&
+if (!releaseDir && !releaseTag &&
     (!existsSync(join(platformRoot, 'packages', 'game-sdk', 'dist', 'index.js')) ||
      !existsSync(join(platformRoot, 'packages', 'core-abi', 'dist', 'index.js')) ||
      !existsSync(join(platformRoot, 'packages', 'pack-format', 'dist', 'index.js')) ||
@@ -78,7 +82,37 @@ if (!releaseDir &&
 }
 
 let tarballs;
-if (releaseDir) {
+if (releaseTag) {
+  mkdirSync(sdkDir, { recursive: true });
+  for (const name of readdirSync(sdkDir)) {
+    if (name.endsWith('.tgz')) rmSync(join(sdkDir, name));
+  }
+  const base = `${releaseBase.replace(/\/+$/, '')}/${releaseTag}`;
+  const sumsResponse = await fetch(`${base}/SHA256SUMS`, { signal: AbortSignal.timeout(15_000) });
+  if (!sumsResponse.ok) fail(`下载 SHA256SUMS 失败：${sumsResponse.status}`);
+  const sums = (await sumsResponse.text())
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((line) => {
+      const [hash, name] = line.split(/\s+/);
+      return { hash, name };
+    })
+    .filter(({ name }) => name && PACKAGE_PREFIXES.some((prefix) => name.startsWith(prefix)) && name.endsWith('.tgz'));
+  for (const prefix of PACKAGE_PREFIXES) {
+    if (!sums.some(({ name }) => name.startsWith(prefix))) fail(`Release ${releaseTag} 缺少 ${prefix}*.tgz`);
+  }
+  for (const { hash, name } of sums) {
+    const response = await fetch(`${base}/${name}`, { signal: AbortSignal.timeout(60_000) });
+    if (!response.ok) fail(`下载 ${name} 失败：${response.status}`);
+    const bytes = Buffer.from(await response.arrayBuffer());
+    const actual = createHash('sha256').update(bytes).digest('hex');
+    if (actual !== hash) fail(`SHA256 不匹配：${name}（${actual} != ${hash}）`);
+    writeFileSync(join(sdkDir, name), bytes);
+    console.log(`已下载 ${name}`);
+  }
+  tarballs = sums.map(({ name }) => join(sdkDir, name));
+} else if (releaseDir) {
   const dir = resolve(releaseDir);
   if (!existsSync(dir)) fail(`Release 目录不存在：${dir}`);
   const found = readdirSync(dir).filter((name) => name.endsWith('.tgz'));

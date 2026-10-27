@@ -5,7 +5,7 @@
  * 产物在 dist-sdk/（不入库）；脚本会先检查包元数据，避免把 private 包或 `*` 依赖发出去。
  */
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -69,7 +69,9 @@ const tgz = readdirSync(OUT).filter((name) => name.endsWith('.tgz')).sort();
 for (const { prefix } of PACKAGES) {
   if (!tgz.some((name) => name.startsWith(prefix))) fail(`缺少 ${prefix}*.tgz`);
 }
-const sums = tgz.map((name) => `${sha256(readFileSync(join(OUT, name)))}  ${name}`);
+copyFileSync(join(ROOT, 'packages', 'sdk-tools', 'templates', 'scripts', 'setup-sdk.mjs'), join(OUT, 'setup-sdk.mjs'));
+const assets = [...tgz, 'setup-sdk.mjs'];
+const sums = assets.map((name) => `${sha256(readFileSync(join(OUT, name)))}  ${name}`);
 writeFileSync(join(OUT, 'SHA256SUMS'), `${sums.join('\n')}\n`, 'utf8');
 
 const install = `npm install --save-dev \\
@@ -84,7 +86,13 @@ const notes = `# 3178 SDK ${version}
 
 ## 安装
 
-从本 Release 下载四个 \`.tgz\` 到游戏工程目录，然后执行：
+一条命令下载并安装四个 tarball（会校验 SHA256）：
+
+\`\`\`bash
+node setup-sdk.mjs --release sdk-v${version}
+\`\`\`
+
+也可以先下载四个 \`.tgz\` 到游戏工程目录，再执行：
 
 \`\`\`bash
 ${install}
@@ -110,6 +118,6 @@ sha256sum -c SHA256SUMS
 writeFileSync(join(OUT, 'RELEASE_NOTES.md'), notes, 'utf8');
 
 console.log(`\nSDK ${version} 资产已生成：${OUT}`);
-for (const name of tgz) console.log(`  ${name}`);
+for (const name of assets) console.log(`  ${name}`);
 console.log('  SHA256SUMS');
 console.log('  RELEASE_NOTES.md');
