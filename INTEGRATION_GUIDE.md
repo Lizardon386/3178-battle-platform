@@ -69,7 +69,7 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 
 ### 3.1 获取 SDK
 
-SDK 0.1.0 没有发布到 npm，但 `@bp/game-sdk` 已经去掉 `private`。当前从 GitHub Release 下载四个 tarball（或从平台仓库 `npm pack`）安装；`@bp/game-sdk` 依赖 `@bp/core-abi` 和 `@bp/pack-format`，构建/打包还要 `@bp/sdk-tools`，四个要一起装。
+SDK 0.1.0 已作为预发布放在 [GitHub Release](https://github.com/Lizardon386/3178-battle-platform/releases/tag/sdk-v0.1.0)，没有发布到 npm。下载四个 tarball 安装；`@bp/game-sdk` 依赖 `@bp/core-abi` 和 `@bp/pack-format`，构建/打包还要 `@bp/sdk-tools`，四个要一起装。
 
 有两套做法：3.1.1 手动执行命令，3.1.2 用现成脚本。两者结果一样，选一种即可。
 
