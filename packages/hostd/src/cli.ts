@@ -139,7 +139,13 @@ function banner(lines: string[]): void {
   console.log(`${'='.repeat(width + 4)}\n`);
 }
 
-const PACK_IMPORTS = ['@bp/game-sdk', '@bp/game-sdk/node', '@bp/core-abi', '@bp/protocol'];
+const PACK_IMPORTS = [
+  '@bp/game-sdk',
+  '@bp/game-sdk/node',
+  '@bp/game-sdk/kit/server',
+  '@bp/core-abi',
+  '@bp/protocol',
+];
 
 function packImportUrls(): Record<string, string> {
   return Object.fromEntries(PACK_IMPORTS.map((specifier) => [specifier, import.meta.resolve(specifier)]));

@@ -221,11 +221,11 @@ export default {
 
 ### 2.5 构建
 
-构建到 `dist-pack/`。服务端入口可以把 `@bp/game-sdk` / `@bp/game-sdk/node` / `@bp/core-abi` 交给宿主解析；这是通过 `--external` 实现的，宿主版本要和构建时一致。游戏源码只 import 前两个时，前两条 `--external` 就够；`@bp/core-abi` 保留给直接 import ABI 的旧代码。其他第三方依赖不要 external，应该打进 `server.js`：
+构建到 `dist-pack/`。服务端入口可以把 `@bp/game-sdk` / `@bp/game-sdk/node` / `@bp/game-sdk/kit/server` / `@bp/core-abi` 交给宿主解析；这是通过 `--external` 实现的，宿主版本要和构建时一致。游戏源码只 import 前三个时，前三条 `--external` 就够；`@bp/core-abi` 保留给直接 import ABI 的旧代码。其他第三方依赖不要 external，应该打进 `server.js`：
 
 ```bash
 npx esbuild src/server.ts --bundle --platform=node --format=esm \
-  --external:@bp/game-sdk --external:@bp/game-sdk/node --external:@bp/core-abi \
+  --external:@bp/game-sdk --external:@bp/game-sdk/node --external:@bp/game-sdk/kit/server --external:@bp/core-abi \
   --outfile=dist-pack/server.js
 
 npx esbuild src/client.ts --bundle --platform=browser --format=esm \
@@ -813,7 +813,7 @@ CLI 行为：
 1. 目录游戏：`games/<id>/dist/index.js`，模块 id 必须和目录名一致。
 2. 单文件包：`games/*.bpmap`，先检查包头 `mode` / `apiVersion`，再读包、解到缓存、`import()` 包里的 `server` 入口。当前宿主支持 `turn` / `1`，不支持的包跳过并记录原因。包的 id/version 必须和模块导出一致，否则这个包跳过。同一个 id 已被目录游戏或前一个包占用时，后面的包跳过并记录错误；坏包只记错误，不挡启动。加载完按 id 排序。目录游戏没有包清单，按 `turn` / `1` 处理。
 
-包内服务端入口的裸导入只解析 `@bp/game-sdk`、`@bp/game-sdk/node`、`@bp/core-abi`，URL 由宿主壳在启动时解析并传给 loader；`@bp/protocol` 只保留给旧包过渡。其他第三方依赖要打进 `server.js`，不要指望宿主有。
+包内服务端入口的裸导入只解析 `@bp/game-sdk`、`@bp/game-sdk/node`、`@bp/game-sdk/kit/server`、`@bp/core-abi`，URL 由宿主壳在启动时解析并传给 loader；`@bp/protocol` 只保留给旧包过渡。其他第三方依赖要打进 `server.js`，不要指望宿主有。
 
 宿主把模块版本改成 `模块版本+包哈希前 12 位`，并把包内所有文件作为 `assets` 挂到 manifest 上（`path`、`hash: sha256:<hex>`、`bytes`）。`hash` 允许带 `sha256:` 前缀，也接受裸十六进制。目录游戏没有包哈希，也就没有这组自动 `assets`。`/api/games` 返回各模块用 `normalizeConfig({})` 生成的默认 manifest；`/games/<id>/<路径>` 直接从解包目录取文件。客户端入口的哈希校验和局域网 HTTP 的限制见 3.7。
 

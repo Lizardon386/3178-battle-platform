@@ -64,7 +64,7 @@ await build({
   bundle: true,
   platform: 'node',
   format: 'esm',
-  external: ['@bp/game-sdk', '@bp/game-sdk/node', '@bp/core-abi'],
+  external: ['@bp/game-sdk', '@bp/game-sdk/node', '@bp/game-sdk/kit/server', '@bp/core-abi'],
   outfile: join(outDir, 'server.js'),
   logLevel: 'info',
 });
@@ -116,7 +116,7 @@ if (platformRoot) {
 
 if (hostUrl) {
   const require = createRequire(import.meta.url);
-  const cli = join(dirname(require.resolve('@bp/game-sdk/package.json')), 'dist', 'cli', 'index.js');
+  const cli = join(dirname(require.resolve('@bp/sdk-tools/package.json')), 'dist', 'cli', 'index.js');
   console.log(`检查宿主兼容性：${hostUrl}`);
   const result = spawnSync(process.execPath, [cli, 'doctor', packFile, '--host', hostUrl], { stdio: 'inherit' });
   if (result.status !== 0) process.exit(result.status ?? 1);

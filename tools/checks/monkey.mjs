@@ -12,7 +12,7 @@ import { readFileSync, existsSync, readdirSync, rmSync, statSync, unlinkSync } f
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
-import { PLATFORM_CODES, NOTICE_CODES } from '../../packages/protocol/dist/index.js';
+import { PLATFORM_CODES, NOTICE_CODES } from '../../packages/core-abi/dist/index.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -293,6 +293,7 @@ const ACTIONS = [
   { w: 6, label: 'ready', can: (u) => u.seatId && u.role !== 'spectator', run: (u) => u.raw({ type: 'ready', ready: rnd() < 0.5 }, 'ready') },
   { w: 5, label: 'chat', can: () => true, run: (u) => u.raw({ type: 'chat', text: `猴叫 ${int(1, 9999)}` }, 'chat') },
   { w: 4, label: 'guess', can: (u) => u.seatId && u.phase === 'playing', run: (u) => u.raw({ type: 'gameAction', name: 'guess', payload: { value: int(0, 20) } }, 'guess') },
+  { w: 2, label: 'bump', can: (u) => u.seatId && u.phase === 'playing', run: (u) => u.raw({ type: 'gameAction', name: 'bump' }, 'bump') },
   { w: 2, label: 'pass', can: (u) => u.seatId && u.phase === 'playing', run: (u) => u.raw({ type: 'gameAction', name: 'pass' }, 'pass') },
   { w: 1, label: 'reveal', can: (u) => u.seatId && u.phase === 'playing', run: (u) => u.raw({ type: 'gameAction', name: 'reveal' }, 'reveal') },
   { w: 3, label: 'ping', can: () => true, run: (u) => u.raw({ type: 'ping', nonce: `n${int(1, 999)}` }, 'ping') },
@@ -302,12 +303,13 @@ const ACTIONS = [
     label: 'create',
     can: (u) => !u.seatId,
     run: (u) => {
+      const gameId = pick(['fixture-turn', 'fixture-turn', 'fixture-simultaneous', 'fixture-kit']);
       const r = u.raw(
         {
           type: 'roomCreate',
-          gameId: pick(['fixture-turn', 'fixture-turn', 'fixture-simultaneous']),
+          gameId,
           roomName: `猴房${int(1, 99)}`,
-          seatSlots: int(1, 4),
+          seatSlots: gameId === 'fixture-kit' ? int(1, 2) : int(1, 4),
           allowSpectate: rnd() < 0.7,
           config: {},
         },

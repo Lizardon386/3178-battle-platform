@@ -74,6 +74,7 @@ test('/api/games 报出本机装的游戏，含房规摘要与入口', async () 
   assert.equal(kit.ui.chat, 'game');
   assert.equal(kit.entry, 'client.js');
   assert.ok(kit.assets?.some((a) => a.path === 'client.js'), 'game-kit 测试夹具要带客户端入口');
+  assert.ok(kit.assets?.some((a) => a.path === 'assets/notice.json'), '客户端资源也要进资产清单');
 });
 
 test('/api/version 报出平台版本与支持的包/协议/接口版本', async () => {
@@ -154,6 +155,15 @@ test('game-kit 测试夹具的客户端入口可下发', async () => {
   assert.equal(status, 200);
   assert.match(body, /bp-chat/);
   assert.match(body, /bp-scoreboard/);
+  assert.match(body, /bp-feed/, '客户端包里要有事件流面板');
+  assert.equal(headers.get('access-control-allow-origin'), '*');
+});
+
+test('game-kit 测试夹具的客户端资源可下发', async () => {
+  const { status, body, headers } = await get('/games/fixture-kit/assets/notice.json');
+  assert.equal(status, 200);
+  assert.match(body, /SDK 夹具资源已加载/);
+  assert.match(headers.get('content-type') ?? '', /application\/json/);
   assert.equal(headers.get('access-control-allow-origin'), '*');
 });
 

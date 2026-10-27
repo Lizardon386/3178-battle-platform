@@ -27,7 +27,7 @@
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 
-怎么算做成了（都能用工具验证）：`tools/checks/check-seam.sh` 在平台包内没有命中玩法词；仓库自带三个测试夹具（`测试夹具·回合制` + 隐私 / `测试夹具·同时操作` 无游标 + 无隐私 + 同时操作 / `测试夹具·game-kit 界面` 带客户端入口，在 `tools/testkit/src/test-games/`），前两个证明接口与玩法无关，第三个用来联调聊天和记分板；协议层与 UI 层两层猴测无违规。当前 `npm test` **171 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+怎么算做成了（都能用工具验证）：`tools/checks/check-seam.sh` 在平台包内没有命中玩法词；仓库自带三个测试夹具（`测试夹具·回合制` + 隐私 / `测试夹具·同时操作` 无游标 + 无隐私 + 同时操作 / `测试夹具·game-kit 界面` 带客户端入口，在 `tools/testkit/src/test-games/`），前两个证明接口与玩法无关，第三个用来联调聊天、事件流、记分板、资源和拒绝；协议层与 UI 层两层猴测无违规，另有 `fixture-kit` 的随机动作猴测。当前 `npm test` **173 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
 
 ## 2. 运行模式
 
@@ -291,11 +291,11 @@ flowchart TD
 | [games/](games/.gitkeep) | 运行时游戏包目录，只放生成的 `.bpmap` |
 | [tools/testkit/src/test-games/turn-based/index.ts](tools/testkit/src/test-games/turn-based/index.ts) | 测试夹具·回合制（id `fixture-turn`）：回合游标 + 隐私 |
 | [tools/testkit/src/test-games/simultaneous/index.ts](tools/testkit/src/test-games/simultaneous/index.ts) | 测试夹具·同时操作（id `fixture-simultaneous`）：无游标 + 无隐私 |
-| [tools/testkit/src/test-games/kit-client/index.ts](tools/testkit/src/test-games/kit-client/index.ts) / [client.ts](tools/testkit/src/test-games/kit-client/client.ts) | 测试夹具·game-kit 界面（id `fixture-kit`）：服务端 + 用 ChatPanel/ScoreboardPanel 的客户端入口，`ui.chat='game'` |
+| [tools/testkit/src/test-games/kit-client/index.ts](tools/testkit/src/test-games/kit-client/index.ts) / [client.ts](tools/testkit/src/test-games/kit-client/client.ts) | 测试夹具·game-kit 界面（id `fixture-kit`）：服务端 FeedLog + 客户端 ChatPanel/FeedPanel/ScoreboardPanel，加载包内资源，`ui.chat='game'` |
 | [tools/checks/check-seam.sh](tools/checks/check-seam.sh) | 架构检查：平台代码里不许出现玩法词 |
-| [tools/checks/fixture-kit.page.js](tools/checks/fixture-kit.page.js) | 在真实大厅检查 fixture-kit：建房、开局、聊天、记分板和电脑位 |
+| [tools/checks/fixture-kit.page.js](tools/checks/fixture-kit.page.js) | 在真实大厅检查 fixture-kit：建房、开局、聊天、事件流、资源、拒绝、记分板和电脑位 |
 | [tools/packaging/build-portable.mjs](tools/packaging/build-portable.mjs) | 绿色便携包装配与自检 |
-| [tools/checks/monkey.mjs](tools/checks/monkey.mjs) | 协议层猴测 |
+| [tools/checks/monkey.mjs](tools/checks/monkey.mjs) | 协议层猴测（含 fixture-kit 的真实宿主路径） |
 | [tools/packaging/bpmap.mjs](tools/packaging/bpmap.mjs) | .bpmap 打包/检查入口，调用 `@bp/sdk-tools` CLI |
 | [packages/sdk-tools/src/cli/index.ts](packages/sdk-tools/src/cli/index.ts) | `pack` / `inspect` / `unpack` 的 CLI 实现 |
 | [tools/checks/monkey-ui.page.js](tools/checks/monkey-ui.page.js) | 页内 UI 猴测 |
@@ -309,9 +309,10 @@ flowchart TD
 | [packages/protocol/test/protocol.test.mjs](packages/protocol/test/protocol.test.mjs) | 协议、manifest 与形状闸 |
 | [packages/server/test/room-authority.test.mjs](packages/server/test/room-authority.test.mjs) | 房主权限/票据/座位模型 |
 | [tools/testkit/test/contract.test.mjs](tools/testkit/test/contract.test.mjs) | 两个测试夹具共用同一套接口断言 |
+| [tools/testkit/test/fixture-kit-monkey.test.mjs](tools/testkit/test/fixture-kit-monkey.test.mjs) | fixture-kit 随机动作猴测：事件流序号、记分板行数、拒绝码与计数自洽 |
 | [packages/server/test/ws-live.test.mjs](packages/server/test/ws-live.test.mjs) | 真 socket 端到端 |
 | [packages/server/test/store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) | 落盘恢复 + 信标编解码 |
-| [packages/game-sdk/test/pack.test.mjs](packages/game-sdk/test/pack.test.mjs) | 单文件包：往返、篡改、路径穿越、缓存复用 |
+| [packages/pack-format/test/pack.test.mjs](packages/pack-format/test/pack.test.mjs) | 单文件包：往返、篡改、路径穿越、缓存复用 |
 | [packages/server/test/pack-loader.test.mjs](packages/server/test/pack-loader.test.mjs) | 单文件包：宿主加载、坏包跳过、同 id 去重 |
 | [packages/server/test/bpmap-cli.test.mjs](packages/server/test/bpmap-cli.test.mjs) | .bpmap CLI：打包、检查、坏输入 |
 | [packages/hostd/test/game-roots.test.mjs](packages/hostd/test/game-roots.test.mjs) | 游戏根映射：包目录、目录回退、越界 404 |
