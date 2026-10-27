@@ -8,7 +8,7 @@
 
 | 文档 | 阅读对象 | 内容 |
 |---|---|---|
-| [README.md](README.md) | 玩家 / 房主 | 平台是什么、前置与双击入口、一局怎么走、命令行、限制与注意事项 |
+| [README.md](README.md) | 玩家 / 房主 | 平台概述、运行环境与入口、对局流程、网络连接、数据存储、命令行用法、使用限制 |
 | [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 设计方向（目标 / 约束 / 验收标准 / 测试手顺）；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | SDK 获取与从零接入、GameModule/GameInstance/Effect[]、客户端入口、单文件包、回合制与实时模式边界、game-kit（事件流/聊天/记分板）、沙箱限制、版本自检与升级 |
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
@@ -116,6 +116,7 @@
 - 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
 ## 6. 变更记录
+- 2026-10-27 Qoder：**README 可读性**：章节名改为平台概述 / 快速开始 / 对局流程 / 网络连接 / 数据存储 / 命令行用法 / 使用限制；昵称步骤移到进房前，3.2 加建房—进房时序图，3.3 加网络连接流程图，并加入两张平台实机截图（裁剪掉只有测试夹具的游戏选择器）。截图在 `docs/images/`，DESIGN 目录树和文件清单同步。
 - 2026-10-27 Qoder：**文档目录统一编号**：README / DESIGN / INTEGRATION_GUIDE / CONTEXT 顶部的 `文档` 改成 `1. 文档目录`，后续章节整体顺延一位；INTEGRATION_GUIDE 的正文引用和 `GameModule` / `GameInstance` 锚点同步，README/DESIGN/CONTEXT 的交叉引用复查过。
 - 2026-10-27 Qoder：**文档分层**：README 的文档目录保持在顶部，只列 README / DESIGN / INTEGRATION_GUIDE / CONTEXT；正文删除测试夹具、猴测报告和 `npm test` 描述，保留玩家能感知的占位面板说明。DESIGN 正文第一章（文档目录之后）改名“设计方向”，拆成目标 / 约束 / 验收三节，验收下分“验收标准”和“测试手顺”，历史证据继续链到本档；README/DESIGN/CONTEXT/INTEGRATION_GUIDE 顶部日期统一到 2026-10-27。
 - 2026-10-27 Qoder：**按开发者接入路径扩 fixture-kit**：服务端接 `FeedLog`，客户端挂 `FeedPanel` 并加载 `assets/notice.json`；新增 `fixture-reject` 动作和按钮，非法动作在平台状态栏显示拒绝。`pack-test-games.mjs` 改走 `bpmap` CLI，包头写 `mode: turn` / `apiVersion: 1`。抓到一个真实集成缺口：宿主 loader 的裸导入表缺 `@bp/game-sdk/kit/server`，导致用 FeedLog 的游戏整包被跳过；已补进 hostd 和构建模板的 external，并把 `--host` 的 doctor 路径从 `@bp/game-sdk` 改到 `@bp/sdk-tools`。新增 `fixture-kit-monkey.test.mjs`（固定 seed、300 步随机动作）和资源下发断言；协议层 `monkey.mjs` 的房间创建加入 `fixture-kit` 并补 `bump` 动作，修掉它仍从 `@bp/protocol` 取 `NOTICE_CODES` 的旧导入（`300` 步短程 0 违规）。浏览器复验事件流、资源、拒绝。测试 171 → 173。

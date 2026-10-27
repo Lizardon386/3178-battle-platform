@@ -8,7 +8,7 @@
 
 | 文档 | 阅读对象 | 内容 |
 |---|---|---|
-| [README.md](README.md) | 玩家 / 房主 | 平台是什么、前置与双击入口、一局怎么走、命令行、限制与注意事项 |
+| [README.md](README.md) | 玩家 / 房主 | 平台概述、运行环境与入口、对局流程、网络连接、数据存储、命令行用法、使用限制 |
 | [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 设计方向（目标 / 约束 / 验收标准 / 测试手顺）；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | SDK 获取与从零接入、GameModule/GameInstance/Effect[]、客户端入口、单文件包、回合制与实时模式边界、game-kit（事件流/聊天/记分板）、沙箱限制、版本自检与升级 |
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
@@ -247,6 +247,7 @@ stateDiagram-v2
 │  ├─ testkit/                       @bp/testkit：接口测试脚手架、模拟上下文、测试夹具
 │  ├─ checks/                        架构检查、随机操作测试、存档/重连问题复现
 │  └─ packaging/                     便携包、.bpmap CLI、启动器生成
+├─ docs/images/                      README 实机截图（裁剪后，不含测试夹具名）
 ├─ games/                            运行时 .bpmap（不入库）
 ├─ dogfood-output/                   猴测报告
 ├─ README.md                         玩家使用说明
@@ -373,6 +374,7 @@ flowchart TD
 | [tools/checks/monkey-ui.page.js](tools/checks/monkey-ui.page.js) | 页内 UI 猴测 |
 | [tools/checks/repro-persist.mjs](tools/checks/repro-persist.mjs) / [tools/checks/repro-resume.mjs](tools/checks/repro-resume.mjs) | 落盘窗口与票据重连复现 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 猴测报告：15 条问题、修法与复跑次数 |
+| [docs/images/readme-host-room.png](docs/images/readme-host-room.png) / [readme-join-room.png](docs/images/readme-join-room.png) | README 建房 / 进房实机截图；裁剪掉游戏选择器，避免测试夹具名进入玩家文档 |
 
 **测试**
 
