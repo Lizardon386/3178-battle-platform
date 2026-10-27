@@ -116,6 +116,7 @@
 - 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
 ## 6. 变更记录
+- 2026-10-27 Qoder：**README 截图改为独立图片段**：MD Human Review 能渲染表格但收集不到表格内的相对图片路径，导致实机截图显示破图；把房主/玩家两张图移出表格，改成标准 Markdown 图片 + 图注。文件仍在 `docs/images/`。
 - 2026-10-27 Qoder：**README 接入提示纠正**：不再写“实现两个接口即可”，改成按接入指南安装 SDK、实现 `GameModule` / `GameInstance`、按需写客户端入口和 game-kit、再用 `bpmap` 打包；明确当前回合制可用、实时模式规划中。
 - 2026-10-27 Qoder：**文档目录标注当前文档**：README / DESIGN / INTEGRATION_GUIDE / CONTEXT 的文档目录里，本文件那一行都标“（本文）”，和 README 的写法一致；四份文档的章节编号保持 `1. 文档目录` + 后续顺延。
 - 2026-10-27 Qoder：**README 可读性**：章节名改为平台概述 / 快速开始 / 对局流程 / 网络连接 / 数据存储 / 命令行用法 / 使用限制；昵称步骤移到进房前，3.2 加建房—进房时序图，3.3 加网络连接流程图，并加入两张平台实机截图（裁剪掉只有测试夹具的游戏选择器）。截图在 `docs/images/`，DESIGN 目录树和文件清单同步。
