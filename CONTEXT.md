@@ -4,7 +4,7 @@
 > 最近更新：2026-10-27
 <!-- 日期要保持 README、DESIGN、CONTEXT 顶部同一天；原 check-docs.sh 随交接工具卸载。 -->
 
-## 文档
+## 1. 文档目录
 
 | 文档 | 阅读对象 | 内容 |
 |---|---|---|
@@ -14,7 +14,7 @@
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条问题（4 高 / 9 中 / 2 低）、修法、实测证据、复跑次数、猴测台自身 9 个缺陷与未覆盖范围 |
 
-## 1. 背景与目标
+## 2. 背景与目标
 
 用户 2026-10-10 指令：**本会话只做类 war3 的联机对战平台**，把这部分能力从 [uno-online](../uno-online/CONTEXT.md) 里剥离出来重做，"不要怕麻烦，用合适的语言重构"；代码就落在本目录（原 `game-host-platform` 改名而来），不在别处新建仓库。
 
@@ -25,7 +25,7 @@
 
 目标产物：一个可被两个形状不同的游戏驱动、带房主权限与终局语义、能落盘恢复、能真 socket 联机的**平台内核**，以及尚未开始的客户端壳。
 
-## 2. 当前状态
+## 3. 当前状态
 
 **2026-10-27 当前：`npm test` 173/173 全绿，`tools/checks/check-seam.sh` 零命中，`tsc -b` 通过。** 包边界已拆成 `@bp/core-abi`（游戏 ABI 和游戏可见类型）、`@bp/protocol`（wire / guard / 握手 / 房间视图）、`@bp/pack-format`（.bpmap 格式库）、`@bp/game-sdk`（公共门面 + game-kit）、`@bp/sdk-tools`（bpmap CLI + doctor + 模板，独立发版）：`game-sdk` 依赖 core-abi + pack-format，`protocol` 依赖 core-abi，`server` / `client` 依赖 core-abi + protocol，server 还依赖 pack-format；server/client 不再依赖 game-sdk，hostd 依赖 game-sdk 并在启动时把包内裸导入的 URL 表传给 loader；CLI/模板不再在 game-sdk 里。game-kit G1–G4 已完成，`fixture-kit` 现在覆盖 FeedLog / FeedPanel、包内资源、拒绝动作，并由 `bpmap` CLI 打包（包头带 `turn` / `1`）；真实沙箱验证过事件流、资源、拒绝提示、聊天、记分板和电脑位。宿主 loader 的裸导入表补上了 `@bp/game-sdk/kit/server`，构建模板补了同名 external，并修正 `--host` 指向 `@bp/sdk-tools` 的 CLI。`apiVersion` / `mode` 闸门已落地：包头字段、宿主加载闸、`/api/version`、`bpmap doctor` 对齐，当前支持 `turn` / `1`。P8 真游戏接入仍未做。代码全部在本目录，`uno-online` 未动。
 
@@ -61,7 +61,7 @@
 | 客户端连接地址写死 `location.host`，且倒计时拿本地钟比服务端绝对时间戳 | [public/client.js:156-157](../uno-online/public/client.js) |
 | `ready` 字段存在但 `start()` 完全忽略它 | [server/room.js:236-239](../uno-online/server/room.js) |
 
-## 3. 计划 / 待办
+## 4. 计划 / 待办
 
 - [x] 拆出 `@bp/core-abi`，`protocol` 只留 wire/guard/握手/房间视图（`8b8e832`）
 - [x] game-kit G1–G3、`/api/version`、`bpmap doctor`、SDK 脚本模板
@@ -90,7 +90,7 @@
 - [ ] 待做实验（做单文件 exe 之前必须跑）：Node SEA 打一个 hello-world，看这台机器的 SAC 拦不拦。**别在未跑实验前投入打包链路**
 - [ ] 未做且刻意不做：目录服务器 / 账号 / 好友 / 段位 / 匹配 / 反作弊仲裁 / 自动写防火墙规则
 
-## 4. 关键约束与注意事项
+## 5. 关键约束与注意事项
 
 - **包边界**：`@bp/core-abi` 只放游戏 ABI 和游戏可见类型；`@bp/protocol` 只放 wire / guard / 握手 / 房间视图；`@bp/game-sdk` 是游戏公共门面。游戏运行时只依赖 game-sdk，构建/打包用独立的 sdk-tools；server/client 不 import game-sdk，hostd 只负责提供游戏包运行时依赖；不要把 wire 类型塞回 core-abi，也不要把 `GameModule` 塞回 protocol。
 - **接缝闸门必须保持绿**：`bash tools/checks/check-seam.sh` 扫 `packages/*/src` 里的玩法词与 `games/` import。重构中最容易发生的退化就是"顺手把旧 `room.js` 搬过来"，这条是唯一的机械防线。**不要在闸门里加例外**（例外一旦存在就形同不存在）；平台代码的注释也不要提旧游戏名字，历史来源写在本档案里。
@@ -115,8 +115,9 @@
 - **版本管理**：本目录是 GitHub 仓库（`origin`，公开），`.bat` 由 `.gitattributes` 锁 CRLF；提交前跑 `npm test` 与 `npm run seam`。便携包产物 `dist-portable/` 不入库。
 - 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
-## 5. 变更记录
-- 2026-10-27 Qoder：**文档分层**：README 的文档目录保持在顶部，只列 README / DESIGN / INTEGRATION_GUIDE / CONTEXT；正文删除测试夹具、猴测报告和 `npm test` 描述，保留玩家能感知的占位面板说明。DESIGN 第 1 章改名“设计方向”，拆成 `1.1 目标` / `1.2 约束` / `1.3 验收`，验收下分“验收标准”和“测试手顺”，历史证据继续链到本档；README/DESIGN/CONTEXT/INTEGRATION_GUIDE 顶部日期统一到 2026-10-27。
+## 6. 变更记录
+- 2026-10-27 Qoder：**文档目录统一编号**：README / DESIGN / INTEGRATION_GUIDE / CONTEXT 顶部的 `文档` 改成 `1. 文档目录`，后续章节整体顺延一位；INTEGRATION_GUIDE 的正文引用和 `GameModule` / `GameInstance` 锚点同步，README/DESIGN/CONTEXT 的交叉引用复查过。
+- 2026-10-27 Qoder：**文档分层**：README 的文档目录保持在顶部，只列 README / DESIGN / INTEGRATION_GUIDE / CONTEXT；正文删除测试夹具、猴测报告和 `npm test` 描述，保留玩家能感知的占位面板说明。DESIGN 正文第一章（文档目录之后）改名“设计方向”，拆成目标 / 约束 / 验收三节，验收下分“验收标准”和“测试手顺”，历史证据继续链到本档；README/DESIGN/CONTEXT/INTEGRATION_GUIDE 顶部日期统一到 2026-10-27。
 - 2026-10-27 Qoder：**按开发者接入路径扩 fixture-kit**：服务端接 `FeedLog`，客户端挂 `FeedPanel` 并加载 `assets/notice.json`；新增 `fixture-reject` 动作和按钮，非法动作在平台状态栏显示拒绝。`pack-test-games.mjs` 改走 `bpmap` CLI，包头写 `mode: turn` / `apiVersion: 1`。抓到一个真实集成缺口：宿主 loader 的裸导入表缺 `@bp/game-sdk/kit/server`，导致用 FeedLog 的游戏整包被跳过；已补进 hostd 和构建模板的 external，并把 `--host` 的 doctor 路径从 `@bp/game-sdk` 改到 `@bp/sdk-tools`。新增 `fixture-kit-monkey.test.mjs`（固定 seed、300 步随机动作）和资源下发断言；协议层 `monkey.mjs` 的房间创建加入 `fixture-kit` 并补 `bump` 动作，修掉它仍从 `@bp/protocol` 取 `NOTICE_CODES` 的旧导入（`300` 步短程 0 违规）。浏览器复验事件流、资源、拒绝。测试 171 → 173。
 - 2026-10-27 Qoder：**`@bp/game-sdk` 根入口补齐版本常量**：re-export `API_VERSION`、`SUPPORTED_API_VERSIONS`、`GAME_MODES`、`SUPPORTED_MODES`、`DEFAULT_MODE` 和 `GameMode`；构建模板 `build.mjs` 改为从 `@bp/game-sdk` 与 `@bp/game-sdk/node` 取常量和打包函数，游戏工程不再直接 import core-abi / pack-format；接入指南的导出表和源码树同步。测试 170 → 171。
 - 2026-10-23 Qoder：**拆出 `@bp/sdk-tools`**（`ab77ac4`）：`bpmap` CLI、doctor、setup/build 模板从 `@bp/game-sdk` 移到 `packages/sdk-tools`，独立依赖 core-abi + pack-format，不依赖 game-sdk；game-sdk 去掉 bin/templates，保留 `/node` 兼容 re-export；`tools/packaging/bpmap.mjs` shim 改指 sdk-tools CLI；安装脚本改为 core-abi + pack-format + game-sdk + sdk-tools 四个 tarball，外部 smoke 跑通。测试 170。
@@ -188,7 +189,7 @@
 - 2026-10-20 Qoder：**用户要求把接入文档改名为 `INTEGRATION_GUIDE.md`，并去掉文档里的 AI 腔**：新文档改成直述句，去掉“硬规矩 / 唯一出口”这类口号；README 与 DESIGN 的“契约”改为“接口”，入口说明里多余的破折号改成正常句号。
 - 2026-10-21 Qoder：**「单机游戏单文件对接」交接过来的三项平台改动全部完成**。① README 补「同网 / 跨网」，防火墙提示改成“专用 + 公用都勾选”。② 房主页在邀请链接下面显示 `/api/self` 的 `lanOrigins`：两行文字——局域网地址列表（多网卡全列、去重）和“手动加入：房主地址填 …，房号 …”（纯函数 `accessHints`，两条单测；join 模式无局域网入口时该段不显示，实测隐藏）。③ 便携包的数据目录移出程序目录：新增 [data-dir.ts](packages/hostd/src/data-dir.ts)，根目录带 `.portable-build.json` 时写 `%LOCALAPPDATA%\3178-battle-platform\data`，开发目录仍写仓库 `data/`，`BP_DATA_DIR` 可覆盖；diagnose 打印落点与原因，新增 [data-dir.test.mjs](packages/hostd/test/data-dir.test.mjs) 五条用例；打包器自检改走临时目录，并校验 diagnose 真的报用户目录。**验证**：`npm test` 114 → **131/131**，`npm run seam` OK；便携包重建后自检全绿（94.3 MB），`data/` 为空，用户目录下尚未创建数据目录。README 新增「你的数据在哪里」表格。：新文档改成直述句，去掉“硬规矩 / 唯一出口”这类口号；README 与 DESIGN 的“契约”改为“接口”，入口说明里多余的破折号改成正常句号。
 
-## 6. 阶段状态与逐文件验收凭据
+## 7. 阶段状态与逐文件验收凭据
 
 > 2026-10-14：设计结论（设计取舍 / 架构与产物清单 / 已定语义 / 工程侧硬约束）已搬到同目录 [DESIGN.md](DESIGN.md)——本档只留时间序列的进度与凭据。逐条实测数字在下面，改动时请同步 DESIGN。
 
@@ -206,7 +207,8 @@
 | P8.5 | 游戏模块下发通道：`/api/games` + `/games/<id>/*`(CORS) + 客户端哈希校验 + blob 导入；缺入口时占位渲染 | 通道已通，**游戏自带界面还没有** | 同上：产物可跨源取、穿越被挡 |
 | Q1 | 两层猴测台（协议层 + 页内 UI 层）与猴测报告 | 已完成，持续在跑 | 协议层 12 seed × 8 人 × 300 步 × 3 次硬重启 **0 违规**；UI 层多轮 0 违规；报告 [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) 15 条 finding + 台子自己的 9 个缺陷全记 |
 | R1 | 绿色便携包（官方签名 `node.exe` + 运行时子集 + 便携启动器） | 已完成（本机剥离 PATH 验证；真干净机未测） | `npm run portable`：签名校验（OpenJS Foundation / Valid）+ 产物约 **94.2MB**；自检只用包内 `node.exe` 跑通 `diagnose`、host `/health`、`stop` 收尾 |
-## 7. 给下一个 agent 的追加区
+
+## 8. 给下一个 agent 的追加区
 
 （后续会话请在此追加一行 `- YYYY-MM-DD <来源>：<结论/改动/遗留问题>`，或直接更新上面各节）
 

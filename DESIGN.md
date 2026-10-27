@@ -4,7 +4,7 @@
 > 最近更新：2026-10-27
 <!-- 日期必须留在这个 blockquote 里：check-docs.sh 的 [新]/[旧]/[期] 只读这里。改日期时 README、DESIGN、CONTEXT 顶部要同一天。 -->
 
-## 文档
+## 1. 文档目录
 
 | 文档 | 阅读对象 | 内容 |
 |---|---|---|
@@ -16,9 +16,9 @@
 
 本仓库推到 GitHub，文档内部用仓库相对链接。数字都是实测的，改动时请同步。
 
-## 1. 设计方向
+## 2. 设计方向
 
-### 1.1 目标
+### 2.1 目标
 
 做一个**游戏无关的宿主制联机对战平台**：每个人在自己电脑上跑一个可双击的客户端，谁建房谁的进程就是服务器，别人从局域网列表或邀请链接进房，类似 war3 对战平台。玩法通过 `GameModule` 接口接入，平台自己只管房间、座位、房主权限、准备、聊天、观战、电脑位、掉线宽限、版本检查、存档和传输。
 
@@ -29,7 +29,7 @@
 
 不做什么：目录服务器、账号 / 好友 / 段位 / 匹配、反作弊仲裁、自动写防火墙规则、内置游戏引擎或地图编辑器。
 
-### 1.2 约束
+### 2.2 约束
 
 - **离线双击可用**：不能要求朋友装构建工具、买服务器或备案。
 - **平台与玩法必须真的能分离**：否则它就不是平台，只是又一个游戏。
@@ -37,9 +37,9 @@
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
 - **游戏代码安装即信任**：服务端代码在房主进程里执行，第一版不做 worker 隔离；客户端代码放进 `sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`。
 
-### 1.3 验收
+### 2.3 验收
 
-#### 1.3.1 验收标准
+#### 2.3.1 验收标准
 
 | 验收项 | 通过标准 | 证据 |
 |---|---|---|
@@ -52,7 +52,7 @@
 | 版本闸 | 当前只加载 `turn` / `1`；`/api/version` 与 `bpmap doctor` 用同一组常量 | `pack-loader` / `bpmap-cli` 测试 |
 | 当前回归门禁 | `npm test` 173 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
 
-#### 1.3.2 测试手顺
+#### 2.3.2 测试手顺
 
 1. 安装与构建：
 
@@ -101,9 +101,9 @@ node tools/checks/monkey.mjs --seed 20261027 --users 3 --steps 300 --restarts 1 
 逐阶段的实测凭据和历史复跑记录在 [CONTEXT.md](CONTEXT.md)；本节只保留当前门禁，避免 DESIGN 变成测试日志。
 
 
-## 2. 运行模式
+## 3. 运行模式
 
-### 2.1 两种角色
+### 3.1 两种角色
 
 | 角色 | 监听 | 本机页面 | 局域网发现 | 落盘 | 隧道 |
 |---|---|---|---|---|---|
@@ -112,7 +112,7 @@ node tools/checks/monkey.mjs --seed 20261027 --users 3 --steps 300 --restarts 1 
 
 两种角色都带完整 `Engine`，所以本机都能开房；`join` 只绑回环，别人连不进来。`host` 的两个监听共享**同一个** `Engine` / `HostStore`：本机页面和局域网玩家看到的是同一张桌子。
 
-### 2.2 拓扑
+### 3.2 拓扑
 
 ```mermaid
 flowchart LR
@@ -134,21 +134,21 @@ flowchart LR
   G2 -- "ws://房主:3000" --> PUBLIC
 ```
 
-### 2.3 权威、状态与落盘
+### 3.3 权威、状态与落盘
 
 - **权威在房主进程**：建房、开局、踢人、关房、移交都由它裁决；没有中央服务器。
 - **内存状态归 `Room`**：座位表、房主标记、聊天环形缓冲、`revision`；游戏状态是 opaque blob，平台不解释。
 - **落盘只在权威进程**：开发目录写仓库里的 `data/`；便携包（根目录有 `.portable-build.json`）改写到 `%LOCALAPPDATA%\3178-battle-platform\data`，因为整个程序目录会被新版本直接替换。`BP_DATA_DIR` 可覆盖，`diagnose` 会打印实际路径。写盘是原子写；盘上只存票据摘要（`secretHash`），不存明文票据。玩家进别人的房不写对方的盘；`join` 壳自己开的房仍由本机落盘——此时它本身就是房主。
 - **票据先落盘再离进程**：`onTicketIssued` 在唯一的发票据点触发 `syncStore`，避免“加入后立刻硬杀，重启后房在座位不在”。
 
-### 2.4 房间发现与跨网
+### 3.4 房间发现与跨网
 
 - **B+A 两档**：同网段 UDP 组播实时列表（房主广播、`join` 壳代浏览器收）；跨网用邀请链接 / 地址簿，不做目录服务器。
 - **隧道**：`--tunnel` 调 cloudflared，指向 `--lan-port`；`/api/self` 把隧道地址或局域网地址作为 `publicOrigin` 交给页面生成邀请链接。隧道域名每次启动都变。
 
-## 3. 核心流程
+## 4. 核心流程
 
-### 3.1 建房 → 入座 → 准备 → 开局
+### 4.1 建房 → 入座 → 准备 → 开局
 
 ```mermaid
 sequenceDiagram
@@ -173,7 +173,7 @@ sequenceDiagram
   S-->>G: snapshot(phase=playing)
 ```
 
-### 3.2 对局动作与广播
+### 4.2 对局动作与广播
 
 ```mermaid
 sequenceDiagram
@@ -192,7 +192,7 @@ sequenceDiagram
 - 每次可见状态变更都推进 `revision`；客户端按它去重，不推进就会被当重复帧丢掉。
 - 出站目标在消息创建时就解析成具体 `connId`，避免关房/退出时最后一条通知凭空消失。
 
-### 3.3 断线重连与落盘恢复
+### 4.3 断线重连与落盘恢复
 
 ```mermaid
 sequenceDiagram
@@ -214,7 +214,7 @@ sequenceDiagram
   S->>S: 不兼容的快照直接丢弃
 ```
 
-### 3.4 房间相位
+### 4.4 房间相位
 
 ```mermaid
 stateDiagram-v2
@@ -228,9 +228,9 @@ stateDiagram-v2
   ended --> [*]
 ```
 
-## 4. 架构与接缝
+## 5. 架构与接缝
 
-### 4.1 包结构
+### 5.1 包结构
 
 ```text
 3178-battle-platform/
@@ -285,7 +285,7 @@ flowchart TD
   G -. "loader 按 id 加载；只通过 Effect[] 出站" .-> S
 ```
 
-### 4.2 三处接缝
+### 5.2 三处接缝
 
 - **线协议**（`packages/protocol`）：消息目录、房间视图和形状闸是客户端/服务端唯一的字据。
 - **`GameModule` / `GameInstance` 接口**（`packages/core-abi/src/module-api.ts`；`packages/server/src/module-api.ts` 转出并组装 manifest）：运行时按 id 动态加载目录游戏或单文件包，平台源码不 import 游戏。
@@ -294,7 +294,7 @@ flowchart TD
 
 > 接一个新游戏（GameModule / GameInstance / 客户端入口 / 目录与构建）见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)。
 
-### 4.3 文件清单
+### 5.3 文件清单
 
 > 只列关键文件；UI 观感相关的样式/字体/预览页不在这里展开。
 
@@ -397,7 +397,7 @@ flowchart TD
 | [packages/hostd/test/dual-listener.test.mjs](packages/hostd/test/dual-listener.test.mjs) | 私网建房、公网进房，两个监听共享同一引擎 |
 | [packages/hostd/test/data-dir.test.mjs](packages/hostd/test/data-dir.test.mjs) | 数据目录落点与覆盖顺序 |
 
-## 5. 线协议
+## 6. 线协议
 
 | 方向 | 消息 | 要座位 | 要房主 |
 |---|---|---|---|
@@ -408,7 +408,7 @@ flowchart TD
 
 完整字段与中文错误码文案在 [wire.ts](packages/protocol/src/wire.ts) 与 [codes.ts](packages/protocol/src/codes.ts)。
 
-## 6. 开发与构建
+## 7. 开发与构建
 
 ```bash
 npm run build          # tsc -b 项目引用，无打包器
@@ -422,7 +422,7 @@ node tools/checks/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # �
 - `.bat` 由 [tools/packaging/gen-bat.mjs](tools/packaging/gen-bat.mjs) 生成，别手写。
 - 便携包由 [tools/packaging/build-portable.mjs](tools/packaging/build-portable.mjs) 汇编并自检，产物 `dist-portable/` 不进 git。
 
-## 7. 关键设计决策
+## 8. 关键设计决策
 
 | 决策 | 理由 | 代价 |
 |---|---|---|
@@ -440,7 +440,7 @@ node tools/checks/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # �
 | 落盘只发生在房间权威所在进程 | “谁是权威”只有一份 | 房主关机这局就没了 |
 | 两个形状不同的测试 demo 游戏 | “平台无关玩法”必须有第二个形状做证据 | 多写约 300 行测试用游戏代码 |
 
-## 8. 已定语义与边界
+## 9. 已定语义与边界
 
 | 事项 | 结论 |
 |---|---|
@@ -464,7 +464,7 @@ node tools/checks/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # �
 - 与 [uno-online](../uno-online/CONTEXT.md) 是同一份玩法的两种演进：玩法改动归那边，连接/身份/分发改动归这里；不要两边同时动同一份逻辑。
 - 浏览器底线（Chrome/Edge 111+）与使用者视角的限制由 [README.md](README.md) 的「限制与注意事项」持有，本档不重述。
 
-## 9. 工程约束
+## 10. 工程约束
 
 - **`.bat` 编码**：UTF-8 无 BOM + CRLF + 第 2 行 `chcp 65001`，中文只出现在 chcp 之后；否则 cmd 按 cp936 解析会把中文拼成命令分隔符。`.bat` 只能做启动器（`start …` 后 `exit /b 0`），Ctrl+C 才会落在 node 上，收尾后窗口自己关而不出 Y/N。
 - **Ctrl+C 验证边界**：收尾处理器本身有测试；但“Windows 把控制台 Ctrl+C 投递成 SIGINT”这一步无法从外部模拟，靠 libuv 自身。
