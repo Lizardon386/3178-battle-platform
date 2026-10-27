@@ -1,5 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import {
+  API_VERSION,
+  DEFAULT_MODE,
+  GAME_MODES,
+  SUPPORTED_API_VERSIONS,
+  SUPPORTED_MODES,
+} from '@bp/game-sdk';
 import { FEED_EVENT, FeedLog } from '@bp/game-sdk/kit/server';
 import {
   FeedPanel,
@@ -122,4 +129,12 @@ test('座位颜色：同输入稳定，队伍优先于座位号', () => {
   assert.deepEqual(seatColor({ seatId: 's1', slot: 1, team: 'red' }), seatColor({ seatId: 's2', slot: 2, team: 'red' }));
   assert.match(a.value, /^#[0-9a-f]{6}$/i);
   assert.match(formatFeedTime(0), /^\d{2}:\d{2}:\d{2}$/);
+});
+
+test('包入口：版本常量从根路径可取', () => {
+  assert.equal(API_VERSION, 1);
+  assert.deepEqual(SUPPORTED_API_VERSIONS, [1]);
+  assert.deepEqual(GAME_MODES, ['turn', 'realtime']);
+  assert.equal(DEFAULT_MODE, 'turn');
+  assert.deepEqual(SUPPORTED_MODES, { turn: [1], realtime: [] });
 });

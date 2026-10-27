@@ -5,6 +5,7 @@ export type {
   GameContext,
   GameInstance,
   GameManifest,
+  GameMode,
   GameModule,
   GameSeatInfo,
   GameUiOptions,
@@ -17,4 +18,13 @@ export type {
   SeatView,
   ViewerId,
 } from '@bp/core-abi';
-export { isReject, reject, stableDigest } from '@bp/core-abi';
+export {
+  API_VERSION,
+  DEFAULT_MODE,
+  GAME_MODES,
+  SUPPORTED_API_VERSIONS,
+  SUPPORTED_MODES,
+  isReject,
+  reject,
+  stableDigest,
+} from '@bp/core-abi';

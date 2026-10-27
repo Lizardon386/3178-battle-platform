@@ -221,7 +221,7 @@ export default {
 
 ### 2.5 构建
 
-构建到 `dist-pack/`。服务端入口可以把 `@bp/game-sdk` / `@bp/game-sdk/node` / `@bp/core-abi` 交给宿主解析；这是通过 `--external` 实现的，宿主版本要和构建时一致。其他第三方依赖不要 external，应该打进 `server.js`：
+构建到 `dist-pack/`。服务端入口可以把 `@bp/game-sdk` / `@bp/game-sdk/node` / `@bp/core-abi` 交给宿主解析；这是通过 `--external` 实现的，宿主版本要和构建时一致。游戏源码只 import 前两个时，前两条 `--external` 就够；`@bp/core-abi` 保留给直接 import ABI 的旧代码。其他第三方依赖不要 external，应该打进 `server.js`：
 
 ```bash
 npx esbuild src/server.ts --bundle --platform=node --format=esm \
@@ -411,8 +411,8 @@ node scripts/build.mjs --out build/mygame.bpmap
 
 ```text
 packages/game-sdk/src/
+├─ index.ts              # 根入口：re-export @bp/core-abi 的 ABI 与版本常量
 ├─ contract/
-│  ├─ module-api.ts      # re-export @bp/core-abi
 │  └─ client.ts          # 客户端 mount / onEvent / actions 类型
 ├─ node/
 │  └─ pack.ts            # re-export @bp/pack-format，保留 /node 路径
@@ -432,14 +432,14 @@ packages/sdk-tools/
 
 | 导入 | 内容 |
 |---|---|
-| `@bp/game-sdk` | `GameModule` / `GameInstance` / `GameContext` / `GameSeatInfo` / `GameAction` / `Effect` / `Outcome` / `Reject` / `reject()` / `isReject()` / `ViewerId` / `stableDigest` / `GameManifest` / `GameAsset` / `GameUiOptions` / `SeatRole` / `RoomPhase` / `SeatView` / `PlatformCode` / `NoticeCode` |
+| `@bp/game-sdk` | `GameModule` / `GameInstance` / `GameContext` / `GameSeatInfo` / `GameAction` / `Effect` / `Outcome` / `Reject` / `reject()` / `isReject()` / `ViewerId` / `stableDigest` / `GameManifest` / `GameAsset` / `GameUiOptions` / `SeatRole` / `RoomPhase` / `SeatView` / `PlatformCode` / `NoticeCode` / `GameMode` / `API_VERSION` / `SUPPORTED_API_VERSIONS` / `GAME_MODES` / `SUPPORTED_MODES` / `DEFAULT_MODE` |
 | `@bp/game-sdk/client` | `GameClientContract` / `GameActions`（只有类型，没有运行时） |
 | `@bp/game-sdk/node` | re-export `@bp/pack-format`，保留 `packDirectory` / `readPack` / `readPackSource` / `extractPack` / `listPackFiles` / 包格式常量和类型 |
 | `@bp/game-sdk/kit` | `ChatPanel` / `FeedPanel` / `ScoreboardPanel` / `seatColor`，以及 `normalizeFeedEntry`、`mergeFeedEntries`、`formatFeedTime`、`normalizeChatLine`、`mergeChatLines`、`chatText`、`resolveColumnValue`、`formatColumnValue`、`sortScoreboardRows`、`buildScoreboardRows`、`connectionLabel` 等纯函数 |
 | `@bp/game-sdk/kit/server` | `FeedLog` / `FeedLogOptions` / `FeedEmitInput` / `FeedSeat` / `FeedEntry` / `FeedVisibility` / `FeedError` / `FEED_EVENT` |
 | `bpmap` bin（`@bp/sdk-tools`） | `pack` / `inspect` / `unpack` / `doctor` |
 
-`reject()` 是构造 `Reject` 的助手；`stableDigest` 是确定性摘要，只用于“两端配置是否一致”，不是签名或安全哈希。`@bp/core-abi` 是 SDK 底层的游戏 ABI 包，`@bp/pack-format` 是 `.bpmap` 读写库；两者都由 `@bp/game-sdk` 作为依赖安装并重新导出，游戏工程不需要直接 import。`@bp/sdk-tools` 是独立工具包，提供 `bpmap` CLI 和工程模板，运行时代码不 import 它。
+`reject()` 是构造 `Reject` 的助手；`stableDigest` 是确定性摘要，只用于“两端配置是否一致”，不是签名或安全哈希。`@bp/core-abi` 是 SDK 底层的游戏 ABI 包，`@bp/pack-format` 是 `.bpmap` 读写库；两者都由 `@bp/game-sdk` 作为依赖安装并重新导出，游戏工程的运行时代码和构建脚本只需要 import `@bp/game-sdk` 与 `@bp/game-sdk/node`，不需要直接 import 这两个包。`@bp/sdk-tools` 是独立工具包，提供 `bpmap` CLI 和工程模板，运行时代码不 import 它。
 
 `index.ts` 保留在源码根目录作为包入口；内部目录调整不改变上面的公共路径。
 

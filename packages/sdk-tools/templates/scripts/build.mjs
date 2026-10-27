@@ -10,8 +10,8 @@ import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writ
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { build } from 'esbuild';
-import { API_VERSION, DEFAULT_MODE } from '@bp/core-abi';
-import { packDirectory, readPack, readPackSource } from '@bp/pack-format';
+import { API_VERSION, DEFAULT_MODE } from '@bp/game-sdk';
+import { packDirectory, readPack, readPackSource } from '@bp/game-sdk/node';
 
 const args = process.argv.slice(2);
 const argValue = (name, fallback) => {
