@@ -1,7 +1,22 @@
 {
   "name": "@bp/game-sdk",
   "version": "0.1.0",
-  "private": true,
+  "description": "3178 游戏接入 SDK：游戏 ABI、客户端契约、单文件包和 game-kit",
+  "license": "MIT",
+  "author": "3178-battle-platform contributors",
+  "homepage": "https://github.com/Lizardon386/3178-battle-platform#readme",
+  "bugs": {
+    "url": "https://github.com/Lizardon386/3178-battle-platform/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lizardon386/3178-battle-platform.git",
+    "directory": "packages/game-sdk"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "keywords": ["3178", "game-platform", "game-sdk", "game-kit"],
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -29,10 +44,11 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@bp/core-abi": "*",
-    "@bp/pack-format": "*"
+    "@bp/core-abi": "^0.1.0",
+    "@bp/pack-format": "^0.1.0"
   },
-  "files": [
-    "dist"
-  ]
+  "files": ["dist", "src"],
+  "publishConfig": {
+    "access": "public"
+  }
 }

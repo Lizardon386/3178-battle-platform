@@ -69,13 +69,15 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 
 ### 3.1 获取 SDK
 
-SDK 还没有发布到 npm，当前是 `private` 包。外部工程从平台仓库打成 tarball 安装；`@bp/game-sdk` 依赖 `@bp/core-abi` 和 `@bp/pack-format`，构建/打包还要 `@bp/sdk-tools`，四个要一起装。
+SDK 0.1.0 没有发布到 npm，但 `@bp/game-sdk` 已经去掉 `private`。当前从 GitHub Release 下载四个 tarball（或从平台仓库 `npm pack`）安装；`@bp/game-sdk` 依赖 `@bp/core-abi` 和 `@bp/pack-format`，构建/打包还要 `@bp/sdk-tools`，四个要一起装。
 
 有两套做法：3.1.1 手动执行命令，3.1.2 用现成脚本。两者结果一样，选一种即可。
 
 #### 3.1.1 手动安装（命令）
 
 下面用 Git Bash 示例；把 `<3178 仓库>`、`<SDK 产物目录>`、`<你的游戏工程>` 换成实际路径。tarball 文件名带版本号，按 `npm pack` 的实际输出替换。
+
+已经有 Release 下载的四个 `.tgz` 时，直接从第二段 `cd <你的游戏工程>` 开始，不需要在平台仓库重新 `npm pack`。
 
 ```bash
 cd <3178 仓库>
@@ -114,30 +116,35 @@ npm install --save-dev \
 
 脚本在 SDK 仓库的 [setup-sdk.mjs](packages/sdk-tools/templates/scripts/setup-sdk.mjs)，复制到游戏工程的 `scripts/`。安装后同一份也在 `node_modules/@bp/sdk-tools/templates/scripts/`。
 
-前置条件：Node 24+、npm、能访问平台仓库。游戏工程可以还没有 `package.json`，脚本会创建一个最小版本。
+前置条件：Node.js >= 20.19、npm。游戏工程可以还没有 `package.json`，脚本会创建一个最小版本。
 
 用法：
 
 ```bash
+# 开发时：从本地平台仓库打包并安装
 node scripts/setup-sdk.mjs --platform ../3178-battle-platform
+
+# 外部接入：直接安装 Release 下载目录里的四个 tarball
+node scripts/setup-sdk.mjs --tarballs ./sdk-release
 ```
 
 参数：
 
 | 参数 | 必填 | 默认值 | 说明 |
 |---|---|---|---|
-| `--platform <路径>` | 否 | `../3178-battle-platform` | 平台仓库路径；脚本会确认 `packages/game-sdk/package.json` 存在，缺构建产物时先跑 `npm run build` |
-| `--sdk-dir <目录>` | 否 | `sdk` | tarball 存放目录；每次重跑会先删掉这个目录里的旧 `.tgz` |
+| `--tarballs <目录>` | 二选一 | 无 | 直接安装目录里的 `bp-*.tgz`；四个包都要在 |
+| `--platform <路径>` | 二选一 | `../3178-battle-platform` | 平台仓库路径；脚本会打四个 tarball 再安装 |
+| `--sdk-dir <目录>` | 否 | `sdk` | `--platform` 模式下的 tarball 存放目录；每次重跑会先删掉旧 `.tgz` |
 
 脚本做的事：
 
 1. 没有 `package.json` 就创建一个最小的；有但缺 `"type": "module"` 就补上。
-2. 检查平台是否已构建；`packages/game-sdk/dist/index.js`、`packages/core-abi/dist/index.js`、`packages/pack-format/dist/index.js` 或 `packages/sdk-tools/dist/cli/index.js` 不存在时在平台仓库跑 `npm run build`。
-3. 把 `@bp/core-abi`、`@bp/pack-format`、`@bp/game-sdk` 和 `@bp/sdk-tools` 打进 `sdk/`，清掉旧的 tarball。
-4. 在游戏工程执行 `npm install --save-dev sdk/*.tgz esbuild`。
+2. `--platform` 模式：检查平台是否已构建；缺少 `dist/index.js` / `dist/cli/index.js` 时先跑 `npm run build`，然后把四个包打进 `sdk/`。
+3. `--tarballs` 模式：检查目录里四个包齐全，不再访问平台仓库。
+4. 在游戏工程执行 `npm install --save-dev <四个 tarball> esbuild`。
 5. 打印安装的 tarball 文件名和下一步命令。
 
-跑完后会得到：
+`--platform` 模式跑完后会得到：
 
 | 位置 | 内容 |
 |---|---|
@@ -151,7 +158,7 @@ node scripts/setup-sdk.mjs --platform ../3178-battle-platform
 
 注意：
 
-- 平台更新 SDK 后重跑一次，脚本会重新打包并覆盖安装。
+- `--platform` 模式更新 SDK 后重跑一次，脚本会重新打包并覆盖安装；`--tarballs` 模式重新下载 Release 资产再跑。
 - 脚本用 npm 安装依赖；工程如果改用 pnpm/yarn，需要自己把四个 tarball 装上。
 - 脚本只负责装 SDK，不写 `bp` 配置；`bp.id` / `bp.entry` 在 3.8 里配。
 - `--sdk-dir` 是相对游戏工程根目录的路径；不要指到会被打包的目录里。

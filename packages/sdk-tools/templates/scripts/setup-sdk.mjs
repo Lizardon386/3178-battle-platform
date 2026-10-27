@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * 用法：node scripts/setup-sdk.mjs [--platform <3178 仓库>] [--sdk-dir sdk]
- * 把 core-abi、pack-format、game-sdk 和 sdk-tools 打成 tarball，安装到当前游戏工程，并补上 package.json 的 type=module。
+ * 用法：node scripts/setup-sdk.mjs [--platform <3178 仓库>] [--tarballs <Release 目录>] [--sdk-dir sdk]
+ * 两种来源二选一：
+ *   --platform  从平台仓库打四个 tarball 再安装（开发时用）
+ *   --tarballs  直接安装 Release 下载目录里的四个 tarball（外部接入用）
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -17,9 +19,11 @@ const argValue = (name, fallback) => {
 };
 
 const gameRoot = process.cwd();
+const releaseDir = argValue('--tarballs', null);
 const platformRoot = resolve(argValue('--platform', '../3178-battle-platform'));
 const sdkDir = resolve(argValue('--sdk-dir', 'sdk'));
 const npmCli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+const PACKAGE_PREFIXES = ['bp-core-abi-', 'bp-pack-format-', 'bp-game-sdk-', 'bp-sdk-tools-'];
 
 function fail(message) {
   console.error(`[x] ${message}`);
@@ -42,8 +46,8 @@ function npm(commandArgs, cwd) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-if (!existsSync(join(platformRoot, 'packages', 'game-sdk', 'package.json'))) {
-  fail(`找不到平台仓库：${platformRoot}，用 --platform 指向 3178-battle-platform`);
+if (!releaseDir && !existsSync(join(platformRoot, 'packages', 'game-sdk', 'package.json'))) {
+  fail(`找不到平台仓库：${platformRoot}，用 --platform 指向 3178-battle-platform；或用 --tarballs 指向 Release 目录`);
 }
 
 const packagePath = join(gameRoot, 'package.json');
@@ -64,27 +68,40 @@ if (!existsSync(packagePath)) {
   }
 }
 
-if (!existsSync(join(platformRoot, 'packages', 'game-sdk', 'dist', 'index.js')) ||
-    !existsSync(join(platformRoot, 'packages', 'core-abi', 'dist', 'index.js')) ||
-    !existsSync(join(platformRoot, 'packages', 'pack-format', 'dist', 'index.js')) ||
-    !existsSync(join(platformRoot, 'packages', 'sdk-tools', 'dist', 'cli', 'index.js'))) {
+if (!releaseDir &&
+    (!existsSync(join(platformRoot, 'packages', 'game-sdk', 'dist', 'index.js')) ||
+     !existsSync(join(platformRoot, 'packages', 'core-abi', 'dist', 'index.js')) ||
+     !existsSync(join(platformRoot, 'packages', 'pack-format', 'dist', 'index.js')) ||
+     !existsSync(join(platformRoot, 'packages', 'sdk-tools', 'dist', 'cli', 'index.js')))) {
   console.log('平台还没构建，先跑 npm run build');
   npm(['run', 'build'], platformRoot);
 }
 
-mkdirSync(sdkDir, { recursive: true });
-for (const name of readdirSync(sdkDir)) {
-  if (name.endsWith('.tgz')) rmSync(join(sdkDir, name));
+let tarballs;
+if (releaseDir) {
+  const dir = resolve(releaseDir);
+  if (!existsSync(dir)) fail(`Release 目录不存在：${dir}`);
+  const found = readdirSync(dir).filter((name) => name.endsWith('.tgz'));
+  for (const prefix of PACKAGE_PREFIXES) {
+    if (!found.some((name) => name.startsWith(prefix))) fail(`Release 目录缺少 ${prefix}*.tgz：${dir}`);
+  }
+  tarballs = found.map((name) => join(dir, name));
+} else {
+  mkdirSync(sdkDir, { recursive: true });
+  for (const name of readdirSync(sdkDir)) {
+    if (name.endsWith('.tgz')) rmSync(join(sdkDir, name));
+  }
+
+  npm(['pack', './packages/core-abi', '--pack-destination', sdkDir], platformRoot);
+  npm(['pack', './packages/pack-format', '--pack-destination', sdkDir], platformRoot);
+  npm(['pack', './packages/game-sdk', '--pack-destination', sdkDir], platformRoot);
+  npm(['pack', './packages/sdk-tools', '--pack-destination', sdkDir], platformRoot);
+
+  tarballs = readdirSync(sdkDir)
+    .filter((name) => name.endsWith('.tgz'))
+    .map((name) => join(sdkDir, name));
 }
 
-npm(['pack', './packages/core-abi', '--pack-destination', sdkDir], platformRoot);
-npm(['pack', './packages/pack-format', '--pack-destination', sdkDir], platformRoot);
-npm(['pack', './packages/game-sdk', '--pack-destination', sdkDir], platformRoot);
-npm(['pack', './packages/sdk-tools', '--pack-destination', sdkDir], platformRoot);
-
-const tarballs = readdirSync(sdkDir)
-  .filter((name) => name.endsWith('.tgz'))
-  .map((name) => join(sdkDir, name));
 npm(['install', '--save-dev', ...tarballs, 'esbuild'], gameRoot);
 
 console.log('');

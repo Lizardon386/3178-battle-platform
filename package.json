@@ -13,6 +13,7 @@
     "clean": "tsc -b --clean",
     "seam": "bash tools/checks/check-seam.sh",
     "portable": "node tools/packaging/build-portable.mjs",
+    "pack:sdk": "node tools/packaging/pack-sdk.mjs",
     "test": "npm run build && node tools/testkit/scripts/pack-test-games.mjs && node --test --test-timeout=20000 \"packages/*/test/*.test.mjs\" \"tools/*/test/*.test.mjs\""
   },
   "devDependencies": {

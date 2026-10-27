@@ -2,6 +2,21 @@
   "name": "@bp/core-abi",
   "version": "0.1.0",
   "description": "3178 游戏接口层：GameModule / GameInstance / Effect 等宿主与游戏共同遵守的 ABI 和数据类型",
+  "license": "MIT",
+  "author": "3178-battle-platform contributors",
+  "homepage": "https://github.com/Lizardon386/3178-battle-platform#readme",
+  "bugs": {
+    "url": "https://github.com/Lizardon386/3178-battle-platform/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lizardon386/3178-battle-platform.git",
+    "directory": "packages/core-abi"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "keywords": ["3178", "game-platform", "game-abi", "types"],
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,5 +26,8 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"]
+  "files": ["dist", "src"],
+  "publishConfig": {
+    "access": "public"
+  }
 }
