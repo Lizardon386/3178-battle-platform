@@ -11,7 +11,7 @@
 | [README.md](README.md) | 玩家 / 房主 | 平台概述、运行环境与入口、对局流程、网络连接、数据存储、命令行用法、使用限制 |
 | [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 设计方向（目标 / 约束 / 验收标准 / 测试手顺）；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | SDK 获取与从零接入、GameModule/GameInstance/Effect[]、客户端入口、单文件包、回合制与实时模式边界、game-kit（事件流/聊天/记分板）、沙箱限制、版本自检与升级 |
-| [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
+| [CONTEXT.md](CONTEXT.md)（本文） | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条问题（4 高 / 9 中 / 2 低）、修法、实测证据、复跑次数、猴测台自身 9 个缺陷与未覆盖范围 |
 
 ## 2. 背景与目标
@@ -116,6 +116,7 @@
 - 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
 ## 6. 变更记录
+- 2026-10-27 Qoder：**文档目录标注当前文档**：README / DESIGN / INTEGRATION_GUIDE / CONTEXT 的文档目录里，本文件那一行都标“（本文）”，和 README 的写法一致；四份文档的章节编号保持 `1. 文档目录` + 后续顺延。
 - 2026-10-27 Qoder：**README 可读性**：章节名改为平台概述 / 快速开始 / 对局流程 / 网络连接 / 数据存储 / 命令行用法 / 使用限制；昵称步骤移到进房前，3.2 加建房—进房时序图，3.3 加网络连接流程图，并加入两张平台实机截图（裁剪掉只有测试夹具的游戏选择器）。截图在 `docs/images/`，DESIGN 目录树和文件清单同步。
 - 2026-10-27 Qoder：**文档目录统一编号**：README / DESIGN / INTEGRATION_GUIDE / CONTEXT 顶部的 `文档` 改成 `1. 文档目录`，后续章节整体顺延一位；INTEGRATION_GUIDE 的正文引用和 `GameModule` / `GameInstance` 锚点同步，README/DESIGN/CONTEXT 的交叉引用复查过。
 - 2026-10-27 Qoder：**文档分层**：README 的文档目录保持在顶部，只列 README / DESIGN / INTEGRATION_GUIDE / CONTEXT；正文删除测试夹具、猴测报告和 `npm test` 描述，保留玩家能感知的占位面板说明。DESIGN 正文第一章（文档目录之后）改名“设计方向”，拆成目标 / 约束 / 验收三节，验收下分“验收标准”和“测试手顺”，历史证据继续链到本档；README/DESIGN/CONTEXT/INTEGRATION_GUIDE 顶部日期统一到 2026-10-27。
