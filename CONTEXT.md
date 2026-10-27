@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 本文件是任务交接档案，供后续 agent 跟进；改动产物后请更新「当前状态」「变更记录」。
-> 最近更新：2026-10-23
+> 最近更新：2026-10-27
 <!-- 日期要保持 README、DESIGN、CONTEXT 顶部同一天；原 check-docs.sh 随交接工具卸载。 -->
 
 ## 文档
@@ -9,7 +9,7 @@
 | 文档 | 阅读对象 | 内容 |
 |---|---|---|
 | [README.md](README.md) | 玩家 / 房主 | 平台是什么、前置与双击入口、一局怎么走、命令行、限制与注意事项 |
-| [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 目标与约束；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
+| [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 设计方向（目标 / 约束 / 验收标准 / 测试手顺）；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | SDK 获取与从零接入、GameModule/GameInstance/Effect[]、客户端入口、单文件包、回合制与实时模式边界、game-kit（事件流/聊天/记分板）、沙箱限制、版本自检与升级 |
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条问题（4 高 / 9 中 / 2 低）、修法、实测证据、复跑次数、猴测台自身 9 个缺陷与未覆盖范围 |
@@ -116,6 +116,7 @@
 - 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
 ## 5. 变更记录
+- 2026-10-27 Qoder：**文档分层**：README 只留玩家/房主内容，删除测试夹具、猴测报告和 `npm test` 描述；DESIGN 第 1 章改名“设计方向”，拆成 `1.1 目标` / `1.2 约束` / `1.3 验收`，验收下分“验收标准”和“测试手顺”，历史证据继续链到本档；README/DESIGN/CONTEXT/INTEGRATION_GUIDE 顶部日期统一到 2026-10-27。
 - 2026-10-27 Qoder：**按开发者接入路径扩 fixture-kit**：服务端接 `FeedLog`，客户端挂 `FeedPanel` 并加载 `assets/notice.json`；新增 `fixture-reject` 动作和按钮，非法动作在平台状态栏显示拒绝。`pack-test-games.mjs` 改走 `bpmap` CLI，包头写 `mode: turn` / `apiVersion: 1`。抓到一个真实集成缺口：宿主 loader 的裸导入表缺 `@bp/game-sdk/kit/server`，导致用 FeedLog 的游戏整包被跳过；已补进 hostd 和构建模板的 external，并把 `--host` 的 doctor 路径从 `@bp/game-sdk` 改到 `@bp/sdk-tools`。新增 `fixture-kit-monkey.test.mjs`（固定 seed、300 步随机动作）和资源下发断言；协议层 `monkey.mjs` 的房间创建加入 `fixture-kit` 并补 `bump` 动作，修掉它仍从 `@bp/protocol` 取 `NOTICE_CODES` 的旧导入（`300` 步短程 0 违规）。浏览器复验事件流、资源、拒绝。测试 171 → 173。
 - 2026-10-27 Qoder：**`@bp/game-sdk` 根入口补齐版本常量**：re-export `API_VERSION`、`SUPPORTED_API_VERSIONS`、`GAME_MODES`、`SUPPORTED_MODES`、`DEFAULT_MODE` 和 `GameMode`；构建模板 `build.mjs` 改为从 `@bp/game-sdk` 与 `@bp/game-sdk/node` 取常量和打包函数，游戏工程不再直接 import core-abi / pack-format；接入指南的导出表和源码树同步。测试 170 → 171。
 - 2026-10-23 Qoder：**拆出 `@bp/sdk-tools`**（`ab77ac4`）：`bpmap` CLI、doctor、setup/build 模板从 `@bp/game-sdk` 移到 `packages/sdk-tools`，独立依赖 core-abi + pack-format，不依赖 game-sdk；game-sdk 去掉 bin/templates，保留 `/node` 兼容 re-export；`tools/packaging/bpmap.mjs` shim 改指 sdk-tools CLI；安装脚本改为 core-abi + pack-format + game-sdk + sdk-tools 四个 tarball，外部 smoke 跑通。测试 170。

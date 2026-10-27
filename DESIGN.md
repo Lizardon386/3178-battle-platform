@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 方案架构设计
 
-> 写给方案评审、维护和二次开发的人；运行模式、流程、接缝、协议、语义和工程约束都在这里。
-> 最近更新：2026-10-23
+> 写给方案评审、维护和二次开发的人；设计方向、运行模式、流程、接缝、协议、语义和工程约束都在这里。
+> 最近更新：2026-10-27
 <!-- 日期必须留在这个 blockquote 里：check-docs.sh 的 [新]/[旧]/[期] 只读这里。改日期时 README、DESIGN、CONTEXT 顶部要同一天。 -->
 
 ## 文档
@@ -9,25 +9,97 @@
 | 文档 | 阅读对象 | 内容 |
 |---|---|---|
 | [README.md](README.md) | 玩家 / 房主 | 平台是什么、前置与双击入口、一局怎么走、命令行、限制与注意事项 |
-| [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 目标与约束；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
+| [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 设计方向（目标 / 约束 / 验收标准 / 测试手顺）；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | SDK 获取与从零接入、GameModule/GameInstance/Effect[]、客户端入口、单文件包、回合制与实时模式边界、game-kit（事件流/聊天/记分板）、沙箱限制、版本自检与升级 |
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条问题（4 高 / 9 中 / 2 低）、修法、实测证据、复跑次数、猴测台自身 9 个缺陷与未覆盖范围 |
 
 本仓库推到 GitHub，文档内部用仓库相对链接。数字都是实测的，改动时请同步。
 
-## 1. 目标与约束
+## 1. 设计方向
+
+### 1.1 目标
 
 做一个**游戏无关的宿主制联机对战平台**：每个人在自己电脑上跑一个可双击的客户端，谁建房谁的进程就是服务器，别人从局域网列表或邀请链接进房，类似 war3 对战平台。玩法通过 `GameModule` 接口接入，平台自己只管房间、座位、房主权限、准备、聊天、观战、电脑位、掉线宽限、版本检查、存档和传输。
 
-约束（每条都直接逼出后面的设计）：
+它要同时满足两件事：
+
+- **玩家侧**：双击即用，不装构建工具、不买服务器、不备案。
+- **游戏侧**：玩法只面对 `GameModule` / `GameInstance` / `Effect[]`，不碰 socket、座位表和房间相位。
+
+不做什么：目录服务器、账号 / 好友 / 段位 / 匹配、反作弊仲裁、自动写防火墙规则、内置游戏引擎或地图编辑器。
+
+### 1.2 约束
 
 - **离线双击可用**：不能要求朋友装构建工具、买服务器或备案。
 - **平台与玩法必须真的能分离**：否则它就不是平台，只是又一个游戏。
 - **私有信息不能泄**：观战与他人看不到别人的秘密。
 - **权威只能落在某一台机器上**：不做分布式，也不做中央服务器。
+- **游戏代码安装即信任**：服务端代码在房主进程里执行，第一版不做 worker 隔离；客户端代码放进 `sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`。
 
-怎么算做成了（都能用工具验证）：`tools/checks/check-seam.sh` 在平台包内没有命中玩法词；仓库自带三个测试夹具（`测试夹具·回合制` + 隐私 / `测试夹具·同时操作` 无游标 + 无隐私 + 同时操作 / `测试夹具·game-kit 界面` 带客户端入口，在 `tools/testkit/src/test-games/`），前两个证明接口与玩法无关，第三个用来联调聊天、事件流、记分板、资源和拒绝；协议层与 UI 层两层猴测无违规，另有 `fixture-kit` 的随机动作猴测。当前 `npm test` **173 例**全绿，逐阶段数据在 [CONTEXT.md](CONTEXT.md)。
+### 1.3 验收
+
+#### 1.3.1 验收标准
+
+| 验收项 | 通过标准 | 证据 |
+|---|---|---|
+| 平台与玩法解耦 | `tools/checks/check-seam.sh` 在平台包内零命中；两个形状不同的测试夹具跑同一套契约断言 | [contract.test.mjs](tools/testkit/test/contract.test.mjs) 19 例 |
+| 私密状态 | 回合制夹具的秘密只给本人，观战视角为 `null` | 同一套契约测试 |
+| 真 socket 联机 | 建房 → 入座 → 准备 → 开局 → 出招，两端各自拿到自己的视角 | [ws-live.test.mjs](packages/server/test/ws-live.test.mjs) 4 例 |
+| 落盘与重连 | 重启后房号、座位、票据、对局状态都回来；坏文件不挡启动 | [store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) 11 例 |
+| 单文件包 | 往返、篡改拒绝、路径穿越拒绝、坏包跳过、版本不符跳过 | `pack-format` / `pack-loader` / `bpmap-cli` 测试 |
+| 沙箱客户端 | `fixture-kit` 在真实宿主里显示聊天、事件流、记分板，加载包内资源，非法动作有拒绝提示 | [fixture-kit.page.js](tools/checks/fixture-kit.page.js) + 浏览器实测 |
+| 版本闸 | 当前只加载 `turn` / `1`；`/api/version` 与 `bpmap doctor` 用同一组常量 | `pack-loader` / `bpmap-cli` 测试 |
+| 当前回归门禁 | `npm test` 173 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
+
+#### 1.3.2 测试手顺
+
+1. 安装与构建：
+
+```bash
+npm ci
+npm run build
+```
+
+2. 自动化回归：
+
+```bash
+npm test
+```
+
+预期 173 例全绿。这一轮会重新生成三个测试夹具，并跑单元、契约、宿主集成和夹具猴测。
+
+3. 接缝检查：
+
+```bash
+npm run seam
+```
+
+预期输出 `seam OK`。
+
+4. 协议层猴测：
+
+```bash
+node tools/checks/monkey.mjs --seed 20261027 --users 3 --steps 300 --restarts 1 --port 3501
+```
+
+预期最后一行“不变式全部成立”，违规 0。长跑时换 `--seed` / `--steps`，失败时按打印的 seed 复现。
+
+5. 浏览器沙箱检查：
+
+- 启动宿主：`node packages/hostd/dist/cli.js host --port 3178 --no-lan`
+- 打开 `http://127.0.0.1:3178/`
+- 在 in-app Browser 的 `evaluate_script` 里执行 [fixture-kit.page.js](tools/checks/fixture-kit.page.js) 的函数；在 DevTools 里先粘贴整个文件，再调用 `bpFixtureKitCheck()`
+- 预期：能建房、开局；聊天、事件流、记分板、包内资源、拒绝提示和加电脑位逐项通过
+
+6. 未自动化的验收：
+
+- 双机组播 / 隧道：两台机器同 WiFi 互相发现、防火墙弹窗行为。
+- 便携包：真正没有 Node 的电脑上双击启动。
+- 这两项不阻塞本地回归，结果记录在 [CONTEXT.md](CONTEXT.md)。
+
+逐阶段的实测凭据和历史复跑记录在 [CONTEXT.md](CONTEXT.md)；本节只保留当前门禁，避免 DESIGN 变成测试日志。
+
 
 ## 2. 运行模式
 
