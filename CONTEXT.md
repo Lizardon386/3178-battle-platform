@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-10-28　模式：三档（README / DESIGN / CONTEXT）
+> 最近更新：2026-10-28　模式：三档（README / DESIGN / CONTEXT）　锚点：`8dffb71`（master，已推 origin）
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
@@ -27,14 +27,13 @@
 
 - 平台内核（P0–P7）已交付：协议、座位与房主权限、`GameModule` 契约 + 测试夹具、ws 传输、落盘恢复、客户端界面、hostd 壳（host / join / diagnose / stop）。
 - 包边界：`@lizardon386/core-abi`（游戏 ABI）· `@bp/protocol`（wire）· `@lizardon386/pack-format`（.bpmap）· `@lizardon386/game-sdk`（公共门面 + game-kit）· `@lizardon386/sdk-tools`（bpmap CLI / doctor / 模板）。平台包仍是 `@bp/server`、`@bp/client`、`@bp/hostd`、`@bp/testkit`。
-- 游戏下发已通：`/api/games`、`/games/<id>/*`、客户端 SHA-256 校验（无 `crypto.subtle` 时纯 JS 回退）、`sandbox=allow-scripts` iframe；`fixture-kit` 覆盖事件流 / 资源 / 拒绝。
-- 兼容闸：`mode` / `apiVersion` 写入 `.bpmap` 包头，宿主只加载 `turn` / `1`，`/api/version` 与 `bpmap doctor` 用同一组常量。
+- 游戏下发与兼容闸：`/api/games`、`/games/<id>/*`、客户端 SHA-256 校验（无 `crypto.subtle` 时纯 JS 回退）、`sandbox=allow-scripts` iframe；`mode` / `apiVersion` 写入 `.bpmap` 包头，宿主只加载 `turn` / `1`，`/api/version` 与 `bpmap doctor` 用同一组常量；`fixture-kit` 覆盖事件流 / 资源 / 拒绝。
 - SDK 0.2.0 已发 npm（四包 `@lizardon386/*`，`latest` 均为 0.2.0）；Trusted Publisher 已配，`sdk-v*` tag 由 [publish-sdk.yml](.github/workflows/publish-sdk.yml) 走 OIDC 发布；`sdk-v0.2.0` Release 已建、workflow 已绿。
 - **P8 真游戏接入（UNO）未开始。** 代码全部在本仓库，`uno-online` 未动。
 
 ## 4. 下一步
 
-1. **UNO 接入**：把 `uno.js` 规则包成 `GameModule` + 客户端入口，用 0.2.0 SDK 打包成 `.bpmap`，走真实宿主 + 浏览器验证；不改 `uno-online`。
+1. **UNO 接入（先拍板再动）**：源码走外部改名工程 + `.bpmap`，不搬进本仓库、不改 `uno-online`；开工前要用户定四件事——MVP 还是完整、最终名称/id（不能沿用 UNO 品牌）、复制到外部工程的授权、是否复用旧 UI/CODEX。适配结论：`server/uno.js` + `bot.js` 进 `GameModule`，旧 `Room` 的座位/连接耦合与客户端去 WS 改写是主风险；MVP 约 5–8 回合，验收是"1 人类 + N 电脑打完一局"。
 2. **首个真实 Trusted Publishing 发布**：下次 SDK 变更跑 `npm run bump:sdk -- <版本>` → test → smoke → pack → 打 `sdk-v*` tag，确认 Actions 无人工介入完成发布。
 3. **双机实测**：同 WiFi 组播房间发现、首次绑定防火墙弹窗行为、`--tunnel` 真隧道（需 cloudflared）。
 4. **便携包**：在真正没装 Node 的机器上跑 `dist-portable/`。
@@ -54,8 +53,7 @@
 - **高危动作不许顺带触发**：写防火墙入站规则、建议关 Smart App Control、`force push`。
 - **混合内容方向性**：本地壳页面必须 http，才能连局域网 `ws://` 与隧道 `wss://`。
 - **注入的宿主方法不能 `this.x()` 调用**：`fetch` 存字段再调用会 `Illegal invocation`，外面有静默 catch 就表现为"局域网列表永远空白"。
-- **Windows `kill('SIGTERM')` 是硬杀**：测试不能靠 kill 断言 `run.json` 被删，要断言"留下了、`stop` 收掉"。
-- **`server.close()` 在有 keep-alive/WS 时不回调**：先 `closeAllConnections()` + 超时竞速；`transport.close()` 先 `terminate()`。
+- **收尾两条硬规则**：Windows `kill('SIGTERM')` 是硬杀，测试别靠 kill 断言 `run.json` 被删，要断言"留下了、`stop` 收掉"；`server.close()` 有 keep-alive/WS 时不回调，先 `closeAllConnections()` + 超时竞速，`transport.close()` 先 `terminate()`。
 - **`.bat` 是启动器**：`start "标题" node …` + `exit /b 0` 结尾；UTF-8 无 BOM + CRLF + 第 2 行 `chcp 65001`，中文只在 chcp 之后；生成走 [gen-bat.mjs](tools/packaging/gen-bat.mjs)（Git Bash 会把 `nul` 改写成 `/dev/null`），由 [bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) 钉住。环境检查失败分支的 `pause` 是故意的。
 - **测试写法**：`node --test` 必须用带引号的 glob（`node --test "packages/*/test/*.test.mjs"`）并带 `--test-timeout`；等消息要按 predicate 等符合条件的那一帧。
 - **UI 验证**：in-app Browser 无可见视口，用 `navigate_page` + `evaluate_script` 驱动 DOM，观感仍需人工确认。
@@ -88,6 +86,7 @@ node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
 
 ## 8. 交接记录
 
+- 2026-10-28 Qoder：**收工**：UNO 开工前置条件（四项拍板、外部改名工程、不搬源码）写进「下一步」；锚点 `8dffb71`；最旧一条交接记录沉降到 [压卡备份.md](压卡备份.md)。
 - 2026-10-28 Qoder：**压卡**：CONTEXT 压到 100 行以内，原第 6–8 节（逐阶段凭据、变更记录、旧追加区）逐字移入 [压卡备份.md](压卡备份.md)；四份文档顶部日期统一到 2026-10-28。
 - 2026-10-28 Qoder：**SDK 版本脚本**：`npm run bump:sdk -- <版本>`（`--dry-run` 预览）同步四包 version、内部依赖与 lock；发布手顺改为 bump → test → smoke → pack → tag。
 - 2026-10-28 Qoder：**Trusted Publishing 验证**：`sdk-v0.2.0` tag/Release 已建，workflow 全绿（版本已存在时跳过 publish）；修掉 CI 上唯一跨平台失败（`hostd stop --port` 硬杀断言只在 Windows 跑）。
@@ -97,4 +96,3 @@ node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
 - 2026-10-27 Qoder：**外部消费者 smoke + 发布元数据**：临时工程装 tarball、模板构建/打包/doctor、宿主加载全通；四包去 `private`、补 MIT/README/repository/engines。
 - 2026-10-27 Qoder：**开源校验补局域网路径**：`module-loader` 在无 `crypto.subtle` 时回退纯 JS SHA-256；`seatGranted` manifest 带 `assets`；局域网 IP 实测夹具仍挂载并显示"哈希校验通过"。
 - 2026-10-27 Qoder：**按开发者接入路径扩 fixture-kit**：服务端 FeedLog，客户端 FeedPanel + `assets/notice.json` + 拒绝动作；抓到真实缺口（宿主裸导入表缺 `@lizardon386/game-sdk/kit/server`）并修复。
-- 2026-10-23 Qoder：**拆包三刀**：`core-abi`、`pack-format`、`sdk-tools` 依次拆出，server 不再依赖 game-sdk，CLI/模板独立发版；G4 game-kit 真实沙箱联调完成。
