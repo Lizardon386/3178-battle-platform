@@ -1,8 +1,8 @@
-import { writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, unlinkSync, writeFileSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 
-// 生成两个双击入口。两条硬规矩：
+// 生成唯一双击入口。两条硬规矩：
 //  1) UTF-8 无 BOM + CRLF + 第二行 chcp 65001，中文只允许出现在 chcp 之后——
 //     否则 cmd 按 cp936 解析 UTF-8 字节，第二个字节落在 GBK trail 区（含 '|'），把命令行拼断。
 //  2) 脚本只当"启动器"：用 start 把 node 开进它自己的控制台窗口，然后立刻 exit /b 0。
@@ -50,24 +50,13 @@ const tail = [
   '',
 ];
 
-export function renderHostBat({ portable = false } = {}) {
+export function renderShellBat({ portable = false } = {}) {
   return [
     ...HEAD,
     ...nodeGuard(portable),
     ...depsGuard(portable),
     ...distGuard(portable),
-    `start "3178 房主端" ${nodeCommand(portable)} packages\\hostd\\dist\\cli.js host --port 3178 --lan-port 3000 %*`,
-    ...tail,
-  ].join('\r\n');
-}
-
-export function renderJoinBat({ portable = false } = {}) {
-  return [
-    ...HEAD,
-    ...nodeGuard(portable),
-    ...depsGuard(portable),
-    ...distGuard(portable),
-    `start "3178 玩家进房" ${nodeCommand(portable)} packages\\hostd\\dist\\cli.js join --port 3178 %*`,
+    `start "3178 对战平台" ${nodeCommand(portable)} packages\\hostd\\dist\\cli.js shell --port 3178 --lan-port 3000 %*`,
     ...tail,
   ].join('\r\n');
 }
@@ -87,12 +76,12 @@ export function verifyBat(name, text) {
 }
 
 function writeRepoBats() {
-  const host = renderHostBat();
-  const join = renderJoinBat();
-  writeFileSync('房主建房.bat', host, 'utf8');
-  writeFileSync('玩家进房.bat', join, 'utf8');
-  verifyBat('房主建房.bat', readFileSync('房主建房.bat', 'utf8'));
-  verifyBat('玩家进房.bat', readFileSync('玩家进房.bat', 'utf8'));
+  const shell = renderShellBat();
+  writeFileSync('3178对战平台.bat', shell, 'utf8');
+  for (const old of ['房主建房.bat', '玩家进房.bat']) {
+    if (existsSync(old)) unlinkSync(old);
+  }
+  verifyBat('3178对战平台.bat', readFileSync('3178对战平台.bat', 'utf8'));
 }
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;

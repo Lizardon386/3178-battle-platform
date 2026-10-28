@@ -205,7 +205,7 @@ export class PlatformApp {
         this.render();
       },
       onProtocolError: (reason) => this.setStatus(`协议不对：${reason}`),
-      onConnectError: () => this.setStatus(`连不上 ${endpoint.httpOrigin}：那边没有房主端在听，检查地址与端口（房主要先跑「房主建房.bat」）`),
+      onConnectError: () => this.setStatus(`连不上 ${endpoint.httpOrigin}：那边没有房主端在听，检查地址与端口（房主要先跑「3178对战平台.bat」）`),
     };
     const options: ConnectionOptions = {
       factory: this.deps.factory ?? browserSocketFactory(),
@@ -365,23 +365,7 @@ export class PlatformApp {
     on('nick', 'input', () => this.rememberNick(this.typedNick()));
 
     on('btn-create', 'click', () => {
-      const gameSelect = el(this.doc, 'game-select') as HTMLSelectElement | null;
-      const gameId = gameSelect?.value || 'fixture-turn';
-      const manifest = this.selectedLobbyManifest() ?? this.view.availableGames.find((g) => g.id === gameId) ?? null;
-      this.pendingManifest = manifest;
-      this.pendingJoin = null;
-      const endpoint = parseHostAddress(this.selfOrigin);
-      if (!endpoint.ok) return this.setStatus(endpoint.message);
-      this.connCreateFrom(endpoint.endpoint, {
-        gameId,
-        roomName: value(el(this.doc, 'room-name')) || '未命名房间',
-        seatSlots: Number(value(el(this.doc, 'seat-slots')) || 4),
-        password: value(el(this.doc, 'room-password')) || undefined,
-        allowSpectate: (el(this.doc, 'chk-spectate') as HTMLInputElement | null)?.checked ?? true,
-        hidden: (el(this.doc, 'chk-hidden') as HTMLInputElement | null)?.checked ?? false,
-        config: {},
-      });
-      return undefined;
+      void this.createRoom();
     });
 
     on('btn-join', 'click', () => {
@@ -753,6 +737,50 @@ export class PlatformApp {
     message.textContent = result.message;
     body.append(message);
     title.textContent = '规则与资料';
+  }
+
+  private async prepareHostMode(): Promise<boolean> {
+    try {
+      const response = await this.fetchImpl(`${this.selfOrigin}/api/host/ready`, { method: 'POST' });
+      if (response.status === 404 || response.status === 405) return true;
+      const data = (await response.json()) as { ok?: boolean; reason?: string; publicOrigin?: string | null; lanOrigins?: unknown };
+      if (data.ok === false) {
+        this.setStatus(data.reason || '本机壳不能开房；用「3178对战平台.bat」重新打开');
+        return false;
+      }
+      if (data.ok) {
+        if (data.publicOrigin) this.inviteOrigin = data.publicOrigin;
+        if (Array.isArray(data.lanOrigins)) this.lanOrigins = data.lanOrigins.filter((item): item is string => typeof item === 'string');
+      }
+      return true;
+    } catch {
+      // 老壳/纯浏览器没有这个端点：保持原有建房路径，让它自己报连接错误。
+      return true;
+    }
+  }
+
+  private async createRoom(): Promise<void> {
+    this.setStatus('正在开启局域网入口…');
+    if (!(await this.prepareHostMode())) return;
+    const gameSelect = el(this.doc, 'game-select') as HTMLSelectElement | null;
+    const gameId = gameSelect?.value || 'fixture-turn';
+    const manifest = this.selectedLobbyManifest() ?? this.view.availableGames.find((g) => g.id === gameId) ?? null;
+    this.pendingManifest = manifest;
+    this.pendingJoin = null;
+    const endpoint = parseHostAddress(this.selfOrigin);
+    if (!endpoint.ok) {
+      this.setStatus(endpoint.message);
+      return;
+    }
+    this.connCreateFrom(endpoint.endpoint, {
+      gameId,
+      roomName: value(el(this.doc, 'room-name')) || '未命名房间',
+      seatSlots: Number(value(el(this.doc, 'seat-slots')) || 4),
+      password: value(el(this.doc, 'room-password')) || undefined,
+      allowSpectate: (el(this.doc, 'chk-spectate') as HTMLInputElement | null)?.checked ?? true,
+      hidden: (el(this.doc, 'chk-hidden') as HTMLInputElement | null)?.checked ?? false,
+      config: {},
+    });
   }
 
   private connCreateFrom(endpoint: Endpoint, input: { gameId: string; roomName: string; seatSlots: number; password?: string; allowSpectate: boolean; hidden: boolean; config: Record<string, unknown> }): void {

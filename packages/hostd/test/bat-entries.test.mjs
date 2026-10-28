@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,8 +14,10 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const bats = readdirSync(ROOT).filter((name) => name.toLowerCase().endsWith('.bat'));
 
-test('仓库根至少要有两个双击入口', () => {
-  assert.ok(bats.length >= 2, `只找到：${bats.join('、')}`);
+test('仓库根只留一个双击入口', () => {
+  assert.deepEqual(bats, ['3178对战平台.bat'], `根目录的 bat 应该只有一个：${bats.join('、')}`);
+  assert.equal(existsSync(join(ROOT, '房主建房.bat')), false, '旧入口「房主建房.bat」不该再生成');
+  assert.equal(existsSync(join(ROOT, '玩家进房.bat')), false, '旧入口「玩家进房.bat」不该再生成');
 });
 
 for (const name of bats) {
@@ -41,6 +43,7 @@ for (const name of bats) {
     assert.equal(text.includes('/dev/null'), false, '被 Git Bash 的路径转换改写过（nul → /dev/null），cmd 会报错');
     assert.match(text, /where node/, '要先确认 node 在 PATH 里，否则用户只会看到一句天书');
     assert.match(text, /packages\\hostd\\dist\\cli\.js/, '要真的指向宿主壳入口');
+    assert.match(text, /cli\.js shell --port 3178/, '单入口要启动 shell 模式');
   });
 
   test(`${name}：只做启动器，最后一行必须 exit /b 0（不然后台跑着批处理，Ctrl+C 会问 Y/N）`, () => {

@@ -26,6 +26,10 @@ export interface SelfInfo {
   lanOrigins?: string[];
 }
 
+export type HostReadyResult =
+  | ({ ok: true } & SelfInfo)
+  | { ok: false; reason: string };
+
 export interface WebRootOptions {
   root: string;
   modules: GameModule[];
@@ -39,6 +43,8 @@ export interface WebRootOptions {
   getRooms?: () => DiscoveryRoom[];
   /** 页面用它生成邀请链接；老壳没有这个端点时客户端会退回 selfOrigin。 */
   selfInfo?: () => SelfInfo;
+  /** 单入口壳：建房前按需打开局域网监听；纯进房壳不提供。 */
+  onHostReady?: () => Promise<HostReadyResult>;
   onBadPath?: (path: string) => void;
 }
 const CONTENT_TYPES: Record<string, string> = {
@@ -134,6 +140,21 @@ export function createWebServer(opts: WebRootOptions): Server {
     }
     if (path === '/api/self') {
       sendJson(res, opts.selfInfo?.() ?? { uiOrigin: null, publicOrigin: null });
+      return;
+    }
+    if (path === '/api/host/ready') {
+      if (req.method !== 'POST') {
+        sendJson(res, { ok: false, reason: '开房接口只接受 POST' });
+        return;
+      }
+      if (!opts.onHostReady) {
+        sendJson(res, { ok: false, reason: '当前是本机玩家壳，不能当房主；用单入口「3178对战平台.bat」重新打开' });
+        return;
+      }
+      void opts.onHostReady().then(
+        (result) => sendJson(res, result),
+        (error) => sendJson(res, { ok: false, reason: error instanceof Error ? error.message : String(error) }),
+      );
       return;
     }
     if (path === '/api/version') {

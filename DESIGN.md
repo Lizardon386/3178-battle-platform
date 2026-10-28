@@ -9,7 +9,7 @@
 | 文档 | 阅读对象 | 内容 |
 |---|---|---|
 | [README.md](README.md) | 玩家 / 房主 | 平台概述、运行环境与入口、对局流程、网络连接、数据存储、命令行用法、使用限制 |
-| [DESIGN.md](DESIGN.md)（本文） | 开发者 / 二次开发 / 方案评审 | 设计方向（目标 / 约束 / 验收标准 / 测试手顺）；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
+| [DESIGN.md](DESIGN.md)（本文） | 开发者 / 二次开发 / 方案评审 | 设计方向（目标 / 约束 / 验收标准 / 测试手顺）；运行模式（单入口 shell 动态开 LAN / host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、落盘恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | SDK 获取与从零接入、GameModule/GameInstance/Effect[]、客户端入口、单文件包、回合制与实时模式边界、game-kit（事件流/聊天/记分板）、沙箱限制、版本自检与升级 |
 | [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条问题（4 高 / 9 中 / 2 低）、修法、实测证据、复跑次数、猴测台自身 9 个缺陷与未覆盖范围 |
@@ -53,7 +53,8 @@
 | 版本闸 | 当前只加载 `turn` / `1`；`/api/version` 与 `bpmap doctor` 用同一组常量 | `pack-loader` / `bpmap-cli` 测试 |
 | 对局布局 | `playing` 时游戏区拉通整行；1280/1440 宽下 ≥1100×560，席位横向状态条，聊天/房主在可收起侧栏 | 无头浏览器实测 + [style-hooks.test.mjs](packages/client/test/style-hooks.test.mjs) |
 | 规则与资料 | `manifest.ruleConfig` / `reference` 透传；房主房间内改规则、非房主 HOSTONLY、ready 重置、`RoomView.config`、资料 404/坏 JSON/HTML 转义/图片路径边界都有测试 | `module-contract` / `room-authority` / [rule-config.test.mjs](packages/client/test/rule-config.test.mjs) / [reference.test.mjs](packages/client/test/reference.test.mjs) |
-| 当前回归门禁 | `npm test` 217 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
+| 单入口 | 根目录一个 `.bat`；启动只开本机口，建房时才开 LAN、组播与落盘；纯进房不写 `data/` | [single-shell.test.mjs](packages/hostd/test/single-shell.test.mjs) / [bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) |
+| 当前回归门禁 | `npm test` 216 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
 
 #### 2.3.2 测试手顺
 
@@ -70,7 +71,7 @@ npm run build
 npm test
 ```
 
-预期 217 例全绿。这一轮会重新生成三个测试夹具，并跑单元、契约、宿主集成和夹具猴测。
+预期 216 例全绿。这一轮会重新生成三个测试夹具，并跑单元、契约、宿主集成和夹具猴测。
 
 3. 接缝检查：
 
@@ -128,14 +129,15 @@ git tag sdk-v0.2.1 && git push origin master sdk-v0.2.1
 
 ## 3. 运行模式
 
-### 3.1 两种角色
+### 3.1 入口与角色
 
-| 角色 | 监听 | 本机页面 | 局域网发现 | 落盘 | 隧道 |
+| 入口 / 角色 | 监听 | 本机页面 | 局域网发现 | 落盘 | 隧道 |
 |---|---|---|---|---|---|
-| `host`（房主端） | `127.0.0.1:3178` + `0.0.0.0:3000` | `http://127.0.0.1:3178` | 广播组播 | 本机开的房落盘 | 可选，指向 3000 |
-| `join`（玩家进房） | `127.0.0.1:3178` | `http://127.0.0.1:3178` | 只听组播 | 自己开的房本机落盘；进别人的房不写 | 否 |
+| `shell`（双击入口） | 启动 `127.0.0.1:3178`；建房时加 `0.0.0.0:3000` | `http://127.0.0.1:3178` | 启动只听组播；建房后广播 | 纯进房不写；建房后写 | 可选 |
+| `host`（命令行房主） | `127.0.0.1:3178` + `0.0.0.0:3000` | `http://127.0.0.1:3178` | 广播组播 | 本机开的房落盘 | 可选，指向 3000 |
+| `join`（命令行玩家） | `127.0.0.1:3178` | `http://127.0.0.1:3178` | 只听组播 | 自己开的房本机落盘；进别人的房不写 | 否 |
 
-两种角色都带完整 `Engine`，所以本机都能开房；`join` 只绑回环，别人连不进来。`host` 的两个监听共享**同一个** `Engine` / `HostStore`：本机页面和局域网玩家看到的是同一张桌子。
+双击入口只启动 `shell`：先用本机口打开大厅，页面点「建房」时再按需开局域网监听、组播、`HostStore` 与邀请链接；`host` / `join` 留给命令行用户。三者都共享同一套 `Engine` / 房间 / 票据；`shell` 建房后的两个监听仍是**同一个 `Engine`**，不会新建第二个。
 
 ### 3.2 拓扑
 
@@ -152,18 +154,20 @@ flowchart LR
     ENGINE --> STORE
   end
   subgraph GUESTS["局域网 / 隧道"]
-    G1["玩家 A<br/>玩家进房壳 127.0.0.1:3178"]
+    G1["玩家 A<br/>单入口壳 127.0.0.1:3178"]
     G2["玩家 B<br/>浏览器打开邀请链接"]
   end
   G1 -- "ws://房主:3000" --> PUBLIC
   G2 -- "ws://房主:3000" --> PUBLIC
 ```
 
+`shell` 启动时只有 `PRIVATE`、组播浏览和临时解包缓存；页面调用 `/api/host/ready` 后才创建 `PUBLIC` 与 `HostStore`，但 `PUBLIC` 仍指向同一个 `ENGINE`。`host` 模式启动即完成这一步；`join` 只保留本机口。
+
 ### 3.3 权威、状态与落盘
 
 - **权威在房主进程**：建房、开局、踢人、关房、移交都由它裁决；没有中央服务器。
 - **内存状态归 `Room`**：座位表、房主标记、聊天环形缓冲、`revision`；游戏状态是 opaque blob，平台不解释。
-- **落盘只在权威进程**：开发目录写仓库里的 `data/`；便携包（根目录有 `.portable-build.json`）改写到 `%LOCALAPPDATA%\3178-battle-platform\data`，因为整个程序目录会被新版本直接替换。`BP_DATA_DIR` 可覆盖，`diagnose` 会打印实际路径。写盘是原子写；盘上只存票据摘要（`secretHash`），不存明文票据。玩家进别人的房不写对方的盘；`join` 壳自己开的房仍由本机落盘——此时它本身就是房主。
+- **落盘只在权威进程**：开发目录写仓库里的 `data/`；便携包（根目录有 `.portable-build.json`）改写到 `%LOCALAPPDATA%\3178-battle-platform\data`，因为整个程序目录会被新版本直接替换。`BP_DATA_DIR` 可覆盖，`diagnose` 会打印实际路径。写盘是原子写；盘上只存票据摘要（`secretHash`），不存明文票据。玩家进别人的房不写对方的盘；`shell` 纯进房不创建 `HostStore`，也不写 `data/`，建房后才启用；`join` 命令行壳自己开的房仍由本机落盘——此时它本身就是房主。
 - **票据先落盘再离进程**：`onTicketIssued` 在唯一的发票据点触发 `syncStore`，避免“加入后立刻硬杀，重启后房在座位不在”。
 
 ### 3.4 房间发现与跨网
@@ -277,7 +281,7 @@ stateDiagram-v2
 │  ├─ sdk-tools/                     独立 SDK 工具：bpmap CLI、doctor、工程模板
 │  ├─ server/                        引擎、房间、权限、落盘、传输、发现
 │  ├─ client/                        浏览器端连接、视图、界面、沙箱挂载
-│  └─ hostd/                         宿主壳 host/join/diagnose/stop、静态路由
+│  └─ hostd/                         宿主壳 shell/host/join/diagnose/stop、静态路由
 ├─ tools/                            开发与测试工具
 │  ├─ testkit/                       @bp/testkit：接口测试脚手架、模拟上下文、测试夹具
 │  ├─ checks/                        架构检查、随机操作测试、存档/重连问题复现
@@ -302,7 +306,7 @@ flowchart TD
   T["@lizardon386/sdk-tools<br/>bpmap CLI / doctor / 工程模板"]
   S["@bp/server<br/>Engine / Room / Authority / Store / Transport"]
   C["@bp/client<br/>连接 / 视图 / 界面 / 沙箱"]
-  H["@bp/hostd<br/>host / join / 静态路由"]
+  H["@bp/hostd<br/>shell / host / join / 静态路由"]
   G["games/*.bpmap<br/>运行时游戏包"]
   H --> S
   H --> P
@@ -387,12 +391,12 @@ flowchart TD
 
 | 文件 | 用途 |
 |---|---|
-| [packages/hostd/src/cli.ts](packages/hostd/src/cli.ts) | host / join / diagnose / stop；host 双监听；扫描单文件包 |
+| [packages/hostd/src/cli.ts](packages/hostd/src/cli.ts) | shell / host / join / diagnose / stop；shell 建房时动态开局域网；扫描单文件包 |
 | [packages/hostd/src/data-dir.ts](packages/hostd/src/data-dir.ts) | 数据目录落点（便携包写用户目录，开发目录写仓库） |
-| [packages/hostd/src/webroot.ts](packages/hostd/src/webroot.ts) | 静态与接口路由（含 `/api/self`、游戏产物根映射） |
+| [packages/hostd/src/webroot.ts](packages/hostd/src/webroot.ts) | 静态与接口路由（含 `/api/self`、`/api/host/ready`、游戏产物根映射） |
 | [packages/hostd/src/tunnel.ts](packages/hostd/src/tunnel.ts) | cloudflared 查找与隧道网址解析 |
-| [房主建房.bat](房主建房.bat) / [玩家进房.bat](玩家进房.bat) | 双击入口（CRLF） |
-| [tools/packaging/gen-bat.mjs](tools/packaging/gen-bat.mjs) | 生成 .bat，保证编码与启动器结构 |
+| [3178对战平台.bat](3178对战平台.bat) | 唯一双击入口（CRLF） |
+| [tools/packaging/gen-bat.mjs](tools/packaging/gen-bat.mjs) | 生成唯一的 .bat，保证编码与启动器结构 |
 
 **游戏与工具**
 
@@ -435,6 +439,7 @@ flowchart TD
 | [packages/hostd/test/hostd-http.test.mjs](packages/hostd/test/hostd-http.test.mjs) | 宿主壳集成（静态路由、穿越防线、真 WS） |
 | [packages/hostd/test/bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) | 双击入口编码与结构防呆 |
 | [packages/hostd/test/shell-join.test.mjs](packages/hostd/test/shell-join.test.mjs) | join 模式壳建房→加电脑→开局 |
+| [packages/hostd/test/single-shell.test.mjs](packages/hostd/test/single-shell.test.mjs) | 单入口壳：纯进房不写 data；建房时开 LAN、共享同一个 Engine |
 | [packages/hostd/test/sigint-shutdown.test.mjs](packages/hostd/test/sigint-shutdown.test.mjs) | Ctrl+C 收尾：落盘、删记录、退出码 0、端口释放 |
 | [packages/hostd/test/dual-listener.test.mjs](packages/hostd/test/dual-listener.test.mjs) | 私网建房、公网进房，两个监听共享同一引擎 |
 | [packages/hostd/test/data-dir.test.mjs](packages/hostd/test/data-dir.test.mjs) | 数据目录落点与覆盖顺序 |
@@ -454,7 +459,7 @@ flowchart TD
 
 ```bash
 npm run build          # tsc -b 项目引用，无打包器
-npm test               # node --test（当前 217 例）
+npm test               # node --test（当前 216 例）
 bash tools/checks/check-seam.sh                        # 闸门：平台包内不得出现玩法词
 npm run portable                                # 绿色便携包（dist-portable/，不入库）
 node tools/checks/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测

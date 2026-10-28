@@ -23,13 +23,14 @@
 
 ## 3. 现在在哪
 
-**2026-10-28：`npm test` 217/217，`npm run seam` 零命中，`npx tsc -b` 通过，外部消费者 smoke `[smoke] OK`。**
+**2026-10-28：`npm test` 216/216，`npm run seam` 零命中，`npx tsc -b` 通过，外部消费者 smoke `[smoke] OK`。**
 
 - 平台内核（P0–P7）已交付：协议、座位与房主权限、`GameModule` 契约 + 测试夹具、ws 传输、落盘恢复、客户端界面、hostd 壳（host / join / diagnose / stop）。
 - 包边界：`@lizardon386/core-abi`（游戏 ABI）· `@bp/protocol`（wire）· `@lizardon386/pack-format`（.bpmap）· `@lizardon386/game-sdk`（公共门面 + game-kit）· `@lizardon386/sdk-tools`（bpmap CLI / doctor / 模板）。平台包仍是 `@bp/server`、`@bp/client`、`@bp/hostd`、`@bp/testkit`。
 - 游戏下发与兼容闸：`/api/games`、`/games/<id>/*`、客户端 SHA-256 校验（无 `crypto.subtle` 时纯 JS 回退）、`sandbox=allow-scripts` iframe；`mode` / `apiVersion` 写入 `.bpmap` 包头，宿主只加载 `turn` / `1`，`/api/version` 与 `bpmap doctor` 用同一组常量；`fixture-kit` 覆盖事件流 / 资源 / 拒绝。
 - 房间 UI 增量：`playing` 时游戏区拉通整行，席位横向状态条，聊天/房主进右侧侧栏（`D` / `Esc`，焦点归还）；1280×800 实测 1233×560，1440×900 实测 1393×630，lobby 三列不变。房间页「本局规则」卡由房主在 lobby 编辑（`ruleConfig` 命令，非房主 HOSTONLY），改后刷新 `RoomView.config` / `rulesHash`、重置真人 ready 并发系统消息；`RoomExport.config` 落盘，重启保持。`manifest.reference` 首次展开才请求，`parseGameReference` 校验，文本用 `textContent`、图片走 `/games`，图片 404 显示 alt，失败只影响面板。
 - 服务端在模块加载时校验 `ruleConfig` / `reference` 文档，坏声明跳过并记 `errors`；`manifestOf` 再挡一次；包头与模块 reference 不一致拒绝加载。
+- 单入口壳：根目录只有 `3178对战平台.bat`，启动 `cli.js shell`；先只开 `127.0.0.1:3178` 与本机大厅，点「建房」时调 `/api/host/ready` 再开 `0.0.0.0:3000`、组播与 `HostStore`。纯进房不创建 `HostStore`、不写 `data/`；建房后 `run-<port>.json` / `stop` / `diagnose` 与旧入口一致。`host` / `join` 子命令保留给命令行。
 - SDK 0.2.0 已发 npm（四包 `@lizardon386/*`，`latest` 均为 0.2.0）；Trusted Publisher 已配，`sdk-v*` tag 由 [publish-sdk.yml](.github/workflows/publish-sdk.yml) 走 OIDC 发布；`sdk-v0.2.0` Release 已建、workflow 已绿。**SDK 0.3.0 仓库就绪**（rule-config / reference；构建模板会把 `src/reference/` 铺到包根并写 `bpmap.json`；smoke 端到端覆盖声明、doctor、`/api/games` 与资料/图片 GET；tarball 在 `dist-sdk/` 并附 SHA256SUMS），**尚未打 tag、未发 npm**。
 - **第一款真游戏「变色对决」已落地为独立仓库 `D:\agent_workspace\color-duel`，公开仓库尚未创建/推送。** 完整版：2~8 人、观战、三档电脑、5 个规则开关 + 手牌上限 + 关闭倒计时、规则资料与 rule-config 声明。`npm test` 33/33、`npm run build`、`bpmap doctor` 通过；本地 6 笔提交，HEAD `8c68c06`。它通过本地 link 使用 SDK 0.3.0；装进平台的协议级联调尚未跑。`uno-online` 未动。
 
@@ -68,7 +69,7 @@
 ## 6. 验证命令
 
 ```bash
-npm test                         # 217 例
+npm test                         # 216 例
 npm run seam                     # 接缝闸门
 npx tsc -b                       # 类型检查
 node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke

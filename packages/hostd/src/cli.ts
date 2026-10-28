@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { networkInterfaces } from 'node:os';
+import { networkInterfaces, tmpdir } from 'node:os';
 import type { Server } from 'node:http';
 import { Engine, HostStore, WsTransport, LanAnnouncer, LanBrowser, loadGameSet, toDiscoveryRoom, type GameSet } from '@bp/server';
 import type { DiscoveryRoom } from '@bp/protocol';
-import { createWebServer } from './webroot.js';
+import { createWebServer, type HostReadyResult } from './webroot.js';
 import { dataDirNote, resolveDataDir } from './data-dir.js';
 import { findCloudflared, startTunnel } from './tunnel.js';
 
 /**
- * 宿主壳。三种活：
+ * 宿主壳。四种活：
+ *   shell  单入口：先只开本机口；点建房时再开 0.0.0.0:<lan-port>、组播与落盘
  *   host   房主：本机界面 127.0.0.1:<port>；另开 0.0.0.0:<lan-port> 给朋友（--no-lan 可关）
  *   join   玩家：只开本机界面 127.0.0.1:<port>，页面连别人的房主
  *   stop   按 data/run-<本机端口>.json 精确收掉本机进程
@@ -43,7 +44,7 @@ function readPlatformVersion(): string {
 const PLATFORM_VERSION = readPlatformVersion();
 
 interface Options {
-  mode: 'host' | 'join' | 'stop' | 'diagnose';
+  mode: 'host' | 'join' | 'shell' | 'stop' | 'diagnose';
   /** 本机界面端口，永远只绑 127.0.0.1。 */
   port: number;
   /** host 模式下对局域网/隧道开放的端口。 */
@@ -111,7 +112,7 @@ function parseArgs(argv: string[]): Options {
     options.lan = false;
     options.tunnel = false;
   }
-  if (options.mode === 'host' && options.lan && options.port === options.lanPort) {
+  if ((options.mode === 'host' || options.mode === 'shell') && options.lan && options.port === options.lanPort) {
     console.error(`本机界面端口和局域网端口不能相同（都是 ${options.port}）。用 --port <本机口> --lan-port <局域网口>，默认是 3178 / 3000。`);
     process.exit(1);
   }
@@ -157,14 +158,14 @@ function packImportUrls(): Record<string, string> {
   return urls;
 }
 
-async function loadAllGames(): Promise<GameSet> {
-  const loaded = await loadGameSet(join(ROOT, 'games'), join(DATA_DIR, 'packs'), packImportUrls());
+async function loadAllGames(cacheRoot = join(DATA_DIR, 'packs')): Promise<GameSet> {
+  const loaded = await loadGameSet(join(ROOT, 'games'), cacheRoot, packImportUrls());
   for (const error of loaded.errors) console.error(`[包] 跳过 ${error.source}：${error.message}`);
   return loaded;
 }
 
 interface RunRecord {
-  mode: Options['mode'];
+  mode: 'host' | 'join' | 'shell';
   /** 本机界面端口。 */
   port: number;
   /** 局域网/隧道端口；join 模式为 null。 */
@@ -208,6 +209,188 @@ async function closeServer(server: Server): Promise<void> {
     new Promise<void>((r) => server.close(() => r())),
     new Promise<void>((r) => setTimeout(r, 1_000)),
   ]);
+}
+
+/**
+ * 单入口壳：启动时只开本机口，页面点「建房」时再开局域网监听、组播与落盘。
+ * 不新建第二个 Engine；host 与 join 仍是同一套房间/票据/落盘。
+ */
+async function startDynamicShell(options: Options): Promise<void> {
+  const packCache = mkdtempSync(join(tmpdir(), '3178-shell-packs-'));
+  const loaded = await loadAllGames(packCache);
+  const { modules, roots, assets } = loaded;
+  if (modules.length === 0) {
+    rmSync(packCache, { recursive: true, force: true });
+    console.error(`没在 ${join(ROOT, 'games')} 找到可用的游戏模块或单文件包，先跑 npm run build，或检查 .bpmap`);
+    process.exit(1);
+  }
+  const engine = new Engine({ modules, assets });
+  const browser = new LanBrowser();
+  browser.start();
+
+  const lanHosts = lanAddresses();
+  const lanIp = lanHosts[0] ?? '127.0.0.1';
+  let hostActive = false;
+  let tunnelUrl: string | null = null;
+  let tunnelPid: number | null = null;
+  let store: HostStore | null = null;
+  let publicTransport: WsTransport | null = null;
+  let publicServer: Server | null = null;
+  let announcer: LanAnnouncer | null = null;
+
+  const selfInfo = () => ({
+    uiOrigin: `http://127.0.0.1:${options.port}`,
+    publicOrigin: tunnelUrl ?? (hostActive && options.lan ? `http://${lanIp}:${options.lanPort}` : null),
+    lanOrigins: hostActive && options.lan ? lanHosts.map((ip) => `http://${ip}:${options.lanPort}`) : [],
+  });
+
+  let activation: Promise<HostReadyResult> | null = null;
+  const activateHost = (): Promise<HostReadyResult> => {
+    if (hostActive) return Promise.resolve({ ok: true, ...selfInfo() });
+    if (activation) return activation;
+    activation = (async (): Promise<HostReadyResult> => {
+      try {
+        if (options.lan) {
+          const transport = new WsTransport(engine, {});
+          const server = createWebServer({
+            root: ROOT,
+            modules,
+            gameRoots: roots,
+            gameAssets: assets,
+            platformVersion: PLATFORM_VERSION,
+            getRooms: () => [],
+            selfInfo,
+          });
+          transport.attach(server);
+          try {
+            await listenOn(server, options.lanPort, '0.0.0.0');
+          } catch (error) {
+            await transport.close();
+            server.close();
+            const code = (error as NodeJS.ErrnoException).code;
+            if (code === 'EADDRINUSE') throw new Error(`局域网端口 ${options.lanPort} 已被占用，换一个端口再点建房`);
+            throw error;
+          }
+          publicTransport = transport;
+          publicServer = server;
+        }
+        store = new HostStore(DATA_DIR);
+        store.purgeOrphans();
+        engine.onTicketIssued = () => engine.syncStore(store as HostStore);
+        const restored = engine.restoreFrom(store.readAll().entries);
+        hostActive = true;
+        if (options.lan && options.announce) {
+          announcer = new LanAnnouncer(() => beaconRooms(engine, `ws://${lanIp}:${options.lanPort}/ws`));
+          announcer.start();
+        }
+        if (options.tunnel) {
+          const tunnel = await startTunnel(options.lanPort, (line) => console.log(`  tunnel| ${line}`));
+          tunnelUrl = tunnel?.url ?? null;
+          tunnelPid = tunnel?.pid ?? null;
+        }
+        writeRun({
+          mode: 'shell',
+          port: options.port,
+          lanPort: options.lan ? options.lanPort : null,
+          httpPid: process.pid,
+          tunnelPid,
+          startedAt: Date.now(),
+        });
+        banner([
+          `房主能力已开启：http://127.0.0.1:${options.port}`,
+          options.lan ? `局域网入口：http://${lanIp}:${options.lanPort}` : '局域网入口：已关闭（--no-lan）',
+          `组播广播：${announcer ? '已开启' : '已关闭'}`,
+          restored.restored.length > 0 ? `恢复了上次的房：${restored.restored.join('、')}` : '没有需要恢复的对局',
+        ]);
+        return { ok: true, ...selfInfo() };
+      } catch (error) {
+        activation = null;
+        announcer?.stop();
+        announcer = null;
+        if (publicTransport) {
+          await publicTransport.close();
+          publicTransport = null;
+        }
+        if (publicServer) {
+          await closeServer(publicServer);
+          publicServer = null;
+        }
+        throw error;
+      }
+    })();
+    return activation;
+  };
+
+  const privateTransport = new WsTransport(engine, {});
+  const privateServer = createWebServer({
+    root: ROOT,
+    modules,
+    gameRoots: roots,
+    gameAssets: assets,
+    platformVersion: PLATFORM_VERSION,
+    getRooms: () => browser.list(),
+    selfInfo,
+    onHostReady: activateHost,
+  });
+  privateTransport.attach(privateServer);
+  try {
+    await listenOn(privateServer, options.port, '127.0.0.1');
+  } catch (error) {
+    privateServer.close();
+    browser.stop();
+    rmSync(packCache, { recursive: true, force: true });
+    const code = (error as NodeJS.ErrnoException).code;
+    console.error(code === 'EADDRINUSE'
+      ? `\n端口 ${options.port} 已被占用，壳没有启动。先关掉占用它的进程，或换一个 --port。`
+      : `\n壳没能启动：${String(error)}`);
+    process.exit(1);
+  }
+
+  // 上次建过房：重启后自动恢复房主能力（同一份房间/票据），否则页面只能当纯玩家。
+  const hasStoredRooms = existsSync(DATA_DIR) && readdirSync(DATA_DIR).some((name) => /^room-[A-Z0-9]+\.json$/.test(name));
+  if (hasStoredRooms) {
+    try {
+      await activateHost();
+    } catch (error) {
+      console.error(`恢复上次房主能力失败：${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  const tick = setInterval(() => {
+    privateTransport.tick();
+    publicTransport?.tick();
+  }, 250);
+  const sync = setInterval(() => {
+    if (store) engine.syncStore(store);
+  }, 250);
+
+  banner([
+    `大厅已就绪：http://127.0.0.1:${options.port}`,
+    '未建房前只开本机口；点「建房」时才打开局域网端口、组播广播和落盘。',
+    `装了这些游戏：${modules.map((m) => `${m.name}(${m.id} ${m.version})`).join('、')}`,
+    '打开上面的本机界面即可建房或进房。Ctrl+C 收尾。',
+  ]);
+
+  const shutdown = async (signal: string): Promise<void> => {
+    console.log(`\n收到 ${signal}，正在收尾…`);
+    clearInterval(tick);
+    clearInterval(sync);
+    engine.shutdown();
+    if (store) engine.syncStore(store);
+    announcer?.stop();
+    browser.stop();
+    await privateTransport.close();
+    await publicTransport?.close();
+    await Promise.all([
+      closeServer(privateServer),
+      ...(publicServer ? [closeServer(publicServer)] : []),
+    ]);
+    if (hostActive) removeRun(options.port);
+    rmSync(packCache, { recursive: true, force: true });
+    process.exit(0);
+  };
+  process.on('SIGINT', () => void shutdown('SIGINT'));
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
 }
 
 /**
@@ -314,7 +497,7 @@ async function startShell(options: Options, role: 'host' | 'join'): Promise<void
     : [
       `玩家进房已就绪：http://127.0.0.1:${options.port}`,
       '局域网房间监听：组播 239.255.77.178:47878（首次绑定 Windows 会弹窗，请你亲手点"允许"）',
-      '这个入口只监听 127.0.0.1：自己开房能玩，别人连不进来。要当房主请用「房主建房.bat」。',
+      '这个入口只监听 127.0.0.1：自己开房能玩，别人连不进来。要当房主请用「3178对战平台.bat」。',
     ];
   lines.push(
     `装了这些游戏：${modules.map((m) => `${m.name}(${m.id} ${m.version})`).join('、')}`,
@@ -429,11 +612,14 @@ async function runDiagnose(): Promise<void> {
       }
     }
   }
-  console.log('注意：两种壳都会往 data/ 写自己开过的房——房主侧才有权威，玩家进别人的房不写别人的盘。');
+  console.log('注意：只有建过房的壳才往 data/ 写房间；单入口纯进房不写 data/。');
 }
 
 const options = parseArgs(process.argv.slice(2));
 switch (options.mode) {
+  case 'shell':
+    await startDynamicShell(options);
+    break;
   case 'host':
     await startShell(options, 'host');
     break;
@@ -447,8 +633,9 @@ switch (options.mode) {
     await runDiagnose();
     break;
   default:
-    console.log('用法：hostd host|join|diagnose|stop [--port N] [--lan-port N] [--game id] [--name 房名] [--seats N] [--tunnel] [--no-lan] [--no-announce]');
+    console.log('用法：hostd shell|host|join|diagnose|stop [--port N] [--lan-port N] [--tunnel] [--no-lan] [--no-announce]');
     console.log('  --port      本机界面端口（只绑 127.0.0.1），默认 3178');
     console.log('  --lan-port  房主模式对局域网开放的端口，默认 3000');
+    console.log('  shell       单入口：建房时才开局域网端口，纯进房不写 data/');
     process.exit(1);
 }

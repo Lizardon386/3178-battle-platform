@@ -5,7 +5,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderHostBat, renderJoinBat, verifyBat } from './gen-bat.mjs';
+import { renderShellBat, verifyBat } from './gen-bat.mjs';
 
 /**
  * 绿色便携包：官方签名的 node.exe + 运行所需产物，拷到干净机器双击就能跑。
@@ -305,12 +305,10 @@ copyRuntimeModules();
 cpSync(nodeExe, join(OUT, 'node.exe'));
 
 step('生成启动器与许可');
-const hostBat = renderHostBat({ portable: true });
-const joinBat = renderJoinBat({ portable: true });
-writeFileSync(join(OUT, '房主建房.bat'), hostBat, 'utf8');
-writeFileSync(join(OUT, '玩家进房.bat'), joinBat, 'utf8');
-verifyBat('房主建房.bat（便携版）', readFileSync(join(OUT, '房主建房.bat'), 'utf8'));
-verifyBat('玩家进房.bat（便携版）', readFileSync(join(OUT, '玩家进房.bat'), 'utf8'));
+const shellBat = renderShellBat({ portable: true });
+writeFileSync(join(OUT, '3178对战平台.bat'), shellBat, 'utf8');
+for (const old of ['房主建房.bat', '玩家进房.bat']) rmSync(join(OUT, old), { force: true });
+verifyBat('3178对战平台.bat（便携版）', readFileSync(join(OUT, '3178对战平台.bat'), 'utf8'));
 writeLicenses();
 
 writeFileSync(
@@ -333,4 +331,4 @@ step('完成');
 const sizeMb = (dirSize(OUT) / 1024 / 1024).toFixed(1);
 console.log(`便携包：${OUT}`);
 console.log(`体积：约 ${sizeMb} MB（其中 node.exe 约 ${(statSync(join(OUT, 'node.exe')).size / 1024 / 1024).toFixed(1)} MB）`);
-console.log('拷到干净机器后双击「房主建房.bat」即可。');
+console.log('拷到干净机器后双击「3178对战平台.bat」即可。');
