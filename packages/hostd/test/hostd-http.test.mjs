@@ -222,7 +222,7 @@ test('hostd 按端口写 run-<port>.json，供 stop 精确收尾', async () => {
   assert.equal(typeof record.httpPid, 'number');
 });
 
-test('hostd stop --port 能收掉对应记录（Windows 上 kill 是硬杀，不走信号处理器）', async () => {
+test('hostd stop --port 能收掉对应记录（Windows 上 kill 是硬杀，不走信号处理器）', { skip: process.platform !== 'win32' ? '只在 Windows 的硬杀语义下验证' : false }, async () => {
   const file = join(DATA_DIR, `run-${PORT}.json`);
   const pid = child?.pid;
   child?.kill('SIGTERM');
