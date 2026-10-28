@@ -56,12 +56,14 @@ for (const spec of SPECS) {
     assert.equal(snap.phase, 'lobby');
     assert.equal(snap.game, null, '没开局前游戏状态为空');
     assert.equal(snap.room.rulesHash.length, 16);
+    assert.deepEqual(snap.room.config, spec.module.normalizeConfig(spec.config), '房间视图要带规范化后的房规');
 
     const guest = h.join('客人');
     guest.send({ type: 'roomJoin', code: snap.room.code });
     const guestSnap = guest.rec.last('snapshot');
     assert.equal(guestSnap.seats.length, 2);
     assert.deepEqual(guestSnap.seats.map((s) => s.slot), [1, 2]);
+    assert.deepEqual(guestSnap.room.config, snap.room.config, '加入者也要看到同一份房规');
   });
 
   test(`${spec.name}：Ready 闸——有人没准备就开不了局`, () => {

@@ -51,7 +51,9 @@
 | 沙箱客户端 | `fixture-kit` 在真实宿主里显示聊天、事件流、记分板，加载包内资源，非法动作有拒绝提示 | [fixture-kit.page.js](tools/checks/fixture-kit.page.js) + 浏览器实测 |
 | 局域网源码校验 | 非安全上下文（局域网 HTTP）没有 `crypto.subtle` 时，仍能按 `seatGranted` 的 assets 校验客户端源码并执行 | 纯 JS SHA-256 测试 + 局域网 IP 浏览器实测 |
 | 版本闸 | 当前只加载 `turn` / `1`；`/api/version` 与 `bpmap doctor` 用同一组常量 | `pack-loader` / `bpmap-cli` 测试 |
-| 当前回归门禁 | `npm test` 176 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
+| 对局布局 | `playing` 时游戏区拉通整行；1280/1440 宽下 ≥1100×560，席位横向状态条，聊天/房主在可收起侧栏 | 无头浏览器实测 + [style-hooks.test.mjs](packages/client/test/style-hooks.test.mjs) |
+| 规则与资料 | `manifest.ruleConfig` / `reference` 透传；建房表单默认值与提交、`RoomView.config`、资料 404/坏 JSON/HTML 转义/图片路径边界都有测试 | `module-contract` / `room-authority` / [rule-config.test.mjs](packages/client/test/rule-config.test.mjs) / [reference.test.mjs](packages/client/test/reference.test.mjs) |
+| 当前回归门禁 | `npm test` 211 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
 
 #### 2.3.2 测试手顺
 
@@ -68,7 +70,7 @@ npm run build
 npm test
 ```
 
-预期 176 例全绿。这一轮会重新生成三个测试夹具，并跑单元、契约、宿主集成和夹具猴测。
+预期 211 例全绿。这一轮会重新生成三个测试夹具，并跑单元、契约、宿主集成和夹具猴测。
 
 3. 接缝检查：
 
@@ -251,6 +253,13 @@ stateDiagram-v2
   ended --> [*]
 ```
 
+### 4.5 房间界面：对局区、规则与资料
+
+- **lobby 保持三列**（席位 / 聊天 / 房主）；进入 `playing` 后游戏区拉通整行，席位压成横向状态条，聊天与房主面板收进右侧抽屉，默认收起。按钮、`D` 键和 `Esc` 都能操作，关闭时焦点回到触发按钮。
+- **桌面实测**：1280×800 下游戏区 1233×560，1440×900 下 1393×630；低于 1100px 宽的桌面不在本档验收范围。
+- **规则表单**：`manifest.ruleConfig` 的 boolean / enum / integer 字段渲染到大厅建房表单，默认值取 `default`，提交进 `roomCreate.config`。`RoomView.config` 由 `room.roomView()` 下发，加入者也能看到同一份规范化房规；平台不改 `normalizeConfig`，非法值仍由游戏兜底。
+- **资料面板**：`manifest.reference.entry` 指向包内 JSON，第一次展开才请求 `/games/<id>/<entry>`，用 `parseGameReference` 校验。只渲染纯文本与图片，文本走 `textContent`，不解析 HTML；图片走现有 `/games` 路由，`..`、绝对路径和反斜杠一律拒绝。读取失败只在面板里说明，不影响对局。
+
 ## 5. 架构与接缝
 
 ### 5.1 包结构
@@ -365,6 +374,8 @@ flowchart TD
 | [packages/client/src/view-model.ts](packages/client/src/view-model.ts) | 帧流 → UI 状态归约（revision 去重等） |
 | [packages/game-sdk/src/contract/client.ts](packages/game-sdk/src/contract/client.ts) | re-export core-abi 的客户端入口类型 |
 | [packages/client/src/module-loader.ts](packages/client/src/module-loader.ts) | 游戏模块拉取、哈希校验、沙箱挂载、占位渲染 |
+| [packages/client/src/rule-config.ts](packages/client/src/rule-config.ts) | 规则表单默认值、控件值收口与房间只读摘要 |
+| [packages/client/src/reference.ts](packages/client/src/reference.ts) | 规则资料懒加载、路径校验与纯文本/图片渲染 |
 | [packages/client/public/game-sandbox.html](packages/client/public/game-sandbox.html) | 沙箱 iframe 页面：执行游戏客户端源码，用 postMessage 桥接 view/action |
 | [packages/client/src/app.ts](packages/client/src/app.ts) | 界面装配：大厅 / 房间内 / 对局挂载点 |
 | [packages/client/public/index.html](packages/client/public/index.html) | 页面骨架与 import map（原生 ESM，无打包） |
@@ -440,7 +451,7 @@ flowchart TD
 
 ```bash
 npm run build          # tsc -b 项目引用，无打包器
-npm test               # node --test（当前 145 例）
+npm test               # node --test（当前 211 例）
 bash tools/checks/check-seam.sh                        # 闸门：平台包内不得出现玩法词
 npm run portable                                # 绿色便携包（dist-portable/，不入库）
 node tools/checks/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测
@@ -466,6 +477,9 @@ node tools/checks/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # �
 | `deadline` 下发相对毫秒 + `serverNow` | 两台机器时钟不齐时倒计时仍准确 | 客户端要维护单调钟外推 |
 | 房间发现走 B+A（组播 + 地址簿/邀请） | 无公共服务器也要实时列表 | 组播限同网段；跨网靠邀请/隧道 |
 | 落盘只发生在房间权威所在进程 | “谁是权威”只有一份 | 房主关机这局就没了 |
+| playing 对局区拉通整行，席位横排，聊天/房主进侧栏 | 第一款真游戏的全屏界面在 600×400 牌桌里放不下 | 房间页多一套布局状态与键盘/焦点管理 |
+| 规则表单只声明，值仍由游戏 `normalizeConfig` 收口 | 平台不解释玩法；非法值由游戏按自己的边界处理 | 游戏要保证字段 key 与配置 key 对得上 |
+| 资料面板只认纯文本与图片，懒加载 | 不在浏览器里解析 Markdown/HTML，注入面只有文本节点 | 游戏要自己准备 JSON 与图片，不能直接塞网页 |
 | 两个形状不同的测试 demo 游戏 | “平台无关玩法”必须有第二个形状做证据 | 多写约 300 行测试用游戏代码 |
 
 ## 9. 已定语义与边界

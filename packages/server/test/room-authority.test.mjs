@@ -54,6 +54,14 @@ test('建房者即房主，占 1 号槽', () => {
   assert.ok(requireHost(room, host.seatId).ok);
 });
 
+test('RoomView 带规范化后的 config，且不把内部对象直接交出去', () => {
+  const { room } = roomWith({ rawConfig: { speed: 3 } });
+  const view = room.roomView();
+  assert.deepEqual(view.config, { speed: 3 });
+  view.config.speed = 9;
+  assert.equal(room.roomView().config.speed, 3);
+});
+
 test('非房主不能开局/踢人/关房（旧项目谁发 start 都能开局）', () => {
   const { room, host } = roomWith();
   const guest = room.addSeat({ name: '客人', role: 'player' });

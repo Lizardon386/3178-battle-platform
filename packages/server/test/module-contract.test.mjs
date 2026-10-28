@@ -29,3 +29,15 @@ test('模块 ui 字段只允许 chat=platform|game，未知键拒绝', () => {
   assert.ok(!isGameModule({ ...base, ui: { chat: 'game', extra: true } }));
   assert.ok(!isGameModule({ ...base, ui: 'game' }));
 });
+
+test('模块可选携带 ruleConfig 与 reference，并原样进入 manifest', () => {
+  const ruleConfig = {
+    fields: [{ key: 'rounds', label: '回合数', type: 'integer', default: 8, min: 1, max: 20 }],
+  };
+  const reference = { entry: 'docs/reference.json' };
+  const manifest = manifestOf({ ...base, ruleConfig, reference }, {});
+  assert.deepEqual(manifest.ruleConfig, ruleConfig);
+  assert.deepEqual(manifest.reference, reference);
+  assert.equal(manifestOf(base, {}).ruleConfig, undefined);
+  assert.equal(manifestOf(base, {}).reference, undefined);
+});

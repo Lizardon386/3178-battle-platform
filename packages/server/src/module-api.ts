@@ -20,5 +20,7 @@ export function manifestOf(
     entry: module.entry,
     ...(assets && assets.length > 0 ? { assets: assets.map((asset) => ({ ...asset })) } : {}),
     ...(module.ui ? { ui: { ...module.ui } } : {}),
+    ...(module.ruleConfig ? { ruleConfig: { fields: module.ruleConfig.fields.map((field) => ({ ...field })) } } : {}),
+    ...(module.reference ? { reference: { ...module.reference } } : {}),
   };
 }

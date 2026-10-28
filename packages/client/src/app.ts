@@ -7,6 +7,8 @@ import { ServerClock } from './clock.js';
 import { parseHostAddress, parseInviteLink, wouldBeBlocked, type Endpoint } from './endpoint.js';
 import { aiFillBlocker, emptyViewModel, inviteLink, accessHints, isHost, mySeat, reduce, resumeCodeFor, seatLabel, seatPickerBlocker, seatPickerCandidates, startBlockers, emptySlots, type ViewModel } from './view-model.js';
 import { fetchGameList, loadGameClientSource, placeholderClient, sandboxChatText, sandboxedClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
+import { ruleConfigDefaults, ruleConfigFromValues, ruleConfigSpec, ruleConfigSummary } from './rule-config.js';
+import { loadGameReference, renderReference, type ReferenceLoad } from './reference.js';
 import { SelectListboxes } from './listbox.js';
 
 /**
@@ -55,6 +57,13 @@ export class PlatformApp {
   private renderHandle: unknown = null;
   private deadlineAt: number | null = null;
   private resumeAttempted = false;
+  private drawerOpen = false;
+  private drawerWasPlaying = false;
+  private referenceOpen = false;
+  private referenceTrigger: HTMLElement | null = null;
+  private referenceSeq = 0;
+  private readonly referenceCache = new Map<string, ReferenceLoad>();
+  private ruleConfigSignature = '';
   private readonly listboxes: SelectListboxes;
 
   constructor(private readonly deps: AppDeps) {
@@ -123,6 +132,7 @@ export class PlatformApp {
         if (invite.gameId) select.value = invite.gameId;
       }
       this.listboxes.syncAll();
+      this.renderRuleConfig();
     } catch {
       this.setStatus('本机壳没提供游戏清单——创建房间会失败，但加入别人的房不受影响。');
     }
@@ -328,6 +338,10 @@ export class PlatformApp {
     if (host) this.client?.unmount?.(host);
     this.client = null;
     this.endpoint = null;
+    this.drawerOpen = false;
+    this.drawerWasPlaying = false;
+    this.closeReference(false);
+    this.applyDrawerState();
     // 状态行不清的话，房里留下的最后一句（挂载结果、被拒的原因）会一直挂在大厅上，
     // 看着像大厅出了错——用户就是拿着这句"房主没有提供 …（404）"来问的。
     this.setStatus('');
@@ -350,7 +364,7 @@ export class PlatformApp {
     on('btn-create', 'click', () => {
       const gameSelect = el(this.doc, 'game-select') as HTMLSelectElement | null;
       const gameId = gameSelect?.value || 'fixture-turn';
-      const manifest = this.view.availableGames.find((g) => g.id === gameId) ?? null;
+      const manifest = this.selectedLobbyManifest() ?? this.view.availableGames.find((g) => g.id === gameId) ?? null;
       this.pendingManifest = manifest;
       this.pendingJoin = null;
       const endpoint = parseHostAddress(this.selfOrigin);
@@ -362,6 +376,7 @@ export class PlatformApp {
         password: value(el(this.doc, 'room-password')) || undefined,
         allowSpectate: (el(this.doc, 'chk-spectate') as HTMLInputElement | null)?.checked ?? true,
         hidden: (el(this.doc, 'chk-hidden') as HTMLInputElement | null)?.checked ?? false,
+        config: manifest ? this.readRuleConfig(manifest) : {},
       });
       return undefined;
     });
@@ -429,10 +444,318 @@ export class PlatformApp {
     chatInput?.addEventListener('keydown', (event) => {
       if ((event as KeyboardEvent).key === 'Enter') this.sendChat();
     });
+    on('btn-toggle-drawer', 'click', () => this.setDrawerOpen(!this.drawerOpen));
+    on('btn-close-drawer', 'click', () => this.setDrawerOpen(false));
+    on('drawer-backdrop', 'click', () => this.setDrawerOpen(false));
+    on('game-select', 'change', () => {
+      this.ruleConfigSignature = '';
+      this.renderRuleConfig();
+    });
+    const bindReference = (id: string) => {
+      el(this.doc, id)?.addEventListener('click', (event) => {
+        this.openReference(event.currentTarget as HTMLElement);
+      });
+    };
+    bindReference('btn-reference');
+    bindReference('btn-reference-lobby');
+    on('btn-reference-close', 'click', () => this.closeReference());
+    on('reference-backdrop', 'click', () => this.closeReference());
+    this.doc.defaultView?.addEventListener('keydown', (event) => this.onRoomShortcut(event));
     this.listboxes.attachAll();
   }
 
-  private connCreateFrom(endpoint: Endpoint, input: { gameId: string; roomName: string; seatSlots: number; password?: string; allowSpectate: boolean; hidden: boolean }): void {
+  private isPlayingLayout(): boolean {
+    return this.view.phase === 'playing' || this.view.phase === 'ended';
+  }
+
+  private drawerHasContent(): boolean {
+    const chatVisible = !(this.view.manifest?.ui?.chat === 'game' && this.view.phase === 'playing');
+    return chatVisible || isHost(this.view);
+  }
+
+  private setDrawerOpen(open: boolean, focus = true): void {
+    if (open) this.closeReference(false);
+    const allowed = open && this.isPlayingLayout() && this.drawerHasContent();
+    if (allowed === this.drawerOpen) {
+      this.applyDrawerState();
+      return;
+    }
+    this.drawerOpen = allowed;
+    this.applyDrawerState();
+    if (!focus) return;
+    const target = el<HTMLButtonElement>(this.doc, this.drawerOpen ? 'btn-close-drawer' : 'btn-toggle-drawer');
+    target?.focus();
+  }
+
+  private applyDrawerState(): void {
+    const playing = this.isPlayingLayout();
+    if (playing && !this.drawerHasContent()) this.drawerOpen = false;
+    if (!playing) this.drawerOpen = false;
+    el(this.doc, 'room-layout')?.classList.toggle('is-playing', playing);
+    const toggle = el<HTMLButtonElement>(this.doc, 'btn-toggle-drawer');
+    if (toggle) {
+      toggle.classList.toggle('hidden', !playing || !this.drawerHasContent());
+      toggle.setAttribute('aria-expanded', String(this.drawerOpen));
+      toggle.title = this.drawerOpen
+        ? '收起聊天与房主面板（快捷键 D）'
+        : '打开聊天与房主面板（快捷键 D）';
+    }
+    const label = el(this.doc, 'drawer-toggle-label');
+    if (label) label.textContent = this.drawerOpen ? '收起侧栏' : '侧栏';
+    const drawer = el(this.doc, 'side-panels');
+    if (drawer) {
+      drawer.classList.toggle('is-open', playing && this.drawerOpen);
+      // lobby 里侧栏就是普通三列，不能把它们从无障碍树里摘掉。
+      drawer.setAttribute('aria-hidden', String(playing && !this.drawerOpen));
+      drawer.toggleAttribute('inert', playing && !this.drawerOpen);
+    }
+    el(this.doc, 'drawer-backdrop')?.classList.toggle('hidden', !(playing && this.drawerOpen));
+  }
+
+  private onRoomShortcut(event: KeyboardEvent): void {
+    if (event.defaultPrevented) return;
+    if (event.key === 'Escape' && this.referenceOpen) {
+      event.preventDefault();
+      this.closeReference();
+      return;
+    }
+    if (event.key === 'Escape' && this.drawerOpen) {
+      event.preventDefault();
+      this.setDrawerOpen(false);
+      return;
+    }
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key !== 'd' && event.key !== 'D') return;
+    if (!this.isPlayingLayout()) return;
+    const target = event.target as HTMLElement | null;
+    const tag = target?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
+    event.preventDefault();
+    this.setDrawerOpen(!this.drawerOpen);
+  }
+
+  private selectedLobbyManifest(): GameManifest | null {
+    const select = el(this.doc, 'game-select') as HTMLSelectElement | null;
+    const id = select?.value;
+    const games = this.localGames.length > 0 ? this.localGames : this.view.availableGames;
+    return games.find((game) => game.id === id) ?? null;
+  }
+
+  private renderRuleConfig(): void {
+    const host = el(this.doc, 'rule-config');
+    if (!host) return;
+    const manifest = this.selectedLobbyManifest();
+    if (!manifest?.ruleConfig) {
+      host.replaceChildren();
+      host.classList.add('hidden');
+      this.ruleConfigSignature = '';
+      return;
+    }
+    const signature = `${manifest.id}:${manifest.version}:${JSON.stringify(manifest.ruleConfig)}`;
+    if (signature === this.ruleConfigSignature) return;
+    this.ruleConfigSignature = signature;
+    host.replaceChildren();
+    const title = this.doc.createElement('p');
+    title.className = 'rule-title';
+    title.textContent = '本局规则';
+    host.append(title);
+    const spec = ruleConfigSpec(manifest.ruleConfig);
+    if (!spec) {
+      const bad = this.doc.createElement('p');
+      bad.className = 'hint';
+      bad.textContent = '这个游戏的规则表单声明有误，开局时会按游戏默认值处理。';
+      host.append(bad);
+      host.classList.remove('hidden');
+      return;
+    }
+    const defaults = ruleConfigDefaults(spec);
+    for (const field of spec.fields) {
+      const wrap = this.doc.createElement('div');
+      wrap.className = 'rule-field';
+      const id = `rule-${field.key}`;
+      if (field.type === 'boolean') {
+        const check = this.doc.createElement('div');
+        check.className = 'form-check form-switch';
+        const input = this.doc.createElement('input');
+        input.className = 'form-check-input';
+        input.type = 'checkbox';
+        input.id = id;
+        input.checked = defaults[field.key] === true;
+        const label = this.doc.createElement('label');
+        label.className = 'form-check-label';
+        label.htmlFor = id;
+        label.textContent = field.label;
+        check.append(input, label);
+        wrap.append(check);
+      } else {
+        const label = this.doc.createElement('label');
+        label.className = 'form-label';
+        label.htmlFor = id;
+        label.textContent = field.label;
+        wrap.append(label);
+        if (field.type === 'enum') {
+          const select = this.doc.createElement('select');
+          select.className = 'form-select';
+          select.id = id;
+          for (const option of field.options) {
+            const node = this.doc.createElement('option');
+            node.value = option.value;
+            node.textContent = option.label;
+            select.append(node);
+          }
+          select.value = String(defaults[field.key]);
+          wrap.append(select);
+        } else {
+          const input = this.doc.createElement('input');
+          input.className = 'form-control';
+          input.type = 'number';
+          input.id = id;
+          input.min = String(field.min);
+          input.max = String(field.max);
+          if (field.step !== undefined) input.step = String(field.step);
+          input.value = String(defaults[field.key]);
+          wrap.append(input);
+        }
+      }
+      if (field.description) {
+        const hint = this.doc.createElement('p');
+        hint.className = 'hint';
+        hint.textContent = field.description;
+        wrap.append(hint);
+      }
+      host.append(wrap);
+    }
+    host.classList.remove('hidden');
+    this.listboxes.attachAll();
+    this.listboxes.syncAll();
+  }
+
+  private readRuleConfig(manifest: GameManifest): Record<string, unknown> {
+    const spec = manifest.ruleConfig ? ruleConfigSpec(manifest.ruleConfig) : null;
+    if (!spec) return {};
+    return ruleConfigFromValues(spec, (field) => {
+      const node = el(this.doc, `rule-${field.key}`) as HTMLInputElement | HTMLSelectElement | null;
+      if (!node) return undefined;
+      return field.type === 'boolean' ? (node as HTMLInputElement).checked : node.value;
+    });
+  }
+
+  private renderRuleSummary(): void {
+    const host = el(this.doc, 'rule-summary');
+    if (!host) return;
+    const spec = this.view.manifest?.ruleConfig ? ruleConfigSpec(this.view.manifest.ruleConfig) : null;
+    if (!spec || !this.view.room) {
+      host.replaceChildren();
+      host.classList.add('hidden');
+      return;
+    }
+    const rows = ruleConfigSummary(spec, this.view.room.config);
+    if (rows.length === 0) {
+      host.replaceChildren();
+      host.classList.add('hidden');
+      return;
+    }
+    host.replaceChildren(
+      ...rows.map((row) => {
+        const chip = this.doc.createElement('span');
+        chip.className = 'rule-chip';
+        const label = this.doc.createElement('span');
+        label.className = 'rule-chip-label';
+        label.textContent = row.label;
+        const value = this.doc.createElement('span');
+        value.className = 'rule-chip-value';
+        value.textContent = row.text;
+        chip.append(label, value);
+        return chip;
+      }),
+    );
+    host.classList.remove('hidden');
+  }
+
+  private currentReferenceManifest(): GameManifest | null {
+    if (!this.view.room) return this.selectedLobbyManifest();
+    return this.view.manifest ?? this.localGames.find((game) => game.id === this.view.room?.gameId) ?? null;
+  }
+
+  private referenceOrigin(): string {
+    return this.view.room && this.endpoint ? this.endpoint.httpOrigin : this.selfOrigin;
+  }
+
+  private openReference(trigger: HTMLElement): void {
+    const manifest = this.currentReferenceManifest();
+    if (!manifest) {
+      this.setStatus('先选一个游戏，或进入房间后再看规则与资料。');
+      return;
+    }
+    this.referenceTrigger = trigger;
+    this.referenceOpen = true;
+    this.referenceSeq += 1;
+    this.setDrawerOpen(false, false);
+    this.applyReferenceState();
+    el<HTMLButtonElement>(this.doc, 'btn-reference-close')?.focus();
+    void this.showReference(manifest, this.referenceSeq);
+  }
+
+  private applyReferenceState(): void {
+    const panel = el(this.doc, 'reference-panel');
+    if (panel) {
+      panel.classList.toggle('is-open', this.referenceOpen);
+      panel.setAttribute('aria-hidden', String(!this.referenceOpen));
+      panel.toggleAttribute('inert', !this.referenceOpen);
+    }
+    el(this.doc, 'reference-backdrop')?.classList.toggle('hidden', !this.referenceOpen);
+    for (const id of ['btn-reference', 'btn-reference-lobby']) {
+      el(this.doc, id)?.setAttribute('aria-expanded', String(this.referenceOpen));
+    }
+  }
+
+  private closeReference(focus = true): void {
+    if (!this.referenceOpen) return;
+    this.referenceOpen = false;
+    this.referenceSeq += 1;
+    this.applyReferenceState();
+    if (!focus) return;
+    const trigger = this.referenceTrigger;
+    if (trigger?.isConnected && !trigger.classList.contains('hidden')) trigger.focus();
+    else el<HTMLButtonElement>(this.doc, 'btn-reference')?.focus();
+  }
+
+  private async showReference(manifest: GameManifest, seq: number): Promise<void> {
+    const body = el(this.doc, 'reference-body');
+    const title = el(this.doc, 'reference-title');
+    if (!body || !title) return;
+    const origin = this.referenceOrigin();
+    const key = `${origin}|${manifest.id}|${manifest.version}|${manifest.reference?.entry ?? ''}`;
+    const cached = this.referenceCache.get(key);
+    if (cached) {
+      this.paintReference(cached, manifest, origin);
+      return;
+    }
+    body.textContent = '正在读取规则与资料…';
+    title.textContent = '规则与资料';
+    const result = await loadGameReference(manifest, origin, this.fetchImpl);
+    if (seq !== this.referenceSeq || !this.referenceOpen) return;
+    if (result.ok) this.referenceCache.set(key, result);
+    this.paintReference(result, manifest, origin);
+  }
+
+  private paintReference(result: ReferenceLoad, manifest: GameManifest, origin: string): void {
+    const body = el(this.doc, 'reference-body');
+    const title = el(this.doc, 'reference-title');
+    if (!body || !title) return;
+    if (result.ok) {
+      title.textContent = renderReference(body, result.doc, origin, manifest.id);
+      return;
+    }
+    body.replaceChildren();
+    const message = this.doc.createElement('p');
+    message.className = 'reference-error';
+    message.textContent = result.message;
+    body.append(message);
+    title.textContent = '规则与资料';
+  }
+
+  private connCreateFrom(endpoint: Endpoint, input: { gameId: string; roomName: string; seatSlots: number; password?: string; allowSpectate: boolean; hidden: boolean; config: Record<string, unknown> }): void {
     this.connectTo(endpoint, null);
     this.pendingJoin = {
       type: 'roomCreate',
@@ -442,7 +765,7 @@ export class PlatformApp {
       password: input.password,
       allowSpectate: input.allowSpectate,
       hidden: input.hidden,
-      config: {},
+      config: input.config,
     };
   }
 
@@ -546,6 +869,11 @@ export class PlatformApp {
   }
 
   private renderRoom(): void {
+    const playing = this.isPlayingLayout();
+    // 每次从 lobby 进入对局都从"抽屉收起"开始；对局中重绘不能把玩家打开的抽屉关掉。
+    if (playing && !this.drawerWasPlaying) this.drawerOpen = false;
+    this.drawerWasPlaying = playing;
+    this.applyDrawerState();
     const chatPanel = el(this.doc, 'chat-panel');
     if (chatPanel) {
       chatPanel.classList.toggle('hidden', this.view.manifest?.ui?.chat === 'game' && this.view.phase === 'playing');
@@ -558,6 +886,7 @@ export class PlatformApp {
       title.textContent = `${room.name} · ${room.gameName} · ${phase}`;
     }
     if (codeChip && this.view.room) codeChip.textContent = this.view.room.code;
+    this.renderRuleSummary();
     const grid = el(this.doc, 'seat-grid');
     if (!grid) return;
     grid.replaceChildren();

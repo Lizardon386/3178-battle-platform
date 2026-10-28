@@ -384,6 +384,7 @@ export class Room {
       allowSpectate: this.allowSpectate,
       hasPassword: this.secretHash !== null,
       rulesHash: this.rulesHash,
+      config: { ...this.config },
       createdAt: this.createdAt,
     };
   }

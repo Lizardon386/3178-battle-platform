@@ -16,6 +16,8 @@ export interface RoomView {
   hasPassword: boolean;
   /** 房规摘要，客户端可显示"房主改了设置"。 */
   rulesHash: string;
+  /** 规范化后的房规值；只读展示用，规则由游戏模块解释。 */
+  config: Record<string, unknown>;
   createdAt: number;
 }
 

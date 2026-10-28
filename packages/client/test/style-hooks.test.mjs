@@ -15,6 +15,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..', '..');
 const appSource = readFileSync(join(HERE, '..', 'src', 'app.ts'), 'utf8');
 const css = readFileSync(join(HERE, '..', 'public', 'style.css'), 'utf8');
+const pageHtml = readFileSync(join(HERE, '..', 'public', 'index.html'), 'utf8');
 // 断言"不许出现 @layer / url()"时要先剥掉注释，否则注释里提一句就把检查判红（上界就这么误报过）
 const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, '');
 
@@ -103,6 +104,36 @@ test('字体必须同源分发，且 CSS 引用的文件真的在盘上', () => 
   );
   assert.ok(/--bp-font-display:/.test(css) && /--bp-font-mono:/.test(css), '字体令牌要成对：展示体 + HUD 等宽');
   assert.ok(/\.hidden\s*\{[^}]*display:\s*none\s*!important/.test(cssCode), 'app.ts 靠 .hidden 切屏，Bootstrap 5 不再提供这个类');
+});
+
+test('对局区全宽：游戏拉通整行，席位横排，聊天/房主进可收起侧栏', () => {
+  for (const id of ['room-layout', 'game-host', 'side-panels', 'btn-toggle-drawer', 'btn-close-drawer', 'drawer-backdrop']) {
+    assert.match(pageHtml, new RegExp(`id="${id}"`), `index.html 缺少 #${id}`);
+  }
+  assert.match(pageHtml, /aria-controls="side-panels"/, '侧栏按钮要声明控制目标');
+  assert.match(pageHtml, /aria-keyshortcuts="D"/, '侧栏要声明快捷键');
+  assert.match(cssCode, /\.room-layout\.is-playing\s*\{[^}]*display:\s*grid/s, 'playing 布局要切成整行网格');
+  assert.match(cssCode, /\.game-host\s*\{[^}]*min-height:\s*560px/s, '对局区高度不能低于 560px');
+  assert.match(cssCode, /#side-panels\.is-open/, '侧栏要有打开态');
+  assert.match(cssCode, /#side-panels[^}]*visibility:\s*hidden/s, '侧栏默认要收起');
+  assert.match(appSource, /btn-toggle-drawer/, 'app.ts 要绑定侧栏按钮');
+  assert.match(appSource, /Escape/, '侧栏要支持 Esc 关闭');
+  assert.match(appSource, /aria-hidden/, '侧栏要同步 aria-hidden');
+});
+
+test('规则与资料：大厅入口、房间入口、抽屉与只读摘要都在', () => {
+  for (const id of ['btn-reference-lobby', 'btn-reference', 'reference-panel', 'reference-body', 'btn-reference-close', 'reference-backdrop', 'rule-config', 'rule-summary']) {
+    assert.match(pageHtml, new RegExp(`id="${id}"`), `index.html 缺少 #${id}`);
+  }
+  assert.match(pageHtml, /aria-controls="reference-panel"/, '规则按钮要声明控制目标');
+  assert.match(cssCode, /\.reference-panel\s*\{[^}]*visibility:\s*hidden/s, '资料抽屉默认收起');
+  assert.match(cssCode, /\.reference-panel\.is-open/, '资料抽屉要有打开态');
+  assert.match(cssCode, /\.rule-chip\s*\{/, '房间规则摘要要有样式');
+  assert.match(cssCode, /\.bp-game-row\s*\{/, '大厅游戏选择与查看规则要同一行');
+  assert.match(appSource, /loadGameReference/, 'app.ts 要懒加载资料');
+  assert.match(appSource, /renderReference/, 'app.ts 要用纯文本渲染资料');
+  assert.match(appSource, /renderRuleSummary/, '房间页要渲染规则摘要');
+  assert.match(appSource, /readRuleConfig/, '建房提交要收规则值');
 });
 
 test('紫底版仍然不许有渐变、关键帧动画和发光阴影', () => {

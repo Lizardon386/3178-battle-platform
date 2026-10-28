@@ -23,17 +23,18 @@
 
 ## 3. 现在在哪
 
-**2026-10-28：`npm test` 176/176，`npm run seam` 零命中，`npx tsc -b` 通过，外部消费者 smoke `[smoke] OK`。**
+**2026-10-28：`npm test` 211/211，`npm run seam` 零命中，`npx tsc -b` 通过，外部消费者 smoke `[smoke] OK`。**
 
 - 平台内核（P0–P7）已交付：协议、座位与房主权限、`GameModule` 契约 + 测试夹具、ws 传输、落盘恢复、客户端界面、hostd 壳（host / join / diagnose / stop）。
 - 包边界：`@lizardon386/core-abi`（游戏 ABI）· `@bp/protocol`（wire）· `@lizardon386/pack-format`（.bpmap）· `@lizardon386/game-sdk`（公共门面 + game-kit）· `@lizardon386/sdk-tools`（bpmap CLI / doctor / 模板）。平台包仍是 `@bp/server`、`@bp/client`、`@bp/hostd`、`@bp/testkit`。
 - 游戏下发与兼容闸：`/api/games`、`/games/<id>/*`、客户端 SHA-256 校验（无 `crypto.subtle` 时纯 JS 回退）、`sandbox=allow-scripts` iframe；`mode` / `apiVersion` 写入 `.bpmap` 包头，宿主只加载 `turn` / `1`，`/api/version` 与 `bpmap doctor` 用同一组常量；`fixture-kit` 覆盖事件流 / 资源 / 拒绝。
+- 房间 UI 增量：`playing` 时游戏区拉通整行，席位横向状态条，聊天/房主进右侧侧栏（`D` / `Esc`，焦点归还）；1280×800 实测 1233×560，1440×900 实测 1393×630，lobby 三列不变。建房按 `manifest.ruleConfig` 渲染规则表单并以 `roomCreate.config` 提交，`RoomView.config` 下发给加入者；房间页显示「本局规则」摘要。`manifest.reference` 首次展开才请求，`parseGameReference` 校验，文本用 `textContent`、图片走 `/games`，失败只影响面板。
 - SDK 0.2.0 已发 npm（四包 `@lizardon386/*`，`latest` 均为 0.2.0）；Trusted Publisher 已配，`sdk-v*` tag 由 [publish-sdk.yml](.github/workflows/publish-sdk.yml) 走 OIDC 发布；`sdk-v0.2.0` Release 已建、workflow 已绿。
-- **P8 真游戏接入（UNO）未开始。** 代码全部在本仓库，`uno-online` 未动。
+- **第一款真游戏「变色对决」（原 UNO 方向）接入未开始。** 平台侧 UI/规则/资料前提已就绪，`uno-online` 未动。
 
 ## 4. 下一步
 
-1. **UNO 接入（先拍板再动）**：源码走外部改名工程 + `.bpmap`，不搬进本仓库、不改 `uno-online`；开工前要用户定四件事——MVP 还是完整、最终名称/id（不能沿用 UNO 品牌）、复制到外部工程的授权、是否复用旧 UI/CODEX。适配结论：`server/uno.js` + `bot.js` 进 `GameModule`，旧 `Room` 的座位/连接耦合与客户端去 WS 改写是主风险；MVP 约 5–8 回合，验收是"1 人类 + N 电脑打完一局"。
+1. **变色对决（原 UNO 方向）接入（先拍板再动）**：源码走外部公开仓库 `color-duel` + `.bpmap`，不搬进本仓库、不改 `uno-online`；开工前要用户定四件事——MVP 还是完整、最终名称/id（不能沿用 UNO 品牌）、复制到外部工程的授权、是否复用旧 UI/CODEX。适配结论：`server/uno.js` + `bot.js` 进 `GameModule`，旧 `Room` 的座位/连接耦合与客户端去 WS 改写是主风险；MVP 约 5–8 回合，验收是"1 人类 + N 电脑打完一局"。
 2. **首个真实 Trusted Publishing 发布**：下次 SDK 变更跑 `npm run bump:sdk -- <版本>` → test → smoke → pack → 打 `sdk-v*` tag，确认 Actions 无人工介入完成发布。
 3. **双机实测**：同 WiFi 组播房间发现、首次绑定防火墙弹窗行为、`--tunnel` 真隧道（需 cloudflared）。
 4. **便携包**：在真正没装 Node 的机器上跑 `dist-portable/`。
@@ -56,13 +57,14 @@
 - **收尾两条硬规则**：Windows `kill('SIGTERM')` 是硬杀，测试别靠 kill 断言 `run.json` 被删，要断言"留下了、`stop` 收掉"；`server.close()` 有 keep-alive/WS 时不回调，先 `closeAllConnections()` + 超时竞速，`transport.close()` 先 `terminate()`。
 - **`.bat` 是启动器**：`start "标题" node …` + `exit /b 0` 结尾；UTF-8 无 BOM + CRLF + 第 2 行 `chcp 65001`，中文只在 chcp 之后；生成走 [gen-bat.mjs](tools/packaging/gen-bat.mjs)（Git Bash 会把 `nul` 改写成 `/dev/null`），由 [bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) 钉住。环境检查失败分支的 `pause` 是故意的。
 - **测试写法**：`node --test` 必须用带引号的 glob（`node --test "packages/*/test/*.test.mjs"`）并带 `--test-timeout`；等消息要按 predicate 等符合条件的那一帧。
-- **UI 验证**：in-app Browser 无可见视口，用 `navigate_page` + `evaluate_script` 驱动 DOM，观感仍需人工确认。
+- **UI 验证**：in-app Browser 无可见视口，用 `navigate_page` + `evaluate_script` 驱动 DOM，观感仍需人工确认；要精确量多档桌面尺寸时用无头 Edge + CDP `Emulation.setDeviceMetricsOverride`（本轮 1280×800 / 1440×900 就是这样量的）。
+- **规则表单与资料**：`ruleConfig` 的字段 key 必须小写（SDK 口径），游戏自己的 `normalizeConfig` 负责把表单 key 映射到玩法配置；资料入口先过 `isValidGameReferenceEntry`，文档过 `parseGameReference`，图片路径只走 `/games` 同源路由，文本一律 `textContent`。
 - **房主面板每个动作按钮**都要在渲染时判断"此刻合法吗"，不合法就置灰并写原因（`aiFillBlocker` 是范例）；别把服务端错误码当提示。
 
 ## 6. 验证命令
 
 ```bash
-npm test                         # 176 例
+npm test                         # 211 例
 npm run seam                     # 接缝闸门
 npx tsc -b                       # 类型检查
 node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
