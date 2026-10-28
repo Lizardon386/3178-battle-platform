@@ -62,6 +62,7 @@
 - **UI 验证**：in-app Browser 无可见视口，用 `navigate_page` + `evaluate_script` 驱动 DOM，观感仍需人工确认；要精确量多档桌面尺寸时用无头 Edge + CDP `Emulation.setDeviceMetricsOverride`（本轮 1280×800 / 1440×900 就是这样量的）。
 - **规则表单与资料**：`ruleConfig` 的字段 key 必须小写（SDK 口径），游戏自己的 `normalizeConfig` 负责把表单 key 映射到玩法配置；资料入口先过 `isValidGameReferenceEntry`，文档过 `parseGameReference`，图片路径只走 `/games` 同源路由，文本一律 `textContent`。
 - **加入/重连的 hello 不带大厅选中的游戏版本**：房间游戏由房主决定；带错版本会被版本闸误判成 `VERSION`。只有建房（`roomCreate`）才声明本机选中的游戏。
+- **单入口的 run 记录**：纯进房不写 `data/`，也不写 `run-<port>.json`；`stop` / `diagnose` 只在建过房后生效。两条要求冲突时当前优先“纯进房不写 data”；若要让纯进房也能被 `stop` 收掉，需要允许一个非房间的 run 文件。
 - **多会话共享一个工作区**：只 stage 自己的文件，禁止 `git add -A` / `git stash`；SDK 包（`core-abi` / `game-sdk` / `sdk-tools` / `INTEGRATION_GUIDE.md`）与平台/客户端分属不同会话，抢写会让 `tsc -b` 和测试互相打断。
 - **color-duel 的坑在它自己的 CONTEXT**：卡牌高度变量、`[hidden]`、`no-turn-timer`、不要用 `end` 收尾、tick 必须出 effect；不要在本仓库重复维护这些细节。
 - **房主面板每个动作按钮**都要在渲染时判断"此刻合法吗"，不合法就置灰并写原因（`aiFillBlocker` 是范例）；别把服务端错误码当提示。
