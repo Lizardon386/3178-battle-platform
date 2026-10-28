@@ -1,6 +1,6 @@
 {
-  "name": "@bp/sdk-tools",
-  "version": "0.1.1",
+  "name": "@3178/sdk-tools",
+  "version": "0.2.0",
   "description": "3178 SDK 工具：bpmap CLI、doctor 和游戏工程脚本模板",
   "license": "MIT",
   "author": "3178-battle-platform contributors",
@@ -32,8 +32,8 @@
     "src"
   ],
   "dependencies": {
-    "@bp/core-abi": "^0.1.1",
-    "@bp/pack-format": "^0.1.1"
+    "@3178/core-abi": "^0.2.0",
+    "@3178/pack-format": "^0.2.0"
   },
   "publishConfig": {
     "access": "public"

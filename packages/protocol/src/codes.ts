@@ -1,4 +1,4 @@
-import { NOTICE_CODES, PLATFORM_CODES, type NoticeCode, type PlatformCode } from '@bp/core-abi';
+import { NOTICE_CODES, PLATFORM_CODES, type NoticeCode, type PlatformCode } from '@3178/core-abi';
 
 export function isPlatformCode(value: unknown): value is PlatformCode {
   return typeof value === 'string' && (PLATFORM_CODES as readonly string[]).includes(value);

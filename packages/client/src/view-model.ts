@@ -1,5 +1,5 @@
 import type { ClientMessage, RoomView, ServerMessage } from '@bp/protocol';
-import type { GameManifest, NoticeCode, RoomPhase, SeatView } from '@bp/core-abi';
+import type { GameManifest, NoticeCode, RoomPhase, SeatView } from '@3178/core-abi';
 
 /**
  * 视图模型：把服务端帧流归约成 UI 能直接渲染的一份状态。

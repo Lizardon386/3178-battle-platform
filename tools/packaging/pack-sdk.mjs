@@ -14,16 +14,16 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'dist-sdk');
 const NPM_CLI = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
 const PACKAGES = [
-  { dir: 'core-abi', prefix: 'bp-core-abi-' },
-  { dir: 'pack-format', prefix: 'bp-pack-format-' },
-  { dir: 'game-sdk', prefix: 'bp-game-sdk-' },
-  { dir: 'sdk-tools', prefix: 'bp-sdk-tools-' },
+  { dir: 'core-abi', prefix: '3178-core-abi-' },
+  { dir: 'pack-format', prefix: '3178-pack-format-' },
+  { dir: 'game-sdk', prefix: '3178-game-sdk-' },
+  { dir: 'sdk-tools', prefix: '3178-sdk-tools-' },
 ];
 const INTERNAL_DEPS = {
   'core-abi': [],
-  'pack-format': ['@bp/core-abi'],
-  'game-sdk': ['@bp/core-abi', '@bp/pack-format'],
-  'sdk-tools': ['@bp/core-abi', '@bp/pack-format'],
+  'pack-format': ['@3178/core-abi'],
+  'game-sdk': ['@3178/core-abi', '@3178/pack-format'],
+  'sdk-tools': ['@3178/core-abi', '@3178/pack-format'],
 };
 
 function fail(message) {
@@ -75,10 +75,10 @@ const sums = assets.map((name) => `${sha256(readFileSync(join(OUT, name)))}  ${n
 writeFileSync(join(OUT, 'SHA256SUMS'), `${sums.join('\n')}\n`, 'utf8');
 
 const install = `npm install --save-dev \\
-  ./bp-core-abi-${version}.tgz \\
-  ./bp-pack-format-${version}.tgz \\
-  ./bp-game-sdk-${version}.tgz \\
-  ./bp-sdk-tools-${version}.tgz \\
+  ./3178-core-abi-${version}.tgz \\
+  ./3178-pack-format-${version}.tgz \\
+  ./3178-game-sdk-${version}.tgz \\
+  ./3178-sdk-tools-${version}.tgz \\
   esbuild`;
 const notes = `# 3178 SDK ${version}
 
@@ -103,8 +103,8 @@ ${install}
 ## 范围
 
 - \`turn\` 模式、\`apiVersion 1\` 可用
-- \`@bp/game-sdk\` 是游戏唯一需要直接依赖的运行时包
-- \`@bp/sdk-tools\` 提供 \`bpmap\` CLI、\`doctor\` 和工程模板
+- \`@3178/game-sdk\` 是游戏唯一需要直接依赖的运行时包
+- \`@3178/sdk-tools\` 提供 \`bpmap\` CLI、\`doctor\` 和工程模板
 - 不包含 realtime 运行时；规划中的实时能力不在本版本内
 
 ## 校验

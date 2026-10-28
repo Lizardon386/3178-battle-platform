@@ -2,10 +2,10 @@ import { existsSync, readdirSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { GameAsset } from '@bp/core-abi';
-import { SUPPORTED_API_VERSIONS, SUPPORTED_MODES, type GameMode } from '@bp/core-abi';
+import type { GameAsset } from '@3178/core-abi';
+import { SUPPORTED_API_VERSIONS, SUPPORTED_MODES, type GameMode } from '@3178/core-abi';
 import type { GameModule } from './module-api.js';
-import { extractPack, listPackFiles, readPack } from '@bp/pack-format';
+import { extractPack, listPackFiles, readPack } from '@3178/pack-format';
 
 /**
  * 解包缓存可能落在程序目录之外（便携包的数据目录在用户目录），那里向上找不到

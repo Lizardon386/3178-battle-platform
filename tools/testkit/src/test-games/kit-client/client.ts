@@ -1,5 +1,5 @@
-import { ChatPanel, FeedPanel, ScoreboardPanel } from '@bp/game-sdk/kit';
-import type { FeedEntry } from '@bp/game-sdk/kit';
+import { ChatPanel, FeedPanel, ScoreboardPanel } from '@3178/game-sdk/kit';
+import type { FeedEntry } from '@3178/game-sdk/kit';
 
 let board: ScoreboardPanel | null = null;
 let chat: ChatPanel | null = null;

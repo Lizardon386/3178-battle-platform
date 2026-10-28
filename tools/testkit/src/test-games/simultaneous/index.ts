@@ -1,4 +1,4 @@
-import { stableDigest, type Effect, type GameContext, type GameInstance, type GameModule, type Outcome, type ViewerId } from '@bp/game-sdk';
+import { stableDigest, type Effect, type GameContext, type GameInstance, type GameModule, type Outcome, type ViewerId } from '@3178/game-sdk';
 
 /**
  * 测试夹具：**没有回合游标、没有隐私状态、所有人同时操作**的协作计数。

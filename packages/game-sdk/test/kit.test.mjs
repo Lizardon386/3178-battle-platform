@@ -6,15 +6,15 @@ import {
   GAME_MODES,
   SUPPORTED_API_VERSIONS,
   SUPPORTED_MODES,
-} from '@bp/game-sdk';
-import { FEED_EVENT, FeedLog } from '@bp/game-sdk/kit/server';
+} from '@3178/game-sdk';
+import { FEED_EVENT, FeedLog } from '@3178/game-sdk/kit/server';
 import {
   FeedPanel,
   formatFeedTime,
   mergeFeedEntries,
   normalizeFeedEntry,
   seatColor,
-} from '@bp/game-sdk/kit';
+} from '@3178/game-sdk/kit';
 
 test('事件流：全员事件广播、序号递增、drain 只取一次', () => {
   let now = 1_000;

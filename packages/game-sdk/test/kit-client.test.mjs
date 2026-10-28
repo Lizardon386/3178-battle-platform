@@ -13,7 +13,7 @@ import {
   normalizeScoreboardRows,
   resolveColumnValue,
   sortScoreboardRows,
-} from '@bp/game-sdk/kit';
+} from '@3178/game-sdk/kit';
 
 const seat = (over = {}) => ({
   seatId: 's1',

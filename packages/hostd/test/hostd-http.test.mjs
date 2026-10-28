@@ -96,7 +96,7 @@ test('页面、客户端模块与协议包都能取到，且 MIME 是对的', as
   assert.match(page.headers.get('content-type'), /text\/html/);
   assert.match(page.body, /对战平台/);
   assert.match(page.body, /"imports"/);
-  assert.match(page.body, /@bp\/core-abi/);
+  assert.match(page.body, /@3178\/core-abi/);
 
   const app = await get('/app/app.js');
   assert.equal(app.status, 200);

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
-import { packDirectory, readPack, readPackSource } from '@bp/pack-format';
+import { packDirectory, readPack, readPackSource } from '@3178/pack-format';
 import { doctor } from './doctor.js';
 
 function usage(): void {

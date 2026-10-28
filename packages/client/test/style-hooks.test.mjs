@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SEAT_ROLES } from '@bp/core-abi';
+import { SEAT_ROLES } from '@3178/core-abi';
 
 /**
  * 表现层防呆：app.ts 里 className 发出去的每个类，style.css 里就得真的有一条规则。

@@ -1,6 +1,6 @@
-import type { GameAsset, GameManifest, GameModule } from '@bp/core-abi';
+import type { GameAsset, GameManifest, GameModule } from '@3178/core-abi';
 
-export * from '@bp/core-abi';
+export * from '@3178/core-abi';
 
 /** 平台侧组装 manifest。rulesHash 由模块从规范化 config 算出，平台不参与玩法判断。 */
 export function manifestOf(

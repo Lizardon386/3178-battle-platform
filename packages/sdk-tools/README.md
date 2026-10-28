@@ -1,4 +1,4 @@
-# @bp/sdk-tools
+# @3178/sdk-tools
 
 3178 SDK 的构建与打包工具：
 

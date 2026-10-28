@@ -1,4 +1,4 @@
-import type { GameContext, GameSeatInfo } from '@bp/game-sdk';
+import type { GameContext, GameSeatInfo } from '@3178/game-sdk';
 
 export interface FakeContextOptions {
   roomCode?: string;

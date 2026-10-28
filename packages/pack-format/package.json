@@ -1,6 +1,6 @@
 {
-  "name": "@bp/pack-format",
-  "version": "0.1.1",
+  "name": "@3178/pack-format",
+  "version": "0.2.0",
   "description": "3178 单文件游戏包格式：BPMAP 包头、读写、校验、打包和解包缓存",
   "license": "MIT",
   "author": "3178-battle-platform contributors",
@@ -37,7 +37,7 @@
     "src"
   ],
   "dependencies": {
-    "@bp/core-abi": "^0.1.1"
+    "@3178/core-abi": "^0.2.0"
   },
   "publishConfig": {
     "access": "public"

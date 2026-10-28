@@ -27,7 +27,7 @@
 
 ## 3. 当前状态
 
-**2026-10-27 当前：`npm test` 176/176 全绿，`tools/checks/check-seam.sh` 零命中，`tsc -b` 通过。** 包边界已拆成 `@bp/core-abi`（游戏 ABI 和游戏可见类型）、`@bp/protocol`（wire / guard / 握手 / 房间视图）、`@bp/pack-format`（.bpmap 格式库）、`@bp/game-sdk`（公共门面 + game-kit）、`@bp/sdk-tools`（bpmap CLI + doctor + 模板，独立发版）：`game-sdk` 依赖 core-abi + pack-format，`protocol` 依赖 core-abi，`server` / `client` 依赖 core-abi + protocol，server 还依赖 pack-format；server/client 不再依赖 game-sdk，hostd 依赖 game-sdk 并在启动时把包内裸导入的 URL 表传给 loader；CLI/模板不再在 game-sdk 里。game-kit G1–G4 已完成，`fixture-kit` 现在覆盖 FeedLog / FeedPanel、包内资源、拒绝动作，并由 `bpmap` CLI 打包（包头带 `turn` / `1`）；真实沙箱验证过事件流、资源、拒绝提示、聊天、记分板和电脑位。宿主 loader 的裸导入表补上了 `@bp/game-sdk/kit/server`，构建模板补了同名 external，并修正 `--host` 指向 `@bp/sdk-tools` 的 CLI。客户端源码校验在非安全上下文没有 `crypto.subtle` 时回退纯 JS SHA-256；`seatGranted` 的房间 manifest 也带 `assets`，正常入房路径能校验。`apiVersion` / `mode` 闸门已落地：包头字段、宿主加载闸、`/api/version`、`bpmap doctor` 对齐，当前支持 `turn` / `1`。SDK 0.1.1 已正式发布为 [sdk-v0.1.1](https://github.com/Lizardon386/3178-battle-platform/releases/tag/sdk-v0.1.1)，四个 tarball + SHA256SUMS 已上传并校验通过；`setup-sdk.mjs --release sdk-v0.1.1` 可一条命令下载、验哈希并安装；尚未发布到 npm。P8 真游戏接入仍未做。代码全部在本目录，`uno-online` 未动。
+**2026-10-27 当前：`npm test` 176/176 全绿，`tools/checks/check-seam.sh` 零命中，`tsc -b` 通过。** 包边界已拆成 `@3178/core-abi`（游戏 ABI 和游戏可见类型）、`@bp/protocol`（wire / guard / 握手 / 房间视图）、`@3178/pack-format`（.bpmap 格式库）、`@3178/game-sdk`（公共门面 + game-kit）、`@3178/sdk-tools`（bpmap CLI + doctor + 模板，独立发版）：`game-sdk` 依赖 core-abi + pack-format，`protocol` 依赖 core-abi，`server` / `client` 依赖 core-abi + protocol，server 还依赖 pack-format；server/client 不再依赖 game-sdk，hostd 依赖 game-sdk 并在启动时把包内裸导入的 URL 表传给 loader；CLI/模板不再在 game-sdk 里。game-kit G1–G4 已完成，`fixture-kit` 现在覆盖 FeedLog / FeedPanel、包内资源、拒绝动作，并由 `bpmap` CLI 打包（包头带 `turn` / `1`）；真实沙箱验证过事件流、资源、拒绝提示、聊天、记分板和电脑位。宿主 loader 的裸导入表补上了 `@3178/game-sdk/kit/server`，构建模板补了同名 external，并修正 `--host` 指向 `@3178/sdk-tools` 的 CLI。客户端源码校验在非安全上下文没有 `crypto.subtle` 时回退纯 JS SHA-256；`seatGranted` 的房间 manifest 也带 `assets`，正常入房路径能校验。`apiVersion` / `mode` 闸门已落地：包头字段、宿主加载闸、`/api/version`、`bpmap doctor` 对齐，当前支持 `turn` / `1`。SDK 0.1.1 已正式发布为 [sdk-v0.1.1](https://github.com/Lizardon386/3178-battle-platform/releases/tag/sdk-v0.1.1)，四个 tarball + SHA256SUMS 已上传并校验通过；`setup-sdk.mjs --release sdk-v0.1.1` 可一条命令下载、验哈希并安装；尚未发布到 npm。P8 真游戏接入仍未做。代码全部在本目录，`uno-online` 未动。
 
 浏览器实测（`hostd host --port 3289 --no-lan`，页面内 `evaluate_script` 驱动；2026-10-21 复测时 in-app Browser 有 831px 视口，几何和版式可以直接量）走过的路径：大厅取到 `/api/games` 两个游戏 → 建房坐 1 号位 → 客人 ws 入座 2 号、观战入 901 → 加电脑位 → 未准备时开局按钮写"等准备：客人乙"且 `disabled` → 客人准备后变"开始对局" → 开局后牌桌区渲染按视角裁剪的状态、倒计时 `剩 58 秒 → 剩 56 秒`（服务端时间轴生效）→ 房主点"离开房间"被中文提示挡住 → 踢观战生效 → 移交后 👑 跳到 2 号位、房主面板自动隐藏、通知条"房主已移交给 客人乙" → 此后离席成功回到大厅。
 
@@ -41,8 +41,8 @@
 | 局域网客户端源码校验 | [module-loader.ts](packages/client/src/module-loader.ts) / [sha256.ts](packages/client/src/sha256.ts) / [engine.ts](packages/server/src/engine.ts) | 无 `crypto.subtle` 时纯 JS SHA-256 回退；`seatGranted` 带 assets；局域网 IP 实测 `isSecureContext=false`，fixture-kit 仍挂载并显示“哈希校验通过”；测试 176 例 |
 | 外部消费者 smoke | [smoke-sdk.mjs](tools/checks/smoke-sdk.mjs) | 临时工程装四个 tarball、用模板构建/打包/doctor，宿主 `/api/games` 能加载；2026-10-27 实测 `[smoke] OK` |
 | `mode` / `apiVersion` 包兼容闸 | [core-abi/version.ts](packages/core-abi/src/version.ts) / [pack-format/src/pack.ts](packages/pack-format/src/pack.ts) / [loader.ts](packages/server/src/loader.ts) | 包头/源清单读写；宿主只加载 `turn` / `1`；`/api/version` 和 `bpmap doctor` 使用同一组常量；测试 176 例 |
-| `@bp/pack-format` 包格式库 | [packages/pack-format](packages/pack-format) | `.bpmap` 读写/打包/解包；server 和 SDK 依赖，game-sdk `/node` 保持 re-export |
-| `@bp/sdk-tools` SDK 工具包 | [packages/sdk-tools](packages/sdk-tools) | `bpmap` CLI、doctor、setup/build 模板；独立依赖 core-abi + pack-format，不依赖 game-sdk |
+| `@3178/pack-format` 包格式库 | [packages/pack-format](packages/pack-format) | `.bpmap` 读写/打包/解包；server 和 SDK 依赖，game-sdk `/node` 保持 re-export |
+| `@3178/sdk-tools` SDK 工具包 | [packages/sdk-tools](packages/sdk-tools) | `bpmap` CLI、doctor、setup/build 模板；独立依赖 core-abi + pack-format，不依赖 game-sdk |
 | 座位模型 + 房主权限 + 票据 + Ready 闸 | [room.ts](packages/server/src/room.ts) / [authority.ts](packages/server/src/authority.ts) | [room-authority.test.mjs](packages/server/test/room-authority.test.mjs) 14 例 |
 | `GameModule` 契约 + 两个测试夹具 + 同一断言集 | [module-api.ts](packages/core-abi/src/module-api.ts) / [engine.ts](packages/server/src/engine.ts) | [contract.test.mjs](tools/testkit/test/contract.test.mjs) 19 例 |
 | ws 传输、限流、Origin 策略、心跳、真 socket 双游戏 | [transport.ts](packages/server/src/transport.ts) | [ws-live.test.mjs](packages/server/test/ws-live.test.mjs) 4 例 |
@@ -65,12 +65,12 @@
 
 ## 4. 计划 / 待办
 
-- [x] 拆出 `@bp/core-abi`，`protocol` 只留 wire/guard/握手/房间视图（`8b8e832`）
+- [x] 拆出 `@3178/core-abi`，`protocol` 只留 wire/guard/握手/房间视图（`8b8e832`）
 - [x] game-kit G1–G3、`/api/version`、`bpmap doctor`、SDK 脚本模板
 - [x] G4：ChatPanel / ScoreboardPanel / `ui.chat='game'` 真实沙箱联调（`a2fe494`）
 - [x] `apiVersion` / `mode` 闸门：包头、宿主加载、`/api/version`、`bpmap doctor` 对齐
-- [x] 拆出 `@bp/pack-format`，server 不再依赖 game-sdk
-- [x] 拆出 `@bp/sdk-tools`，CLI/模板独立发版
+- [x] 拆出 `@3178/pack-format`，server 不再依赖 game-sdk
+- [x] 拆出 `@3178/sdk-tools`，CLI/模板独立发版
 - [x] SDK 夹具扩展：fixture-kit 覆盖事件流 / 资源 / 拒绝，改走 `bpmap` CLI；补随机动作猴测
 - [x] 外部消费者 smoke：tarball 安装 + 模板构建 + doctor + 宿主加载
 - [x] SDK 发布元数据：去 `private`、MIT/LICENSE/README、repository/engines、依赖 `^0.1.0`、tarball 去 `.tsbuildinfo`
@@ -97,7 +97,7 @@
 
 ## 5. 关键约束与注意事项
 
-- **包边界**：`@bp/core-abi` 只放游戏 ABI 和游戏可见类型；`@bp/protocol` 只放 wire / guard / 握手 / 房间视图；`@bp/game-sdk` 是游戏公共门面。游戏运行时只依赖 game-sdk，构建/打包用独立的 sdk-tools；server/client 不 import game-sdk，hostd 只负责提供游戏包运行时依赖；不要把 wire 类型塞回 core-abi，也不要把 `GameModule` 塞回 protocol。
+- **包边界**：`@3178/core-abi` 只放游戏 ABI 和游戏可见类型；`@bp/protocol` 只放 wire / guard / 握手 / 房间视图；`@3178/game-sdk` 是游戏公共门面。游戏运行时只依赖 game-sdk，构建/打包用独立的 sdk-tools；server/client 不 import game-sdk，hostd 只负责提供游戏包运行时依赖；不要把 wire 类型塞回 core-abi，也不要把 `GameModule` 塞回 protocol。
 - **接缝闸门必须保持绿**：`bash tools/checks/check-seam.sh` 扫 `packages/*/src` 里的玩法词与 `games/` import。重构中最容易发生的退化就是"顺手把旧 `room.js` 搬过来"，这条是唯一的机械防线。**不要在闸门里加例外**（例外一旦存在就形同不存在）；平台代码的注释也不要提旧游戏名字，历史来源写在本档案里。
 - **revision 不变式**：任何可见状态变更都要推进 revision（`Room.addSeat/removeSeat/attach/detach/pushChat/bump` 已内置）。新加变更点时忘了 bump 的表现是"客户端收到了却不更新"，排查成本很高——本会话就是靠端到端测试抓到这个 bug 的。
 - **出站目标在创建时解析成 connIds**：任何"先改会话表再投递"的写法都会让最后一条通知丢掉（`hostClose`、`shutdown` 两处踩过）。新增广播入口时用 `Engine.toRoom/toSeat`，别自己拼 target。
@@ -131,14 +131,14 @@
 - 2026-10-27 Qoder：**README 可读性**：章节名改为平台概述 / 快速开始 / 对局流程 / 网络连接 / 数据存储 / 命令行用法 / 使用限制；昵称步骤移到进房前，3.2 加建房—进房时序图，3.3 加网络连接流程图，并加入两张平台实机截图（裁剪掉只有测试夹具的游戏选择器）。截图在 `docs/images/`，DESIGN 目录树和文件清单同步。
 - 2026-10-27 Qoder：**文档目录统一编号**：README / DESIGN / INTEGRATION_GUIDE / CONTEXT 顶部的 `文档` 改成 `1. 文档目录`，后续章节整体顺延一位；INTEGRATION_GUIDE 的正文引用和 `GameModule` / `GameInstance` 锚点同步，README/DESIGN/CONTEXT 的交叉引用复查过。
 - 2026-10-27 Qoder：**文档分层**：README 的文档目录保持在顶部，只列 README / DESIGN / INTEGRATION_GUIDE / CONTEXT；正文删除测试夹具、猴测报告和 `npm test` 描述，保留玩家能感知的占位面板说明。DESIGN 正文第一章（文档目录之后）改名“设计方向”，拆成目标 / 约束 / 验收三节，验收下分“验收标准”和“测试手顺”，历史证据继续链到本档；README/DESIGN/CONTEXT/INTEGRATION_GUIDE 顶部日期统一到 2026-10-27。
-- 2026-10-27 Qoder：**按开发者接入路径扩 fixture-kit**：服务端接 `FeedLog`，客户端挂 `FeedPanel` 并加载 `assets/notice.json`；新增 `fixture-reject` 动作和按钮，非法动作在平台状态栏显示拒绝。`pack-test-games.mjs` 改走 `bpmap` CLI，包头写 `mode: turn` / `apiVersion: 1`。抓到一个真实集成缺口：宿主 loader 的裸导入表缺 `@bp/game-sdk/kit/server`，导致用 FeedLog 的游戏整包被跳过；已补进 hostd 和构建模板的 external，并把 `--host` 的 doctor 路径从 `@bp/game-sdk` 改到 `@bp/sdk-tools`。新增 `fixture-kit-monkey.test.mjs`（固定 seed、300 步随机动作）和资源下发断言；协议层 `monkey.mjs` 的房间创建加入 `fixture-kit` 并补 `bump` 动作，修掉它仍从 `@bp/protocol` 取 `NOTICE_CODES` 的旧导入（`300` 步短程 0 违规）。浏览器复验事件流、资源、拒绝。测试 171 → 173。
-- 2026-10-27 Qoder：**`@bp/game-sdk` 根入口补齐版本常量**：re-export `API_VERSION`、`SUPPORTED_API_VERSIONS`、`GAME_MODES`、`SUPPORTED_MODES`、`DEFAULT_MODE` 和 `GameMode`；构建模板 `build.mjs` 改为从 `@bp/game-sdk` 与 `@bp/game-sdk/node` 取常量和打包函数，游戏工程不再直接 import core-abi / pack-format；接入指南的导出表和源码树同步。测试 170 → 171。
-- 2026-10-23 Qoder：**拆出 `@bp/sdk-tools`**（`ab77ac4`）：`bpmap` CLI、doctor、setup/build 模板从 `@bp/game-sdk` 移到 `packages/sdk-tools`，独立依赖 core-abi + pack-format，不依赖 game-sdk；game-sdk 去掉 bin/templates，保留 `/node` 兼容 re-export；`tools/packaging/bpmap.mjs` shim 改指 sdk-tools CLI；安装脚本改为 core-abi + pack-format + game-sdk + sdk-tools 四个 tarball，外部 smoke 跑通。测试 170。
-- 2026-10-23 Qoder：**拆出 `@bp/pack-format`**（`4f74bad`）：`.bpmap` 读写/打包/解包从 `@bp/game-sdk/node` 移到 `packages/pack-format`；SDK 的 `/node` 保留 re-export，server 改依赖 pack-format 并去掉 game-sdk 依赖；hostd 负责解析 `@bp/game-sdk` / `@bp/game-sdk/node` / `@bp/core-abi` / `@bp/protocol` 的 URL 并传给 loader；`/api/version` 的 packFormats 改用 `PACK_FORMAT`。SDK 安装脚本和文档后续改为 core-abi + pack-format + SDK + sdk-tools 四个 tarball。测试 170（pack 测试迁到 pack-format）。
-- 2026-10-23 Qoder：**`mode` / `apiVersion` 包兼容闸**（`a70ba58`）：`@bp/core-abi` 增加 `API_VERSION=1`、`GAME_MODES`、`SUPPORTED_MODES`；`bpmap.json` 和 `.bpmap` 包头读写 `mode` / `apiVersion`（旧包头默认 `turn` / `1`）；宿主 `loadPackGame` 在解包前检查，当前只加载 `turn` / `1`；`/api/version` 和 `bpmap doctor` 用同一组常量；`inspect` / `pack` / 构建模板输出和写入字段。测试 167 → 170（pack 字段、旧包头默认、unsupported mode/apiVersion、doctor 显示）。
+- 2026-10-27 Qoder：**按开发者接入路径扩 fixture-kit**：服务端接 `FeedLog`，客户端挂 `FeedPanel` 并加载 `assets/notice.json`；新增 `fixture-reject` 动作和按钮，非法动作在平台状态栏显示拒绝。`pack-test-games.mjs` 改走 `bpmap` CLI，包头写 `mode: turn` / `apiVersion: 1`。抓到一个真实集成缺口：宿主 loader 的裸导入表缺 `@3178/game-sdk/kit/server`，导致用 FeedLog 的游戏整包被跳过；已补进 hostd 和构建模板的 external，并把 `--host` 的 doctor 路径从 `@3178/game-sdk` 改到 `@3178/sdk-tools`。新增 `fixture-kit-monkey.test.mjs`（固定 seed、300 步随机动作）和资源下发断言；协议层 `monkey.mjs` 的房间创建加入 `fixture-kit` 并补 `bump` 动作，修掉它仍从 `@bp/protocol` 取 `NOTICE_CODES` 的旧导入（`300` 步短程 0 违规）。浏览器复验事件流、资源、拒绝。测试 171 → 173。
+- 2026-10-27 Qoder：**`@3178/game-sdk` 根入口补齐版本常量**：re-export `API_VERSION`、`SUPPORTED_API_VERSIONS`、`GAME_MODES`、`SUPPORTED_MODES`、`DEFAULT_MODE` 和 `GameMode`；构建模板 `build.mjs` 改为从 `@3178/game-sdk` 与 `@3178/game-sdk/node` 取常量和打包函数，游戏工程不再直接 import core-abi / pack-format；接入指南的导出表和源码树同步。测试 170 → 171。
+- 2026-10-23 Qoder：**拆出 `@3178/sdk-tools`**（`ab77ac4`）：`bpmap` CLI、doctor、setup/build 模板从 `@3178/game-sdk` 移到 `packages/sdk-tools`，独立依赖 core-abi + pack-format，不依赖 game-sdk；game-sdk 去掉 bin/templates，保留 `/node` 兼容 re-export；`tools/packaging/bpmap.mjs` shim 改指 sdk-tools CLI；安装脚本改为 core-abi + pack-format + game-sdk + sdk-tools 四个 tarball，外部 smoke 跑通。测试 170。
+- 2026-10-23 Qoder：**拆出 `@3178/pack-format`**（`4f74bad`）：`.bpmap` 读写/打包/解包从 `@3178/game-sdk/node` 移到 `packages/pack-format`；SDK 的 `/node` 保留 re-export，server 改依赖 pack-format 并去掉 game-sdk 依赖；hostd 负责解析 `@3178/game-sdk` / `@3178/game-sdk/node` / `@3178/core-abi` / `@bp/protocol` 的 URL 并传给 loader；`/api/version` 的 packFormats 改用 `PACK_FORMAT`。SDK 安装脚本和文档后续改为 core-abi + pack-format + SDK + sdk-tools 四个 tarball。测试 170（pack 测试迁到 pack-format）。
+- 2026-10-23 Qoder：**`mode` / `apiVersion` 包兼容闸**（`a70ba58`）：`@3178/core-abi` 增加 `API_VERSION=1`、`GAME_MODES`、`SUPPORTED_MODES`；`bpmap.json` 和 `.bpmap` 包头读写 `mode` / `apiVersion`（旧包头默认 `turn` / `1`）；宿主 `loadPackGame` 在解包前检查，当前只加载 `turn` / `1`；`/api/version` 和 `bpmap doctor` 用同一组常量；`inspect` / `pack` / 构建模板输出和写入字段。测试 167 → 170（pack 字段、旧包头默认、unsupported mode/apiVersion、doctor 显示）。
 - 2026-10-23 Qoder：**G4 测试夹具落地**（`6e09208`）：新增 `fixture-kit`（`tools/testkit/src/test-games/kit-client/`，显示名“测试夹具·game-kit 界面”），服务端带 `ui.chat='game'`，客户端用 ChatPanel / ScoreboardPanel；`pack-test-games.mjs` 用 esbuild 把它打成单文件 `client.js` 并写入包清单，`games/fixture-kit.bpmap` 由 `npm test` 生成。hostd-http 增加 `/api/games` 的 `ui.chat`/入口断言和 `/games/fixture-kit/client.js` 下发断言；测试 166 → 167，README/DESIGN/CONTEXT 的夹具数量同步为三个。另补 [fixture-kit.page.js](tools/checks/fixture-kit.page.js)：在真实大厅注入后建房、开局、探测 ChatPanel/ScoreboardPanel、发聊天、下一手、加电脑位并返回逐项结果；已用实际 `fixture-kit` 包跑通（平台聊天卡隐藏、聊天回显、电脑行出现）。
-- 2026-10-23 Qoder：**G4 game-kit 真实沙箱联调完成**（`a2fe494`）。用临时客户端（`ui.chat='game'`，挂 `ChatPanel` / `ScoreboardPanel`）跑真实宿主 + 沙箱 iframe：平台聊天卡在对局中隐藏；游戏聊天发送到平台、历史回灌到游戏；记分板显示玩家/队伍/连接/自定义列，加电脑位后显示“电脑”，点“下一手”后分数和系统事件更新。抓到一个 core-abi 拆分后的真实回归：首页 importmap 没映射 `@bp/core-abi`，`/vendor/core-abi/` 路由也没挂，`PlatformApp` 整个没启动；已补 importmap、hostd 静态路由和 hostd-http 断言。166/166、seam OK。剩余：`apiVersion` / `mode` 闸门、`@bp/pack` 第二刀、UNO。
-- 2026-10-23 Qoder：**拆出 `@bp/core-abi`，`protocol` 只留线协议**（`8b8e832`）。`GameModule` / `GameInstance` / `Effect` / `GameContext` / `GameSeatInfo` / 客户端契约 / `SeatRole` / `RoomPhase` / `SeatView` / `GameManifest` / `GameAsset` / `GameUiOptions` / `PlatformCode` / `NoticeCode` / `stableDigest` 进 core-abi；protocol 依赖 core-abi，只保留 wire、guard、协议版本、房间视图、握手和默认文案；game-sdk 依赖 core-abi 并在根入口 re-export，`/client` 变成兼容路径；client 去掉 game-sdk 依赖；`manifestOf` 移到 server；loader 裸导入和构建模板加 core-abi，docs/DESIGN 同步。验证：166/166、seam OK、`tsc -b` 通过；外部临时工程跑通 core-abi + SDK tarball 安装、构建、打包、inspect。未做：`@bp/pack` 第二刀、`apiVersion` / `mode` 闸门、G4 真实沙箱联调、UNO 接入。
+- 2026-10-23 Qoder：**G4 game-kit 真实沙箱联调完成**（`a2fe494`）。用临时客户端（`ui.chat='game'`，挂 `ChatPanel` / `ScoreboardPanel`）跑真实宿主 + 沙箱 iframe：平台聊天卡在对局中隐藏；游戏聊天发送到平台、历史回灌到游戏；记分板显示玩家/队伍/连接/自定义列，加电脑位后显示“电脑”，点“下一手”后分数和系统事件更新。抓到一个 core-abi 拆分后的真实回归：首页 importmap 没映射 `@3178/core-abi`，`/vendor/core-abi/` 路由也没挂，`PlatformApp` 整个没启动；已补 importmap、hostd 静态路由和 hostd-http 断言。166/166、seam OK。剩余：`apiVersion` / `mode` 闸门、`@bp/pack` 第二刀、UNO。
+- 2026-10-23 Qoder：**拆出 `@3178/core-abi`，`protocol` 只留线协议**（`8b8e832`）。`GameModule` / `GameInstance` / `Effect` / `GameContext` / `GameSeatInfo` / 客户端契约 / `SeatRole` / `RoomPhase` / `SeatView` / `GameManifest` / `GameAsset` / `GameUiOptions` / `PlatformCode` / `NoticeCode` / `stableDigest` 进 core-abi；protocol 依赖 core-abi，只保留 wire、guard、协议版本、房间视图、握手和默认文案；game-sdk 依赖 core-abi 并在根入口 re-export，`/client` 变成兼容路径；client 去掉 game-sdk 依赖；`manifestOf` 移到 server；loader 裸导入和构建模板加 core-abi，docs/DESIGN 同步。验证：166/166、seam OK、`tsc -b` 通过；外部临时工程跑通 core-abi + SDK tarball 安装、构建、打包、inspect。未做：`@bp/pack` 第二刀、`apiVersion` / `mode` 闸门、G4 真实沙箱联调、UNO 接入。
 - 2026-10-10 Qoder：**目录改名 `game-host-platform` → `3178-battle-platform`，并由评估档转为实施档**（用户指令：本会话就在本目录继续开发对战平台）。同时改判两项：计划 D2「代码落新目录 battle-platform」作废，代码就落本目录；D6「房间列表/大厅」用户不接受"只做地址簿 + 邀请链接"，要求**尽量贴合 war3 的房间设计**，发现层级改为 B+A（见 README「房间形态」）。顺带修掉本档 4 处 `[链]` 违规。
 - 2026-10-10 Qoder：**开工 P0–P5，交付平台内核第一版**（用户"选 B+A，其他默认，直接开工"）。新建 npm workspaces + TS 工程（`tsc -b` 项目引用、`node --test`），`packages/protocol`（消息目录/错误码/握手/稳定摘要/形状闸门）、`packages/server`（`Engine` 引擎、`Room` 座位与 revision 不变式、`authority` 权限集中处、`HostStore` 房主侧落盘、`WsTransport`、`discovery` 组播信标、`loader` 运行时动态加载）、`games/echo` + `games/turncount` 两个形状不同的合成游戏。测试 57 例全绿：19 例契约套件用**同一组断言**跑两个游戏，4 例真 socket 端到端跨游戏换房，含落盘重启后旧票据回座。**修掉两个实现缺陷**：① 出站按房间寻址会在 `hostClose`/`shutdown` 清空会话表后丢掉最后一条通知 → 改为创建时即解析 connIds；② 入座/连接/聊天不推进 revision → 按版本号去重的客户端会把新状态当重复帧丢弃。新增 `tools/checks/check-seam.sh`（平台包禁玩法词与 `games/` import）。改名遗留：本档与 [uno-online/CONTEXT.md](../uno-online/CONTEXT.md)、[uno-online/README.md](../uno-online/README.md) 内引用已全部替换为新名（uno-online 那两处经用户授权后修改，其工作树现为未提交状态）。
 - 2026-10-10 Qoder：**P6 客户端 + P7 宿主壳，界面在浏览器里跑通**。`packages/client`（地址解析 / 地址簿+票据 / 指数退避 / 服务端时间轴 / 帧归约 / 模块下发与 sha256 校验 / 大厅+房间内+对局三层界面）与 `packages/hostd`（host/join/diagnose/stop、静态与接口路由、cloudflared 解析、`房主建房.bat` + `玩家本机壳.bat` 双击入口 + `.gitattributes` 锁 CRLF）。测试从 57 涨到 **77 例全绿**（新增 12 例客户端逻辑 + 6 例宿主壳集成，含路径穿越与真 ws）。**修掉四个真实缺陷**：① `this.fetchImpl(...)` 丢接收者 → 浏览器 `Illegal invocation`，表现为局域网列表永远空白，且被静默 `catch` 吞掉（现在把原因写进提示）；② `safeJoin` 用正斜杠比前缀，Windows 上 `resolve` 给反斜杠 → `/app/`、`/games/` 全部误判越界 404；③ `server.close()`/`wss.close()` 在有 keep-alive 与 WS 连接时回调不触发 → 收尾挂死，改 `closeAllConnections()` + 超时竞速、`terminate()` 先行；④ 客户端 `until('snapshot')` 拿到的是在途旧帧 → 测试助手改成带 predicate 等"符合条件的那一帧"。**验证方式**：in-app Browser 无可见视口，用 `evaluate_script` 真点：建房→客人入座→观战入座→加电脑位→未准备时开局按钮写明"等准备：客人乙"并 `disabled`→准备后变亮→开局后倒计时 58→56 秒（服务端时间轴生效）→房主离席被中文提示挡住→踢观战→移交后 👑 换位、房主面板隐藏、通知条正确→离席回大厅。
@@ -210,7 +210,7 @@
 | 阶段 | 内容 | 状态 | 验收凭据 |
 |---|---|---|---|
 | P0 | monorepo + TS 构建 + `node --test` + 接缝闸门 | 已完成 | `npm test` exit 0；`check-seam.sh` 零命中 |
-| P1 | `@bp/core-abi` 游戏 ABI/类型/摘要 + `@bp/protocol` 线协议/形状闸/握手 | 已完成 | [protocol.test.mjs](packages/protocol/test/protocol.test.mjs) 9 例 |
+| P1 | `@3178/core-abi` 游戏 ABI/类型/摘要 + `@bp/protocol` 线协议/形状闸/握手 | 已完成 | [protocol.test.mjs](packages/protocol/test/protocol.test.mjs) 9 例 |
 | P2 | 座位模型与房主权限：`hostId`、票据、Ready 闸、kick/transfer/close | 已完成 | [room-authority.test.mjs](packages/server/test/room-authority.test.mjs) 14 例 |
 | P3 | `GameModule` 契约 + 两个测试夹具 + 契约测试 | 已完成 | [contract.test.mjs](tools/testkit/test/contract.test.mjs) 20 例（同一断言集跑两个夹具） |
 | P4 | 传输（ws/限流/Origin/心跳）、房间聊天、局域网信标 | 已完成（信标未双机实测） | [ws-live.test.mjs](packages/server/test/ws-live.test.mjs) 4 例；[store-discovery.test.mjs](packages/server/test/store-discovery.test.mjs) 12 例 |
@@ -240,13 +240,13 @@
 
 - 2026-10-21 Qoder：**修正下一步清单**：沙箱已完成，从待办移除；下一项改为 M3 试点游戏（uno 或先把 `测试夹具·回合制` 补成带 AI 和客户端的夹具），其次第二台机器与双机实测。
 
-- 2026-10-21 Qoder：**同步测试夹具迁移与 SDK 抽取**：README/DESIGN/CONTEXT 里当前状态和下一步的 echo/turncount 改为“测试夹具·回合制 / 测试夹具·同时操作”（`tools/testkit/src/test-games/`）；契约测试路径改到 `tools/testkit/test/contract.test.mjs`；DESIGN 文件清单补 `@bp/game-sdk` 与 testkit。历史变更记录保留旧名。
+- 2026-10-21 Qoder：**同步测试夹具迁移与 SDK 抽取**：README/DESIGN/CONTEXT 里当前状态和下一步的 echo/turncount 改为“测试夹具·回合制 / 测试夹具·同时操作”（`tools/testkit/src/test-games/`）；契约测试路径改到 `tools/testkit/test/contract.test.mjs`；DESIGN 文件清单补 `@3178/game-sdk` 与 testkit。历史变更记录保留旧名。
 
 - 2026-10-21 Qoder：**统一章节编号与 4.1 架构目录**：README/CONTEXT/INTEGRATION_GUIDE 的正文 H2/H3 从 1 编号，文档索引保持不编号；INTEGRATION_GUIDE 在文档表后新增「1. 接入总则」，后续接口章节顺延；DESIGN 4.1 先列 packages/games/tools 目录文本树，再保留包关系图。
 
 - 2026-10-21 Qoder：**清理过时文件**：删除 `design-refs/`（8 张方向图，14MB，零引用）、`packages/client/public/预览-字号与开关.html`（字体/开关决策辅助页，仅两条历史记录引用，已改为纯文本）、`nc.log`（旧测试日志）。`dogfood-output`（文档仍引用）与 `games/*.bpmap`（测试包）保留；`data/` 与 `dist-portable/` 已按用户确认删除，运行/测试会自动重建 `data/`，便携包用 `npm run portable` 重建。
 
-- 2026-10-21 Qoder：**DESIGN 4.1 按当前源码树更新**：目录改用 `├─` / `└─` 层级树，列出 `packages/{game-sdk,protocol,server,client,hostd,testkit}`、`games/`、`tools/devtools/` 和四份根文档，每个节点带一句说明；包关系图补 `@bp/game-sdk`，游戏节点改为 `games/*.bpmap`。`data/` 与 `dist-portable/` 标为不入库的运行/打包产物，不画进源码树。
+- 2026-10-21 Qoder：**DESIGN 4.1 按当前源码树更新**：目录改用 `├─` / `└─` 层级树，列出 `packages/{game-sdk,protocol,server,client,hostd,testkit}`、`games/`、`tools/devtools/` 和四份根文档，每个节点带一句说明；包关系图补 `@3178/game-sdk`，游戏节点改为 `games/*.bpmap`。`data/` 与 `dist-portable/` 标为不入库的运行/打包产物，不画进源码树。
 
 - 2026-10-21 Qoder：**DESIGN 4.1 区分两个“tools”**：`tools/testkit` 是 workspace 包 `@bp/testkit`（接口测试脚手架、模拟上下文、测试夹具，测试会 import）；`tools/devtools/` 是仓库级脚本（闸门、猴测、打包、启动器生成），不参与 npm 包图。
 
@@ -260,15 +260,15 @@
 
 - 2026-10-21 Qoder：**DESIGN 4.1 目录树收回到包一级**：只列 `packages/*`、`tools/{testkit,checks,packaging}`、`games/` 和根文档，不再展开 `src/`、`test/`、`public/`；各目录的职责写在同行说明里。
 
-- 2026-10-23 Qoder：**拆出 `@bp/core-abi`**（`8b8e832`）：`GameModule` / `GameInstance` / `Effect` / 客户端契约 / 座位类型 / manifest / 错误码 / `stableDigest` 进 core-abi；protocol 只留 wire/guard/握手/房间视图；game-sdk 只依赖 core-abi，client 不再依赖 game-sdk；`manifestOf` 移到 server；loader 和构建模板加 core-abi。166/166、seam OK、`tsc -b` 通过。下一步见本档「下一步顺序建议」。
+- 2026-10-23 Qoder：**拆出 `@3178/core-abi`**（`8b8e832`）：`GameModule` / `GameInstance` / `Effect` / 客户端契约 / 座位类型 / manifest / 错误码 / `stableDigest` 进 core-abi；protocol 只留 wire/guard/握手/房间视图；game-sdk 只依赖 core-abi，client 不再依赖 game-sdk；`manifestOf` 移到 server；loader 和构建模板加 core-abi。166/166、seam OK、`tsc -b` 通过。下一步见本档「下一步顺序建议」。
 
 - 2026-10-23 Qoder：**G4 完成并落成测试夹具**（`a2fe494`）：真实沙箱客户端验证 ChatPanel / ScoreboardPanel / `ui.chat='game'`；新增 `fixture-kit` 带客户端入口，由 `npm test` 打包，测试 167 例；修掉首页 importmap 缺 core-abi 和 `/vendor/core-abi/` 路由。当前下一步是 `apiVersion` / `mode` 闸门。
 
 - 2026-10-23 Qoder：**`mode` / `apiVersion` 闸门完成**：包头、源清单、宿主加载、`/api/version`、`bpmap doctor` 已对齐；当前支持 `turn` / `1`，测试 170 例。下一步是可选 `@bp/pack` 第二刀、SDK 发布准备、UNO。
 
-- 2026-10-23 Qoder：**拆出 `@bp/pack-format`**（`4f74bad`）：`.bpmap` 库从 SDK 移到 `packages/pack-format`；SDK `/node` 保留 re-export；server 去掉 game-sdk 依赖，hostd 负责解析游戏包裸导入 URL 并传给 loader；测试 170。
+- 2026-10-23 Qoder：**拆出 `@3178/pack-format`**（`4f74bad`）：`.bpmap` 库从 SDK 移到 `packages/pack-format`；SDK `/node` 保留 re-export；server 去掉 game-sdk 依赖，hostd 负责解析游戏包裸导入 URL 并传给 loader；测试 170。
 
-- 2026-10-23 Qoder：**拆出 `@bp/sdk-tools`**：CLI/doctor/模板独立发版，不依赖 game-sdk；game-sdk 保留 `/node` 兼容路径；安装脚本四个 tarball；下一步 SDK 发布准备。
+- 2026-10-23 Qoder：**拆出 `@3178/sdk-tools`**：CLI/doctor/模板独立发版，不依赖 game-sdk；game-sdk 保留 `/node` 兼容路径；安装脚本四个 tarball；下一步 SDK 发布准备。
 
 - 2026-10-21 Qoder：**文档去掉行话**：`dogfood-output` 的实际内容写成“猴测报告：随机操作跑出的问题记录”；`finding` / `High` / `Medium` / `Low` 改成“问题 / 高 / 中 / 低”；testkit 描述改成“接口测试脚手架、模拟上下文”；checks 描述改成“架构检查、随机操作测试、存档与重连问题复现”。
 

@@ -1,4 +1,4 @@
-import type { RoomPhase, SeatView } from '@bp/core-abi';
+import type { RoomPhase, SeatView } from '@3178/core-abi';
 import { seatColor } from '../palette.js';
 
 export interface ScoreboardRow {

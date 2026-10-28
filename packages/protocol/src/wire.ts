@@ -1,4 +1,4 @@
-import type { GameManifest, NoticeCode, PlatformCode, RoomPhase, SeatRole, SeatView } from '@bp/core-abi';
+import type { GameManifest, NoticeCode, PlatformCode, RoomPhase, SeatRole, SeatView } from '@3178/core-abi';
 import type { RoomView } from './seats.js';
 
 /**

@@ -95,8 +95,8 @@ try {
   );
   writeFileSync(
     join(project, 'src', 'server.ts'),
-    `import { stableDigest, type GameContext, type GameInstance, type GameModule, type Outcome } from '@bp/game-sdk';
-import { FeedLog } from '@bp/game-sdk/kit/server';
+    `import { stableDigest, type GameContext, type GameInstance, type GameModule, type Outcome } from '@3178/game-sdk';
+import { FeedLog } from '@3178/game-sdk/kit/server';
 
 class SmokeGame implements GameInstance {
   private readonly feed: FeedLog;
@@ -146,7 +146,7 @@ export default smokeGame;
   );
   writeFileSync(
     join(project, 'src', 'client.ts'),
-    `import { ChatPanel } from '@bp/game-sdk/kit';
+    `import { ChatPanel } from '@3178/game-sdk/kit';
 
 export default {
   mount(host: HTMLElement) {
@@ -165,7 +165,7 @@ export default {
   cpSync(SETUP_TEMPLATE, join(project, 'scripts', 'setup-sdk.mjs'));
 
   run([join(project, 'scripts', 'setup-sdk.mjs'), '--platform', ROOT], project, '安装四个 SDK tarball');
-  const buildTemplate = join(project, 'node_modules', '@bp', 'sdk-tools', 'templates', 'scripts', 'build.mjs');
+  const buildTemplate = join(project, 'node_modules', '@3178', 'sdk-tools', 'templates', 'scripts', 'build.mjs');
   if (!existsSync(buildTemplate)) fail(`安装后找不到 build 模板：${buildTemplate}`);
   cpSync(buildTemplate, join(project, 'scripts', 'build.mjs'));
 

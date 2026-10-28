@@ -1,4 +1,4 @@
-import { stableDigest, type GameManifest } from '@bp/core-abi';
+import { stableDigest, type GameManifest } from '@3178/core-abi';
 
 /** 房规摘要。旧项目里写死的牌堆版本号就是这个函数的一个特例。 */
 export function computeRulesHash(config: Record<string, unknown> | undefined): string {

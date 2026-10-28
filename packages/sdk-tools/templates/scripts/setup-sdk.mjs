@@ -27,7 +27,7 @@ const releaseBase = argValue('--release-base', 'https://github.com/Lizardon386/3
 const platformRoot = resolve(argValue('--platform', '../3178-battle-platform'));
 const sdkDir = resolve(argValue('--sdk-dir', 'sdk'));
 const npmCli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
-const PACKAGE_PREFIXES = ['bp-core-abi-', 'bp-pack-format-', 'bp-game-sdk-', 'bp-sdk-tools-'];
+const PACKAGE_PREFIXES = ['3178-core-abi-', '3178-pack-format-', '3178-game-sdk-', '3178-sdk-tools-'];
 
 function fail(message) {
   console.error(`[x] ${message}`);

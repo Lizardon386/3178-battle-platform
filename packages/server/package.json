@@ -11,8 +11,8 @@
     }
   },
   "dependencies": {
-    "@bp/core-abi": "*",
-    "@bp/pack-format": "*",
+    "@3178/core-abi": "*",
+    "@3178/pack-format": "*",
     "@bp/protocol": "*",
     "ws": "^8.18.0"
   },

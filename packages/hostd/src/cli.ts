@@ -140,15 +140,21 @@ function banner(lines: string[]): void {
 }
 
 const PACK_IMPORTS = [
-  '@bp/game-sdk',
-  '@bp/game-sdk/node',
-  '@bp/game-sdk/kit/server',
-  '@bp/core-abi',
+  '@3178/game-sdk',
+  '@3178/game-sdk/node',
+  '@3178/game-sdk/kit/server',
+  '@3178/core-abi',
   '@bp/protocol',
 ];
 
 function packImportUrls(): Record<string, string> {
-  return Object.fromEntries(PACK_IMPORTS.map((specifier) => [specifier, import.meta.resolve(specifier)]));
+  const urls = Object.fromEntries(PACK_IMPORTS.map((specifier) => [specifier, import.meta.resolve(specifier)]));
+  // 旧包（0.1.0 时代）写的是 @bp/*，把旧名字指到新的 @3178/* 入口，不用重复装包
+  urls['@bp/game-sdk'] = urls['@3178/game-sdk']!;
+  urls['@bp/game-sdk/node'] = urls['@3178/game-sdk/node']!;
+  urls['@bp/game-sdk/kit/server'] = urls['@3178/game-sdk/kit/server']!;
+  urls['@bp/core-abi'] = urls['@3178/core-abi']!;
+  return urls;
 }
 
 async function loadAllGames(): Promise<GameSet> {

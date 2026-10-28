@@ -69,7 +69,7 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 
 ### 3.1 获取 SDK
 
-SDK 0.1.1 已发布在 [GitHub Release](https://github.com/Lizardon386/3178-battle-platform/releases/tag/sdk-v0.1.1)，没有发布到 npm。下载四个 tarball 安装；`@bp/game-sdk` 依赖 `@bp/core-abi` 和 `@bp/pack-format`，构建/打包还要 `@bp/sdk-tools`，四个要一起装。
+SDK 0.1.1 已发布在 [GitHub Release](https://github.com/Lizardon386/3178-battle-platform/releases/tag/sdk-v0.1.1)，没有发布到 npm。下载四个 tarball 安装；`@3178/game-sdk` 依赖 `@3178/core-abi` 和 `@3178/pack-format`，构建/打包还要 `@3178/sdk-tools`，四个要一起装。
 
 有两套做法：3.1.1 手动执行命令，3.1.2 用现成脚本。两者结果一样，选一种即可。
 
@@ -91,10 +91,10 @@ cd <你的游戏工程>
 npm init -y
 npm pkg set type=module
 npm install --save-dev \
-  <SDK 产物目录>/bp-core-abi-0.1.0.tgz \
-  <SDK 产物目录>/bp-pack-format-0.1.0.tgz \
-  <SDK 产物目录>/bp-game-sdk-0.1.0.tgz \
-  <SDK 产物目录>/bp-sdk-tools-0.1.0.tgz \
+  <SDK 产物目录>/3178-core-abi-0.1.0.tgz \
+  <SDK 产物目录>/3178-pack-format-0.1.0.tgz \
+  <SDK 产物目录>/3178-game-sdk-0.1.0.tgz \
+  <SDK 产物目录>/3178-sdk-tools-0.1.0.tgz \
   esbuild
 ```
 
@@ -102,19 +102,19 @@ npm install --save-dev \
 
 | 命令 | 作用 |
 |---|---|
-| `npm pack ./packages/core-abi` | 把 `@bp/core-abi` 打成 tarball |
-| `npm pack ./packages/pack-format` | 把 `@bp/pack-format` 打成 tarball |
-| `npm pack ./packages/game-sdk` | 把 `@bp/game-sdk` 打成 tarball |
-| `npm pack ./packages/sdk-tools` | 把 `@bp/sdk-tools` 打成 tarball |
+| `npm pack ./packages/core-abi` | 把 `@3178/core-abi` 打成 tarball |
+| `npm pack ./packages/pack-format` | 把 `@3178/pack-format` 打成 tarball |
+| `npm pack ./packages/game-sdk` | 把 `@3178/game-sdk` 打成 tarball |
+| `npm pack ./packages/sdk-tools` | 把 `@3178/sdk-tools` 打成 tarball |
 | `npm init -y` | 没有 `package.json` 时创建一个 |
 | `npm pkg set type=module` | 让工程按 ESM 解析 |
 | `npm install --save-dev` | 同时安装四个 tarball 和 esbuild；SDK 依赖 core-abi / pack-format，构建和打包还要 sdk-tools |
 
-平台更新 SDK 后重新打包、重新安装。以后发布到 registry 后改成 `npm install @bp/game-sdk @bp/sdk-tools` 即可。
+平台更新 SDK 后重新打包、重新安装。以后发布到 registry 后改成 `npm install @3178/game-sdk @3178/sdk-tools` 即可。
 
 #### 3.1.2 用 setup-sdk.mjs 安装（脚本）
 
-脚本在 SDK 仓库的 [setup-sdk.mjs](packages/sdk-tools/templates/scripts/setup-sdk.mjs)，也可以直接从 GitHub Release 下载；安装后同一份也在 `node_modules/@bp/sdk-tools/templates/scripts/`。
+脚本在 SDK 仓库的 [setup-sdk.mjs](packages/sdk-tools/templates/scripts/setup-sdk.mjs)，也可以直接从 GitHub Release 下载；安装后同一份也在 `node_modules/@3178/sdk-tools/templates/scripts/`。
 
 前置条件：Node.js >= 20.19、npm。游戏工程可以还没有 `package.json`，脚本会创建一个最小版本。
 
@@ -153,13 +153,13 @@ node scripts/setup-sdk.mjs --platform ../3178-battle-platform
 
 | 位置 | 内容 |
 |---|---|
-| `sdk/bp-core-abi-<版本>.tgz` | core-abi tarball |
-| `sdk/bp-pack-format-<版本>.tgz` | pack-format tarball |
-| `sdk/bp-sdk-tools-<版本>.tgz` | sdk-tools tarball |
-| `sdk/bp-game-sdk-<版本>.tgz` | SDK tarball |
+| `sdk/3178-core-abi-<版本>.tgz` | core-abi tarball |
+| `sdk/3178-pack-format-<版本>.tgz` | pack-format tarball |
+| `sdk/3178-sdk-tools-<版本>.tgz` | sdk-tools tarball |
+| `sdk/3178-game-sdk-<版本>.tgz` | SDK tarball |
 | `package.json` 的 `devDependencies` | 四个 tarball 和 esbuild |
-| `node_modules/@bp/game-sdk/` | 已安装的 SDK |
-| `node_modules/@bp/sdk-tools/` | CLI 和模板，`npx bpmap` 从这里来 |
+| `node_modules/@3178/game-sdk/` | 已安装的 SDK |
+| `node_modules/@3178/sdk-tools/` | CLI 和模板，`npx bpmap` 从这里来 |
 
 注意：
 
@@ -195,7 +195,7 @@ mygame/
 实现 [GameModule](#42-gamemodule) 和 [GameInstance](#43-gameinstance)，导出 `default` 或具名对象。下面只列 `GameModule` 对象；`MyGame` 是你要实现的 `GameInstance`，方法见 4.3，`fromSnapshot` 也由你实现。
 
 ```ts
-import { stableDigest, type GameModule } from '@bp/game-sdk';
+import { stableDigest, type GameModule } from '@3178/game-sdk';
 
 export const myGame: GameModule = {
   id: 'mygame',
@@ -233,11 +233,11 @@ export default {
 
 ### 3.5 构建
 
-构建到 `dist-pack/`。服务端入口可以把 `@bp/game-sdk` / `@bp/game-sdk/node` / `@bp/game-sdk/kit/server` / `@bp/core-abi` 交给宿主解析；这是通过 `--external` 实现的，宿主版本要和构建时一致。游戏源码只 import 前三个时，前三条 `--external` 就够；`@bp/core-abi` 保留给直接 import ABI 的旧代码。其他第三方依赖不要 external，应该打进 `server.js`：
+构建到 `dist-pack/`。服务端入口可以把 `@3178/game-sdk` / `@3178/game-sdk/node` / `@3178/game-sdk/kit/server` / `@3178/core-abi` 交给宿主解析；这是通过 `--external` 实现的，宿主版本要和构建时一致。游戏源码只 import 前三个时，前三条 `--external` 就够；`@3178/core-abi` 保留给直接 import ABI 的旧代码。其他第三方依赖不要 external，应该打进 `server.js`：
 
 ```bash
 npx esbuild src/server.ts --bundle --platform=node --format=esm \
-  --external:@bp/game-sdk --external:@bp/game-sdk/node --external:@bp/game-sdk/kit/server --external:@bp/core-abi \
+  --external:@3178/game-sdk --external:@3178/game-sdk/node --external:@3178/game-sdk/kit/server --external:@3178/core-abi \
   --outfile=dist-pack/server.js
 
 npx esbuild src/client.ts --bundle --platform=browser --format=esm \
@@ -423,11 +423,11 @@ node scripts/build.mjs --out build/mygame.bpmap
 
 ```text
 packages/game-sdk/src/
-├─ index.ts              # 根入口：re-export @bp/core-abi 的 ABI 与版本常量
+├─ index.ts              # 根入口：re-export @3178/core-abi 的 ABI 与版本常量
 ├─ contract/
 │  └─ client.ts          # 客户端 mount / onEvent / actions 类型
 ├─ node/
-│  └─ pack.ts            # re-export @bp/pack-format，保留 /node 路径
+│  └─ pack.ts            # re-export @3178/pack-format，保留 /node 路径
 └─ kit/
    ├─ palette.ts         # 座位颜色
    ├─ server/feed.ts     # FeedLog
@@ -444,14 +444,14 @@ packages/sdk-tools/
 
 | 导入 | 内容 |
 |---|---|
-| `@bp/game-sdk` | `GameModule` / `GameInstance` / `GameContext` / `GameSeatInfo` / `GameAction` / `Effect` / `Outcome` / `Reject` / `reject()` / `isReject()` / `ViewerId` / `stableDigest` / `GameManifest` / `GameAsset` / `GameUiOptions` / `SeatRole` / `RoomPhase` / `SeatView` / `PlatformCode` / `NoticeCode` / `GameMode` / `API_VERSION` / `SUPPORTED_API_VERSIONS` / `GAME_MODES` / `SUPPORTED_MODES` / `DEFAULT_MODE` |
-| `@bp/game-sdk/client` | `GameClientContract` / `GameActions`（只有类型，没有运行时） |
-| `@bp/game-sdk/node` | re-export `@bp/pack-format`，保留 `packDirectory` / `readPack` / `readPackSource` / `extractPack` / `listPackFiles` / 包格式常量和类型 |
-| `@bp/game-sdk/kit` | `ChatPanel` / `FeedPanel` / `ScoreboardPanel` / `seatColor`，以及 `normalizeFeedEntry`、`mergeFeedEntries`、`formatFeedTime`、`normalizeChatLine`、`mergeChatLines`、`chatText`、`resolveColumnValue`、`formatColumnValue`、`sortScoreboardRows`、`buildScoreboardRows`、`connectionLabel` 等纯函数 |
-| `@bp/game-sdk/kit/server` | `FeedLog` / `FeedLogOptions` / `FeedEmitInput` / `FeedSeat` / `FeedEntry` / `FeedVisibility` / `FeedError` / `FEED_EVENT` |
-| `bpmap` bin（`@bp/sdk-tools`） | `pack` / `inspect` / `unpack` / `doctor` |
+| `@3178/game-sdk` | `GameModule` / `GameInstance` / `GameContext` / `GameSeatInfo` / `GameAction` / `Effect` / `Outcome` / `Reject` / `reject()` / `isReject()` / `ViewerId` / `stableDigest` / `GameManifest` / `GameAsset` / `GameUiOptions` / `SeatRole` / `RoomPhase` / `SeatView` / `PlatformCode` / `NoticeCode` / `GameMode` / `API_VERSION` / `SUPPORTED_API_VERSIONS` / `GAME_MODES` / `SUPPORTED_MODES` / `DEFAULT_MODE` |
+| `@3178/game-sdk/client` | `GameClientContract` / `GameActions`（只有类型，没有运行时） |
+| `@3178/game-sdk/node` | re-export `@3178/pack-format`，保留 `packDirectory` / `readPack` / `readPackSource` / `extractPack` / `listPackFiles` / 包格式常量和类型 |
+| `@3178/game-sdk/kit` | `ChatPanel` / `FeedPanel` / `ScoreboardPanel` / `seatColor`，以及 `normalizeFeedEntry`、`mergeFeedEntries`、`formatFeedTime`、`normalizeChatLine`、`mergeChatLines`、`chatText`、`resolveColumnValue`、`formatColumnValue`、`sortScoreboardRows`、`buildScoreboardRows`、`connectionLabel` 等纯函数 |
+| `@3178/game-sdk/kit/server` | `FeedLog` / `FeedLogOptions` / `FeedEmitInput` / `FeedSeat` / `FeedEntry` / `FeedVisibility` / `FeedError` / `FEED_EVENT` |
+| `bpmap` bin（`@3178/sdk-tools`） | `pack` / `inspect` / `unpack` / `doctor` |
 
-`reject()` 是构造 `Reject` 的助手；`stableDigest` 是确定性摘要，只用于“两端配置是否一致”，不是签名或安全哈希。`@bp/core-abi` 是 SDK 底层的游戏 ABI 包，`@bp/pack-format` 是 `.bpmap` 读写库；两者都由 `@bp/game-sdk` 作为依赖安装并重新导出，游戏工程的运行时代码和构建脚本只需要 import `@bp/game-sdk` 与 `@bp/game-sdk/node`，不需要直接 import 这两个包。`@bp/sdk-tools` 是独立工具包，提供 `bpmap` CLI 和工程模板，运行时代码不 import 它。
+`reject()` 是构造 `Reject` 的助手；`stableDigest` 是确定性摘要，只用于“两端配置是否一致”，不是签名或安全哈希。`@3178/core-abi` 是 SDK 底层的游戏 ABI 包，`@3178/pack-format` 是 `.bpmap` 读写库；两者都由 `@3178/game-sdk` 作为依赖安装并重新导出，游戏工程的运行时代码和构建脚本只需要 import `@3178/game-sdk` 与 `@3178/game-sdk/node`，不需要直接 import 这两个包。`@3178/sdk-tools` 是独立工具包，提供 `bpmap` CLI 和工程模板，运行时代码不 import 它。
 
 `index.ts` 保留在源码根目录作为包入口；内部目录调整不改变上面的公共路径。
 
@@ -660,7 +660,7 @@ game-kit 在同一个 SDK 包里，按需导入；全部是可选的跨游戏组
 服务端：
 
 ```ts
-import { FeedLog } from '@bp/game-sdk/kit/server';
+import { FeedLog } from '@3178/game-sdk/kit/server';
 
 const feed = new FeedLog({
   max: 100,
@@ -704,7 +704,7 @@ return [...otherEffects, ...feed.drainEffects()];
 客户端：
 
 ```ts
-import { FeedPanel } from '@bp/game-sdk/kit';
+import { FeedPanel } from '@3178/game-sdk/kit';
 
 const feed = new FeedPanel({ mount: feedEl, max: 100 });
 feed.setEntries(view.feed);
@@ -720,7 +720,7 @@ feed.handleEvent(event);   // 放进 onEvent
 `ChatPanel` 监听 4.7 里的 `bp:chat-history`；`ScoreboardPanel` 监听 `bp:room`。
 
 ```ts
-import { ChatPanel } from '@bp/game-sdk/kit';
+import { ChatPanel } from '@3178/game-sdk/kit';
 
 const chat = new ChatPanel({ mount: chatEl, showSystem: true });
 ```
@@ -736,7 +736,7 @@ const chat = new ChatPanel({ mount: chatEl, showSystem: true });
 #### 4.8.3 记分板
 
 ```ts
-import { ScoreboardPanel } from '@bp/game-sdk/kit';
+import { ScoreboardPanel } from '@3178/game-sdk/kit';
 
 const board = new ScoreboardPanel({
   mount: boardEl,
@@ -766,7 +766,7 @@ const board = new ScoreboardPanel({
 #### 4.8.4 座位颜色
 
 ```ts
-import { seatColor } from '@bp/game-sdk/kit';
+import { seatColor } from '@3178/game-sdk/kit';
 
 const color = seatColor({ seatId: 's1', slot: 1, team: 1 });
 // { index: 0, name: 'red', value: '#e05d5d' }
@@ -776,7 +776,7 @@ const color = seatColor({ seatId: 's1', slot: 1, team: 1 });
 
 ### 4.9 打包库与 CLI
 
-`@bp/game-sdk/node` re-export `@bp/pack-format`，提供 `.bpmap` 的读取、校验、打包和解包缓存；`bpmap` CLI 由独立工具包 `@bp/sdk-tools` 提供：
+`@3178/game-sdk/node` re-export `@3178/pack-format`，提供 `.bpmap` 的读取、校验、打包和解包缓存；`bpmap` CLI 由独立工具包 `@3178/sdk-tools` 提供：
 
 ```bash
 bpmap pack dist-pack --out dist/mygame.bpmap
@@ -787,7 +787,7 @@ bpmap doctor dist-pack
 
 日常构建也可以用 3.8 的 [build.mjs](packages/sdk-tools/templates/scripts/build.mjs)，这些子命令留给单独排查和手工检查。
 
-`@bp/game-sdk/node` 的公共函数：
+`@3178/game-sdk/node` 的公共函数：
 
 | 函数 | 作用 |
 |---|---|
@@ -825,7 +825,7 @@ CLI 行为：
 1. 目录游戏：`games/<id>/dist/index.js`，模块 id 必须和目录名一致。
 2. 单文件包：`games/*.bpmap`，先检查包头 `mode` / `apiVersion`，再读包、解到缓存、`import()` 包里的 `server` 入口。当前宿主支持 `turn` / `1`，不支持的包跳过并记录原因。包的 id/version 必须和模块导出一致，否则这个包跳过。同一个 id 已被目录游戏或前一个包占用时，后面的包跳过并记录错误；坏包只记错误，不挡启动。加载完按 id 排序。目录游戏没有包清单，按 `turn` / `1` 处理。
 
-包内服务端入口的裸导入只解析 `@bp/game-sdk`、`@bp/game-sdk/node`、`@bp/game-sdk/kit/server`、`@bp/core-abi`，URL 由宿主壳在启动时解析并传给 loader；`@bp/protocol` 只保留给旧包过渡。其他第三方依赖要打进 `server.js`，不要指望宿主有。
+包内服务端入口的裸导入只解析 `@3178/game-sdk`、`@3178/game-sdk/node`、`@3178/game-sdk/kit/server`、`@3178/core-abi`，URL 由宿主壳在启动时解析并传给 loader；`@bp/protocol` 只保留给旧包过渡。其他第三方依赖要打进 `server.js`，不要指望宿主有。
 
 宿主把模块版本改成 `模块版本+包哈希前 12 位`，并把包内所有文件作为 `assets` 挂到 manifest 上（`path`、`hash: sha256:<hex>`、`bytes`）。`hash` 允许带 `sha256:` 前缀，也接受裸十六进制。目录游戏没有包哈希，也就没有这组自动 `assets`。`/api/games` 返回各模块用 `normalizeConfig({})` 生成的默认 manifest；`/games/<id>/<路径>` 直接从解包目录取文件。客户端入口的哈希校验见 4.7；局域网 HTTP 也能算摘要。
 

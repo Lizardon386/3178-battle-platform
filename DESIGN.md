@@ -277,11 +277,11 @@ stateDiagram-v2
 
 ```mermaid
 flowchart TD
-  A["@bp/core-abi<br/>GameModule / GameInstance / Effect / 游戏可见类型"]
+  A["@3178/core-abi<br/>GameModule / GameInstance / Effect / 游戏可见类型"]
   P["@bp/protocol<br/>线消息 / 房间视图 / 形状闸 / 握手"]
-  F["@bp/pack-format<br/>.bpmap 包头 / 读写 / 打包 / 解包缓存"]
-  K["@bp/game-sdk<br/>公共 SDK / game-kit"]
-  T["@bp/sdk-tools<br/>bpmap CLI / doctor / 工程模板"]
+  F["@3178/pack-format<br/>.bpmap 包头 / 读写 / 打包 / 解包缓存"]
+  K["@3178/game-sdk<br/>公共 SDK / game-kit"]
+  T["@3178/sdk-tools<br/>bpmap CLI / doctor / 工程模板"]
   S["@bp/server<br/>Engine / Room / Authority / Store / Transport"]
   C["@bp/client<br/>连接 / 视图 / 界面 / 沙箱"]
   H["@bp/hostd<br/>host / join / 静态路由"]
@@ -340,8 +340,8 @@ flowchart TD
 | [packages/server/src/module-api.ts](packages/server/src/module-api.ts) | 转出 core-abi，并提供 `manifestOf` |
 | [packages/server/src/loader.ts](packages/server/src/loader.ts) | 运行时按 id 动态加载目录游戏或单文件包 |
 | [packages/pack-format/src/pack.ts](packages/pack-format/src/pack.ts) | 单文件游戏包的读取、校验、解包与缓存 |
-| [packages/game-sdk/src/node/pack.ts](packages/game-sdk/src/node/pack.ts) | re-export `@bp/pack-format`，保持 SDK 的 `/node` 公共路径 |
-| [packages/server/src/pack.ts](packages/server/src/pack.ts) | re-export `@bp/pack-format` |
+| [packages/game-sdk/src/node/pack.ts](packages/game-sdk/src/node/pack.ts) | re-export `@3178/pack-format`，保持 SDK 的 `/node` 公共路径 |
+| [packages/server/src/pack.ts](packages/server/src/pack.ts) | re-export `@3178/pack-format` |
 | [packages/server/src/transport.ts](packages/server/src/transport.ts) | ws 薄壳：握手、编码、Origin、心跳 |
 | [packages/server/src/store.ts](packages/server/src/store.ts) | 房主侧原子落盘与坏文件处理 |
 | [packages/server/src/discovery.ts](packages/server/src/discovery.ts) | 组播信标：广播与过期表 |
@@ -386,7 +386,7 @@ flowchart TD
 | [tools/checks/fixture-kit.page.js](tools/checks/fixture-kit.page.js) | 在真实大厅检查 fixture-kit：建房、开局、聊天、事件流、资源、拒绝、记分板和电脑位 |
 | [tools/packaging/build-portable.mjs](tools/packaging/build-portable.mjs) | 绿色便携包装配与自检 |
 | [tools/checks/monkey.mjs](tools/checks/monkey.mjs) | 协议层猴测（含 fixture-kit 的真实宿主路径） |
-| [tools/packaging/bpmap.mjs](tools/packaging/bpmap.mjs) | .bpmap 打包/检查入口，调用 `@bp/sdk-tools` CLI |
+| [tools/packaging/bpmap.mjs](tools/packaging/bpmap.mjs) | .bpmap 打包/检查入口，调用 `@3178/sdk-tools` CLI |
 | [packages/sdk-tools/src/cli/index.ts](packages/sdk-tools/src/cli/index.ts) | `pack` / `inspect` / `unpack` 的 CLI 实现 |
 | [tools/checks/monkey-ui.page.js](tools/checks/monkey-ui.page.js) | 页内 UI 猴测 |
 | [tools/checks/smoke-sdk.mjs](tools/checks/smoke-sdk.mjs) | 外部消费者 smoke：tarball 安装、模板构建、doctor、宿主加载 |

@@ -125,14 +125,18 @@ function copyRuntimeModules() {
   step('装配 node_modules 运行时子集');
   mkdirSync(join(OUT, 'node_modules'), { recursive: true });
   copy('node_modules/ws');
-  mkdirSync(join(OUT, 'node_modules', '@bp'), { recursive: true });
-  for (const name of readdirSync(join(ROOT, 'node_modules', '@bp'))) {
-    const pkgDir = join(ROOT, 'node_modules', '@bp', name);
-    if (!existsSync(join(pkgDir, 'package.json'))) continue;
-    const dest = join(OUT, 'node_modules', '@bp', name);
-    mkdirSync(dest, { recursive: true });
-    cpSync(join(pkgDir, 'package.json'), join(dest, 'package.json'));
-    if (existsSync(join(pkgDir, 'dist'))) cpSync(join(pkgDir, 'dist'), join(dest, 'dist'), { recursive: true });
+  for (const scope of ['@bp', '@3178']) {
+    const scopeRoot = join(ROOT, 'node_modules', scope);
+    if (!existsSync(scopeRoot)) continue;
+    mkdirSync(join(OUT, 'node_modules', scope), { recursive: true });
+    for (const name of readdirSync(scopeRoot)) {
+      const pkgDir = join(scopeRoot, name);
+      if (!existsSync(join(pkgDir, 'package.json'))) continue;
+      const dest = join(OUT, 'node_modules', scope, name);
+      mkdirSync(dest, { recursive: true });
+      cpSync(join(pkgDir, 'package.json'), join(dest, 'package.json'));
+      if (existsSync(join(pkgDir, 'dist'))) cpSync(join(pkgDir, 'dist'), join(dest, 'dist'), { recursive: true });
+    }
   }
 
   copyOne('node_modules/@tabler/core/dist/css/tabler.min.css', 'node_modules/@tabler/core/dist/css/tabler.min.css');
@@ -175,12 +179,16 @@ function assertNoWorkspaceLeak() {
 }
 
 function assertBarePackagesReal() {
-  step('检查 @bp 依赖是实体目录（不是 workspace 符号链接）');
-  for (const name of readdirSync(join(OUT, 'node_modules', '@bp'))) {
-    const absolute = join(OUT, 'node_modules', '@bp', name);
-    if (lstatSync(absolute).isSymbolicLink()) fail(`@bp/${name} 还是符号链接，离开本仓库就解析不到`);
+  step('检查 @bp / @3178 依赖是实体目录（不是 workspace 符号链接）');
+  for (const scope of ['@bp', '@3178']) {
+    const scopeRoot = join(OUT, 'node_modules', scope);
+    if (!existsSync(scopeRoot)) continue;
+    for (const name of readdirSync(scopeRoot)) {
+      const absolute = join(scopeRoot, name);
+      if (lstatSync(absolute).isSymbolicLink()) fail(`${scope}/${name} 还是符号链接，离开本仓库就解析不到`);
+    }
   }
-  console.log('OK：@bp/* 都是实体目录');
+  console.log('OK：@bp / @3178 都是实体目录');
 }
 
 function dirSize(dir) {

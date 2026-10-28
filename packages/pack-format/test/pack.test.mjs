@@ -12,7 +12,7 @@ import {
   readPack,
   readPackSource,
   sha256Hex,
-} from '@bp/pack-format';
+} from '@3178/pack-format';
 
 function tempDir(prefix = 'bp-pack-') {
   return mkdtempSync(join(tmpdir(), prefix));
