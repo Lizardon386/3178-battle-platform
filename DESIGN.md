@@ -101,13 +101,19 @@ node tools/checks/smoke-sdk.mjs
 
 临时工程从四个 tarball 安装 SDK，用模板跑 `build.mjs`、`bpmap doctor`，再把包交给真实宿主加载。预期最后输出 `[smoke] OK`；会联网安装 esbuild，跑完自动清理临时工程和 `games/sdk-smoke-game.bpmap`。
 
-7. 发布资产（只在发 SDK 时跑）：
+7. 发布 SDK（只在发版时跑）：
 
 ```bash
+npm run bump:sdk -- 0.2.1
+npm test
+npm run seam
+node tools/checks/smoke-sdk.mjs
 npm run pack:sdk
+git add -A && git commit -m "chore: SDK 0.2.1"
+git tag sdk-v0.2.1 && git push origin master sdk-v0.2.1
 ```
 
-产物在 `dist-sdk/`：四个 `.tgz`、`SHA256SUMS`、`RELEASE_NOTES.md`。脚本会先检查四个包不是 `private`、依赖是 `^0.1.0`、LICENSE 和 repository 元数据齐全。
+`bump:sdk` 同步改四个包的 version 和 `@lizardon386/*` 内部依赖，再更新 lockfile；`pack:sdk` 生成 `dist-sdk/` 的离线资产。推 tag 后由 `publish-sdk.yml` 用 Trusted Publishing 发布 npm，不再需要 OTP 或 token。
 
 8. 未自动化的验收：
 
@@ -391,6 +397,7 @@ flowchart TD
 | [tools/checks/monkey-ui.page.js](tools/checks/monkey-ui.page.js) | 页内 UI 猴测 |
 | [tools/checks/smoke-sdk.mjs](tools/checks/smoke-sdk.mjs) | 外部消费者 smoke：tarball 安装、模板构建、doctor、宿主加载 |
 | [tools/packaging/pack-sdk.mjs](tools/packaging/pack-sdk.mjs) | 生成 SDK Release 资产：四个 tarball、SHA256SUMS、发布说明 |
+| [tools/packaging/bump-sdk.mjs](tools/packaging/bump-sdk.mjs) | 同步更新四个 SDK 包版本、内部依赖和 package-lock |
 | [tools/checks/repro-persist.mjs](tools/checks/repro-persist.mjs) / [tools/checks/repro-resume.mjs](tools/checks/repro-resume.mjs) | 落盘窗口与票据重连复现 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 猴测报告：15 条问题、修法与复跑次数 |
 | [docs/images/readme-host-room.png](docs/images/readme-host-room.png) / [readme-join-room.png](docs/images/readme-join-room.png) | README 建房 / 进房实机截图；裁剪掉游戏选择器，避免测试夹具名进入玩家文档 |

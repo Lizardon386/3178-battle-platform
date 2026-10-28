@@ -122,6 +122,7 @@
 - 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
 ## 6. 变更记录
+- 2026-10-28 Qoder：**SDK 版本脚本**：新增 `npm run bump:sdk -- <版本>`，同步四个包的 version、`@lizardon386/*` 内部依赖并更新 package-lock；`--dry-run` 可预览。DESIGN 的发布手顺改为 bump → test → smoke → pack → tag；后续 tag 由 Trusted Publishing 发布。
 - 2026-10-28 Qoder：**测试临时目录清理**：`pack-loader` / `bpmap-cli` / `store-discovery` / `pack-format` / `game-roots` 的临时目录改为登记后 `test.after` 删除。`npm test` 前后 `%TEMP%` 下 `bp-*`/`sdk-*` 计数都是 0，不再每轮堆几千个目录；测试仍 176/176。
 - 2026-10-28 Qoder：**Trusted Publishing 验证**：`sdk-v0.2.0` tag/Release 已建；`publish-sdk.yml` 在 GitHub Actions 上 `npm ci` / `npm test` / `seam` / publish 步骤全部绿（版本已存在时按脚本跳过 publish）。修掉 CI 上唯一的跨平台失败：`hostd stop --port` 的硬杀记录断言改成只在 Windows 运行，Linux 跳过。
 - 2026-10-28 Qoder：**SDK 发布到 npm**：scope 从 `@3178` 改为账号自带的 `@lizardon386`（`@3178` org 不存在，publish 404）。四个包 `0.2.0` 已发布，`latest` 已指向 `0.2.0`；用 registry 干净安装验证了 `game-sdk` / `core-abi` / `pack-format` / `sdk-tools` 版本和 `bpmap` CLI。新增 [publish-sdk.yml](.github/workflows/publish-sdk.yml)，并按 `publish-sdk.yml` / `Lizardon386/3178-battle-platform` 给四个包配置了 Trusted Publisher；之后打 `sdk-v*` tag 由 GitHub Actions OIDC 发布，不再需要 OTP/token。`@bp/*` 旧 Release 保留。
