@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-10-28　模式：三档（README / DESIGN / CONTEXT）　锚点：`7ff08c7`（SDK 最新，已推 origin；本次文档提交在其后）
+> 最近更新：2026-10-28　模式：三档（README / DESIGN / CONTEXT）　锚点：`521b641`（任务 1 已提交）
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
