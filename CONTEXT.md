@@ -32,11 +32,11 @@
 - 服务端在模块加载时校验 `ruleConfig` / `reference` 文档，坏声明跳过并记 `errors`；`manifestOf` 再挡一次；包头与模块 reference 不一致拒绝加载。
 - 单入口壳：根目录只有 `3178对战平台.bat`，启动 `cli.js shell`；先只开 `127.0.0.1:3178` 与本机大厅，点「建房」时调 `/api/host/ready` 再开 `0.0.0.0:3000`、组播与 `HostStore`。纯进房不创建 `HostStore`、不写 `data/`；建房后 `run-<port>.json` / `stop` / `diagnose` 与旧入口一致。`host` / `join` 子命令保留给命令行。
 - SDK 0.2.0 已发 npm（四包 `@lizardon386/*`，`latest` 均为 0.2.0）；Trusted Publisher 已配，`sdk-v*` tag 由 [publish-sdk.yml](.github/workflows/publish-sdk.yml) 走 OIDC 发布；`sdk-v0.2.0` Release 已建、workflow 已绿。**SDK 0.3.0 仓库就绪**（rule-config / reference；构建模板会把 `src/reference/` 铺到包根并写 `bpmap.json`；smoke 端到端覆盖声明、doctor、`/api/games` 与资料/图片 GET；tarball 在 `dist-sdk/` 并附 SHA256SUMS），**尚未打 tag、未发 npm**。
-- **第一款真游戏「变色对决」已落地为独立仓库 `D:\agent_workspace\color-duel`，公开仓库尚未创建/推送。** 完整版：2~8 人、观战、三档电脑、5 个规则开关 + 手牌上限 + 关闭倒计时、规则资料与 rule-config 声明。`npm test` 33/33、`npm run build`、`bpmap doctor` 通过；本地 6 笔提交，HEAD `8c68c06`。它通过本地 link 使用 SDK 0.3.0；装进平台的协议级联调尚未跑。`uno-online` 未动。
+- **第一款真游戏「变色对决」已落地为独立仓库 `D:\agent_workspace\color-duel`，公开仓库尚未创建/推送。** 完整版：2~8 人、观战、三档电脑、5 个规则开关 + 手牌上限 + 关闭倒计时、规则资料与 rule-config 声明。`npm test` 33/33、`npm run build`、`bpmap doctor` 通过；本地 6 笔提交，HEAD `8c68c06`。SDK 用 0.3.0 本地 link，package.json/lock 未改。**联调 PASS**（协议级 7/7、1280×800 UI 端到端、断线/票据与重启恢复）。初版包在 `games/color-duel.bpmap`（102,353 字节，SHA256 `b85db75129c4adbb807c631854aa6cb129d02239fedfb41125b6a05bc70916c8`，gitignored），留给用户自测；`uno-online` 未动。
 
 ## 4. 下一步
 
-1. **跑 color-duel 真机联调**：`cd /d/agent_workspace/color-duel && npm run build` → 把 `dist/color-duel.bpmap` 复制到本仓库 `games/` → 起宿主（错开端口，别和测试抢）→ 建房勾规则 → 加 3 个电脑 → 打完一局 → 房主 rematch；1280×800 与 600×400 各看一次；跑完删掉临时 `.bpmap`。协议级脚本在 `D:\tmp\cd-integration.mjs`（临时目录，可能被清，逻辑见该脚本）。
+1. **等用户自测初版 color-duel 包**：包在 `games/color-duel.bpmap`（gitignored），用「3178对战平台.bat」建房/改规则/开局即可；用户反馈后先修游戏或平台，不急着发版。平台侧猴测结果：协议猴测 seed 707 夹具 0 违规；强制 color-duel 的协议猴测 seed 717 0 违规；UI 猴测 seed 909（4 用户 60 步）0 违规。
 2. **发布 SDK 0.3.0（需用户确认）**：打 `sdk-v0.3.0` tag → Actions 发布；然后把 color-duel 的 SDK 依赖改为 `^0.3.0`、重生成 lock；再 `gh repo create Lizardon386/color-duel --public` 推首个提交，CI 绿后打 `v0.1.0`。
 3. **双机实测**：同 WiFi 组播房间发现、首次绑定防火墙弹窗行为、`--tunnel` 真隧道（需 cloudflared）。
 4. **便携包**：在真正没装 Node 的机器上跑 `dist-portable/`。

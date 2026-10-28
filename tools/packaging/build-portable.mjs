@@ -261,8 +261,10 @@ async function smoke(nodeExe, nodeVersionText) {
     child.kill();
     fail(`便携包里的 host 没起来：\n${log}`);
   }
-  const ids = (health.games ?? []).slice().sort();
-  if (ids.join(',') !== 'fixture-kit,fixture-simultaneous,fixture-turn') fail(`/health 的游戏清单不对：${JSON.stringify(ids)}\n${log}`);
+  const ids = health.games ?? [];
+  for (const id of ['fixture-kit', 'fixture-simultaneous', 'fixture-turn']) {
+    if (!ids.includes(id)) fail(`/health 缺测试夹具 ${id}：${JSON.stringify(ids)}\n${log}`);
+  }
 
   const stop = spawnSync(nodeExe, ['packages/hostd/dist/cli.js', 'stop', '--port', String(port)], { cwd: OUT, env: smokeEnv, encoding: 'utf8' });
   if (stop.status !== 0) fail(`stop 失败：\n${stop.stdout}\n${stop.stderr}`);

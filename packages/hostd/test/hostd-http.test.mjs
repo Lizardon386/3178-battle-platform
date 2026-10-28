@@ -65,7 +65,8 @@ test('/api/games 报出本机装的游戏，含房规摘要与入口', async () 
   const { status, body } = await get('/api/games');
   assert.equal(status, 200);
   const games = JSON.parse(body).games;
-  assert.deepEqual(games.map((g) => g.id).sort(), ['fixture-kit', 'fixture-simultaneous', 'fixture-turn']);
+  const ids = games.map((g) => g.id);
+  for (const id of ['fixture-kit', 'fixture-simultaneous', 'fixture-turn']) assert.ok(ids.includes(id), `缺测试夹具 ${id}`);
   const fixture = games.find((g) => g.id === 'fixture-turn');
   assert.equal(fixture.seats.min, 2);
   assert.equal(fixture.rulesHash.length, 16);
@@ -182,7 +183,8 @@ test('真 WebSocket 经宿主壳连上并拿到 welcome', async () => {
   }
   const welcome = frames.find((f) => f.type === 'welcome');
   assert.ok(welcome, `没拿到 welcome：${JSON.stringify(frames)}`);
-  assert.deepEqual(welcome.availableGames.map((g) => g.id).sort(), ['fixture-kit', 'fixture-simultaneous', 'fixture-turn']);
+  const available = welcome.availableGames.map((g) => g.id);
+  for (const id of ['fixture-kit', 'fixture-simultaneous', 'fixture-turn']) assert.ok(available.includes(id), `缺测试夹具 ${id}`);
   ws.close();
 });
 

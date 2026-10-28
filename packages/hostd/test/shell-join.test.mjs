@@ -92,7 +92,8 @@ test('本地壳也带 WS 服务：hello 能拿到 welcome 与游戏清单', asyn
   const c = connect();
   const welcome = await c.hello('壳里开房的玩家');
   assert.equal(welcome.protocol, 1);
-  assert.deepEqual(welcome.availableGames.map((g) => g.id).sort(), ['fixture-kit', 'fixture-simultaneous', 'fixture-turn']);
+  const available = welcome.availableGames.map((g) => g.id);
+  for (const id of ['fixture-kit', 'fixture-simultaneous', 'fixture-turn']) assert.ok(available.includes(id), `缺测试夹具 ${id}`);
   c.ws.close();
 });
 
