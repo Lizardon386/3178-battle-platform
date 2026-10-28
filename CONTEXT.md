@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-10-28　模式：三档（README / DESIGN / CONTEXT）　锚点：`7d5b4c3`（master）
+> 最近更新：2026-10-28　模式：三档（README / DESIGN / CONTEXT）　锚点：`7697d62`（master）
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
@@ -89,6 +89,7 @@ node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
 
 ## 8. 交接记录
 
+- 2026-10-28 Qoder：**SDK 0.3.0 契约接入补全**：模块加载时校验 `ruleConfig` / `reference` 文档，坏声明跳过并记错误；`manifestOf` 防御性过滤；`seatGranted` 透传测试；资料图片 404 显示 alt。`npm test` 215/215、seam OK、`tsc -b` 通过；提交 `7697d62`。
 - 2026-10-28 Qoder：**对局区全宽 + 规则资料**：`playing` 游戏区全宽、席位横排、聊天/房主进侧栏（D/Esc）；建房按 `manifest.ruleConfig` 渲染并提交，`RoomView.config` 下发给加入者；`manifest.reference` 懒加载、纯文本/图片渲染。无头 Edge 实测 1280×800 下游戏区 1233×560、1440×900 下 1393×630；`npm test` 215/215、seam OK、`tsc -b` 通过；提交 `7d5b4c3`。
 - 2026-10-28 Qoder：**收工**：UNO 开工前置条件（四项拍板、外部改名工程、不搬源码）写进「下一步」；锚点 `8dffb71`；最旧一条交接记录沉降到 [压卡备份.md](压卡备份.md)。
 - 2026-10-28 Qoder：**压卡**：CONTEXT 压到 100 行以内，原第 6–8 节（逐阶段凭据、变更记录、旧追加区）逐字移入 [压卡备份.md](压卡备份.md)；四份文档顶部日期统一到 2026-10-28。
