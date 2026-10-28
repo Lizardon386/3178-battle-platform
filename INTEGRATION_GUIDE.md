@@ -62,6 +62,7 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 | 单机游玩：建房 + 电脑位（AI 由游戏实现） | 可用 |
 | 实时动作、连续输入和高频同步 | 规划中，当前不提供 |
 | game-kit：事件流、聊天、记分板、座位颜色 | 可用 |
+| 规则表单（rule-config）、静态资料（reference） | SDK 0.3.0 起提供 |
 | `/api/version`、`bpmap doctor` | 可用 |
 | `bpmap upgrade`、旧包适配器 | 规划中 |
 
@@ -69,7 +70,7 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 
 ### 3.1 获取 SDK
 
-SDK 0.2.0 已发布到 npm。游戏工程只需要安装门面包和构建工具，`core-abi` / `pack-format` 会作为依赖自动装上：
+SDK 0.3.0 是当前版本。游戏工程只需要安装门面包和构建工具，`core-abi` / `pack-format` 会作为依赖自动装上：
 
 ```bash
 npm install @lizardon386/game-sdk
@@ -96,10 +97,10 @@ cd <你的游戏工程>
 npm init -y
 npm pkg set type=module
 npm install --save-dev \
-  <SDK 产物目录>/lizardon386-core-abi-0.1.0.tgz \
-  <SDK 产物目录>/lizardon386-pack-format-0.1.0.tgz \
-  <SDK 产物目录>/lizardon386-game-sdk-0.1.0.tgz \
-  <SDK 产物目录>/lizardon386-sdk-tools-0.1.0.tgz \
+  <SDK 产物目录>/lizardon386-core-abi-0.3.0.tgz \
+  <SDK 产物目录>/lizardon386-pack-format-0.3.0.tgz \
+  <SDK 产物目录>/lizardon386-game-sdk-0.3.0.tgz \
+  <SDK 产物目录>/lizardon386-sdk-tools-0.3.0.tgz \
   esbuild
 ```
 
@@ -127,7 +128,7 @@ npm install --save-dev \
 
 ```bash
 # 一条命令：从 GitHub Release 下载四个 tarball、验 SHA256、安装
-node setup-sdk.mjs --release sdk-v0.2.0
+node setup-sdk.mjs --release sdk-v0.3.0
 
 # 已下载 Release 资产到某个目录时，直接安装
 node scripts/setup-sdk.mjs --tarballs ./sdk-release
@@ -449,7 +450,7 @@ packages/sdk-tools/
 
 | 导入 | 内容 |
 |---|---|
-| `@lizardon386/game-sdk` | `GameModule` / `GameInstance` / `GameContext` / `GameSeatInfo` / `GameAction` / `Effect` / `Outcome` / `Reject` / `reject()` / `isReject()` / `ViewerId` / `stableDigest` / `GameManifest` / `GameAsset` / `GameUiOptions` / `SeatRole` / `RoomPhase` / `SeatView` / `PlatformCode` / `NoticeCode` / `GameMode` / `API_VERSION` / `SUPPORTED_API_VERSIONS` / `GAME_MODES` / `SUPPORTED_MODES` / `DEFAULT_MODE` |
+| `@lizardon386/game-sdk` | `GameModule` / `GameInstance` / `GameContext` / `GameSeatInfo` / `GameAction` / `Effect` / `Outcome` / `Reject` / `reject()` / `isReject()` / `ViewerId` / `stableDigest` / `GameManifest` / `GameAsset` / `GameUiOptions` / `SeatRole` / `RoomPhase` / `SeatView` / `PlatformCode` / `NoticeCode` / `GameMode` / `API_VERSION` / `SUPPORTED_API_VERSIONS` / `GAME_MODES` / `SUPPORTED_MODES` / `DEFAULT_MODE` / `RuleConfigSpec` / `RuleConfigField` / `parseRuleConfig()` / `RULE_CONFIG_LIMITS` / `GameReferenceSpec` / `GameReferenceDocument` / `GameReferenceGroup` / `GameReferenceItem` / `GameReferenceImage` / `parseGameReference()` / `GAME_REFERENCE_LIMITS` / `isValidGameReferenceEntry()` / `isValidPackRelativePath()` |
 | `@lizardon386/game-sdk/client` | `GameClientContract` / `GameActions`（只有类型，没有运行时） |
 | `@lizardon386/game-sdk/node` | re-export `@lizardon386/pack-format`，保留 `packDirectory` / `readPack` / `readPackSource` / `extractPack` / `listPackFiles` / 包格式常量和类型 |
 | `@lizardon386/game-sdk/kit` | `ChatPanel` / `FeedPanel` / `ScoreboardPanel` / `seatColor`，以及 `normalizeFeedEntry`、`mergeFeedEntries`、`formatFeedTime`、`normalizeChatLine`、`mergeChatLines`、`chatText`、`resolveColumnValue`、`formatColumnValue`、`sortScoreboardRows`、`buildScoreboardRows`、`connectionLabel` 等纯函数 |
@@ -480,6 +481,8 @@ export interface GameModule {
   resume(snapshot: unknown, ctx: GameContext): GameInstance;
   acceptsSnapshot?(snapshot: unknown): boolean;
   ui?: { chat?: 'platform' | 'game' };
+  ruleConfig?: RuleConfigSpec;
+  reference?: GameReferenceSpec;
 }
 ```
 
@@ -499,6 +502,8 @@ export interface GameModule {
 | `create` / `resume` | 开局时 / 恢复存档时调用。`resume` 抛异常时平台丢弃这条存档。 |
 | `acceptsSnapshot` | 可选；返回 false 时平台丢弃快照，不再调用 `resume`。 |
 | `ui.chat` | 只支持 `chat` 一个键，取值 `platform`（默认）或 `game`；`game` 时父页面在对局阶段隐藏平台聊天卡。 |
+| `ruleConfig` | 可选；建房时的规则表单，见 4.11。只声明表单项，不保存值，也不改变线消息。 |
+| `reference` | 可选；静态资料入口（包内 JSON 路径），见 4.12。manifest 只带 `entry`，文档懒加载。 |
 
 `seats.min` 是开局人数下限，电脑位也算人数；`seats.max` 和房间槽位限制总座位数。`roles` 里建议写 `ai` 作为声明，但当前代码不会因为缺 `ai` 而拒绝加电脑位。
 
@@ -816,7 +821,7 @@ CLI 行为：
 
 - 源目录除 `bpmap.json` 外的普通文件都会进包；不允许符号链接、`..` 和绝对路径。
 - `.bpmap` 布局是 `BPMAP1\n` + 4 字节小端包头长度 + JSON 包头 + 按清单顺序拼接的文件段；不压缩，包头上限 1MB。
-- `bpmap.json` 认 `id`、`version`、`mode`、`apiVersion`、`server`、`client` 六个字段；其他字段打包时忽略。`mode` / `apiVersion` 省略时默认 `turn` / `1`。`client` 只用于打包时确认入口文件存在；运行时客户端地址取模块导出的 `entry`，两者通常写同一个路径。
+- `bpmap.json` 认 `id`、`version`、`mode`、`apiVersion`、`server`、`client`、`reference` 七个字段；其他字段打包时忽略。`mode` / `apiVersion` 省略时默认 `turn` / `1`。`client` 只用于打包时确认入口文件存在；运行时客户端地址取模块导出的 `entry`，两者通常写同一个路径。`reference` 只用于声明资料文档入口（4.12），写进包头并在打包时确认文件存在。
 - 单文件上限 64MB，总量上限 256MB，最多 512 个文件；`readPack` 会校验魔数、包头、每个文件的 sha256 和包尾多余字节。
 - 宿主把包解到数据目录下的 `packs/<id>/<包哈希>/`：开发目录是 `data/packs`，便携包是 `%LOCALAPPDATA%\3178-battle-platform\data\packs`。
 - 缓存文件集合必须和包清单完全一致；多一个、少一个或改一个字节都会重新解包。
@@ -834,11 +839,140 @@ CLI 行为：
 
 宿主把模块版本改成 `模块版本+包哈希前 12 位`，并把包内所有文件作为 `assets` 挂到 manifest 上（`path`、`hash: sha256:<hex>`、`bytes`）。`hash` 允许带 `sha256:` 前缀，也接受裸十六进制。目录游戏没有包哈希，也就没有这组自动 `assets`。`/api/games` 返回各模块用 `normalizeConfig({})` 生成的默认 manifest；`/games/<id>/<路径>` 直接从解包目录取文件。客户端入口的哈希校验见 4.7；局域网 HTTP 也能算摘要。
 
-下发给客户端的 manifest 包含 `id`、`name`、`version`、`rulesHash`、`seats`、`allowSpectate`、`soloFill`、`roles`、`entry`，有 UI 声明时再带 `ui`。`/api/games` 和 `seatGranted` 的 manifest 都会给单文件包补 `assets`。
+下发给客户端的 manifest 包含 `id`、`name`、`version`、`rulesHash`、`seats`、`allowSpectate`、`soloFill`、`roles`、`entry`，有 UI 声明时再带 `ui`。SDK 约定 manifest 也可以带 `ruleConfig` / `reference`（4.11 / 4.12）；平台下发这两个字段时，客户端才渲染规则表单和资料面板。`/api/games` 和 `seatGranted` 的 manifest 都会给单文件包补 `assets`。
 
 平台源码不 import 任何 `games/` 路径，运行时按 id 动态加载。宿主只在启动时扫描，替换包后要重启。
 
 包里服务端代码在房主进程里执行，等同于安装一个程序，只装来源可信的包。客户端入口在沙箱 iframe 中执行，源码校验规则见 4.7。
+
+### 4.11 规则开关（rule-config）
+
+建房时房主需要按游戏自己的规则调几个开关。平台不解释这些规则，只按声明渲染表单、把值原样放进建房请求的 `config`。
+
+声明位置是 `GameModule.ruleConfig`（可选的 `GameManifest.ruleConfig` 同形状）；`bpmap.json` 不需要写。
+
+```ts
+export interface RuleConfigSpec { fields: RuleConfigField[] }
+
+type RuleConfigFieldBase = { key: string; label: string; description?: string };
+
+export type RuleConfigField =
+  | (RuleConfigFieldBase & { type: 'boolean'; default: boolean })
+  | (RuleConfigFieldBase & { type: 'enum'; default: string; options: Array<{ value: string; label: string; description?: string }> })
+  | (RuleConfigFieldBase & { type: 'integer'; default: number; min: number; max: number; step?: number });
+```
+
+| 约束 | 值 |
+|---|---|
+| 字段数量 | 1..24 |
+| `key` | 匹配 `^[a-z][a-z0-9-]{0,31}$`，同一份声明里唯一 |
+| `label` | 1..40 字 |
+| `description` | ≤200 字 |
+| enum 选项 | 1..8 个；`value` 匹配 `^[a-z0-9-]{1,32}$` 且唯一；`label` ≤24 字 |
+| enum 默认值 | 必须是某个选项的 `value` |
+| integer | `min` / `default` / `max` 都是整数，`min ≤ default ≤ max`，`max - min ≤ 1000`，`step` 为正整数 |
+
+值怎么走：
+
+1. 平台按 `fields` 渲染表单，默认值来自 `default`。
+2. 房主点建房时，表单值收集成普通对象，随 `roomCreate.config` 一起发送；**没有新增线消息**。
+3. 服务端用这个对象调用游戏的 `normalizeConfig(config)`，再用 `rulesHashOf` 算房规摘要；入房闸比对的就是这个摘要。
+4. 越界值、互斥组合由游戏在 `normalizeConfig` 里收口；平台不会替游戏解释规则，也不会偷偷夹值。
+
+`@lizardon386/game-sdk` 导出 `parseRuleConfig(value)` 和 `RULE_CONFIG_LIMITS`：游戏可以拿它自检，平台接入时也用这一份口径，不要各写一套。这两个字段都是可选增量，按 5.4 的规则不升 `apiVersion`。
+
+示例（变色对决的 5 个开关）：
+
+```ts
+const ruleConfig: RuleConfigSpec = {
+  fields: [
+    { key: 'no-mercy', label: '禁 mercy 规则', type: 'boolean', default: false, description: '开启后不能连续摸牌求和' },
+    { key: 'stacking', label: '叠加 +2', type: 'boolean', default: true },
+    {
+      key: 'ai-level',
+      label: '电脑难度',
+      type: 'enum',
+      default: 'normal',
+      options: [
+        { value: 'easy', label: '简单' },
+        { value: 'normal', label: '普通' },
+        { value: 'hard', label: '困难' },
+      ],
+    },
+    { key: 'starting-cards', label: '起手牌数', type: 'integer', default: 7, min: 3, max: 12, step: 1 },
+    { key: 'turn-seconds', label: '每手限时（秒）', type: 'integer', default: 30, min: 10, max: 120 },
+  ],
+};
+```
+
+### 4.12 资料面板（reference）
+
+游戏可以提供一份静态资料（规则说明、图文帮助）。平台把它渲染成可折叠面板，内容按需加载；manifest 只带入口路径，正文不占 manifest，也不进出房握手。
+
+声明只要一个入口：
+
+```ts
+export interface GameReferenceSpec { entry: string } // 包内相对路径，指向 JSON 文档
+```
+
+`GameModule.reference = { entry: 'reference.json' }`。如果在 `bpmap.json` 里也写一份相同的 `reference`，打包时会把入口写进包头、要求文件真的在源目录里，`bpmap doctor` 也会检查它；不写则只在运行时生效。两处 `entry` 要写同一个值，目前没有自动比对机制（打包器不会执行游戏模块）。
+
+文档格式：
+
+```ts
+export interface GameReferenceDocument {
+  version: 1;
+  title?: string;
+  groups: GameReferenceGroup[];
+}
+export interface GameReferenceGroup { id: string; title: string; items: GameReferenceItem[] }
+export interface GameReferenceItem { title?: string; text: string; images?: GameReferenceImage[] }
+export interface GameReferenceImage { path: string; alt: string; caption?: string }
+```
+
+| 限制 | 值 |
+|---|---|
+| 文档 JSON | ≤64KB |
+| 分组 | 1..20 组；`id` 非空、≤64 字且不重复 |
+| 条目 | 各组合计 ≤120 条 |
+| 标题 | 文档标题 / 分组标题 ≤40 字；条目标题 ≤60 字 |
+| 正文 | 1..2000 字 |
+| 图片 | 每项 ≤6 张；`path` 是包内相对路径（不能含 `..`、不能是绝对路径），扩展名限 png / jpg / jpeg / webp / svg / gif；`alt` 1..120 字；`caption` ≤120 字 |
+
+`reference.json` 示例：
+
+```json
+{
+  "version": 1,
+  "title": "变色对决规则",
+  "groups": [
+    {
+      "id": "basic",
+      "title": "基本规则",
+      "items": [
+        { "text": "打出一张与桌面颜色或数字相同的牌。" },
+        { "text": "没有可出的牌时摸一张。", "images": [{ "path": "images/draw.png", "alt": "摸牌示意" }] }
+      ]
+    },
+    {
+      "id": "score",
+      "title": "计分",
+      "items": [{ "text": "先出完手牌的人赢得本局。" }]
+    }
+  ]
+}
+```
+
+平台的行为：
+
+- 懒加载：manifest 只带 `entry`；面板展开或进房时才去 `/games/<id>/<entry>` 取文档，取不到就显示一句可重试的提示，不影响开局。
+- 只渲染纯文本：`text` / `title` / `alt` / `caption` 一律按纯文本转义，不解析 HTML，也不解析 Markdown。
+- 图片按包内相对路径解析到 `/games/<id>/`；`alt` 必填，读屏和加载失败都靠它。
+- 面板默认折叠，按 `groups` 分组、按 `items` 顺序展示；不提供搜索、锚点或目录。
+
+校验用 `parseGameReference(value)`：输入已解析的对象或原始 JSON 文本，返回 `{ ok: true, doc }` 或 `{ ok: false, error }`；`error` 是可直接显示的中文原因。平台客户端与 `bpmap doctor` 共用这一份实现，不要各写一套。上限常量在 `GAME_REFERENCE_LIMITS`。
+
+`reference` 同样是可选增量，不升 `apiVersion`。
 
 ## 5. SDK 版本、自检与升级
 
@@ -892,8 +1026,8 @@ bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 
 用 3.8 的 [build.mjs](packages/sdk-tools/templates/scripts/build.mjs) 时，跑 `node scripts/build.mjs --host http://127.0.0.1:3178` 就行，同样要先启动宿主。
 
-- 源目录：检查 `bpmap.json`、服务端/客户端入口；读取 `mode` / `apiVersion`（缺省 `turn` / `1`）。
-- 单文件包：检查包格式、服务端入口和清单；从包头读 `mode` / `apiVersion`，旧包头缺字段时按 `turn` / `1`。
+- 源目录：检查 `bpmap.json`、服务端/客户端入口；读取 `mode` / `apiVersion`（缺省 `turn` / `1`）。有 `reference.entry` 时再检查入口是合法包内 `.json` 路径、文件存在，并用 `parseGameReference` 校验文档。
+- 单文件包：检查包格式、服务端入口和清单；从包头读 `mode` / `apiVersion`，旧包头缺字段时按 `turn` / `1`。包头有 `reference` 时，检查入口在文件清单里并解析文档内容。
 - `--host`：请求 `/api/version`（5 秒超时），比对 `packFormats` 是否包含包格式、`apiVersions` 是否包含目标 API 版本、`modes[目标模式]` 是否包含 profile 1。`platform`、`protocolVersions`、`clientCaps` 目前不参与比对。
 - 失败的检查打印 `[x]`，只要有一项失败退出码就是 1；全部通过退出码 0。
 

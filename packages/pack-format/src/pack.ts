@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { API_VERSION, DEFAULT_MODE } from '@lizardon386/core-abi';
+import { API_VERSION, DEFAULT_MODE, isValidGameReferenceEntry } from '@lizardon386/core-abi';
+import type { GameReferenceSpec } from '@lizardon386/core-abi';
 import {
   existsSync,
   mkdirSync,
@@ -51,6 +52,7 @@ export interface PackManifest {
   apiVersion: number;
   server: string;
   client?: string;
+  reference?: GameReferenceSpec;
   files: PackFileEntry[];
 }
 
@@ -73,6 +75,7 @@ export interface PackSource {
   apiVersion?: number;
   server: string;
   client?: string;
+  reference?: GameReferenceSpec;
 }
 
 export interface ExtractResult {
@@ -115,11 +118,22 @@ function readApiVersion(value: unknown): number {
   return value;
 }
 
+function readReference(value: unknown): GameReferenceSpec | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('包 reference 不合法');
+  const entry = (value as Record<string, unknown>).entry;
+  if (typeof entry !== 'string' || !isValidGameReferenceEntry(entry)) {
+    fail('包 reference.entry 必须是包内 .json 相对路径');
+  }
+  return { entry };
+}
+
 function assertSource(source: PackSource): PackSource {
   if (!ID_PATTERN.test(source.id)) fail('包 id 不合法（只允许小写字母、数字、连字符）');
   if (!VERSION_PATTERN.test(source.version)) fail('包 version 不合法');
   const server = assertPath(source.server);
   const client = source.client === undefined ? undefined : assertPath(source.client);
+  const reference = readReference(source.reference);
   return {
     id: source.id,
     version: source.version,
@@ -127,6 +141,7 @@ function assertSource(source: PackSource): PackSource {
     ...(source.apiVersion === undefined ? {} : { apiVersion: readApiVersion(source.apiVersion) }),
     server,
     ...(client ? { client } : {}),
+    ...(reference ? { reference } : {}),
   };
 }
 
@@ -140,6 +155,7 @@ function validateManifest(value: unknown): PackManifest {
   const apiVersion = readApiVersion(raw.apiVersion);
   const server = assertPath(raw.server);
   const client = raw.client === undefined ? undefined : assertPath(raw.client);
+  const reference = readReference(raw.reference);
   if (!Array.isArray(raw.files) || raw.files.length === 0) fail('包内没有文件');
   if (raw.files.length > MAX_FILES) fail(`包内文件过多：${raw.files.length}`);
 
@@ -166,6 +182,9 @@ function validateManifest(value: unknown): PackManifest {
   }
   if (!seen.has(server.toLowerCase())) fail(`服务端入口不在文件清单里：${server}`);
   if (client && !seen.has(client.toLowerCase())) fail(`客户端入口不在文件清单里：${client}`);
+  if (reference && !seen.has(reference.entry.toLowerCase())) {
+    fail(`资料文档不在文件清单里：${reference.entry}`);
+  }
 
   return {
     format: PACK_FORMAT,
@@ -175,6 +194,7 @@ function validateManifest(value: unknown): PackManifest {
     apiVersion,
     server,
     ...(client ? { client } : {}),
+    ...(reference ? { reference } : {}),
     files,
   };
 }
@@ -244,6 +264,7 @@ export function readPackSource(root: string): PackSource {
     ...(raw.mode !== undefined ? { mode: raw.mode as string } : {}),
     ...(raw.apiVersion !== undefined ? { apiVersion: raw.apiVersion as number } : {}),
     ...(typeof raw.client === 'string' ? { client: raw.client } : {}),
+    ...(raw.reference !== undefined ? { reference: raw.reference as GameReferenceSpec } : {}),
   });
 }
 
@@ -280,6 +301,9 @@ function collectSourceFiles(root: string, source: PackSource): CollectedSource {
   if (!server) fail(`服务端入口不存在：${source.server}`);
   const client = source.client ? collected.get(source.client.toLowerCase()) : undefined;
   if (source.client && !client) fail(`客户端入口不存在：${source.client}`);
+  if (source.reference && !collected.has(source.reference.entry.toLowerCase())) {
+    fail(`资料文档不存在：${source.reference.entry}`);
+  }
   return {
     files: [...collected.values()].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0)),
     server: server.path,
@@ -303,6 +327,7 @@ export function packDirectory(root: string, outFile: string, source: PackSource)
     apiVersion: clean.apiVersion ?? API_VERSION,
     server: collected.server,
     ...(collected.client ? { client: collected.client } : {}),
+    ...(clean.reference ? { reference: clean.reference } : {}),
     files: entries,
   };
   const header = Buffer.from(JSON.stringify(manifest), 'utf8');

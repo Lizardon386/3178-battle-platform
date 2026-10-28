@@ -1,6 +1,12 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { API_VERSION, DEFAULT_MODE } from '@lizardon386/core-abi';
+import {
+  API_VERSION,
+  DEFAULT_MODE,
+  isValidGameReferenceEntry,
+  parseGameReference,
+} from '@lizardon386/core-abi';
+import type { GameReferenceSpec } from '@lizardon386/core-abi';
 import { PACK_FORMAT, readPack, readPackSource } from '@lizardon386/pack-format';
 
 export interface HostInfo {
@@ -22,6 +28,9 @@ export interface DoctorTarget {
   format: number;
   mode: string;
   apiVersion: number;
+  reference?: GameReferenceSpec;
+  /** 资料文档原文；源目录与包都用它跑同一份 parseGameReference。 */
+  referenceText?: string;
 }
 
 export interface DoctorCheck {
@@ -35,6 +44,18 @@ export interface DoctorReport {
   checks: DoctorCheck[];
 }
 
+function readDeclaredReference(value: unknown): GameReferenceSpec | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('bpmap.json 的 reference 必须是对象');
+  }
+  const entry = (value as Record<string, unknown>).entry;
+  if (typeof entry !== 'string' || !isValidGameReferenceEntry(entry)) {
+    throw new Error('bpmap.json 的 reference.entry 必须是包内 .json 相对路径');
+  }
+  return { entry };
+}
+
 function readSourceTarget(dir: string): DoctorTarget {
   const rawPath = join(dir, 'bpmap.json');
   let raw: Record<string, unknown>;
@@ -46,6 +67,7 @@ function readSourceTarget(dir: string): DoctorTarget {
     throw new Error(`读不到或解析不了源清单：${rawPath}（${error instanceof Error ? error.message : String(error)}）`);
   }
   const source = readPackSource(dir);
+  const reference = readDeclaredReference(raw.reference);
   return {
     kind: 'source',
     path: dir,
@@ -58,11 +80,16 @@ function readSourceTarget(dir: string): DoctorTarget {
     apiVersion: typeof raw.apiVersion === 'number' && Number.isSafeInteger(raw.apiVersion) && raw.apiVersion > 0
       ? raw.apiVersion
       : API_VERSION,
+    ...(reference ? { reference } : {}),
   };
 }
 
 function readPackTarget(file: string): DoctorTarget {
   const pack = readPack(file);
+  const reference = pack.manifest.reference;
+  const document = reference
+    ? pack.files.find((entry) => entry.path.toLowerCase() === reference.entry.toLowerCase())
+    : undefined;
   return {
     kind: 'pack',
     path: file,
@@ -73,6 +100,8 @@ function readPackTarget(file: string): DoctorTarget {
     format: pack.manifest.format,
     mode: pack.manifest.mode,
     apiVersion: pack.manifest.apiVersion,
+    ...(reference ? { reference } : {}),
+    ...(document ? { referenceText: document.bytes.toString('utf8') } : {}),
   };
 }
 
@@ -138,12 +167,48 @@ export function localChecks(target: DoctorTarget): DoctorCheck[] {
       { ok: existsSync(join(dir, target.server)), label: `服务端入口 ${target.server}` },
     ];
     if (target.client) checks.push({ ok: existsSync(join(dir, target.client)), label: `客户端入口 ${target.client}` });
+    if (target.reference) {
+      const entry = target.reference.entry;
+      const valid = isValidGameReferenceEntry(entry);
+      checks.push({
+        ok: valid,
+        label: `资料文档入口 ${entry}`,
+        ...(valid ? {} : { detail: '必须是包内 .json 相对路径' }),
+      });
+      if (valid) {
+        const absolute = join(dir, ...entry.split('/'));
+        const exists = existsSync(absolute);
+        checks.push({ ok: exists, label: `资料文档 ${entry}` });
+        if (exists) {
+          const parsed = parseGameReference(readFileSync(absolute, 'utf8'));
+          checks.push({
+            ok: parsed.ok,
+            label: '资料文档格式',
+            ...(parsed.ok ? {} : { detail: parsed.error }),
+          });
+        }
+      }
+    }
     return checks;
   }
-  return [
+  const checks: DoctorCheck[] = [
     { ok: target.format === PACK_FORMAT, label: `包格式 ${target.format}` },
     { ok: Boolean(target.server), label: `服务端入口 ${target.server}` },
   ];
+  if (target.reference) {
+    const entry = target.reference.entry;
+    const inPack = target.referenceText !== undefined;
+    checks.push({ ok: inPack, label: `资料文档 ${entry} 在包清单里` });
+    if (inPack) {
+      const parsed = parseGameReference(target.referenceText);
+      checks.push({
+        ok: parsed.ok,
+        label: '资料文档格式',
+        ...(parsed.ok ? {} : { detail: parsed.error }),
+      });
+    }
+  }
+  return checks;
 }
 
 export async function doctor(target: string, hostUrl?: string): Promise<DoctorReport> {

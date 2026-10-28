@@ -1,5 +1,5 @@
 import type { NoticeCode, PlatformCode } from './codes.js';
-import type { GameUiOptions } from './manifest.js';
+import type { GameReferenceSpec, GameUiOptions, RuleConfigSpec } from './manifest.js';
 import type { RoomPhase, SeatRole } from './seats.js';
 
 /**
@@ -95,4 +95,8 @@ export interface GameModule {
   acceptsSnapshot?(snapshot: unknown): boolean;
   /** 可选 UI 声明；例如让游戏自己的聊天面板替代平台聊天卡。 */
   ui?: GameUiOptions;
+  /** 建房规则表单；只声明可配置项，值仍由 normalizeConfig 收口。 */
+  ruleConfig?: RuleConfigSpec;
+  /** 静态资料入口；manifest 只带路径，文档由平台懒加载。 */
+  reference?: GameReferenceSpec;
 }

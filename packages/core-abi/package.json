@@ -1,6 +1,6 @@
 {
   "name": "@lizardon386/core-abi",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "3178 游戏接口层：GameModule / GameInstance / Effect 等宿主与游戏共同遵守的 ABI 和数据类型",
   "license": "MIT",
   "author": "3178-battle-platform contributors",
