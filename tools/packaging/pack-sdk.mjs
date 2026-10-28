@@ -84,7 +84,14 @@ const notes = `# 3178 SDK ${version}
 
 回合制接入预览版。四个 tarball 要一起安装；当前没有发布到 npm，也没有 realtime 运行时。
 
-## 安装
+## 安装（npm，推荐）
+
+\`\`\`bash
+npm install @lizardon386/game-sdk
+npm install --save-dev @lizardon386/sdk-tools esbuild
+\`\`\`
+
+## 离线安装
 
 一条命令下载并安装四个 tarball（会校验 SHA256）：
 

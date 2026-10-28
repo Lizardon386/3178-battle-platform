@@ -69,11 +69,16 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 
 ### 3.1 获取 SDK
 
-SDK 0.1.1 已发布在 [GitHub Release](https://github.com/Lizardon386/3178-battle-platform/releases/tag/sdk-v0.1.1)，没有发布到 npm。下载四个 tarball 安装；`@lizardon386/game-sdk` 依赖 `@lizardon386/core-abi` 和 `@lizardon386/pack-format`，构建/打包还要 `@lizardon386/sdk-tools`，四个要一起装。
+SDK 0.2.0 已发布到 npm。游戏工程只需要安装门面包和构建工具，`core-abi` / `pack-format` 会作为依赖自动装上：
 
-有两套做法：3.1.1 手动执行命令，3.1.2 用现成脚本。两者结果一样，选一种即可。
+```bash
+npm install @lizardon386/game-sdk
+npm install --save-dev @lizardon386/sdk-tools esbuild
+```
 
-#### 3.1.1 手动安装（命令）
+不能联网或要固定离线产物时，再用下面的 tarball 方式；两者结果一样。
+
+#### 3.1.1 离线安装（tarball 命令）
 
 下面用 Git Bash 示例；把 `<3178 仓库>`、`<SDK 产物目录>`、`<你的游戏工程>` 换成实际路径。tarball 文件名带版本号，按 `npm pack` 的实际输出替换。
 
@@ -110,9 +115,9 @@ npm install --save-dev \
 | `npm pkg set type=module` | 让工程按 ESM 解析 |
 | `npm install --save-dev` | 同时安装四个 tarball 和 esbuild；SDK 依赖 core-abi / pack-format，构建和打包还要 sdk-tools |
 
-平台更新 SDK 后重新打包、重新安装。以后发布到 registry 后改成 `npm install @lizardon386/game-sdk @lizardon386/sdk-tools` 即可。
+平台更新 SDK 后，npm 方式 `npm update @lizardon386/game-sdk @lizardon386/sdk-tools`；离线方式重新打包、重新安装。
 
-#### 3.1.2 用 setup-sdk.mjs 安装（脚本）
+#### 3.1.2 离线安装（setup-sdk.mjs 脚本）
 
 脚本在 SDK 仓库的 [setup-sdk.mjs](packages/sdk-tools/templates/scripts/setup-sdk.mjs)，也可以直接从 GitHub Release 下载；安装后同一份也在 `node_modules/@lizardon386/sdk-tools/templates/scripts/`。
 
@@ -122,7 +127,7 @@ npm install --save-dev \
 
 ```bash
 # 一条命令：从 GitHub Release 下载四个 tarball、验 SHA256、安装
-node setup-sdk.mjs --release sdk-v0.1.1
+node setup-sdk.mjs --release sdk-v0.2.0
 
 # 已下载 Release 资产到某个目录时，直接安装
 node scripts/setup-sdk.mjs --tarballs ./sdk-release
@@ -136,7 +141,7 @@ node scripts/setup-sdk.mjs --platform ../3178-battle-platform
 | 参数 | 必填 | 默认值 | 说明 |
 |---|---|---|---|
 | `--release <tag>` | 三选一 | 无 | 从 GitHub Release 下载四个 tarball、验 SHA256 后安装；默认仓库地址是 `https://github.com/Lizardon386/3178-battle-platform/releases/download`，可用 `--release-base` 改 |
-| `--tarballs <目录>` | 三选一 | 无 | 直接安装目录里的 `bp-*.tgz`；四个包都要在 |
+| `--tarballs <目录>` | 三选一 | 无 | 直接安装目录里的 `lizardon386-*.tgz`；四个包都要在 |
 | `--platform <路径>` | 三选一 | `../3178-battle-platform` | 平台仓库路径；脚本会打四个 tarball 再安装 |
 | `--sdk-dir <目录>` | 否 | `sdk` | tarball 存放目录；`--platform` / `--release` 模式下每次重跑会先删掉旧 `.tgz` |
 
