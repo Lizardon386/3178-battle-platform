@@ -510,7 +510,7 @@ export interface GameModule {
 | `create` / `resume` | 开局时 / 恢复存档时调用。`resume` 抛异常时平台丢弃这条存档。 |
 | `acceptsSnapshot` | 可选；返回 false 时平台丢弃快照，不再调用 `resume`。 |
 | `ui.chat` | 只支持 `chat` 一个键，取值 `platform`（默认）或 `game`；`game` 时父页面在对局阶段隐藏平台聊天卡。 |
-| `ruleConfig` | 可选；建房时的规则表单，见 4.11。只声明表单项，不保存值，也不改变线消息。 |
+| `ruleConfig` | 可选；规则表单，见 4.11。只声明表单项，默认值由平台用；房主在房间里改，走房主专用命令。 |
 | `reference` | 可选；静态资料入口（包内 JSON 路径），见 4.12。manifest 只带 `entry`，文档懒加载。 |
 
 `seats.min` 是开局人数下限，电脑位也算人数；`seats.max` 和房间槽位限制总座位数。`roles` 里建议写 `ai` 作为声明，但当前代码不会因为缺 `ai` 而拒绝加电脑位。
@@ -857,7 +857,7 @@ CLI 行为：
 
 ### 4.11 规则开关（rule-config）
 
-建房时房主需要按游戏自己的规则调几个开关。平台不解释这些规则，只按声明渲染表单、把值原样放进建房请求的 `config`。
+建房时房主需要按游戏自己的规则调几个开关。平台不解释这些规则，只按声明渲染表单、把值原样放进房间的 `config`。
 
 声明位置是 `GameModule.ruleConfig`（可选的 `GameManifest.ruleConfig` 同形状）；`bpmap.json` 不需要写。
 
@@ -885,13 +885,13 @@ export type RuleConfigField =
 值怎么走：
 
 1. 平台按 `fields` 渲染表单，默认值来自 `default`。
-2. 房主点建房时，表单值收集成普通对象，随 `roomCreate.config` 一起发送；**没有新增线消息**。
-3. 服务端用这个对象调用游戏的 `normalizeConfig(config)`，再用 `rulesHashOf` 算房规摘要；入房闸比对的就是这个摘要。
-4. 越界值、互斥组合由游戏在 `normalizeConfig` 里收口；平台不会替游戏解释规则，也不会偷偷夹值。
+2. 建房先用默认值，等价于用 `{}` 调一次 `normalizeConfig`；规则选择在房间页，不在建房页。
+3. 房主在房间里改规则时，平台走房主专用的 `ruleConfig` 命令下发新 `config`（只房主、只 `lobby` 相位）；服务端再用这个对象调用 `normalizeConfig(config)`、用 `rulesHashOf` 重算房规摘要，推进 revision，并把已入座真人的 ready 清零。
+4. 越界值、互斥组合由游戏在 `normalizeConfig` 里收口；平台不会替游戏解释规则，也不会偷偷夹值。游戏不需要订阅平台线消息，只按传进来的 config 收口。
 
 `@lizardon386/game-sdk` 导出 `parseRuleConfig(value)` 和 `RULE_CONFIG_LIMITS`：游戏可以拿它自检，宿主加载模块时也用这一份口径校验，坏声明会让该模块加载失败（跳过并记错误，不挡启动）。这两个字段都是可选增量，按 5.4 的规则不升 `apiVersion`。
 
-示例（变色对决的 5 个开关）：
+示例（boolean / enum / integer 三种字段的写法）：
 
 ```ts
 const ruleConfig: RuleConfigSpec = {
