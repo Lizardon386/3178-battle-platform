@@ -101,4 +101,3 @@ node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
 - 2026-10-28 Qoder：**Trusted Publishing 验证**：`sdk-v0.2.0` tag/Release 已建，workflow 全绿（版本已存在时跳过 publish）；修掉 CI 上唯一跨平台失败（`hostd stop --port` 硬杀断言只在 Windows 跑）。
 - 2026-10-28 Qoder：**SDK 发布到 npm**：scope 改为账号自带的 `@lizardon386`（`@3178` org 不存在，publish 404），四包 `0.2.0` 发布、`latest` 指向 0.2.0；配置 Trusted Publisher + [publish-sdk.yml](.github/workflows/publish-sdk.yml)。
 - 2026-10-28 Qoder：**测试临时目录清理**：五个测试文件登记临时目录并在 `test.after` 删除；`npm test` 前后 `%TEMP%` 下 `bp-*`/`sdk-*` 计数均为 0。
-- 2026-10-27 Qoder：**发布 SDK 0.1.1**：`setup-sdk.mjs --release <tag>` 从 GitHub Release 下载并校验 SHA256；Release 资产与安装均验证通过（已由 0.2.0 取代）。
