@@ -835,11 +835,13 @@ CLI 行为：
 1. 目录游戏：`games/<id>/dist/index.js`，模块 id 必须和目录名一致。
 2. 单文件包：`games/*.bpmap`，先检查包头 `mode` / `apiVersion`，再读包、解到缓存、`import()` 包里的 `server` 入口。当前宿主支持 `turn` / `1`，不支持的包跳过并记录原因。包的 id/version 必须和模块导出一致，否则这个包跳过。同一个 id 已被目录游戏或前一个包占用时，后面的包跳过并记录错误；坏包只记错误，不挡启动。加载完按 id 排序。目录游戏没有包清单，按 `turn` / `1` 处理。
 
+模块加载时还会校验可选声明：`ruleConfig` 用 `parseRuleConfig`，`reference` 指向的文档用 `parseGameReference`；文档不存在或不合法时跳过这个模块并记错误。包和模块都声明了 `reference` 时，两处 `entry` 必须一致，否则同样跳过。
+
 包内服务端入口的裸导入只解析 `@lizardon386/game-sdk`、`@lizardon386/game-sdk/node`、`@lizardon386/game-sdk/kit/server`、`@lizardon386/core-abi`，URL 由宿主壳在启动时解析并传给 loader；`@bp/protocol` 只保留给旧包过渡。其他第三方依赖要打进 `server.js`，不要指望宿主有。
 
 宿主把模块版本改成 `模块版本+包哈希前 12 位`，并把包内所有文件作为 `assets` 挂到 manifest 上（`path`、`hash: sha256:<hex>`、`bytes`）。`hash` 允许带 `sha256:` 前缀，也接受裸十六进制。目录游戏没有包哈希，也就没有这组自动 `assets`。`/api/games` 返回各模块用 `normalizeConfig({})` 生成的默认 manifest；`/games/<id>/<路径>` 直接从解包目录取文件。客户端入口的哈希校验见 4.7；局域网 HTTP 也能算摘要。
 
-下发给客户端的 manifest 包含 `id`、`name`、`version`、`rulesHash`、`seats`、`allowSpectate`、`soloFill`、`roles`、`entry`，有 UI 声明时再带 `ui`。SDK 约定 manifest 也可以带 `ruleConfig` / `reference`（4.11 / 4.12）；平台下发这两个字段时，客户端才渲染规则表单和资料面板。`/api/games` 和 `seatGranted` 的 manifest 都会给单文件包补 `assets`。
+下发给客户端的 manifest 包含 `id`、`name`、`version`、`rulesHash`、`seats`、`allowSpectate`、`soloFill`、`roles`、`entry`，有 UI 声明时再带 `ui`，有规则表单或资料入口时再带 `ruleConfig` / `reference`（4.11 / 4.12）。`/api/games` 和 `seatGranted` 的 manifest 都会给单文件包补 `assets`。
 
 平台源码不 import 任何 `games/` 路径，运行时按 id 动态加载。宿主只在启动时扫描，替换包后要重启。
 
@@ -879,7 +881,7 @@ export type RuleConfigField =
 3. 服务端用这个对象调用游戏的 `normalizeConfig(config)`，再用 `rulesHashOf` 算房规摘要；入房闸比对的就是这个摘要。
 4. 越界值、互斥组合由游戏在 `normalizeConfig` 里收口；平台不会替游戏解释规则，也不会偷偷夹值。
 
-`@lizardon386/game-sdk` 导出 `parseRuleConfig(value)` 和 `RULE_CONFIG_LIMITS`：游戏可以拿它自检，平台接入时也用这一份口径，不要各写一套。这两个字段都是可选增量，按 5.4 的规则不升 `apiVersion`。
+`@lizardon386/game-sdk` 导出 `parseRuleConfig(value)` 和 `RULE_CONFIG_LIMITS`：游戏可以拿它自检，宿主加载模块时也用这一份口径校验，坏声明会让该模块加载失败（跳过并记错误，不挡启动）。这两个字段都是可选增量，按 5.4 的规则不升 `apiVersion`。
 
 示例（变色对决的 5 个开关）：
 
@@ -915,7 +917,7 @@ const ruleConfig: RuleConfigSpec = {
 export interface GameReferenceSpec { entry: string } // 包内相对路径，指向 JSON 文档
 ```
 
-`GameModule.reference = { entry: 'reference.json' }`。如果在 `bpmap.json` 里也写一份相同的 `reference`，打包时会把入口写进包头、要求文件真的在源目录里，`bpmap doctor` 也会检查它；不写则只在运行时生效。两处 `entry` 要写同一个值，目前没有自动比对机制（打包器不会执行游戏模块）。
+`GameModule.reference = { entry: 'reference.json' }`。如果在 `bpmap.json` 里也写一份相同的 `reference`，打包时会把入口写进包头、要求文件真的在源目录里，`bpmap doctor` 也会检查它；不写则只按模块声明生效。宿主加载时：模块声明的文档不存在或 `parseGameReference` 不通过，这个模块会被跳过并记错误；包头和模块都声明了 `reference` 但 `entry` 不一致，也会拒绝加载。
 
 文档格式：
 
