@@ -122,6 +122,7 @@
 - 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
 ## 6. 变更记录
+- 2026-10-28 Qoder：**测试临时目录清理**：`pack-loader` / `bpmap-cli` / `store-discovery` / `pack-format` / `game-roots` 的临时目录改为登记后 `test.after` 删除。`npm test` 前后 `%TEMP%` 下 `bp-*`/`sdk-*` 计数都是 0，不再每轮堆几千个目录；测试仍 176/176。
 - 2026-10-28 Qoder：**Trusted Publishing 验证**：`sdk-v0.2.0` tag/Release 已建；`publish-sdk.yml` 在 GitHub Actions 上 `npm ci` / `npm test` / `seam` / publish 步骤全部绿（版本已存在时按脚本跳过 publish）。修掉 CI 上唯一的跨平台失败：`hostd stop --port` 的硬杀记录断言改成只在 Windows 运行，Linux 跳过。
 - 2026-10-28 Qoder：**SDK 发布到 npm**：scope 从 `@3178` 改为账号自带的 `@lizardon386`（`@3178` org 不存在，publish 404）。四个包 `0.2.0` 已发布，`latest` 已指向 `0.2.0`；用 registry 干净安装验证了 `game-sdk` / `core-abi` / `pack-format` / `sdk-tools` 版本和 `bpmap` CLI。新增 [publish-sdk.yml](.github/workflows/publish-sdk.yml)，并按 `publish-sdk.yml` / `Lizardon386/3178-battle-platform` 给四个包配置了 Trusted Publisher；之后打 `sdk-v*` tag 由 GitHub Actions OIDC 发布，不再需要 OTP/token。`@bp/*` 旧 Release 保留。
 - 2026-10-27 Qoder：**发布 SDK 0.1.1**：`setup-sdk.mjs` 增加 `--release <tag>`，直接从 GitHub Release 下载四个 tarball、验 SHA256 后安装；`core-abi` / `pack-format` 补 `./package.json` 导出入口；四包升到 `0.1.1`，内部依赖 `^0.1.1`。`npm test` 176/176、外部消费者 smoke 通过；Release 资产下载后 `sha256sum -c` OK，用 Release 里的 `setup-sdk.mjs --release sdk-v0.1.1` 安装四个包通过，预发布随后转正式。Release：https://github.com/Lizardon386/3178-battle-platform/releases/tag/sdk-v0.1.1。`sdk-v0.1.0` 保留但不再是最新。
