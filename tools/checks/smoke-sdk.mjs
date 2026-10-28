@@ -138,6 +138,13 @@ export const smokeGame: GameModule = {
   create: (_config, ctx) => new SmokeGame(ctx),
   resume: (_snapshot, ctx) => new SmokeGame(ctx),
   acceptsSnapshot: (snapshot) => (snapshot as { version?: number } | null)?.version === 1,
+  ruleConfig: {
+    fields: [
+      { key: 'fast-mode', label: '快速模式', type: 'boolean', default: false },
+      { key: 'rounds', label: '局数', type: 'integer', default: 1, min: 1, max: 5 },
+    ],
+  },
+  reference: { entry: 'reference.json' },
 };
 
 export default smokeGame;
@@ -162,6 +169,27 @@ export default {
     'utf8',
   );
   writeFileSync(join(project, 'src', 'assets', 'notice.json'), '{"text":"外部 smoke 资源"}\n', 'utf8');
+  mkdirSync(join(project, 'src', 'reference', 'images'), { recursive: true });
+  writeFileSync(
+    join(project, 'src', 'reference', 'reference.json'),
+    JSON.stringify({
+      version: 1,
+      title: '外部接入 smoke 资料',
+      groups: [
+        {
+          id: 'basic',
+          title: '基本',
+          items: [{ text: '这段文字来自包内 reference.json。', images: [{ path: 'images/smoke.svg', alt: 'smoke 图' }] }],
+        },
+      ],
+    }, null, 2) + '\n',
+    'utf8',
+  );
+  writeFileSync(
+    join(project, 'src', 'reference', 'images', 'smoke.svg'),
+    '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="#6366f1"/></svg>\n',
+    'utf8',
+  );
   cpSync(SETUP_TEMPLATE, join(project, 'scripts', 'setup-sdk.mjs'));
 
   run([join(project, 'scripts', 'setup-sdk.mjs'), '--platform', ROOT], project, '安装四个 SDK tarball');
@@ -192,6 +220,21 @@ export default {
   if (!loaded.assets?.some((asset) => asset.path === 'client/assets/notice.json')) {
     fail(`smoke 包的资源没有进 manifest：${JSON.stringify(loaded)}`);
   }
+  if (!Array.isArray(loaded.ruleConfig?.fields) || loaded.ruleConfig.fields.length !== 2) {
+    fail(`smoke 包的 ruleConfig 没有进 manifest：${JSON.stringify(loaded)}`);
+  }
+  if (loaded.reference?.entry !== 'reference.json') {
+    fail(`smoke 包的 reference 没有进 manifest：${JSON.stringify(loaded)}`);
+  }
+  const base = `http://127.0.0.1:${RESTART_PORT}`;
+  const referenceResponse = await fetch(`${base}/games/${GAME_ID}/reference.json`);
+  if (!referenceResponse.ok) fail(`资料文档取不到：HTTP ${referenceResponse.status}`);
+  const referenceDoc = JSON.parse(await referenceResponse.text());
+  if (referenceDoc.groups?.[0]?.items?.[0]?.text !== '这段文字来自包内 reference.json。') {
+    fail(`资料文档内容不对：${JSON.stringify(referenceDoc)}`);
+  }
+  const imageResponse = await fetch(`${base}/games/${GAME_ID}/images/smoke.svg`);
+  if (!imageResponse.ok) fail(`资料图片取不到：HTTP ${imageResponse.status}`);
 
   const pack = readFileSync(installedPack);
   console.log(`\n[smoke] OK：${GAME_ID} 已由外部工程构建并被宿主加载（${pack.byteLength} 字节包）`);

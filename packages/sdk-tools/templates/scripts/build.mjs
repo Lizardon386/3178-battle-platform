@@ -6,7 +6,7 @@
  * --platform 复制到平台的 games/，--start 启动宿主，--host 调 bpmap doctor。
  */
 import { createRequire } from 'node:module';
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { build } from 'esbuild';
@@ -84,6 +84,31 @@ if (hasClient) {
   }
 }
 
+// 资料文档与图片：src/reference/ 里的内容按原样铺到包根，也可只放一个 src/reference.json。
+let referenceEntry = null;
+const referenceDir = join(gameRoot, 'src', 'reference');
+const singleReference = join(gameRoot, 'src', 'reference.json');
+if (existsSync(referenceDir)) {
+  for (const item of readdirSync(referenceDir)) {
+    cpSync(join(referenceDir, item), join(outDir, item), { recursive: true });
+  }
+  referenceEntry = typeof pkg.bp?.reference === 'string' ? pkg.bp.reference : 'reference.json';
+  if (referenceEntry.includes('..') || isAbsolute(referenceEntry) || referenceEntry.includes('\\')) {
+    fail(`package.json 的 bp.reference 必须是包内相对路径：${referenceEntry}`);
+  }
+  if (!existsSync(join(outDir, ...referenceEntry.split('/')))) {
+    fail(`reference 入口不存在：src/reference/${referenceEntry}`);
+  }
+} else if (existsSync(singleReference)) {
+  if (pkg.bp?.reference !== undefined && pkg.bp.reference !== 'reference.json') {
+    fail(`bp.reference 指向 ${pkg.bp.reference}，但只找到 src/reference.json`);
+  }
+  referenceEntry = 'reference.json';
+  copyFileSync(singleReference, join(outDir, referenceEntry));
+} else if (pkg.bp?.reference !== undefined) {
+  fail('package.json 声明了 bp.reference，但 src/reference/ 与 src/reference.json 都不存在');
+}
+
 const manifest = {
   id,
   version,
@@ -91,6 +116,7 @@ const manifest = {
   apiVersion: pkg.bp?.apiVersion ?? API_VERSION,
   server: 'server.js',
   ...(hasClient ? { client: entry } : {}),
+  ...(referenceEntry ? { reference: { entry: referenceEntry } } : {}),
 };
 writeFileSync(join(outDir, 'bpmap.json'), JSON.stringify(manifest, null, 2) + '\n');
 

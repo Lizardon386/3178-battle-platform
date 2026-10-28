@@ -183,10 +183,12 @@ mygame/
 ├─ src/
 │  ├─ server.ts          # GameModule
 │  ├─ client.ts          # 可选：客户端入口
-│  └─ assets/            # 图片、音频等
+│  ├─ reference/         # 可选：资料文档与图片，按原样铺到包根
+│  └─ assets/            # 图片、音频等客户端资源
 ├─ dist-pack/            # 只放构建产物，给 bpmap pack 用
 │  ├─ bpmap.json
 │  ├─ server.js
+│  ├─ reference.json     # 由 src/reference/ 复制（可选）
 │  └─ client/
 │     ├─ client.js
 │     └─ assets/
@@ -194,7 +196,7 @@ mygame/
    └─ mygame.bpmap       # 最终分发包
 ```
 
-`sdk/` 和 `node_modules/` 是安装/构建生成的，不进包。`dist-pack/` 只放运行产物；不要把 `bpmap pack` 指向 `src/`，否则 TypeScript 源码、测试和不需要的文件都会进包。
+`sdk/` 和 `node_modules/` 是安装/构建生成的，不进包。`dist-pack/` 只放运行产物；不要把 `bpmap pack` 指向 `src/`，否则 TypeScript 源码、测试和不需要的文件都会进包。用 3.8 的 `build.mjs` 时，`src/reference/` 里的内容会按原样铺到 `dist-pack/` 根并自动写入 `reference`，只放一个 `src/reference.json` 也可以。
 
 ### 3.3 写服务端模块
 
@@ -251,6 +253,9 @@ npx esbuild src/client.ts --bundle --platform=browser --format=esm \
 
 mkdir -p dist-pack/client/assets
 cp -r src/assets/* dist-pack/client/assets/
+
+# 可选：资料文档与图片按原样铺到包根
+cp -r src/reference/* dist-pack/
 ```
 
 构建结果：
@@ -260,6 +265,7 @@ cp -r src/assets/* dist-pack/client/assets/
 | `dist-pack/server.js` | 服务端入口，宿主加载它拿 `GameModule` |
 | `dist-pack/client/client.js` | 客户端单文件 ESM，交给沙箱 |
 | `dist-pack/client/assets/` | 客户端资源，用 `fetch('assets/...')` 取 |
+| `dist-pack/reference.json` 等 | 资料文档与图片，路径由 `GameModule.reference.entry` 指向（4.12） |
 
 没有客户端时跳过第二条 esbuild 和资源复制；`GameModule.entry` 仍要填字符串，父页面会回退到占位面板。没有 `src/assets/` 时也不需要 `cp`。`dist-pack/` 每次构建前建议清空，避免旧文件混进包。
 
@@ -276,7 +282,8 @@ cp -r src/assets/* dist-pack/client/assets/
   "mode": "turn",
   "apiVersion": 1,
   "server": "server.js",
-  "client": "client/client.js"
+  "client": "client/client.js",
+  "reference": { "entry": "reference.json" }
 }
 ```
 
@@ -290,6 +297,7 @@ cp -r src/assets/* dist-pack/client/assets/
 | `apiVersion` | 游戏 ABI 版本；当前宿主支持 `1`，省略时默认 `1` |
 | `server` | 包内服务端入口，通常是 `server.js` |
 | `client` | 包内客户端入口，通常是 `client/client.js`；无客户端时可以省略 |
+| `reference` | 可选；资料文档入口（4.12），文件必须在包内，否则打包失败 |
 
 路径都相对 `dist-pack/`，不能是绝对路径，也不能含 `..`。宿主启动时会按 `mode` / `apiVersion` 做兼容闸，不支持就跳过这个包。打包、检查、本地校验：
 
@@ -917,7 +925,7 @@ const ruleConfig: RuleConfigSpec = {
 export interface GameReferenceSpec { entry: string } // 包内相对路径，指向 JSON 文档
 ```
 
-`GameModule.reference = { entry: 'reference.json' }`。如果在 `bpmap.json` 里也写一份相同的 `reference`，打包时会把入口写进包头、要求文件真的在源目录里，`bpmap doctor` 也会检查它；不写则只按模块声明生效。宿主加载时：模块声明的文档不存在或 `parseGameReference` 不通过，这个模块会被跳过并记错误；包头和模块都声明了 `reference` 但 `entry` 不一致，也会拒绝加载。
+`GameModule.reference = { entry: 'reference.json' }`。用 `build.mjs` 时把文档和图片放进 `src/reference/`（例如 `src/reference/reference.json` + `src/reference/images/a.png`），构建会把它们按原样铺到包根，并在 `bpmap.json` 里自动写 `reference`；只放一个 `src/reference.json` 也可以。手写 `bpmap.json` 时自己在包里声明并按路径放文件，打包要求该文件存在，`bpmap doctor` 也会检查。宿主加载时：模块声明的文档不存在或 `parseGameReference` 不通过，这个模块会被跳过并记错误；包头和模块都声明了 `reference` 但 `entry` 不一致，也会拒绝加载。
 
 文档格式：
 

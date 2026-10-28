@@ -80,10 +80,19 @@ const install = `npm install --save-dev \\
   ./lizardon386-game-sdk-${version}.tgz \\
   ./lizardon386-sdk-tools-${version}.tgz \\
   esbuild`;
+const HIGHLIGHTS = {
+  '0.3.0': [
+    '`ruleConfig`：建房规则表单声明（boolean / enum / integer），值仍走 `roomCreate.config`，不新增线消息。',
+    '`reference`：静态资料入口；客户端懒加载，`bpmap doctor` 校验入口与文档，`bpmap.json` 与包头支持 `reference`。',
+    '构建模板会把 `src/reference/` 按原样铺到包根并自动写 `reference`。',
+  ],
+};
+const highlights = HIGHLIGHTS[version];
 const notes = `# 3178 SDK ${version}
 
 回合制接入预览版。四个 tarball 要一起安装；当前没有发布到 npm，也没有 realtime 运行时。
 
+${highlights ? `## 本版新增（${version}）\n\n${highlights.map((item) => `- ${item}`).join('\n')}\n` : ''}
 ## 安装（npm，推荐）
 
 \`\`\`bash
