@@ -52,8 +52,8 @@
 | 局域网源码校验 | 非安全上下文（局域网 HTTP）没有 `crypto.subtle` 时，仍能按 `seatGranted` 的 assets 校验客户端源码并执行 | 纯 JS SHA-256 测试 + 局域网 IP 浏览器实测 |
 | 版本闸 | 当前只加载 `turn` / `1`；`/api/version` 与 `bpmap doctor` 用同一组常量 | `pack-loader` / `bpmap-cli` 测试 |
 | 对局布局 | `playing` 时游戏区拉通整行；1280/1440 宽下 ≥1100×560，席位横向状态条，聊天/房主在可收起侧栏 | 无头浏览器实测 + [style-hooks.test.mjs](packages/client/test/style-hooks.test.mjs) |
-| 规则与资料 | `manifest.ruleConfig` / `reference` 透传；建房表单默认值与提交、`RoomView.config`、资料 404/坏 JSON/HTML 转义/图片路径边界都有测试 | `module-contract` / `room-authority` / [rule-config.test.mjs](packages/client/test/rule-config.test.mjs) / [reference.test.mjs](packages/client/test/reference.test.mjs) |
-| 当前回归门禁 | `npm test` 215 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
+| 规则与资料 | `manifest.ruleConfig` / `reference` 透传；房主房间内改规则、非房主 HOSTONLY、ready 重置、`RoomView.config`、资料 404/坏 JSON/HTML 转义/图片路径边界都有测试 | `module-contract` / `room-authority` / [rule-config.test.mjs](packages/client/test/rule-config.test.mjs) / [reference.test.mjs](packages/client/test/reference.test.mjs) |
+| 当前回归门禁 | `npm test` 217 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
 
 #### 2.3.2 测试手顺
 
@@ -70,7 +70,7 @@ npm run build
 npm test
 ```
 
-预期 215 例全绿。这一轮会重新生成三个测试夹具，并跑单元、契约、宿主集成和夹具猴测。
+预期 217 例全绿。这一轮会重新生成三个测试夹具，并跑单元、契约、宿主集成和夹具猴测。
 
 3. 接缝检查：
 
@@ -198,6 +198,8 @@ sequenceDiagram
   S-->>G: snapshot(phase=playing)
 ```
 
+- 加入 / 重连的 `hello` 不声明大厅里当前选中的游戏版本；房间游戏由房主决定。拿本地下拉碰巧选中的版本去握手，会把“进别人的房”误判成 `VERSION`。
+
 ### 4.2 对局动作与广播
 
 ```mermaid
@@ -257,7 +259,7 @@ stateDiagram-v2
 
 - **lobby 保持三列**（席位 / 聊天 / 房主）；进入 `playing` 后游戏区拉通整行，席位压成横向状态条，聊天与房主面板收进右侧抽屉，默认收起。按钮、`D` 键和 `Esc` 都能操作，关闭时焦点回到触发按钮。
 - **桌面实测**：1280×800 下游戏区 1233×560，1440×900 下 1393×630；低于 1100px 宽的桌面不在本档验收范围。
-- **规则表单**：`manifest.ruleConfig` 的 boolean / enum / integer 字段渲染到大厅建房表单，默认值取 `default`，提交进 `roomCreate.config`。`RoomView.config` 由 `room.roomView()` 下发，加入者也能看到同一份规范化房规；平台不改 `normalizeConfig`，非法值仍由游戏兜底。
+- **本局规则**：房间页在 `manifest.ruleConfig` 存在时显示规则卡；房主在 `lobby` 阶段可编辑，其他人只读，`playing` 后一律只读。修改走房主专用 `ruleConfig`，服务端用 `normalizeConfig` / `rulesHashOf` 重算，推进 revision，并把所有真人 ready 清零、发系统消息「房规已更新，请重新准备」。`RoomView.config` 与 `rulesHash` 随快照广播，后加入者从 `seatGranted` 的 manifest 和首个快照拿到新值；`RoomExport.config` 落盘，恢复后规则保持。平台不改 `normalizeConfig`，非法值仍由游戏兜底。
 - **资料面板**：`manifest.reference.entry` 指向包内 JSON，第一次展开才请求 `/games/<id>/<entry>`，用 `parseGameReference` 校验。只渲染纯文本与图片，文本走 `textContent`，不解析 HTML；图片走现有 `/games` 路由，`..`、绝对路径和反斜杠一律拒绝。图片 404 时用 `onerror` 显示 alt 文案；读取失败只在面板里说明，不影响对局。
 - **服务端校验**：目录游戏与 `.bpmap` 在加载时用 `parseRuleConfig` / `parseGameReference` 校验声明，坏声明跳过该模块并记错误；`manifestOf` 再挡一次，避免测试或手工构造的模块把坏声明带进房间。包头的 `reference` 与模块里的 `reference` 同时存在但不一致时拒绝加载。
 
@@ -452,7 +454,7 @@ flowchart TD
 
 ```bash
 npm run build          # tsc -b 项目引用，无打包器
-npm test               # node --test（当前 215 例）
+npm test               # node --test（当前 217 例）
 bash tools/checks/check-seam.sh                        # 闸门：平台包内不得出现玩法词
 npm run portable                                # 绿色便携包（dist-portable/，不入库）
 node tools/checks/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测

@@ -121,19 +121,26 @@ test('对局区全宽：游戏拉通整行，席位横排，聊天/房主进可�
   assert.match(appSource, /aria-hidden/, '侧栏要同步 aria-hidden');
 });
 
-test('规则与资料：大厅入口、房间入口、抽屉与只读摘要都在', () => {
-  for (const id of ['btn-reference-lobby', 'btn-reference', 'reference-panel', 'reference-body', 'btn-reference-close', 'reference-backdrop', 'rule-config', 'rule-summary']) {
+test('规则与资料：房间规则卡、大厅资料入口、抽屉都在', () => {
+  for (const id of ['btn-reference-lobby', 'btn-reference', 'reference-panel', 'reference-body', 'btn-reference-close', 'reference-backdrop', 'rule-config', 'rule-config-body', 'rule-config-hint', 'btn-save-rule-config']) {
     assert.match(pageHtml, new RegExp(`id="${id}"`), `index.html 缺少 #${id}`);
   }
+  const lobbyStart = pageHtml.indexOf('id="screen-lobby"');
+  const roomStart = pageHtml.indexOf('id="screen-room"');
+  const ruleStart = pageHtml.indexOf('id="rule-config"');
+  assert.ok(ruleStart > roomStart && ruleStart > lobbyStart, '规则卡应在房间页，不该留在大厅建房表单里');
   assert.match(pageHtml, /aria-controls="reference-panel"/, '规则按钮要声明控制目标');
   assert.match(cssCode, /\.reference-panel\s*\{[^}]*visibility:\s*hidden/s, '资料抽屉默认收起');
   assert.match(cssCode, /\.reference-panel\.is-open/, '资料抽屉要有打开态');
+  assert.match(cssCode, /\.rule-config-panel\s*\{/, '房间规则区要有卡片边界');
   assert.match(cssCode, /\.rule-chip\s*\{/, '房间规则摘要要有样式');
   assert.match(cssCode, /\.bp-game-row\s*\{/, '大厅游戏选择与查看规则要同一行');
   assert.match(appSource, /loadGameReference/, 'app.ts 要懒加载资料');
   assert.match(appSource, /renderReference/, 'app.ts 要用纯文本渲染资料');
-  assert.match(appSource, /renderRuleSummary/, '房间页要渲染规则摘要');
-  assert.match(appSource, /readRuleConfig/, '建房提交要收规则值');
+  assert.match(appSource, /renderRuleConfig/, '房间页要渲染规则区');
+  assert.match(appSource, /saveRuleConfig/, '房主要能提交规则');
+  assert.match(appSource, /仅房主可操作/, '房主端要有固定提示');
+  assert.match(appSource, /ruleConfig/, '改规则要走房主专用命令');
 });
 
 test('紫底版仍然不许有渐变、关键帧动画和发光阴影', () => {

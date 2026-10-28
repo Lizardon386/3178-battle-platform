@@ -66,6 +66,8 @@ export interface RoomExport {
   seatSlots: number;
   hidden: boolean;
   allowSpectate: boolean;
+  /** 房主可能改过房规；落盘要带，恢复时用同一份配置重建 rulesHash。 */
+  config: Record<string, unknown>;
 }
 
 const CHAT_HISTORY = 200;
@@ -85,9 +87,9 @@ export class Room {
   readonly seatSlots: number;
   readonly gameId: string;
   readonly gameName: string;
-  readonly manifest: GameManifest;
-  readonly config: Record<string, unknown>;
-  readonly rulesHash: string;
+  manifest: GameManifest;
+  config: Record<string, unknown>;
+  rulesHash: string;
   readonly allowSpectate: boolean;
   readonly hidden: boolean;
   readonly module: GameModule;
@@ -160,6 +162,19 @@ export class Room {
 
   touch(): void {
     this.updatedAt = this.now();
+  }
+
+  /** 房主改房规：重新规范化、重算 rulesHash，并把真人准备状态清掉。 */
+  updateRuleConfig(rawConfig: Record<string, unknown> | undefined): void {
+    const config = this.module.normalizeConfig(rawConfig);
+    const manifest = manifestOf(this.module, config, this.manifest.assets);
+    this.config = config;
+    this.manifest = manifest;
+    this.rulesHash = manifest.rulesHash;
+    for (const seat of this.seatsRef) {
+      if (!seat.isAi && seat.role !== 'spectator') seat.ready = false;
+    }
+    this.bump();
   }
 
   checkPassword(password: string | undefined): boolean {
@@ -404,6 +419,7 @@ export class Room {
       seatSlots: this.seatSlots,
       hidden: this.hidden,
       allowSpectate: this.allowSpectate,
+      config: { ...this.config },
       seats: this.seatsRef.map((s) => ({ ...s, transport: null })),
       chat: [...this.chatRef],
     };

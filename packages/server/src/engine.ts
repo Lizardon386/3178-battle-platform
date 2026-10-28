@@ -485,7 +485,12 @@ export class Engine {
     const room = this.roomOf(conn);
     if (!room) return [this.to(conn.id, { type: 'error', code: 'NOROOM', message: '房间不存在' })];
     const auth = requireHost(room, conn.seatId);
-    if (!auth.ok) return [this.toSeat(room, conn.seatId ?? '', { type: 'error', code: auth.code, message: auth.message })];
+    if (!auth.ok) {
+      // 房规命令对普通玩家统一报 HOSTONLY，别只靠客户端把控件置灰。
+      const code = msg.type === 'ruleConfig' ? 'HOSTONLY' : auth.code;
+      const message = msg.type === 'ruleConfig' ? '只有房主能修改房规' : auth.message;
+      return [this.toSeat(room, conn.seatId ?? '', { type: 'error', code, message })];
+    }
     switch (msg.type) {
       case 'hostStart':
         return this.onStart(room);
@@ -497,9 +502,20 @@ export class Engine {
         return this.transfer(room, msg.seatId);
       case 'hostSeat':
         return this.seatOp(room, msg);
+      case 'ruleConfig':
+        return this.onRuleConfig(room, msg);
       default:
         return [];
     }
+  }
+
+  private onRuleConfig(room: Room, msg: Extract<ClientMessage, { type: 'ruleConfig' }>): Outbound[] {
+    if (room.phase !== 'lobby') {
+      return [this.toSeat(room, room.hostSeatId ?? '', { type: 'error', code: 'PHASE', message: '对局开始后不能修改房规' })];
+    }
+    room.updateRuleConfig(msg.config);
+    const line = room.systemLine('房规已更新，请重新准备');
+    return [this.toRoom(room, { type: 'chat', ...line }), ...this.fanout(room)];
   }
 
   private onStart(room: Room): Outbound[] {

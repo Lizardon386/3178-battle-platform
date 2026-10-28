@@ -7,7 +7,7 @@ import { ServerClock } from './clock.js';
 import { parseHostAddress, parseInviteLink, wouldBeBlocked, type Endpoint } from './endpoint.js';
 import { aiFillBlocker, emptyViewModel, inviteLink, accessHints, isHost, mySeat, reduce, resumeCodeFor, seatLabel, seatPickerBlocker, seatPickerCandidates, startBlockers, emptySlots, type ViewModel } from './view-model.js';
 import { fetchGameList, loadGameClientSource, placeholderClient, sandboxChatText, sandboxedClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
-import { ruleConfigDefaults, ruleConfigFromValues, ruleConfigSpec, ruleConfigSummary } from './rule-config.js';
+import { ruleConfigFromValues, ruleConfigSpec, ruleConfigSummary } from './rule-config.js';
 import { loadGameReference, renderReference, type ReferenceLoad } from './reference.js';
 import { SelectListboxes } from './listbox.js';
 
@@ -132,7 +132,6 @@ export class PlatformApp {
         if (invite.gameId) select.value = invite.gameId;
       }
       this.listboxes.syncAll();
-      this.renderRuleConfig();
     } catch {
       this.setStatus('本机壳没提供游戏清单——创建房间会失败，但加入别人的房不受影响。');
     }
@@ -184,17 +183,20 @@ export class PlatformApp {
     const typed = this.typedNick();
     const nickValue = this.currentNick();
     this.rememberNick(typed);
-    const wantedGameId = this.pendingManifest?.id ?? (el(this.doc, 'game-select') as HTMLSelectElement | null)?.value ?? '';
+    // 只有建房时才知道目标游戏就是下拉里选的这一款；加入/重连时房间游戏由房主决定，
+    // 拿大厅里碰巧选中的版本去握手，会把“进别人的房”误判成 VERSION。
+    const creating = this.pendingJoin?.type === 'roomCreate';
+    const wantedGameId = creating
+      ? this.pendingManifest?.id ?? (el(this.doc, 'game-select') as HTMLSelectElement | null)?.value ?? ''
+      : '';
     const handlers: ConnectionHandlers = {
       hello: () => {
-        // 只声明版本号让房主做版本闸；房规由房主选，本机不该拿自己的 hash 去比。
         const installed = this.localGames.find((g) => g.id === wantedGameId);
         return {
           type: 'hello',
           protocol: 1,
           nick: this.currentNick(),
-          gameId: installed?.id,
-          version: installed?.version,
+          ...(installed ? { gameId: installed.id, version: installed.version } : {}),
         };
       },
       onMessage: (message) => this.onServerMessage(message, endpoint),
@@ -340,6 +342,7 @@ export class PlatformApp {
     this.endpoint = null;
     this.drawerOpen = false;
     this.drawerWasPlaying = false;
+    this.ruleConfigSignature = '';
     this.closeReference(false);
     this.applyDrawerState();
     // 状态行不清的话，房里留下的最后一句（挂载结果、被拒的原因）会一直挂在大厅上，
@@ -376,7 +379,7 @@ export class PlatformApp {
         password: value(el(this.doc, 'room-password')) || undefined,
         allowSpectate: (el(this.doc, 'chk-spectate') as HTMLInputElement | null)?.checked ?? true,
         hidden: (el(this.doc, 'chk-hidden') as HTMLInputElement | null)?.checked ?? false,
-        config: manifest ? this.readRuleConfig(manifest) : {},
+        config: {},
       });
       return undefined;
     });
@@ -447,10 +450,7 @@ export class PlatformApp {
     on('btn-toggle-drawer', 'click', () => this.setDrawerOpen(!this.drawerOpen));
     on('btn-close-drawer', 'click', () => this.setDrawerOpen(false));
     on('drawer-backdrop', 'click', () => this.setDrawerOpen(false));
-    on('game-select', 'change', () => {
-      this.ruleConfigSignature = '';
-      this.renderRuleConfig();
-    });
+    on('btn-save-rule-config', 'click', () => this.saveRuleConfig());
     const bindReference = (id: string) => {
       el(this.doc, id)?.addEventListener('click', (event) => {
         this.openReference(event.currentTarget as HTMLElement);
@@ -542,37 +542,62 @@ export class PlatformApp {
   }
 
   private renderRuleConfig(): void {
-    const host = el(this.doc, 'rule-config');
-    if (!host) return;
-    const manifest = this.selectedLobbyManifest();
-    if (!manifest?.ruleConfig) {
-      host.replaceChildren();
-      host.classList.add('hidden');
+    const panel = el(this.doc, 'rule-config');
+    if (!panel) return;
+    const manifest = this.view.manifest;
+    const spec = manifest?.ruleConfig ? ruleConfigSpec(manifest.ruleConfig) : null;
+    if (!spec || !this.view.room) {
+      panel.classList.add('hidden');
       this.ruleConfigSignature = '';
       return;
     }
-    const signature = `${manifest.id}:${manifest.version}:${JSON.stringify(manifest.ruleConfig)}`;
+    const canEdit = isHost(this.view) && this.view.phase === 'lobby';
+    const config = this.view.room.config;
+    const signature = [
+      this.view.room.code,
+      manifest?.id,
+      manifest?.version,
+      JSON.stringify(manifest?.ruleConfig),
+      JSON.stringify(config),
+      canEdit,
+      this.view.phase,
+    ].join('|');
     if (signature === this.ruleConfigSignature) return;
     this.ruleConfigSignature = signature;
-    host.replaceChildren();
-    const title = this.doc.createElement('p');
-    title.className = 'rule-title';
-    title.textContent = '本局规则';
-    host.append(title);
-    const spec = ruleConfigSpec(manifest.ruleConfig);
-    if (!spec) {
-      const bad = this.doc.createElement('p');
-      bad.className = 'hint';
-      bad.textContent = '这个游戏的规则表单声明有误，开局时会按游戏默认值处理。';
-      host.append(bad);
-      host.classList.remove('hidden');
+    panel.classList.remove('hidden');
+    const hint = el(this.doc, 'rule-config-hint');
+    if (hint) {
+      hint.textContent = canEdit ? '仅房主可操作' : isHost(this.view) ? '对局中不可修改' : '只有房主可以修改';
+    }
+    el(this.doc, 'rule-config-actions')?.classList.toggle('hidden', !canEdit);
+    const status = el(this.doc, 'rule-config-status');
+    if (status) status.textContent = '';
+    const body = el(this.doc, 'rule-config-body');
+    if (!body) return;
+    body.replaceChildren();
+    if (!canEdit) {
+      const rows = ruleConfigSummary(spec, config);
+      body.append(
+        ...rows.map((row) => {
+          const chip = this.doc.createElement('span');
+          chip.className = 'rule-chip';
+          const label = this.doc.createElement('span');
+          label.className = 'rule-chip-label';
+          label.textContent = row.label;
+          const value = this.doc.createElement('span');
+          value.className = 'rule-chip-value';
+          value.textContent = row.text;
+          chip.append(label, value);
+          return chip;
+        }),
+      );
       return;
     }
-    const defaults = ruleConfigDefaults(spec);
     for (const field of spec.fields) {
       const wrap = this.doc.createElement('div');
       wrap.className = 'rule-field';
-      const id = `rule-${field.key}`;
+      const id = `room-rule-${field.key}`;
+      const current = config[field.key] ?? field.default;
       if (field.type === 'boolean') {
         const check = this.doc.createElement('div');
         check.className = 'form-check form-switch';
@@ -580,7 +605,7 @@ export class PlatformApp {
         input.className = 'form-check-input';
         input.type = 'checkbox';
         input.id = id;
-        input.checked = defaults[field.key] === true;
+        input.checked = current === true;
         const label = this.doc.createElement('label');
         label.className = 'form-check-label';
         label.htmlFor = id;
@@ -603,7 +628,10 @@ export class PlatformApp {
             node.textContent = option.label;
             select.append(node);
           }
-          select.value = String(defaults[field.key]);
+          const value = typeof current === 'string' && field.options.some((option) => option.value === current)
+            ? current
+            : field.default;
+          select.value = value;
           wrap.append(select);
         } else {
           const input = this.doc.createElement('input');
@@ -613,63 +641,35 @@ export class PlatformApp {
           input.min = String(field.min);
           input.max = String(field.max);
           if (field.step !== undefined) input.step = String(field.step);
-          input.value = String(defaults[field.key]);
+          const value = typeof current === 'number' && Number.isFinite(current) ? current : field.default;
+          input.value = String(value);
           wrap.append(input);
         }
       }
       if (field.description) {
-        const hint = this.doc.createElement('p');
-        hint.className = 'hint';
-        hint.textContent = field.description;
-        wrap.append(hint);
+        const description = this.doc.createElement('p');
+        description.className = 'hint';
+        description.textContent = field.description;
+        wrap.append(description);
       }
-      host.append(wrap);
+      body.append(wrap);
     }
-    host.classList.remove('hidden');
     this.listboxes.attachAll();
     this.listboxes.syncAll();
   }
 
-  private readRuleConfig(manifest: GameManifest): Record<string, unknown> {
-    const spec = manifest.ruleConfig ? ruleConfigSpec(manifest.ruleConfig) : null;
-    if (!spec) return {};
-    return ruleConfigFromValues(spec, (field) => {
-      const node = el(this.doc, `rule-${field.key}`) as HTMLInputElement | HTMLSelectElement | null;
+  private saveRuleConfig(): void {
+    const manifest = this.view.manifest;
+    const spec = manifest?.ruleConfig ? ruleConfigSpec(manifest.ruleConfig) : null;
+    if (!spec || !isHost(this.view) || this.view.phase !== 'lobby') return;
+    const config = ruleConfigFromValues(spec, (field) => {
+      const node = el(this.doc, `room-rule-${field.key}`) as HTMLInputElement | HTMLSelectElement | null;
       if (!node) return undefined;
       return field.type === 'boolean' ? (node as HTMLInputElement).checked : node.value;
     });
-  }
-
-  private renderRuleSummary(): void {
-    const host = el(this.doc, 'rule-summary');
-    if (!host) return;
-    const spec = this.view.manifest?.ruleConfig ? ruleConfigSpec(this.view.manifest.ruleConfig) : null;
-    if (!spec || !this.view.room) {
-      host.replaceChildren();
-      host.classList.add('hidden');
-      return;
-    }
-    const rows = ruleConfigSummary(spec, this.view.room.config);
-    if (rows.length === 0) {
-      host.replaceChildren();
-      host.classList.add('hidden');
-      return;
-    }
-    host.replaceChildren(
-      ...rows.map((row) => {
-        const chip = this.doc.createElement('span');
-        chip.className = 'rule-chip';
-        const label = this.doc.createElement('span');
-        label.className = 'rule-chip-label';
-        label.textContent = row.label;
-        const value = this.doc.createElement('span');
-        value.className = 'rule-chip-value';
-        value.textContent = row.text;
-        chip.append(label, value);
-        return chip;
-      }),
-    );
-    host.classList.remove('hidden');
+    this.command({ type: 'ruleConfig', config });
+    const status = el(this.doc, 'rule-config-status');
+    if (status) status.textContent = '已提交，等待房间确认…';
   }
 
   private currentReferenceManifest(): GameManifest | null {
@@ -886,7 +886,7 @@ export class PlatformApp {
       title.textContent = `${room.name} · ${room.gameName} · ${phase}`;
     }
     if (codeChip && this.view.room) codeChip.textContent = this.view.room.code;
-    this.renderRuleSummary();
+    this.renderRuleConfig();
     const grid = el(this.doc, 'seat-grid');
     if (!grid) return;
     grid.replaceChildren();

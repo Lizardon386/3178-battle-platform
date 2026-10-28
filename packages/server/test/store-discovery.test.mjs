@@ -243,3 +243,44 @@ test('落盘跳过没变的房：所以同步可以跟着心跳勤调，而不�
   assert.equal(engine.syncStore(store).saved, 1, '座位一变就要落，否则硬杀后朋友的邀请链接进不来');
   assert.equal(engine.syncStore(store).saved, 0, '落过之后 again 不重复写');
 });
+
+test('房主改过的房规落盘，重启后规则保持', () => {
+  const dir = storeDir();
+  const a = makeEngine();
+  const transport = { sent: [], send(raw) { this.sent.push(JSON.parse(raw)); }, close() {} };
+  const hostId = a.engine.openConn(transport);
+  a.engine.publish(a.engine.dispatch(hostId, {
+    type: 'hello',
+    protocol: 1,
+    nick: '房主',
+    gameId: 'fixture-turn',
+    version: turnBasedFixture.version,
+  }));
+  a.engine.publish(a.engine.dispatch(hostId, {
+    type: 'roomCreate',
+    gameId: 'fixture-turn',
+    roomName: '改规则落盘',
+    seatSlots: 2,
+    config: { range: 6, target: 4, turnMs: 5000 },
+  }));
+  const code = transport.sent.at(-1).room.code;
+  a.engine.publish(a.engine.dispatch(hostId, {
+    type: 'ruleConfig',
+    config: { range: 12, target: 2, turnMs: 5000 },
+  }));
+  const room = a.engine.registry.get(code);
+  assert.equal(room.config.range, 12);
+  const rulesHash = room.rulesHash;
+
+  a.engine.syncStore(new HostStore(dir));
+  const entry = entryOf(dir, code);
+  assert.equal(entry.config.range, 12);
+  assert.equal(entry.room.config.range, 12);
+
+  const b = makeEngine();
+  const report = b.engine.restoreFrom(new HostStore(dir).readAll().entries);
+  assert.deepEqual(report.restored, [code]);
+  const restored = b.engine.registry.get(code);
+  assert.equal(restored.config.range, 12);
+  assert.equal(restored.rulesHash, rulesHash);
+});

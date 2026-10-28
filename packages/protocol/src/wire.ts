@@ -94,6 +94,12 @@ export interface ClientHostSeat {
   team?: string | number | null;
 }
 
+export interface ClientRuleConfig {
+  type: 'ruleConfig';
+  /** 规则表单收集出的值；平台只做房主与相位检查，规范化仍归游戏。 */
+  config: Record<string, unknown>;
+}
+
 export interface ClientResync {
   type: 'resync';
   since: number;
@@ -118,6 +124,7 @@ export type ClientMessage =
   | ClientHostKick
   | ClientHostTransfer
   | ClientHostSeat
+  | ClientRuleConfig
   | ClientResync
   | ClientPing;
 
@@ -137,12 +144,13 @@ export const CLIENT_MESSAGE_TYPES: readonly ClientMessageType[] = [
   'hostKick',
   'hostTransfer',
   'hostSeat',
+  'ruleConfig',
   'resync',
   'ping',
 ];
 
 /** 需要房主权限的命令。传输层按这张表做统一鉴权。 */
-export const HOST_COMMANDS = ['hostStart', 'hostClose', 'hostKick', 'hostTransfer', 'hostSeat'] as const;
+export const HOST_COMMANDS = ['hostStart', 'hostClose', 'hostKick', 'hostTransfer', 'hostSeat', 'ruleConfig'] as const;
 export type HostCommand = (typeof HOST_COMMANDS)[number];
 
 export function isHostCommand(type: string): type is HostCommand {
@@ -261,6 +269,7 @@ export const MESSAGE_CATALOG: MessageCatalogEntry[] = [
   { direction: 'c2s', type: 'hostKick', requiresSeat: true, requiresHost: true, note: '请出座位' },
   { direction: 'c2s', type: 'hostTransfer', requiresSeat: true, requiresHost: true, note: '只移权限，不迁进程' },
   { direction: 'c2s', type: 'hostSeat', requiresSeat: true, requiresHost: true, note: 'AI 填充/换槽/改队' },
+  { direction: 'c2s', type: 'ruleConfig', requiresSeat: true, requiresHost: true, note: '仅 lobby；改房规后重置准备' },
   { direction: 'c2s', type: 'resync', requiresSeat: true, requiresHost: false, note: '快照 revision 断了时索取' },
   { direction: 'c2s', type: 'ping', requiresSeat: false, requiresHost: false, note: 'RTT 与校时' },
   { direction: 's2c', type: 'welcome', requiresSeat: false, requiresHost: false, note: '握手通过' },

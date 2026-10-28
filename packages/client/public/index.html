@@ -62,7 +62,6 @@
                         </select>
                         <button id="btn-reference-lobby" class="btn btn-outline-secondary btn-lg" type="button" aria-controls="reference-panel" aria-expanded="false">查看规则</button>
                       </div>
-                      <div id="rule-config" class="rule-config hidden"></div>
 
                       <label class="form-label" for="room-name">房间名</label>
                       <input id="room-name" class="form-control form-control-lg mb-4" maxlength="48" placeholder="周末一局" />
@@ -162,7 +161,17 @@
                 </button>
               </div>
 
-              <div id="rule-summary" class="rule-summary hidden" aria-label="本局规则"></div>
+              <section id="rule-config" class="card bp-panel rule-config-panel hidden" aria-labelledby="rule-config-title">
+                <div class="rule-config-panel-head">
+                  <h3 id="rule-config-title" class="rule-config-panel-title">本局规则</h3>
+                  <span id="rule-config-hint" class="rule-config-panel-hint"></span>
+                </div>
+                <div id="rule-config-body" class="rule-config-panel-body"></div>
+                <div id="rule-config-actions" class="rule-config-panel-actions hidden">
+                  <button id="btn-save-rule-config" class="btn btn-primary btn-sm" type="button">保存规则</button>
+                  <span id="rule-config-status" class="rule-config-status" role="status" aria-live="polite"></span>
+                </div>
+              </section>
 
               <div id="room-layout" class="row row-cards room-layout">
                 <div id="seat-column" class="col-lg-6">

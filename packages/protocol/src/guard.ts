@@ -45,6 +45,7 @@ const SPEC: Record<string, Record<string, Kind | `${Kind}?`>> = {
   hostKick: { seatId: 'str' },
   hostTransfer: { seatId: 'str' },
   hostSeat: { op: 'str', seatId: 'str?', slot: 'int?', team: 'any?' },
+  ruleConfig: { config: 'obj' },
   resync: { since: 'int' },
   ping: { nonce: 'str' },
   // 服务端消息（客户端也要能挡住乱序/伪造的帧）

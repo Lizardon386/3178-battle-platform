@@ -69,9 +69,12 @@ test('入站消息形状闸门：缺字段/多余字段/超长都要挡住', () 
 
 test('房主命令表与目录一致，权限判定不会漏一条', () => {
   assert.ok(isHostCommand('hostStart'));
+  assert.ok(isHostCommand('ruleConfig'));
   assert.ok(!isHostCommand('ready'));
   const hostTypes = MESSAGE_CATALOG.filter((e) => e.requiresHost).map((e) => e.type).sort();
-  assert.deepEqual(hostTypes, ['hostClose', 'hostKick', 'hostSeat', 'hostStart', 'hostTransfer']);
+  assert.deepEqual(hostTypes, ['hostClose', 'hostKick', 'hostSeat', 'hostStart', 'hostTransfer', 'ruleConfig']);
+  assert.equal(parseClientMessage({ type: 'ruleConfig', config: { range: 8 } }).ok, true);
+  assert.equal(parseClientMessage({ type: 'ruleConfig' }).ok, false);
 });
 
 test('房号规范化：大小写与空格不影响查房', () => {

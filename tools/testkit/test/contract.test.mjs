@@ -285,3 +285,43 @@ test('seatGranted 的 manifest 也带 ruleConfig / reference', () => {
   assert.deepEqual(granted.manifest.ruleConfig, module.ruleConfig);
   assert.deepEqual(granted.manifest.reference, module.reference);
 });
+
+test('房主改规则：规则/哈希变化、真人准备重置、非房主被拒、后加入者看到新值', () => {
+  const module = {
+    ...turnBasedFixture,
+    ruleConfig: { fields: [{ key: 'range', label: '数值范围', type: 'integer', default: 6, min: 4, max: 99 }] },
+  };
+  const h = harness({ module, config: { range: 6, target: 4, turnMs: 5000 } });
+  const host = createRoom(h, { module, config: { range: 6, target: 4, turnMs: 5000 } });
+  const code = host.rec.last('snapshot').room.code;
+  const guest = h.join('客人');
+  guest.send({ type: 'roomJoin', code });
+  guest.send({ type: 'ready', ready: true });
+  assert.equal(guest.rec.last('snapshot').seats.find((s) => s.name === '客人').ready, true);
+
+  guest.send({ type: 'ruleConfig', config: { range: 8 } });
+  assert.equal(guest.rec.last('error').code, 'HOSTONLY', '非房主不能改规则');
+
+  const before = host.rec.last('snapshot');
+  host.send({ type: 'ruleConfig', config: { range: 8 } });
+  const after = host.rec.last('snapshot');
+  assert.equal(after.room.config.range, 8);
+  assert.notEqual(after.room.rulesHash, before.room.rulesHash);
+  assert.equal(after.seats.find((s) => s.name === '客人').ready, false, '改规则要重置真人准备');
+  assert.ok(host.rec.last('chat').text.includes('房规已更新，请重新准备'));
+
+  host.send({ type: 'hostStart' });
+  assert.equal(host.rec.last('error').code, 'PHASE', '未重新准备不能开局');
+  guest.send({ type: 'ready', ready: true });
+
+  const late = h.join('后来的人');
+  late.send({ type: 'roomJoin', code });
+  const lateGranted = late.rec.last('seatGranted');
+  assert.deepEqual(lateGranted.manifest.ruleConfig, module.ruleConfig);
+  assert.equal(late.rec.last('snapshot').room.config.range, 8, '后加入者看到改后的规则');
+  late.send({ type: 'ready', ready: true });
+  host.send({ type: 'hostStart' });
+  assert.equal(host.rec.last('snapshot').phase, 'playing');
+  host.send({ type: 'ruleConfig', config: { range: 9 } });
+  assert.equal(host.rec.last('error').code, 'PHASE', '对局开始后规则只读');
+});

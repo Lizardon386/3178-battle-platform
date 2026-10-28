@@ -326,12 +326,25 @@ option:disabled {
 .bp-game-row { display: flex; gap: 10px; align-items: flex-start; }
 .bp-game-row .bp-listbox { flex: 1 1 auto; min-width: 0; }
 .bp-game-row > .btn { flex: none; }
-.rule-config { margin-bottom: 20px; }
-.rule-config .rule-title { margin: 0 0 4px; font: 13.5px/1.4 var(--bp-font-mono); letter-spacing: 0.08em; color: var(--bp-dim-hi); }
 .rule-field { margin-top: 14px; }
 .rule-field .form-label { margin-bottom: 6px; }
 .rule-field .hint { margin-top: 6px; }
-.rule-summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.rule-config-panel { margin-bottom: 16px; }
+.rule-config-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--bp-panel-alt);
+  border-bottom: 1px solid var(--bp-line);
+}
+.rule-config-panel-title { margin: 0; font: 500 18px/1.2 var(--bp-font-display); letter-spacing: 0.08em; }
+.rule-config-panel-hint { font: 13px/1.4 var(--bp-font-mono); color: var(--bp-dim-hi); }
+.rule-config-panel-body { display: flex; flex-wrap: wrap; gap: 12px 18px; padding: 16px 20px; }
+.rule-config-panel-body .rule-field { flex: 1 1 220px; margin-top: 0; }
+.rule-config-panel-actions { display: flex; align-items: center; gap: 12px; padding: 0 20px 16px; }
+.rule-config-status { font: 13.5px/1.5 var(--bp-font-mono); color: var(--bp-dim-hi); }
 .rule-chip {
   display: inline-flex;
   align-items: baseline;
