@@ -1,4 +1,4 @@
-import type { Effect, ViewerId } from '@3178/core-abi';
+import type { Effect, ViewerId } from '@lizardon386/core-abi';
 import { FEED_EVENT, FeedError, type FeedEntry, type FeedVisibility } from '../shared.js';
 
 export interface FeedSeat {

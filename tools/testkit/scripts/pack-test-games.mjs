@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
-import { readPack } from '@3178/game-sdk/node';
+import { readPack } from '@lizardon386/game-sdk/node';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const testTools = join(root, 'tools', 'testkit');

@@ -1,6 +1,6 @@
-import { ROOM_PHASES, SEAT_ROLES, type RoomPhase, type SeatRole } from '@3178/core-abi';
+import { ROOM_PHASES, SEAT_ROLES, type RoomPhase, type SeatRole } from '@lizardon386/core-abi';
 
-/** 房间视图和局域网发现条目；座位/相位的基础类型在 @3178/core-abi。 */
+/** 房间视图和局域网发现条目；座位/相位的基础类型在 @lizardon386/core-abi。 */
 
 export interface RoomView {
   code: string;

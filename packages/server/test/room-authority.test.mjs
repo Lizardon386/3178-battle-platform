@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { stableDigest } from '@3178/core-abi';
+import { stableDigest } from '@lizardon386/core-abi';
 import { RoomRegistry, requireHost, requireSeat, requireTicket, canBegin, canJoinAs } from '@bp/server';
 
 function makeInstance(ctx) {

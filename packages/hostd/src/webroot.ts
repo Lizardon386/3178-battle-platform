@@ -4,8 +4,8 @@ import { extname, join, resolve } from 'node:path';
 import type { GameModule } from '@bp/server';
 import { manifestOf, PACK_FORMAT } from '@bp/server';
 import type { DiscoveryRoom } from '@bp/protocol';
-import type { GameAsset } from '@3178/core-abi';
-import { SUPPORTED_API_VERSIONS, SUPPORTED_MODES } from '@3178/core-abi';
+import type { GameAsset } from '@lizardon386/core-abi';
+import { SUPPORTED_API_VERSIONS, SUPPORTED_MODES } from '@lizardon386/core-abi';
 
 /**
  * 宿主壳的静态与接口层。路由前缀就是"三方来源"的分工：

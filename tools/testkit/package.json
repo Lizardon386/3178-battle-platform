@@ -24,8 +24,8 @@
     "pack:test-games": "node scripts/pack-test-games.mjs"
   },
   "dependencies": {
-    "@3178/core-abi": "*",
-    "@3178/game-sdk": "*",
+    "@lizardon386/core-abi": "*",
+    "@lizardon386/game-sdk": "*",
     "@bp/protocol": "*",
     "@bp/server": "*"
   },

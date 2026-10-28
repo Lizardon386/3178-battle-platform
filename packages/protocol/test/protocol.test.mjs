@@ -12,7 +12,7 @@ import {
   MESSAGE_CATALOG,
   PROTOCOL_VERSION,
 } from '@bp/protocol';
-import { canonicalJson, stableDigest } from '@3178/core-abi';
+import { canonicalJson, stableDigest } from '@lizardon386/core-abi';
 
 test('稳定摘要与键顺序无关（旧 deckVersion 的泛化）', () => {
   const a = { stack: true, peng: false, cap: 20 };

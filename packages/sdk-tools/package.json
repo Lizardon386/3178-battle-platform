@@ -1,5 +1,5 @@
 {
-  "name": "@3178/sdk-tools",
+  "name": "@lizardon386/sdk-tools",
   "version": "0.2.0",
   "description": "3178 SDK 工具：bpmap CLI、doctor 和游戏工程脚本模板",
   "license": "MIT",
@@ -32,8 +32,8 @@
     "src"
   ],
   "dependencies": {
-    "@3178/core-abi": "^0.2.0",
-    "@3178/pack-format": "^0.2.0"
+    "@lizardon386/core-abi": "^0.2.0",
+    "@lizardon386/pack-format": "^0.2.0"
   },
   "publishConfig": {
     "access": "public"

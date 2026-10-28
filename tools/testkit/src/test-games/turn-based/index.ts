@@ -1,4 +1,4 @@
-import { stableDigest, type Effect, type GameContext, type GameInstance, type GameModule, type Outcome, type ViewerId } from '@3178/game-sdk';
+import { stableDigest, type Effect, type GameContext, type GameInstance, type GameModule, type Outcome, type ViewerId } from '@lizardon386/game-sdk';
 
 /**
  * 测试夹具：回合制 + 隐私状态。

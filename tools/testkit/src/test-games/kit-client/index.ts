@@ -1,5 +1,5 @@
-import { reject, stableDigest, type GameContext, type GameInstance, type GameModule, type Outcome, type ViewerId } from '@3178/game-sdk';
-import { FeedLog } from '@3178/game-sdk/kit/server';
+import { reject, stableDigest, type GameContext, type GameInstance, type GameModule, type Outcome, type ViewerId } from '@lizardon386/game-sdk';
+import { FeedLog } from '@lizardon386/game-sdk/kit/server';
 
 /** 测试夹具：给 game-kit 客户端面板用的最小对局，不参与契约测试的回合语义断言。 */
 

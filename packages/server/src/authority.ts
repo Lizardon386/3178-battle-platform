@@ -1,4 +1,4 @@
-import type { PlatformCode } from '@3178/core-abi';
+import type { PlatformCode } from '@lizardon386/core-abi';
 import type { Room, SeatRecord } from './room.js';
 
 /**

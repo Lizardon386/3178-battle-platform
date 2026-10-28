@@ -1,5 +1,5 @@
 {
-  "name": "@3178/game-sdk",
+  "name": "@lizardon386/game-sdk",
   "version": "0.2.0",
   "description": "3178 游戏接入 SDK：游戏 ABI、客户端契约、单文件包和 game-kit",
   "license": "MIT",
@@ -49,8 +49,8 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@3178/core-abi": "^0.2.0",
-    "@3178/pack-format": "^0.2.0"
+    "@lizardon386/core-abi": "^0.2.0",
+    "@lizardon386/pack-format": "^0.2.0"
   },
   "files": [
     "dist",

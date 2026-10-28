@@ -1,5 +1,5 @@
 import { Engine, type TtlConfig } from '@bp/server';
-import type { GameModule } from '@3178/game-sdk';
+import type { GameModule } from '@lizardon386/game-sdk';
 
 /** 契约测试台：开引擎、开连接、建房、推进时钟；测试文件只写断言。 */
 

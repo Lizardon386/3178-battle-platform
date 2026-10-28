@@ -10,8 +10,8 @@ import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writ
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { build } from 'esbuild';
-import { API_VERSION, DEFAULT_MODE } from '@3178/game-sdk';
-import { packDirectory, readPack, readPackSource } from '@3178/game-sdk/node';
+import { API_VERSION, DEFAULT_MODE } from '@lizardon386/game-sdk';
+import { packDirectory, readPack, readPackSource } from '@lizardon386/game-sdk/node';
 
 const args = process.argv.slice(2);
 const argValue = (name, fallback) => {
@@ -64,7 +64,7 @@ await build({
   bundle: true,
   platform: 'node',
   format: 'esm',
-  external: ['@3178/game-sdk', '@3178/game-sdk/node', '@3178/game-sdk/kit/server', '@3178/core-abi'],
+  external: ['@lizardon386/game-sdk', '@lizardon386/game-sdk/node', '@lizardon386/game-sdk/kit/server', '@lizardon386/core-abi'],
   outfile: join(outDir, 'server.js'),
   logLevel: 'info',
 });
@@ -116,7 +116,7 @@ if (platformRoot) {
 
 if (hostUrl) {
   const require = createRequire(import.meta.url);
-  const cli = join(dirname(require.resolve('@3178/sdk-tools/package.json')), 'dist', 'cli', 'index.js');
+  const cli = join(dirname(require.resolve('@lizardon386/sdk-tools/package.json')), 'dist', 'cli', 'index.js');
   console.log(`检查宿主兼容性：${hostUrl}`);
   const result = spawnSync(process.execPath, [cli, 'doctor', packFile, '--host', hostUrl], { stdio: 'inherit' });
   if (result.status !== 0) process.exit(result.status ?? 1);

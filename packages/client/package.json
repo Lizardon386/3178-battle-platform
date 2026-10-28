@@ -12,7 +12,7 @@
     "./*": "./dist/*"
   },
   "dependencies": {
-    "@3178/core-abi": "*",
+    "@lizardon386/core-abi": "*",
     "@bp/protocol": "*",
     "@tabler/core": "^1.6.1",
     "@tabler/icons": "^3.49.0",

@@ -125,7 +125,7 @@ function copyRuntimeModules() {
   step('装配 node_modules 运行时子集');
   mkdirSync(join(OUT, 'node_modules'), { recursive: true });
   copy('node_modules/ws');
-  for (const scope of ['@bp', '@3178']) {
+  for (const scope of ['@bp', '@lizardon386']) {
     const scopeRoot = join(ROOT, 'node_modules', scope);
     if (!existsSync(scopeRoot)) continue;
     mkdirSync(join(OUT, 'node_modules', scope), { recursive: true });
@@ -179,8 +179,8 @@ function assertNoWorkspaceLeak() {
 }
 
 function assertBarePackagesReal() {
-  step('检查 @bp / @3178 依赖是实体目录（不是 workspace 符号链接）');
-  for (const scope of ['@bp', '@3178']) {
+  step('检查 @bp / @lizardon386 依赖是实体目录（不是 workspace 符号链接）');
+  for (const scope of ['@bp', '@lizardon386']) {
     const scopeRoot = join(OUT, 'node_modules', scope);
     if (!existsSync(scopeRoot)) continue;
     for (const name of readdirSync(scopeRoot)) {
@@ -188,7 +188,7 @@ function assertBarePackagesReal() {
       if (lstatSync(absolute).isSymbolicLink()) fail(`${scope}/${name} 还是符号链接，离开本仓库就解析不到`);
     }
   }
-  console.log('OK：@bp / @3178 都是实体目录');
+  console.log('OK：@bp / @lizardon386 都是实体目录');
 }
 
 function dirSize(dir) {

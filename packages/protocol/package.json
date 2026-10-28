@@ -12,6 +12,6 @@
   },
   "files": ["dist"],
   "dependencies": {
-    "@3178/core-abi": "*"
+    "@lizardon386/core-abi": "*"
   }
 }

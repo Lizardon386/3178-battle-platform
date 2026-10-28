@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { API_VERSION, DEFAULT_MODE } from '@3178/core-abi';
-import { PACK_FORMAT, readPack, readPackSource } from '@3178/pack-format';
+import { API_VERSION, DEFAULT_MODE } from '@lizardon386/core-abi';
+import { PACK_FORMAT, readPack, readPackSource } from '@lizardon386/pack-format';
 
 export interface HostInfo {
   platform?: string;

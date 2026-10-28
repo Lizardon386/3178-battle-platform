@@ -17,7 +17,7 @@ export type {
   SeatRole,
   SeatView,
   ViewerId,
-} from '@3178/core-abi';
+} from '@lizardon386/core-abi';
 export {
   API_VERSION,
   DEFAULT_MODE,
@@ -27,4 +27,4 @@ export {
   isReject,
   reject,
   stableDigest,
-} from '@3178/core-abi';
+} from '@lizardon386/core-abi';

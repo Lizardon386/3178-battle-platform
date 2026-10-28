@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { API_VERSION, DEFAULT_MODE } from '@3178/core-abi';
+import { API_VERSION, DEFAULT_MODE } from '@lizardon386/core-abi';
 import {
   existsSync,
   mkdirSync,

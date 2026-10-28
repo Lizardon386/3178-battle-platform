@@ -1,8 +1,8 @@
-import type { GameActions, GameClientContract, GameManifest, RoomPhase, SeatView } from '@3178/core-abi';
+import type { GameActions, GameClientContract, GameManifest, RoomPhase, SeatView } from '@lizardon386/core-abi';
 import type { ChatLine } from './view-model.js';
 import { sha256Hex as sha256HexSync } from './sha256.js';
 
-export type { GameActions, GameClientContract } from '@3178/core-abi';
+export type { GameActions, GameClientContract } from '@lizardon386/core-abi';
 
 /**
  * 游戏模块的客户端侧加载（war3 对战平台的"地图自动下载"位）：
