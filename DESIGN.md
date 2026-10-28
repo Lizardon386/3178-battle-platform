@@ -1,8 +1,8 @@
 # 3178-battle-platform（3178 对战平台）· 方案架构设计
 
 > 写给方案评审、维护和二次开发的人；设计方向、运行模式、流程、接缝、协议、语义和工程约束都在这里。
-> 最近更新：2026-10-27
-<!-- 日期必须留在这个 blockquote 里：check-docs.sh 的 [新]/[旧]/[期] 只读这里。改日期时 README、DESIGN、CONTEXT 顶部要同一天。 -->
+> 最近更新：2026-10-28
+<!-- 日期必须留在这个 blockquote 里：check-docs.sh 的 [新]/[旧]/[期] 只读这里。改日期时 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部要同一天。 -->
 
 ## 1. 文档目录
 
