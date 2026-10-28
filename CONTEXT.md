@@ -91,6 +91,7 @@ node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
 
 ## 8. 交接记录
 
+- 2026-10-28 Qoder：**接盘确认**：新会话 `835cf812` 已按「接盘」核对锚点（平台 `3c9cffa`、游戏 `8c68c06`）并复跑验证：平台 215/215 + seam + tsc，游戏 33/33 + build + doctor；只读，未改文件。此后写者切到该会话。
 - 2026-10-28 Qoder：**交接**：平台侧 SDK 0.3.0 契约、全宽对局区、规则表单与资料面板已交付（`7d5b4c3` / `7697d62` / `9495dba`，215/215）；第一款真游戏「变色对决」重构为独立仓库 `D:\agent_workspace\color-duel`（33/33，本地 3 笔，未公开）；下一步是联调、SDK 0.3.0 发布（待用户确认）与公开仓库。交接给会话 `835cf812`。
 - 2026-10-28 Qoder：**SDK 0.3.0 契约接入补全**：模块加载时校验 `ruleConfig` / `reference` 文档，坏声明跳过并记错误；`manifestOf` 防御性过滤；`seatGranted` 透传测试；资料图片 404 显示 alt。`npm test` 215/215、seam OK、`tsc -b` 通过；提交 `7697d62`。
 - 2026-10-28 Qoder：**对局区全宽 + 规则资料**：`playing` 游戏区全宽、席位横排、聊天/房主进侧栏（D/Esc）；建房按 `manifest.ruleConfig` 渲染并提交，`RoomView.config` 下发给加入者；`manifest.reference` 懒加载、纯文本/图片渲染。无头 Edge 实测 1280×800 下游戏区 1233×560、1440×900 下 1393×630；`npm test` 215/215、seam OK、`tsc -b` 通过；提交 `7d5b4c3`。
