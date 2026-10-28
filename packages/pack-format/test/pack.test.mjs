@@ -14,9 +14,15 @@ import {
   sha256Hex,
 } from '@lizardon386/pack-format';
 
+const tempDirs = [];
 function tempDir(prefix = 'bp-pack-') {
-  return mkdtempSync(join(tmpdir(), prefix));
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  tempDirs.push(dir);
+  return dir;
 }
+test.after(() => {
+  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
+});
 
 function sourceDir(overrides = {}) {
   const dir = tempDir();

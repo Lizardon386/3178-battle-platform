@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Engine, HostStore, STORE_VERSION, decodeBeacon, encodeBeacon, LanBrowser } from '@bp/server';
@@ -8,9 +8,15 @@ import turnBasedFixture from '@bp/testkit/test-games/turn-based';
 
 /** 房主侧落盘与局域网发现信标的测试：都不需要真网卡，也不需要真进程重启。 */
 
+const storeDirs = [];
 function storeDir() {
-  return mkdtempSync(join(tmpdir(), 'bp-store-'));
+  const dir = mkdtempSync(join(tmpdir(), 'bp-store-'));
+  storeDirs.push(dir);
+  return dir;
 }
+test.after(() => {
+  for (const dir of storeDirs) rmSync(dir, { recursive: true, force: true });
+});
 
 function makeEngine() {
   let now = 100_000;
