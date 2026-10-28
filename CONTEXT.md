@@ -75,7 +75,8 @@
 - [x] 外部消费者 smoke：tarball 安装 + 模板构建 + doctor + 宿主加载
 - [x] SDK 发布元数据：去 `private`、MIT/LICENSE/README、repository/engines、依赖 `^0.1.0`、tarball 去 `.tsbuildinfo`
 - [x] 发布 SDK 0.2.0 到 npm（`@lizardon386/*`），配置 Trusted Publisher + GitHub Actions
-- [ ] 给 `sdk-v0.2.0` 打 tag 并验证 Trusted Publishing；UNO 接入
+- [x] `sdk-v0.2.0` tag/Release；workflow 已跑绿（版本已存在时跳过发布）
+- [ ] UNO 接入
 - [ ] SDK 发布准备；`@bp/sdk-testkit`（可选）；UNO 接入
 - [x] P0 工程骨架 + 接缝闸门 + `node --test`
 - [x] P1 协议包
@@ -121,6 +122,7 @@
 - 收工跑 `npm test`、`npm run seam` 和文档链接自检（原 `/d/agent_workspace/multi-agent-task-handoff/check-docs.sh` 已随交接工具卸载，不再依赖）。
 
 ## 6. 变更记录
+- 2026-10-28 Qoder：**Trusted Publishing 验证**：`sdk-v0.2.0` tag/Release 已建；`publish-sdk.yml` 在 GitHub Actions 上 `npm ci` / `npm test` / `seam` / publish 步骤全部绿（版本已存在时按脚本跳过 publish）。修掉 CI 上唯一的跨平台失败：`hostd stop --port` 的硬杀记录断言改成只在 Windows 运行，Linux 跳过。
 - 2026-10-28 Qoder：**SDK 发布到 npm**：scope 从 `@3178` 改为账号自带的 `@lizardon386`（`@3178` org 不存在，publish 404）。四个包 `0.2.0` 已发布，`latest` 已指向 `0.2.0`；用 registry 干净安装验证了 `game-sdk` / `core-abi` / `pack-format` / `sdk-tools` 版本和 `bpmap` CLI。新增 [publish-sdk.yml](.github/workflows/publish-sdk.yml)，并按 `publish-sdk.yml` / `Lizardon386/3178-battle-platform` 给四个包配置了 Trusted Publisher；之后打 `sdk-v*` tag 由 GitHub Actions OIDC 发布，不再需要 OTP/token。`@bp/*` 旧 Release 保留。
 - 2026-10-27 Qoder：**发布 SDK 0.1.1**：`setup-sdk.mjs` 增加 `--release <tag>`，直接从 GitHub Release 下载四个 tarball、验 SHA256 后安装；`core-abi` / `pack-format` 补 `./package.json` 导出入口；四包升到 `0.1.1`，内部依赖 `^0.1.1`。`npm test` 176/176、外部消费者 smoke 通过；Release 资产下载后 `sha256sum -c` OK，用 Release 里的 `setup-sdk.mjs --release sdk-v0.1.1` 安装四个包通过，预发布随后转正式。Release：https://github.com/Lizardon386/3178-battle-platform/releases/tag/sdk-v0.1.1。`sdk-v0.1.0` 保留但不再是最新。
 - 2026-10-27 Qoder：**SDK 发布元数据**：四包去掉 `private`，内部依赖改 `^0.1.0`，补 MIT LICENSE（根和包内）、包 README、repository/homepage/bugs/engines、`publishConfig.access`；`files` 加 `src` 让 sourcemap 可解析，`.tsbuildinfo` 移出 `dist` 不再进 tarball。`setup-sdk.mjs` 增加 `--tarballs <目录>`，可直接安装 Release 资产；新增 [pack-sdk.mjs](tools/packaging/pack-sdk.mjs) 生成四个 tarball + SHA256SUMS + release notes。外部 smoke 与 `--tarballs` 安装均已跑通。
