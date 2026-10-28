@@ -41,3 +41,11 @@ test('模块可选携带 ruleConfig 与 reference，并原样进入 manifest', (
   assert.equal(manifestOf(base, {}).ruleConfig, undefined);
   assert.equal(manifestOf(base, {}).reference, undefined);
 });
+
+test('manifestOf 不把坏声明带进房间', () => {
+  const badRule = {
+    fields: [{ key: 'mode', label: '模式', type: 'enum', default: 'missing', options: [{ value: 'a', label: 'A' }] }],
+  };
+  assert.equal(manifestOf({ ...base, ruleConfig: badRule }, {}).ruleConfig, undefined);
+  assert.equal(manifestOf({ ...base, reference: { entry: '../escape.json' } }, {}).reference, undefined);
+});

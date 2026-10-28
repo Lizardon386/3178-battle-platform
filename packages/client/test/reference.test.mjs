@@ -148,6 +148,12 @@ test('reference：文本走 textContent，HTML 标签不会变成 DOM；图片�
   assert.equal(img.src, 'http://host/games/demo/images/pic.png');
   assert.equal(img.alt, '<img onerror=alert(1)>');
   assert.equal(img.loading, 'lazy');
+
+  img.onerror();
+  assert.equal(img.hidden, true);
+  const afterError = [];
+  collect(host, [], afterError);
+  assert.ok(afterError.includes('<img onerror=alert(1)>'), '图片 404 时要直接显示 alt 文案');
 });
 
 test('reference：渲染器不碰 innerHTML', () => {

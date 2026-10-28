@@ -272,3 +272,16 @@ test('房主进程退出：广播主机已退出并删局', () => {
   assert.equal(guest.rec.last('notice').code, 'HOSTLEFT');
   assert.equal(h.engine.registry.size(), 0);
 });
+
+test('seatGranted 的 manifest 也带 ruleConfig / reference', () => {
+  const module = {
+    ...turnBasedFixture,
+    ruleConfig: { fields: [{ key: 'rounds', label: '回合数', type: 'integer', default: 8, min: 1, max: 20 }] },
+    reference: { entry: 'docs/reference.json' },
+  };
+  const h = harness({ module, config: {} });
+  const host = createRoom(h, { module, seatSlots: 2, config: {} });
+  const granted = host.rec.last('seatGranted');
+  assert.deepEqual(granted.manifest.ruleConfig, module.ruleConfig);
+  assert.deepEqual(granted.manifest.reference, module.reference);
+});

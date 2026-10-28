@@ -380,6 +380,7 @@ option:disabled {
 .reference-error { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--bp-bad); }
 .reference-figure { margin: 12px 0 0; }
 .reference-image { display: block; max-width: 100%; height: auto; border: 1px solid var(--bp-line); border-radius: 4px; }
+.reference-image-fallback { margin: 8px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--bp-dim-hi); }
 .reference-figure figcaption { margin-top: 6px; font-size: 13.5px; line-height: 1.5; color: var(--bp-dim-hi); }
 .reference-backdrop { position: fixed; inset: 0; z-index: 1050; background: rgba(10, 10, 15, 0.6); }
 

@@ -95,6 +95,13 @@ export function renderReference(
         img.src = url;
         img.alt = image.alt;
         img.loading = 'lazy';
+        img.onerror = () => {
+          img.hidden = true;
+          const fallback = owner.createElement('p');
+          fallback.className = 'reference-image-fallback';
+          fallback.textContent = image.alt;
+          figure.append(fallback);
+        };
         figure.append(img);
         if (image.caption) {
           const caption = owner.createElement('figcaption');

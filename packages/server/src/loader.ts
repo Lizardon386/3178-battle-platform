@@ -1,9 +1,16 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { GameAsset } from '@lizardon386/core-abi';
-import { SUPPORTED_API_VERSIONS, SUPPORTED_MODES, type GameMode } from '@lizardon386/core-abi';
+import {
+  SUPPORTED_API_VERSIONS,
+  SUPPORTED_MODES,
+  isValidGameReferenceEntry,
+  parseGameReference,
+  parseRuleConfig,
+  type GameMode,
+} from '@lizardon386/core-abi';
 import type { GameModule } from './module-api.js';
 import { extractPack, listPackFiles, readPack } from '@lizardon386/pack-format';
 
@@ -48,6 +55,27 @@ export function isGameModule(value: unknown): value is GameModule {
   return true;
 }
 
+/** 模块声明可选的规则表单与资料入口；坏声明不能带进房间。 */
+function validateDeclarations(module: GameModule, readReference: (entry: string) => string | null): void {
+  if (module.ruleConfig !== undefined) {
+    const parsed = parseRuleConfig(module.ruleConfig);
+    if (!parsed.ok) throw new Error(`规则表单声明不合法：${parsed.error}`);
+  }
+  if (module.reference) {
+    if (!isValidGameReferenceEntry(module.reference.entry)) {
+      throw new Error(`资料入口不是包内 .json 路径：${module.reference.entry}`);
+    }
+    const text = readReference(module.reference.entry);
+    if (text === null) throw new Error(`资料文档不存在：${module.reference.entry}`);
+    const parsed = parseGameReference(text);
+    if (!parsed.ok) throw new Error(`资料文档不合法：${parsed.error}`);
+  }
+}
+
+function readFileIfExists(path: string): string | null {
+  return existsSync(path) ? readFileSync(path, 'utf8') : null;
+}
+
 function pickExport(loaded: Record<string, unknown>): GameModule | null {
   if (isGameModule(loaded.default)) return loaded.default;
   for (const value of Object.values(loaded)) {
@@ -69,16 +97,24 @@ export async function loadGame(gamesRoot: string, id: string): Promise<GameModul
   if (!existsSync(entry)) throw new Error(`找不到游戏模块入口：${entry}`);
   const found = await importModule(entry);
   if (found.id !== id) throw new Error(`${id} 目录里的模块自称 ${found.id}`);
+  validateDeclarations(found, (reference) =>
+    readFileIfExists(join(gamesRoot, id, ...reference.split('/'))),
+  );
   return found;
 }
 
-export async function loadGames(gamesRoot: string): Promise<GameModule[]> {
+export async function loadGames(gamesRoot: string, errors?: GameLoadError[]): Promise<GameModule[]> {
   if (!existsSync(gamesRoot)) return [];
   const found: GameModule[] = [];
   for (const name of readdirSync(gamesRoot, { withFileTypes: true })) {
     if (!name.isDirectory() || name.name.startsWith('.')) continue;
     if (!existsSync(join(gamesRoot, name.name, 'dist', 'index.js'))) continue;
-    found.push(await loadGame(gamesRoot, name.name));
+    try {
+      found.push(await loadGame(gamesRoot, name.name));
+    } catch (error) {
+      if (!errors) throw error;
+      errors.push({ source: name.name, message: error instanceof Error ? error.message : String(error) });
+    }
   }
   return found.sort((a, b) => a.id.localeCompare(b.id));
 }
@@ -127,6 +163,12 @@ export async function loadPackGame(
   if (module.version !== pack.manifest.version) {
     throw new Error(`包声明版本 ${pack.manifest.version}，模块自称 ${module.version}`);
   }
+  if (pack.manifest.reference && module.reference && pack.manifest.reference.entry !== module.reference.entry) {
+    throw new Error(`包 reference 与模块 reference 不一致：${pack.manifest.reference.entry} / ${module.reference.entry}`);
+  }
+  validateDeclarations(module, (reference) =>
+    readFileIfExists(join(extracted.dir, ...reference.split('/'))),
+  );
   return {
     module: { ...module, version: `${module.version}+${pack.packageHash.slice(0, 12)}` },
     root: extracted.dir,
@@ -153,7 +195,7 @@ export async function loadGameSet(
   const assets = new Map<string, GameAsset[]>();
   const errors: GameLoadError[] = [];
 
-  for (const module of await loadGames(gamesRoot)) {
+  for (const module of await loadGames(gamesRoot, errors)) {
     modules.push(module);
     roots.set(module.id, join(gamesRoot, module.id));
   }

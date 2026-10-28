@@ -1,4 +1,4 @@
-import type { GameAsset, GameManifest, GameModule } from '@lizardon386/core-abi';
+import { isValidGameReferenceEntry, parseRuleConfig, type GameAsset, type GameManifest, type GameModule } from '@lizardon386/core-abi';
 
 export * from '@lizardon386/core-abi';
 
@@ -8,6 +8,13 @@ export function manifestOf(
   config: Record<string, unknown>,
   assets?: readonly GameAsset[],
 ): GameManifest {
+  // 加载器已经把坏声明挡在模块外；这里再挡一次，避免测试/手工构造的模块把坏声明带进房间。
+  const ruleConfig = module.ruleConfig && parseRuleConfig(module.ruleConfig).ok
+    ? { fields: module.ruleConfig.fields.map((field) => ({ ...field })) }
+    : null;
+  const reference = module.reference && isValidGameReferenceEntry(module.reference.entry)
+    ? { ...module.reference }
+    : null;
   return {
     id: module.id,
     name: module.name,
@@ -20,7 +27,7 @@ export function manifestOf(
     entry: module.entry,
     ...(assets && assets.length > 0 ? { assets: assets.map((asset) => ({ ...asset })) } : {}),
     ...(module.ui ? { ui: { ...module.ui } } : {}),
-    ...(module.ruleConfig ? { ruleConfig: { fields: module.ruleConfig.fields.map((field) => ({ ...field })) } } : {}),
-    ...(module.reference ? { reference: { ...module.reference } } : {}),
+    ...(ruleConfig ? { ruleConfig } : {}),
+    ...(reference ? { reference } : {}),
   };
 }

@@ -23,12 +23,13 @@
 
 ## 3. 现在在哪
 
-**2026-10-28：`npm test` 211/211，`npm run seam` 零命中，`npx tsc -b` 通过，外部消费者 smoke `[smoke] OK`。**
+**2026-10-28：`npm test` 215/215，`npm run seam` 零命中，`npx tsc -b` 通过，外部消费者 smoke `[smoke] OK`。**
 
 - 平台内核（P0–P7）已交付：协议、座位与房主权限、`GameModule` 契约 + 测试夹具、ws 传输、落盘恢复、客户端界面、hostd 壳（host / join / diagnose / stop）。
 - 包边界：`@lizardon386/core-abi`（游戏 ABI）· `@bp/protocol`（wire）· `@lizardon386/pack-format`（.bpmap）· `@lizardon386/game-sdk`（公共门面 + game-kit）· `@lizardon386/sdk-tools`（bpmap CLI / doctor / 模板）。平台包仍是 `@bp/server`、`@bp/client`、`@bp/hostd`、`@bp/testkit`。
 - 游戏下发与兼容闸：`/api/games`、`/games/<id>/*`、客户端 SHA-256 校验（无 `crypto.subtle` 时纯 JS 回退）、`sandbox=allow-scripts` iframe；`mode` / `apiVersion` 写入 `.bpmap` 包头，宿主只加载 `turn` / `1`，`/api/version` 与 `bpmap doctor` 用同一组常量；`fixture-kit` 覆盖事件流 / 资源 / 拒绝。
-- 房间 UI 增量：`playing` 时游戏区拉通整行，席位横向状态条，聊天/房主进右侧侧栏（`D` / `Esc`，焦点归还）；1280×800 实测 1233×560，1440×900 实测 1393×630，lobby 三列不变。建房按 `manifest.ruleConfig` 渲染规则表单并以 `roomCreate.config` 提交，`RoomView.config` 下发给加入者；房间页显示「本局规则」摘要。`manifest.reference` 首次展开才请求，`parseGameReference` 校验，文本用 `textContent`、图片走 `/games`，失败只影响面板。
+- 房间 UI 增量：`playing` 时游戏区拉通整行，席位横向状态条，聊天/房主进右侧侧栏（`D` / `Esc`，焦点归还）；1280×800 实测 1233×560，1440×900 实测 1393×630，lobby 三列不变。建房按 `manifest.ruleConfig` 渲染规则表单并以 `roomCreate.config` 提交，`RoomView.config` 下发给加入者；房间页显示「本局规则」摘要。`manifest.reference` 首次展开才请求，`parseGameReference` 校验，文本用 `textContent`、图片走 `/games`，图片 404 显示 alt，失败只影响面板。
+- 服务端在模块加载时校验 `ruleConfig` / `reference` 文档，坏声明跳过并记 `errors`；`manifestOf` 再挡一次；包头与模块 reference 不一致拒绝加载。
 - SDK 0.2.0 已发 npm（四包 `@lizardon386/*`，`latest` 均为 0.2.0）；Trusted Publisher 已配，`sdk-v*` tag 由 [publish-sdk.yml](.github/workflows/publish-sdk.yml) 走 OIDC 发布；`sdk-v0.2.0` Release 已建、workflow 已绿。
 - **第一款真游戏「变色对决」（原 UNO 方向）接入未开始。** 平台侧 UI/规则/资料前提已就绪，`uno-online` 未动。
 
@@ -64,7 +65,7 @@
 ## 6. 验证命令
 
 ```bash
-npm test                         # 211 例
+npm test                         # 215 例
 npm run seam                     # 接缝闸门
 npx tsc -b                       # 类型检查
 node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
@@ -88,7 +89,7 @@ node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
 
 ## 8. 交接记录
 
-- 2026-10-28 Qoder：**对局区全宽 + 规则资料**：`playing` 游戏区全宽、席位横排、聊天/房主进侧栏（D/Esc）；建房按 `manifest.ruleConfig` 渲染并提交，`RoomView.config` 下发给加入者；`manifest.reference` 懒加载、纯文本/图片渲染。无头 Edge 实测 1280×800 下游戏区 1233×560、1440×900 下 1393×630；`npm test` 211/211、seam OK、`tsc -b` 通过；提交 `7d5b4c3`。
+- 2026-10-28 Qoder：**对局区全宽 + 规则资料**：`playing` 游戏区全宽、席位横排、聊天/房主进侧栏（D/Esc）；建房按 `manifest.ruleConfig` 渲染并提交，`RoomView.config` 下发给加入者；`manifest.reference` 懒加载、纯文本/图片渲染。无头 Edge 实测 1280×800 下游戏区 1233×560、1440×900 下 1393×630；`npm test` 215/215、seam OK、`tsc -b` 通过；提交 `7d5b4c3`。
 - 2026-10-28 Qoder：**收工**：UNO 开工前置条件（四项拍板、外部改名工程、不搬源码）写进「下一步」；锚点 `8dffb71`；最旧一条交接记录沉降到 [压卡备份.md](压卡备份.md)。
 - 2026-10-28 Qoder：**压卡**：CONTEXT 压到 100 行以内，原第 6–8 节（逐阶段凭据、变更记录、旧追加区）逐字移入 [压卡备份.md](压卡备份.md)；四份文档顶部日期统一到 2026-10-28。
 - 2026-10-28 Qoder：**SDK 版本脚本**：`npm run bump:sdk -- <版本>`（`--dry-run` 预览）同步四包 version、内部依赖与 lock；发布手顺改为 bump → test → smoke → pack → tag。
