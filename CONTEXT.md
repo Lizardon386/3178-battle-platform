@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-10-28　模式：三档（README / DESIGN / CONTEXT）　锚点：`3cdc6f4`（master）
+> 最近更新：2026-10-28　模式：三档（README / DESIGN / CONTEXT）　锚点：`b00014b`（master；本次收工提交在其后）
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
@@ -28,8 +28,7 @@
 - 平台内核（P0–P7）已交付：协议、座位与房主权限、`GameModule` 契约 + 测试夹具、ws 传输、落盘恢复、客户端界面、hostd 壳（host / join / diagnose / stop）。
 - 包边界：`@lizardon386/core-abi`（游戏 ABI）· `@bp/protocol`（wire）· `@lizardon386/pack-format`（.bpmap）· `@lizardon386/game-sdk`（公共门面 + game-kit）· `@lizardon386/sdk-tools`（bpmap CLI / doctor / 模板）。平台包仍是 `@bp/server`、`@bp/client`、`@bp/hostd`、`@bp/testkit`。
 - 游戏下发与兼容闸：`/api/games`、`/games/<id>/*`、客户端 SHA-256 校验（无 `crypto.subtle` 时纯 JS 回退）、`sandbox=allow-scripts` iframe；`mode` / `apiVersion` 写入 `.bpmap` 包头，宿主只加载 `turn` / `1`，`/api/version` 与 `bpmap doctor` 用同一组常量；`fixture-kit` 覆盖事件流 / 资源 / 拒绝。
-- 房间 UI 增量：`playing` 时游戏区拉通整行，席位横向状态条，聊天/房主进右侧侧栏（`D` / `Esc`，焦点归还）；1280×800 实测 1233×560，1440×900 实测 1393×630，lobby 三列不变。房间页「本局规则」卡由房主在 lobby 编辑（`ruleConfig` 命令，非房主 HOSTONLY），改后刷新 `RoomView.config` / `rulesHash`、重置真人 ready 并发系统消息；`RoomExport.config` 落盘，重启保持。`manifest.reference` 首次展开才请求，`parseGameReference` 校验，文本用 `textContent`、图片走 `/games`，图片 404 显示 alt，失败只影响面板。
-- 服务端在模块加载时校验 `ruleConfig` / `reference` 文档，坏声明跳过并记 `errors`；`manifestOf` 再挡一次；包头与模块 reference 不一致拒绝加载。
+- 房间 UI 增量：`playing` 时游戏区拉通整行，席位横向状态条，聊天/房主进右侧侧栏（`D` / `Esc`，焦点归还）；1280×800 实测 1233×560，1440×900 实测 1393×630，lobby 三列不变。房间页「本局规则」卡由房主在 lobby 编辑（`ruleConfig` 命令，非房主 HOSTONLY），改后刷新 `RoomView.config` / `rulesHash`、重置真人 ready 并发系统消息；`RoomExport.config` 落盘，重启保持。`manifest.reference` 首次展开才请求，`parseGameReference` 校验，文本用 `textContent`、图片走 `/games`，图片 404 显示 alt，失败只影响面板。服务端在模块加载时还会校验 `ruleConfig` / `reference` 文档，坏声明跳过并记 `errors`；`manifestOf` 再挡一次；包头与模块 reference 不一致拒绝加载。
 - 单入口壳：根目录只有 `3178对战平台.bat`，启动 `cli.js shell`；先只开 `127.0.0.1:3178` 与本机大厅，点「建房」时调 `/api/host/ready` 再开 `0.0.0.0:3000`、组播与 `HostStore`。纯进房不创建 `HostStore`、不写 `data/`；建房后 `run-<port>.json` / `stop` / `diagnose` 与旧入口一致。`host` / `join` 子命令保留给命令行。
 - SDK 0.2.0 已发 npm（四包 `@lizardon386/*`，`latest` 均为 0.2.0）；Trusted Publisher 已配，`sdk-v*` tag 由 [publish-sdk.yml](.github/workflows/publish-sdk.yml) 走 OIDC 发布；`sdk-v0.2.0` Release 已建、workflow 已绿。**SDK 0.3.0 仓库就绪**（rule-config / reference；构建模板会把 `src/reference/` 铺到包根并写 `bpmap.json`；smoke 端到端覆盖声明、doctor、`/api/games` 与资料/图片 GET；tarball 在 `dist-sdk/` 并附 SHA256SUMS），**尚未打 tag、未发 npm**。
 - **第一款真游戏「变色对决」已落地为独立仓库 `D:\agent_workspace\color-duel`，公开仓库尚未创建/推送。** 完整版：2~8 人、观战、三档电脑、5 个规则开关 + 手牌上限 + 关闭倒计时、规则资料与 rule-config 声明。`npm test` 33/33、`npm run build`、`bpmap doctor` 通过；本地 6 笔提交，HEAD `8c68c06`。SDK 用 0.3.0 本地 link，package.json/lock 未改。**联调 PASS**（协议级 7/7、1280×800 UI 端到端、断线/票据与重启恢复）。初版包在 `games/color-duel.bpmap`（102,353 字节，SHA256 `b85db75129c4adbb807c631854aa6cb129d02239fedfb41125b6a05bc70916c8`，gitignored），留给用户自测；`uno-online` 未动。
@@ -39,8 +38,7 @@
 1. **等用户自测初版 color-duel 包**：包在 `games/color-duel.bpmap`（gitignored），用「3178对战平台.bat」建房/改规则/开局即可；用户反馈后先修游戏或平台，不急着发版。平台侧猴测结果：协议猴测 seed 707 夹具 0 违规；强制 color-duel 的协议猴测 seed 717 0 违规；UI 猴测 seed 909（4 用户 60 步）0 违规。
 2. **发布 SDK 0.3.0（需用户确认）**：打 `sdk-v0.3.0` tag → Actions 发布；然后把 color-duel 的 SDK 依赖改为 `^0.3.0`、重生成 lock；再 `gh repo create Lizardon386/color-duel --public` 推首个提交，CI 绿后打 `v0.1.0`。
 3. **双机实测**：同 WiFi 组播房间发现、首次绑定防火墙弹窗行为、`--tunnel` 真隧道（需 cloudflared）。
-4. **便携包**：在真正没装 Node 的机器上跑 `dist-portable/`。
-5. 单文件 exe 之前必须先做 Node SEA hello-world 实验（本机 SAC = On，可能直接拦）；未跑实验前不投入打包链路。
+4. **便携包与单文件 exe**：先在真正没装 Node 的机器上跑 `dist-portable/`；单文件 exe 之前必须先做 Node SEA hello-world 实验（本机 SAC = On，可能直接拦），未跑实验前不投入打包链路。
 6. 刻意不做：目录服务器 / 账号 / 好友 / 段位 / 匹配 / 反作弊仲裁 / 自动写防火墙规则。
 
 ## 5. 关键约束与易踩的坑
@@ -53,16 +51,13 @@
 - **权威只有一份**：`Engine.persistable/syncStore/restoreFrom` 只允许 `hostd host`；host 的两个监听必须共享同一个 `Engine`/`HostStore`（[dual-listener.test.mjs](packages/hostd/test/dual-listener.test.mjs)）。
 - **端口语义**：`--port` 本机界面（默认 3178，只绑 127.0.0.1），`--lan-port` 对外（默认 3000）；`--no-lan` 关监听与组播，`--no-announce` 只关组播。
 - **明文票据不落盘**：盘上只有 `secretHash`（房间密码同理）；`HostStore.fileFor` 卡死房号字符集防路径注入。
-- **高危动作不许顺带触发**：写防火墙入站规则、建议关 Smart App Control、`force push`。
-- **混合内容方向性**：本地壳页面必须 http，才能连局域网 `ws://` 与隧道 `wss://`。
-- **注入的宿主方法不能 `this.x()` 调用**：`fetch` 存字段再调用会 `Illegal invocation`，外面有静默 catch 就表现为"局域网列表永远空白"。
+- **高危动作与方向性**：不写防火墙入站规则、不建议关 Smart App Control、不 `force push`；本地壳页面必须 http，才能连局域网 `ws://` 与隧道 `wss://`。注入的宿主方法不能 `this.x()` 调用（`fetch` 存字段再调用会 `Illegal invocation`，静默 catch 会表现为局域网列表永远空白）。
 - **收尾两条硬规则**：Windows `kill('SIGTERM')` 是硬杀，测试别靠 kill 断言 `run.json` 被删，要断言"留下了、`stop` 收掉"；`server.close()` 有 keep-alive/WS 时不回调，先 `closeAllConnections()` + 超时竞速，`transport.close()` 先 `terminate()`。
 - **`.bat` 是启动器**：`start "标题" node …` + `exit /b 0` 结尾；UTF-8 无 BOM + CRLF + 第 2 行 `chcp 65001`，中文只在 chcp 之后；生成走 [gen-bat.mjs](tools/packaging/gen-bat.mjs)（Git Bash 会把 `nul` 改写成 `/dev/null`），由 [bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) 钉住。环境检查失败分支的 `pause` 是故意的。
 - **测试写法**：`node --test` 必须用带引号的 glob（`node --test "packages/*/test/*.test.mjs"`）并带 `--test-timeout`；等消息要按 predicate 等符合条件的那一帧。
 - **UI 验证**：in-app Browser 无可见视口，用 `navigate_page` + `evaluate_script` 驱动 DOM，观感仍需人工确认；要精确量多档桌面尺寸时用无头 Edge + CDP `Emulation.setDeviceMetricsOverride`（本轮 1280×800 / 1440×900 就是这样量的）。
 - **规则表单与资料**：`ruleConfig` 的字段 key 必须小写（SDK 口径），游戏自己的 `normalizeConfig` 负责把表单 key 映射到玩法配置；资料入口先过 `isValidGameReferenceEntry`，文档过 `parseGameReference`，图片路径只走 `/games` 同源路由，文本一律 `textContent`。
-- **加入/重连的 hello 不带大厅选中的游戏版本**：房间游戏由房主决定；带错版本会被版本闸误判成 `VERSION`。只有建房（`roomCreate`）才声明本机选中的游戏。
-- **单入口的 run 记录**：纯进房不写 `data/`，也不写 `run-<port>.json`；`stop` / `diagnose` 只在建过房后生效。两条要求冲突时当前优先“纯进房不写 data”；若要让纯进房也能被 `stop` 收掉，需要允许一个非房间的 run 文件。
+- **单入口与加入**：加入/重连的 hello 不带大厅选中的游戏版本，只有建房才声明；纯进房不写 `data/`、不写 `run-<port>.json`，`stop` / `diagnose` 只在建过房后生效。若要让纯进房也能被 `stop` 收掉，需要允许一个非房间的 run 文件。
 - **多会话共享一个工作区**：只 stage 自己的文件，禁止 `git add -A` / `git stash`；SDK 包（`core-abi` / `game-sdk` / `sdk-tools` / `INTEGRATION_GUIDE.md`）与平台/客户端分属不同会话，抢写会让 `tsc -b` 和测试互相打断。
 - **color-duel 的坑在它自己的 CONTEXT**：卡牌高度变量、`[hidden]`、`no-turn-timer`、不要用 `end` 收尾、tick 必须出 effect；不要在本仓库重复维护这些细节。
 - **房主面板每个动作按钮**都要在渲染时判断"此刻合法吗"，不合法就置灰并写原因（`aiFillBlocker` 是范例）；别把服务端错误码当提示。
@@ -94,11 +89,10 @@ node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
 
 ## 8. 交接记录
 
+- 2026-10-28 Qoder：**联调 + 初版包 + 猴测**：color-duel 用 SDK 0.3.0 本地 link，协议 7/7、UI E2E、断线/重启恢复 PASS；初版包 `games/color-duel.bpmap`（102,353 字节，SHA256 `b85db75129c4adbb807c631854aa6cb129d02239fedfb41125b6a05bc70916c8`，gitignored）留给用户自测。猴测：协议 seed 707（夹具）/717（强制 color-duel）0 违规，UI seed 909（4 用户 60 步，强制 color-duel）0 违规；`npm test` 216/216。收工前压卡，旧记录沉降到 [压卡备份.md](压卡备份.md)。
 - 2026-10-28 Qoder：**规则移入房间 + 单入口壳**：规则卡由房主在 lobby 编辑（ruleConfig 命令，非房主 HOSTONLY），改后重算 rulesHash/revision、重置 ready、`RoomExport.config` 落盘；根目录只留 `3178对战平台.bat`，shell 建房时才开 LAN/HostStore，纯进房不写 `data/`。无头 Edge 实测 1280/1440；`npm test` 216/216、seam OK、`tsc -b` 通过；提交 `521b641` / `4753ab4`。
 - 2026-10-28 Qoder：**接盘确认**：新会话 `835cf812` 已按「接盘」核对锚点（平台 `3c9cffa`、游戏 `8c68c06`）并复跑验证：平台 215/215 + seam + tsc，游戏 33/33 + build + doctor；只读，未改文件。此后写者切到该会话。
 - 2026-10-28 Qoder：**交接**：平台侧 SDK 0.3.0 契约、全宽对局区、规则表单与资料面板已交付（`7d5b4c3` / `7697d62` / `9495dba`，215/215）；第一款真游戏「变色对决」重构为独立仓库 `D:\agent_workspace\color-duel`（33/33，本地 3 笔，未公开）；下一步是联调、SDK 0.3.0 发布（待用户确认）与公开仓库。交接给会话 `835cf812`。
-- 2026-10-28 Qoder：**SDK 0.3.0 契约接入补全**：模块加载时校验 `ruleConfig` / `reference` 文档，坏声明跳过并记错误；`manifestOf` 防御性过滤；`seatGranted` 透传测试；资料图片 404 显示 alt。`npm test` 215/215、seam OK、`tsc -b` 通过；提交 `7697d62`。
-- 2026-10-28 Qoder：**对局区全宽 + 规则资料**：`playing` 游戏区全宽、席位横排、聊天/房主进侧栏（D/Esc）；建房按 `manifest.ruleConfig` 渲染并提交，`RoomView.config` 下发给加入者；`manifest.reference` 懒加载、纯文本/图片渲染。无头 Edge 实测 1280×800 下游戏区 1233×560、1440×900 下 1393×630；`npm test` 215/215、seam OK、`tsc -b` 通过；提交 `7d5b4c3`。
 - 2026-10-28 Qoder：**收工**：UNO 开工前置条件（四项拍板、外部改名工程、不搬源码）写进「下一步」；锚点 `8dffb71`；最旧一条交接记录沉降到 [压卡备份.md](压卡备份.md)。
 - 2026-10-28 Qoder：**压卡**：CONTEXT 压到 100 行以内，原第 6–8 节（逐阶段凭据、变更记录、旧追加区）逐字移入 [压卡备份.md](压卡备份.md)；四份文档顶部日期统一到 2026-10-28。
 - 2026-10-28 Qoder：**SDK 版本脚本**：`npm run bump:sdk -- <版本>`（`--dry-run` 预览）同步四包 version、内部依赖与 lock；发布手顺改为 bump → test → smoke → pack → tag。
