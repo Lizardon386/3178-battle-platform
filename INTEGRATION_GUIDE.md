@@ -70,7 +70,7 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 
 ### 3.1 获取 SDK
 
-SDK 0.3.0 是当前版本。游戏工程只需要安装门面包和构建工具，`core-abi` / `pack-format` 会作为依赖自动装上：
+SDK 0.3.0 已发布到 npm（`latest`）。游戏工程只需要安装门面包和构建工具，`core-abi` / `pack-format` 会作为依赖自动装上：
 
 ```bash
 npm install @lizardon386/game-sdk
