@@ -31,12 +31,12 @@
 - 房间 UI 增量：`playing` 时游戏区拉通整行，席位横向状态条，聊天/房主进右侧侧栏（`D` / `Esc`，焦点归还）；1280×800 实测 1233×560，1440×900 实测 1393×630，lobby 三列不变。房间页「本局规则」卡由房主在 lobby 编辑（`ruleConfig` 命令，非房主 HOSTONLY），改后刷新 `RoomView.config` / `rulesHash`、重置真人 ready 并发系统消息；`RoomExport.config` 落盘，重启保持。`manifest.reference` 首次展开才请求，`parseGameReference` 校验，文本用 `textContent`、图片走 `/games`，图片 404 显示 alt，失败只影响面板。服务端在模块加载时还会校验 `ruleConfig` / `reference` 文档，坏声明跳过并记 `errors`；`manifestOf` 再挡一次；包头与模块 reference 不一致拒绝加载。
 - 单入口壳：根目录只有 `3178对战平台.bat`，启动 `cli.js shell`；先只开 `127.0.0.1:3178` 与本机大厅，点「建房」时调 `/api/host/ready` 再开 `0.0.0.0:3000`、组播与 `HostStore`。纯进房不创建 `HostStore`、不写 `data/`；建房后 `run-<port>.json` / `stop` / `diagnose` 与旧入口一致。`host` / `join` 子命令保留给命令行。
 - SDK 0.3.0 已发 npm（四包 `@lizardon386/*`，`latest` 均为 0.3.0，2026-10-29）；Trusted Publisher + [publish-sdk.yml](.github/workflows/publish-sdk.yml) 的首次真实 CI 发布已绿；`sdk-v0.3.0` tag/Release 已建（Release 资产来自 `dist-sdk/`，含 SHA256SUMS）。`sdk-v0.2.0` 保留可回退。
-- **第一款真游戏「变色对决」已落地为独立仓库 `D:\agent_workspace\color-duel`，公开仓库尚未创建/推送。** 完整版：2~8 人、观战、三档电脑、5 个规则开关 + 手牌上限 + 关闭倒计时、规则资料与 rule-config 声明。`npm test` 33/33、`npm run build`、`bpmap doctor` 通过；本地 6 笔提交，HEAD `8c68c06`。SDK 用 0.3.0 本地 link，package.json/lock 未改。**联调 PASS**（协议级 7/7、1280×800 UI 端到端、断线/票据与重启恢复）。初版包在 `games/color-duel.bpmap`（102,353 字节，SHA256 `b85db75129c4adbb807c631854aa6cb129d02239fedfb41125b6a05bc70916c8`，gitignored），留给用户自测；`uno-online` 未动。
+- **第一款真游戏「变色对决」已落地为独立仓库 `D:\agent_workspace\color-duel`，公开仓库尚未创建/推送。** 完整版：2~8 人、观战、三档电脑、5 个规则开关 + 手牌上限 + 关闭倒计时、规则资料与 rule-config 声明。`npm test` 33/33、`npm run build`、`bpmap doctor` 通过；本地 7 笔提交，HEAD `1a78b9e`。SDK 依赖已切 `^0.3.0`、lock 指向 npm registry（提交 `1a78b9e`）。**联调 PASS**（协议级 7/7、1280×800 UI 端到端、断线/票据与重启恢复）。初版包在 `games/color-duel.bpmap`（102,353 字节，SHA256 `b85db75129c4adbb807c631854aa6cb129d02239fedfb41125b6a05bc70916c8`，gitignored），留给用户自测；`uno-online` 未动。
 
 ## 4. 下一步
 
 1. **等用户自测初版 color-duel 包**：包在 `games/color-duel.bpmap`（gitignored），用「3178对战平台.bat」建房/改规则/开局即可；用户反馈后先修游戏或平台，不急着发版。平台侧猴测结果：协议猴测 seed 707 夹具 0 违规；强制 color-duel 的协议猴测 seed 717 0 违规；UI 猴测 seed 909（4 用户 60 步）0 违规。
-2. **SDK 0.3.0 已发布（2026-10-29）**：把 color-duel 的 SDK 依赖改为 `^0.3.0`、重生成 lock 并提交；再 `gh repo create Lizardon386/color-duel --public` 推首个提交，CI 绿后打 `v0.1.0`。
+2. **SDK 0.3.0 已发布（2026-10-29）**，color-duel 依赖已切 `^0.3.0` 并提交（`1a78b9e`，lock 指向 registry）；下一步 `gh repo create Lizardon386/color-duel --public` 推首个提交，CI 绿后打 `v0.1.0`。
 3. **双机实测**：同 WiFi 组播房间发现、首次绑定防火墙弹窗行为、`--tunnel` 真隧道（需 cloudflared）。
 4. **便携包与单文件 exe**：先在真正没装 Node 的机器上跑 `dist-portable/`；单文件 exe 之前必须先做 Node SEA hello-world 实验（本机 SAC = On，可能直接拦），未跑实验前不投入打包链路。
 6. 刻意不做：目录服务器 / 账号 / 好友 / 段位 / 匹配 / 反作弊仲裁 / 自动写防火墙规则。
