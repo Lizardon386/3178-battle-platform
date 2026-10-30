@@ -261,8 +261,9 @@ stateDiagram-v2
 
 ### 4.5 房间界面：对局区、规则与资料
 
-- **lobby 两列**：席位与聊天等高并排，「本局规则与房主操作」合并成一条整行控制台（房主可编辑规则和管理房间，非房主只读规则）。进入 `playing` 后游戏区拉通整行，席位压成横向状态条，聊天与同一控制台收进右侧抽屉，默认收起；按钮、`D` 键和 `Esc` 都能操作，关闭时焦点回到触发按钮。没有 deadline 时不显示倒计时块。
-- **桌面实测**：1280×800 下游戏区 1233×560，1440×900 下 1393×630；低于 1100px 宽的桌面不在本档验收范围。
+- **lobby 三栏**：左栏放房间信息与「本局规则与房主操作」控制台（房主可编辑规则和管理房间，非房主只读规则），右侧席位与聊天等高并排。进入 `playing` 后房间头移到顶部，游戏区拉通整行，席位压成横向状态条，聊天与同一控制台收进右侧抽屉，默认收起；按钮、`D` 键和 `Esc` 都能操作，关闭时焦点回到触发按钮。没有 deadline 时不显示倒计时块。
+- **非房主视图**：左栏只保留房间名/房号/连接状态和规则摘要，开局、加电脑位、移交、请出、邀请和关房全部隐藏；座位号码牌不是颜色入口，电脑难度下拉也不会出现。席位与聊天位置和房主一致，`lobby` 只多一个「准备」按钮。截图见 [room-guest-lobby-1280.png](docs/images/room-guest-lobby-1280.png)。
+- **桌面实测**：1280×800 下游戏区 1248×560（席位/聊天 448 高）；低于 1100px 宽的桌面不在本档验收范围。
 - **本局规则**：房间页在 `manifest.ruleConfig` 存在时在房主控制台里显示规则区；房主在 `lobby` 阶段可编辑，其他人只读，`playing` 后一律只读。修改走房主专用 `ruleConfig`，服务端用 `normalizeConfig` / `rulesHashOf` 重算，推进 revision，并把所有真人 ready 清零、发系统消息「房规已更新，请重新准备」。`RoomView.config` 与 `rulesHash` 随快照广播，后加入者从 `seatGranted` 的 manifest 和首个快照拿到新值；`RoomExport.config` 落盘，恢复后规则保持。平台不改 `normalizeConfig`，非法值仍由游戏兜底。
 - **座位级选项**：`GameModule.seatOptions` 声明每个座位可配的字段（`roles` 过滤）。颜色字段直接驱动席位行的左侧色条/图标/号码牌，房主在 lobby 点号码牌选色；电脑座位在行内显示难度下拉；不再有通用“设置”按钮。变更走 `hostSeat {op:'setOptions'}`；只房主、只 lobby，服务端用 `normalizeSeatOptions` 或声明默认值收口，`SeatView.options` / `GameSeatInfo.options` 透传，`RoomExport` 随座位持久化。平台不解释 field 的玩法含义。
 - **资料面板**：`manifest.reference.entry` 指向包内 JSON，第一次展开才请求 `/games/<id>/<entry>`，用 `parseGameReference` 校验；主界面和房间共用接近全屏的双栏弹层。只渲染纯文本与图片，文本走 `textContent`，不解析 HTML；图片走现有 `/games` 路由，`..`、绝对路径和反斜杠一律拒绝。图片 404 时用 `onerror` 显示 alt 文案；读取失败只在面板里说明，不影响对局。
@@ -422,6 +423,7 @@ flowchart TD
 | [tools/checks/repro-persist.mjs](tools/checks/repro-persist.mjs) / [tools/checks/repro-resume.mjs](tools/checks/repro-resume.mjs) | 落盘窗口与票据重连复现 |
 | [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 猴测报告：15 条问题、修法与复跑次数 |
 | [docs/images/readme-host-room.png](docs/images/readme-host-room.png) / [readme-join-room.png](docs/images/readme-join-room.png) | README 建房 / 进房实机截图；裁剪掉游戏选择器，避免测试夹具名进入玩家文档 |
+| [docs/images/room-host-lobby-1280.png](docs/images/room-host-lobby-1280.png) / [room-guest-lobby-1280.png](docs/images/room-guest-lobby-1280.png) / [room-playing-1280.png](docs/images/room-playing-1280.png) | 房间三栏布局实测：房主、非房主、对局中 |
 
 **测试**
 

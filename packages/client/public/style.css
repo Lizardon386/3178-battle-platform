@@ -291,6 +291,8 @@ option:disabled {
 .status:empty { display: none; }
 
 /* ---------- 房间内 HUD 头 ---------- */
+.room-playing-head:empty { display: none; }
+.room-playing-head:not(:empty) { margin-bottom: 16px; }
 .room-head {
   display: flex;
   align-items: center;
@@ -301,6 +303,8 @@ option:disabled {
   border-radius: 6px;
 }
 .room-head h2 { font: 500 var(--bp-title)/1.2 var(--bp-font-display); letter-spacing: 0.06em; }
+.room-meta { margin: 6px 0 0; font: 13.5px/1.5 var(--bp-font-mono); color: var(--bp-accent-hi); }
+.room-meta:empty { display: none; }
 /* 连接条与大厅状态行是**同一类字**（setStatus 同时写这两处），所以字号与颜色都走同一档。 */
 .connection-bar { margin-top: 8px; font: 15px/1.5 var(--bp-font-mono); color: var(--bp-dim-hi); }
 /* HUD 上的微标签：比正文标签再小一档，但不再用 0.26em 那种把中文拉开的字距 */
@@ -410,47 +414,76 @@ option:disabled {
 .reference-figure figcaption { margin-top: 6px; font-size: 13.5px; line-height: 1.5; color: var(--bp-dim-hi); }
 .reference-backdrop { position: fixed; inset: 0; z-index: 1050; background: rgba(10, 10, 15, 0.6); }
 
-/* ---------- 房间布局：lobby 席位 + 聊天等高，房主控制台整行；playing 对局区拉通 ---------- */
+/* ---------- 房间布局：lobby 左栏房信息 + 房主台，右侧席位与聊天并排；playing 对局区拉通 ---------- */
+.room-layout { margin-left: 0; margin-right: 0; }
 .room-layout:not(.is-playing) {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-columns: minmax(300px, 340px) minmax(0, 3fr) minmax(0, 2fr);
+  align-items: start;
   gap: 16px;
-  margin-left: 0;
-  margin-right: 0;
 }
+.room-layout:not(.is-playing) #room-left {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.room-left-slot:empty { display: none; }
+.room-layout:not(.is-playing) .room-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 14px 16px;
+  padding: 20px;
+}
+.room-layout:not(.is-playing) .room-head > .flex-grow-1 { grid-column: 1 / -1; }
+.room-layout:not(.is-playing) .room-head > .text-end { grid-column: 1; text-align: left !important; }
+.room-layout:not(.is-playing) .room-head #countdown-block { grid-column: 2; margin-left: 0; }
+.room-layout:not(.is-playing) .room-head #btn-reference { grid-column: 1 / -1; justify-self: start; }
+.room-layout:not(.is-playing) .room-head h2 { font-size: 24px; line-height: 1.25; }
+.room-layout:not(.is-playing) .room-head .hud-code { font-size: 42px; }
+.room-layout:not(.is-playing) .connection-bar { font-size: 13.5px; }
 .room-layout:not(.is-playing) .side-panels,
 .room-layout:not(.is-playing) .side-panels-body { display: contents; }
 .room-layout:not(.is-playing) .side-panels-head { display: none; }
 .room-layout:not(.is-playing) #seat-column {
-  grid-column: 1;
-  grid-row: 1;
-  flex: none;
-  width: auto;
-  max-width: none;
-  height: clamp(320px, 44vh, 440px);
-  margin-top: 0;
-  padding: 0;
-}
-.room-layout:not(.is-playing) #chat-panel {
   grid-column: 2;
   grid-row: 1;
-  flex: none;
-  width: auto;
-  max-width: none;
-  height: clamp(320px, 44vh, 440px);
-  padding: 0;
+  min-width: 0;
+  height: clamp(420px, 56vh, 600px);
+}
+.room-layout:not(.is-playing) #chat-panel {
+  grid-column: 3;
+  grid-row: 1;
+  min-width: 0;
+  height: clamp(420px, 56vh, 600px);
 }
 .room-layout:not(.is-playing) #seat-column > .bp-panel,
 .room-layout:not(.is-playing) #chat-panel > .bp-panel { height: 100%; }
 .room-layout:not(.is-playing) #seat-grid { overflow-y: auto; }
 .room-layout:not(.is-playing) #chat-panel .chat-log { flex: 1 1 auto; min-height: 0; }
-.room-layout:not(.is-playing) #host-console {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  width: auto;
-  max-width: none;
-  padding: 0;
+.room-layout:not(.is-playing) #room-left .host-console-head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
 }
+.room-layout:not(.is-playing) #room-left .host-console-head-actions {
+  width: 100%;
+  justify-content: space-between;
+}
+.room-layout:not(.is-playing) #room-left .host-console-body {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+.room-layout:not(.is-playing) #room-left .host-actions {
+  border-left: 0;
+  padding-left: 0;
+  border-top: 1px solid var(--bp-line);
+  padding-top: 16px;
+}
+.drawer-host-slot:empty { display: none; }
 
 /* 房主控制台把「本局规则」和「房主操作」收进同一张卡；非房主只保留只读规则。 */
 .host-console-head {
@@ -484,6 +517,7 @@ option:disabled {
   margin-left: 0;
   margin-right: 0;
 }
+.room-layout.is-playing #room-left { display: none; }
 .room-layout.is-playing > #seat-column,
 .room-layout.is-playing > #game-host {
   width: 100%;
@@ -548,8 +582,8 @@ option:disabled {
   padding-top: 16px;
   overflow-y: auto;
 }
-.room-layout.is-playing #side-panels .side-panels-body > [class^="col"],
-.room-layout.is-playing #side-panels .side-panels-body > #host-console {
+.room-layout.is-playing #side-panels .side-panels-body > #chat-panel,
+.room-layout.is-playing #side-panels .side-panels-body > #drawer-host {
   flex: none;
   width: 100%;
   max-width: 100%;
@@ -562,10 +596,11 @@ option:disabled {
 .drawer-backdrop { position: fixed; inset: 0; z-index: 1030; background: rgba(10, 10, 15, 0.6); }
 
 @media (max-width: 991.98px) {
+  .room-head { flex-wrap: wrap; gap: 18px 28px; padding: 20px; }
   .room-layout:not(.is-playing) { grid-template-columns: minmax(0, 1fr); }
-  .room-layout:not(.is-playing) #seat-column { grid-column: 1; grid-row: 1; }
-  .room-layout:not(.is-playing) #chat-panel { grid-column: 1; grid-row: 2; }
-  .room-layout:not(.is-playing) #host-console { grid-column: 1; grid-row: 3; }
+  .room-layout:not(.is-playing) #room-left { grid-column: 1; grid-row: 1; }
+  .room-layout:not(.is-playing) #seat-column { grid-column: 1; grid-row: 2; height: clamp(340px, 48vh, 520px); }
+  .room-layout:not(.is-playing) #chat-panel { grid-column: 1; grid-row: 3; height: clamp(340px, 48vh, 520px); }
   .host-console.has-rules.is-host .host-console-body { grid-template-columns: minmax(0, 1fr); }
   .host-console.has-rules.is-host .host-actions { border-left: 0; padding-left: 0; border-top: 1px solid var(--bp-line); padding-top: 14px; }
 }

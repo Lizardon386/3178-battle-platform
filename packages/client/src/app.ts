@@ -459,6 +459,17 @@ export class PlatformApp {
     return chatVisible || rulesVisible || isHost(this.view);
   }
 
+  // 房间头与房主台在两种布局里各有一个家：lobby 在左栏，playing 在顶部/右侧抽屉。
+  // 只搬同一份 DOM，不复制表单，否则规则输入框与已填内容会跟着副本分叉。
+  private placeRoomChrome(playing: boolean): void {
+    const head = this.doc.querySelector<HTMLElement>('.room-head');
+    const headParent = el(this.doc, playing ? 'room-playing-head' : 'room-left-head');
+    if (head && headParent && head.parentElement !== headParent) headParent.append(head);
+    const hostConsole = el(this.doc, 'host-console');
+    const hostParent = el(this.doc, playing ? 'drawer-host' : 'room-left-host');
+    if (hostConsole && hostParent && hostConsole.parentElement !== hostParent) hostParent.append(hostConsole);
+  }
+
   private setDrawerOpen(open: boolean, focus = true): void {
     if (open) this.closeReference(false);
     const allowed = open && this.isPlayingLayout() && this.drawerHasContent();
@@ -478,6 +489,7 @@ export class PlatformApp {
     if (playing && !this.drawerHasContent()) this.drawerOpen = false;
     if (!playing) this.drawerOpen = false;
     el(this.doc, 'room-layout')?.classList.toggle('is-playing', playing);
+    this.placeRoomChrome(playing);
     const toggle = el<HTMLButtonElement>(this.doc, 'btn-toggle-drawer');
     if (toggle) {
       toggle.classList.toggle('hidden', !playing || !this.drawerHasContent());
@@ -1027,11 +1039,13 @@ export class PlatformApp {
       chatPanel.classList.toggle('hidden', this.view.manifest?.ui?.chat === 'game' && this.view.phase === 'playing');
     }
     const title = el(this.doc, 'room-title');
+    const meta = el(this.doc, 'room-meta');
     const codeChip = el(this.doc, 'room-code-hud');
     if (title && this.view.room) {
       const room = this.view.room;
       const phase = room.phase === 'lobby' ? '等待入座' : room.phase === 'playing' ? '对局中' : '已结束';
-      title.textContent = `${room.name} · ${room.gameName} · ${phase}`;
+      title.textContent = room.name;
+      if (meta) meta.textContent = `${room.gameName} · ${phase}`;
     }
     if (codeChip && this.view.room) codeChip.textContent = this.view.room.code;
     this.renderRuleConfig();

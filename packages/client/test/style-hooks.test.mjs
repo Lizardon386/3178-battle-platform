@@ -107,7 +107,7 @@ test('字体必须同源分发，且 CSS 引用的文件真的在盘上', () => 
 });
 
 test('对局区全宽：游戏拉通整行，席位横排，聊天/房主进可收起侧栏', () => {
-  for (const id of ['room-layout', 'game-host', 'side-panels', 'btn-toggle-drawer', 'btn-close-drawer', 'drawer-backdrop']) {
+  for (const id of ['room-layout', 'game-host', 'side-panels', 'btn-toggle-drawer', 'btn-close-drawer', 'drawer-backdrop', 'room-playing-head', 'room-left', 'room-meta', 'drawer-host']) {
     assert.match(pageHtml, new RegExp(`id="${id}"`), `index.html 缺少 #${id}`);
   }
   assert.match(pageHtml, /aria-controls="side-panels"/, '侧栏按钮要声明控制目标');
@@ -133,8 +133,10 @@ test('规则与资料：房间规则卡、大厅资料入口、抽屉都在', ()
   assert.match(cssCode, /\.reference-panel\s*\{[^}]*visibility:\s*hidden/s, '资料抽屉默认收起');
   assert.match(cssCode, /\.reference-panel\.is-open/, '资料抽屉要有打开态');
   assert.match(cssCode, /\.host-console-head\s*\{/, '规则与房主操作要有合并后的卡片头');
-  assert.match(cssCode, /\.room-layout:not\(\.is-playing\)[^}]*grid-template-columns:\s*minmax\(0,\s*3fr\)/s, 'lobby 席位与聊天要同一行等高网格');
-  assert.match(cssCode, /height:\s*clamp\(320px,\s*44vh,\s*440px\);/, '席位/聊天高度要一致');
+  assert.match(cssCode, /\.room-layout:not\(\.is-playing\)\s*\{[^}]*grid-template-columns:\s*minmax\(300px,\s*340px\)\s+minmax\(0,\s*3fr\)\s+minmax\(0,\s*2fr\)/s, 'lobby 要三栏：左栏房信息/房主台，席位与聊天并排');
+  assert.match(cssCode, /\.room-layout:not\(\.is-playing\) #seat-column\s*\{[^}]*height:\s*clamp\(420px,\s*56vh,\s*600px\)/s, '席位高度要留够');
+  assert.match(cssCode, /\.room-layout:not\(\.is-playing\) #chat-panel\s*\{[^}]*height:\s*clamp\(420px,\s*56vh,\s*600px\)/s, '聊天与席位等高');
+  assert.match(appSource, /placeRoomChrome/, '房间头与房主台要按 lobby/playing 搬家而不是复制');
   assert.match(cssCode, /\.reference-panel\s*\{[^}]*width:\s*min\(1400px/s, '规则资料面板要接近全屏');
   assert.match(cssCode, /\.reference-body\s*\{[^}]*grid-template-columns:\s*repeat\(2/s, '宽屏资料要双栏');
   assert.match(cssCode, /\.seat-slot-button\s*\{/, '座位号码牌要能作为颜色入口');
