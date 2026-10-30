@@ -454,7 +454,8 @@ export class PlatformApp {
 
   private drawerHasContent(): boolean {
     const chatVisible = !(this.view.manifest?.ui?.chat === 'game' && this.view.phase === 'playing');
-    return chatVisible || isHost(this.view);
+    const rulesVisible = Boolean(this.view.room && this.view.manifest?.ruleConfig);
+    return chatVisible || rulesVisible || isHost(this.view);
   }
 
   private setDrawerOpen(open: boolean, focus = true): void {
@@ -533,6 +534,7 @@ export class PlatformApp {
     if (!spec || !this.view.room) {
       panel.classList.add('hidden');
       this.ruleConfigSignature = '';
+      this.syncHostConsole();
       return;
     }
     const canEdit = isHost(this.view) && this.view.phase === 'lobby';
@@ -640,6 +642,27 @@ export class PlatformApp {
     }
     this.listboxes.attachAll();
     this.listboxes.syncAll();
+    this.syncHostConsole();
+  }
+
+  private syncHostConsole(): void {
+    const panel = el(this.doc, 'host-console');
+    if (!panel) return;
+    const spec = this.view.manifest?.ruleConfig ? ruleConfigSpec(this.view.manifest.ruleConfig) : null;
+    const host = isHost(this.view);
+    const show = Boolean(this.view.room) && (Boolean(spec) || host);
+    panel.classList.toggle('hidden', !show);
+    panel.classList.toggle('has-rules', Boolean(spec));
+    panel.classList.toggle('is-host', host);
+    el(this.doc, 'rule-config')?.classList.toggle('hidden', !spec);
+    const title = el(this.doc, 'rule-config-title');
+    if (title) title.textContent = spec ? (host ? '本局规则与房主操作' : '本局规则') : (host ? '房主操作' : '');
+    const hint = el(this.doc, 'rule-config-hint');
+    if (hint) {
+      hint.textContent = spec
+        ? (host && this.view.phase === 'lobby' ? '仅房主可操作' : host ? '对局中不可修改' : '只有房主可以修改')
+        : (host ? '仅房主可操作' : '');
+    }
   }
 
   private saveRuleConfig(): void {
@@ -959,6 +982,8 @@ export class PlatformApp {
       access.classList.toggle('hidden', hints.length === 0);
     }
     const countdown = el(this.doc, 'turn-countdown');
+    const countdownBlock = el(this.doc, 'countdown-block');
+    countdownBlock?.classList.toggle('hidden', this.deadlineAt === null);
     if (countdown) {
       countdown.textContent =
         this.deadlineAt === null ? '' : `剩 ${Math.max(0, Math.round((this.deadlineAt - this.clock.now()) / 1000))} 秒`;
@@ -1002,6 +1027,7 @@ export class PlatformApp {
     const blockers = startBlockers(this.view);
     const startButton = el(this.doc, 'btn-start') as HTMLButtonElement | null;
     if (startButton) {
+      startButton.classList.toggle('hidden', !isHost(this.view));
       startButton.disabled = this.view.phase !== 'lobby' || !blockers.ok;
       startButton.textContent = blockers.tooFew
         ? '人还不够'
@@ -1053,6 +1079,7 @@ export class PlatformApp {
       );
       if (candidates.some((s) => s.seatId === previous)) select.value = previous;
     }
+    this.syncHostConsole();
   }
 
   private renderGame(): void {

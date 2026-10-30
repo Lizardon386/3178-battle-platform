@@ -261,10 +261,10 @@ stateDiagram-v2
 
 ### 4.5 房间界面：对局区、规则与资料
 
-- **lobby 保持三列**（席位 / 聊天 / 房主）；进入 `playing` 后游戏区拉通整行，席位压成横向状态条，聊天与房主面板收进右侧抽屉，默认收起。按钮、`D` 键和 `Esc` 都能操作，关闭时焦点回到触发按钮。
+- **lobby 两列**：席位与聊天等高并排，「本局规则与房主操作」合并成一条整行控制台（房主可编辑规则和管理房间，非房主只读规则）。进入 `playing` 后游戏区拉通整行，席位压成横向状态条，聊天与同一控制台收进右侧抽屉，默认收起；按钮、`D` 键和 `Esc` 都能操作，关闭时焦点回到触发按钮。没有 deadline 时不显示倒计时块。
 - **桌面实测**：1280×800 下游戏区 1233×560，1440×900 下 1393×630；低于 1100px 宽的桌面不在本档验收范围。
-- **本局规则**：房间页在 `manifest.ruleConfig` 存在时显示规则卡；房主在 `lobby` 阶段可编辑，其他人只读，`playing` 后一律只读。修改走房主专用 `ruleConfig`，服务端用 `normalizeConfig` / `rulesHashOf` 重算，推进 revision，并把所有真人 ready 清零、发系统消息「房规已更新，请重新准备」。`RoomView.config` 与 `rulesHash` 随快照广播，后加入者从 `seatGranted` 的 manifest 和首个快照拿到新值；`RoomExport.config` 落盘，恢复后规则保持。平台不改 `normalizeConfig`，非法值仍由游戏兜底。
-- **资料面板**：`manifest.reference.entry` 指向包内 JSON，第一次展开才请求 `/games/<id>/<entry>`，用 `parseGameReference` 校验。只渲染纯文本与图片，文本走 `textContent`，不解析 HTML；图片走现有 `/games` 路由，`..`、绝对路径和反斜杠一律拒绝。图片 404 时用 `onerror` 显示 alt 文案；读取失败只在面板里说明，不影响对局。
+- **本局规则**：房间页在 `manifest.ruleConfig` 存在时在房主控制台里显示规则区；房主在 `lobby` 阶段可编辑，其他人只读，`playing` 后一律只读。修改走房主专用 `ruleConfig`，服务端用 `normalizeConfig` / `rulesHashOf` 重算，推进 revision，并把所有真人 ready 清零、发系统消息「房规已更新，请重新准备」。`RoomView.config` 与 `rulesHash` 随快照广播，后加入者从 `seatGranted` 的 manifest 和首个快照拿到新值；`RoomExport.config` 落盘，恢复后规则保持。平台不改 `normalizeConfig`，非法值仍由游戏兜底。
+- **资料面板**：`manifest.reference.entry` 指向包内 JSON，第一次展开才请求 `/games/<id>/<entry>`，用 `parseGameReference` 校验；主界面和房间共用接近全屏的双栏弹层。只渲染纯文本与图片，文本走 `textContent`，不解析 HTML；图片走现有 `/games` 路由，`..`、绝对路径和反斜杠一律拒绝。图片 404 时用 `onerror` 显示 alt 文案；读取失败只在面板里说明，不影响对局。
 - **服务端校验**：目录游戏与 `.bpmap` 在加载时用 `parseRuleConfig` / `parseGameReference` 校验声明，坏声明跳过该模块并记错误；`manifestOf` 再挡一次，避免测试或手工构造的模块把坏声明带进房间。包头的 `reference` 与模块里的 `reference` 同时存在但不一致时拒绝加载。
 
 ## 5. 架构与接缝

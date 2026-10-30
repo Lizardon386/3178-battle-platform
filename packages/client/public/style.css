@@ -360,20 +360,24 @@ option:disabled {
 /* ---------- 规则与资料抽屉 ---------- */
 .reference-panel {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  top: 50%;
+  left: 50%;
   z-index: 1060;
   display: flex;
   flex-direction: column;
-  width: min(520px, 94vw);
+  width: min(1400px, calc(100vw - 48px));
+  height: min(880px, calc(100vh - 48px));
   overflow: hidden;
   background: var(--bp-panel);
-  border-left: 1px solid var(--bp-line);
-  transform: translateX(100%);
+  border: 1px solid var(--bp-line);
+  border-radius: 8px;
+  transform: translate(-50%, -50%) scale(0.98);
   visibility: hidden;
 }
-.reference-panel.is-open { transform: translateX(0); visibility: visible; }
+.reference-panel.is-open { transform: translate(-50%, -50%) scale(1); visibility: visible; }
+@media (max-width: 900px) {
+  .reference-panel { width: calc(100vw - 24px); height: calc(100vh - 24px); }
+}
 .reference-head {
   display: flex;
   align-items: center;
@@ -384,8 +388,17 @@ option:disabled {
   border-bottom: 1px solid var(--bp-line);
 }
 .reference-title { margin: 0; font: 500 20px/1.2 var(--bp-font-display); letter-spacing: 0.08em; }
-.reference-body { flex: 1 1 auto; padding: 20px 24px 28px; overflow-y: auto; }
-.reference-group + .reference-group { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--bp-line); }
+.reference-body {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 16px;
+  padding: 24px;
+  overflow-y: auto;
+}
+@media (max-width: 900px) { .reference-body { grid-template-columns: minmax(0, 1fr); padding: 18px; } }
+.reference-group { margin: 0; padding: 18px; background: var(--bp-panel-alt); border: 1px solid var(--bp-line); border-radius: 6px; }
 .reference-group-title { margin: 0 0 12px; font: 500 17px/1.3 var(--bp-font-display); letter-spacing: 0.06em; color: var(--bp-accent-hi); }
 .reference-item + .reference-item { margin-top: 16px; }
 .reference-item-title { margin: 0 0 6px; font-size: 15.5px; font-weight: 600; }
@@ -397,12 +410,72 @@ option:disabled {
 .reference-figure figcaption { margin-top: 6px; font-size: 13.5px; line-height: 1.5; color: var(--bp-dim-hi); }
 .reference-backdrop { position: fixed; inset: 0; z-index: 1050; background: rgba(10, 10, 15, 0.6); }
 
-/* ---------- 房间布局：lobby 三列不变，playing 对局区拉通整行 ---------- */
-/* 侧栏在 lobby 里不存在布局：display:contents 让聊天/房主两列仍直接参与 Bootstrap 行。 */
+/* ---------- 房间布局：lobby 席位 + 聊天等高，房主控制台整行；playing 对局区拉通 ---------- */
+.room-layout:not(.is-playing) {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  margin-left: 0;
+  margin-right: 0;
+}
 .room-layout:not(.is-playing) .side-panels,
 .room-layout:not(.is-playing) .side-panels-body { display: contents; }
 .room-layout:not(.is-playing) .side-panels-head { display: none; }
-.room-layout:not(.is-playing) .side-panels-body > [class^="col"] > .bp-panel { height: 100%; }
+.room-layout:not(.is-playing) #seat-column {
+  grid-column: 1;
+  grid-row: 1;
+  flex: none;
+  width: auto;
+  max-width: none;
+  height: clamp(320px, 44vh, 440px);
+  margin-top: 0;
+  padding: 0;
+}
+.room-layout:not(.is-playing) #chat-panel {
+  grid-column: 2;
+  grid-row: 1;
+  flex: none;
+  width: auto;
+  max-width: none;
+  height: clamp(320px, 44vh, 440px);
+  padding: 0;
+}
+.room-layout:not(.is-playing) #seat-column > .bp-panel,
+.room-layout:not(.is-playing) #chat-panel > .bp-panel { height: 100%; }
+.room-layout:not(.is-playing) #seat-grid { overflow-y: auto; }
+.room-layout:not(.is-playing) #chat-panel .chat-log { flex: 1 1 auto; min-height: 0; }
+.room-layout:not(.is-playing) #host-console {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: auto;
+  max-width: none;
+  padding: 0;
+}
+
+/* 房主控制台把「本局规则」和「房主操作」收进同一张卡；非房主只保留只读规则。 */
+.host-console-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--bp-panel-alt);
+  border-bottom: 1px solid var(--bp-line);
+}
+.host-console-title { margin: 0; font: 500 18px/1.2 var(--bp-font-display); letter-spacing: 0.08em; }
+.host-console-head-actions { display: flex; align-items: center; gap: 12px; }
+.host-console-hint { font: 13px/1.4 var(--bp-font-mono); color: var(--bp-dim-hi); }
+.room-layout.is-playing #side-panels .host-console-head { align-items: flex-start; flex-direction: column; }
+.room-layout.is-playing #side-panels .host-console-head-actions { width: 100%; justify-content: space-between; }
+.host-console-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px 20px 18px; }
+.host-console.has-rules.is-host .host-console-body { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.host-console.has-rules.is-host .host-actions { border-left: 1px solid var(--bp-line); padding-left: 18px; }
+.rule-config-section { min-width: 0; }
+.host-console .rule-config-panel-body { padding: 0; }
+.host-console .rule-config-panel-actions { padding: 12px 0 0; }
+.host-actions { min-width: 0; }
+.host-actions-title { margin: 0 0 4px; font: 500 15px/1.3 var(--bp-font-display); letter-spacing: 0.08em; color: var(--bp-dim-hi); }
+.host-actions-body { padding-top: 4px; }
 
 .room-layout.is-playing {
   display: grid;
@@ -440,7 +513,7 @@ option:disabled {
 .room-layout.is-playing .seat-empty { min-height: 56px; }
 .room-layout.is-playing .seat-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* playing 时聊天与房主面板进右侧抽屉，默认收起；按钮与 D 键开合。 */
+/* playing 时聊天与房主控制台进右侧抽屉，默认收起；按钮与 D 键开合。 */
 .room-layout.is-playing #side-panels {
   position: fixed;
   top: 0;
@@ -449,7 +522,7 @@ option:disabled {
   z-index: 1040;
   display: flex;
   flex-direction: column;
-  width: min(400px, 92vw);
+  width: min(420px, 92vw);
   padding: 18px;
   overflow: hidden;
   background: var(--bp-bg);
@@ -475,16 +548,27 @@ option:disabled {
   padding-top: 16px;
   overflow-y: auto;
 }
-.room-layout.is-playing #side-panels .side-panels-body > [class^="col"] {
+.room-layout.is-playing #side-panels .side-panels-body > [class^="col"],
+.room-layout.is-playing #side-panels .side-panels-body > #host-console {
   flex: none;
   width: 100%;
   max-width: 100%;
   padding-left: 0;
   padding-right: 0;
 }
+.room-layout.is-playing #side-panels .host-console-body { grid-template-columns: minmax(0, 1fr); }
+.room-layout.is-playing #side-panels .host-actions { border-left: 0; padding-left: 0; border-top: 1px solid var(--bp-line); padding-top: 14px; }
 .room-layout.is-playing #side-panels .chat-log { flex: 1 1 auto; min-height: 240px; }
 .drawer-backdrop { position: fixed; inset: 0; z-index: 1030; background: rgba(10, 10, 15, 0.6); }
 
+@media (max-width: 991.98px) {
+  .room-layout:not(.is-playing) { grid-template-columns: minmax(0, 1fr); }
+  .room-layout:not(.is-playing) #seat-column { grid-column: 1; grid-row: 1; }
+  .room-layout:not(.is-playing) #chat-panel { grid-column: 1; grid-row: 2; }
+  .room-layout:not(.is-playing) #host-console { grid-column: 1; grid-row: 3; }
+  .host-console.has-rules.is-host .host-console-body { grid-template-columns: minmax(0, 1fr); }
+  .host-console.has-rules.is-host .host-actions { border-left: 0; padding-left: 0; border-top: 1px solid var(--bp-line); padding-top: 14px; }
+}
 @media (max-width: 767.98px) {
   .room-layout.is-playing #game-host { height: auto; min-height: 420px; }
   .room-layout.is-playing .game-frame { height: 100%; min-height: 420px; }
