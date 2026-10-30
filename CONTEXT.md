@@ -37,7 +37,7 @@
 ## 4. 下一步
 
 1. **等用户自测 color-duel 包**：包在 `games/color-duel.bpmap`（gitignored，已含 seatOptions），用「3178对战平台.bat」建房/改规则/开局即可；**如果平台窗口在换包前就开着，先关掉重开**。用户反馈后先修游戏或平台，不急着发版。平台侧猴测结果：协议猴测 seed 707 夹具 0 违规；强制 color-duel 的协议猴测 seed 717 0 违规；UI 猴测 seed 909（4 用户 60 步）0 违规。
-2. **SDK 0.3.0 已发布（2026-10-29）**，color-duel 依赖已切 `^0.3.0` 并提交（`1a78b9e`，lock 指向 registry）；下一步 `gh repo create Lizardon386/color-duel --public` 推首个提交，CI 绿后打 `v0.1.0`。
+2. **SDK 0.3.0 已发布（2026-10-29）**，color-duel 依赖仍写 `^0.3.0`，本地 link 的 `game-sdk` 为 0.4.0，仓库 HEAD `70ec433`；下一步 `gh repo create Lizardon386/color-duel --public` 推首个提交，CI 绿后打 `v0.1.0`。
 3. **双机与交付实测**：同 WiFi 组播、首次防火墙弹窗、`--tunnel` 真隧道（cloudflared）；便携包上无 Node 机器；单文件 exe 前先做 Node SEA hello-world 实验（SAC = On 可能直接拦）。
 6. 刻意不做：目录服务器 / 账号 / 好友 / 段位 / 匹配 / 反作弊仲裁 / 自动写防火墙规则。
 
