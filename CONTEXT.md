@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-10-30　模式：三档（README / DESIGN / CONTEXT）　锚点：`8224e06`（master）　当前接盘：qoder:34b30598-b681-4b8a-ac60-cdfcdc0aa6b1
+> 最近更新：2026-10-30　模式：三档（README / DESIGN / CONTEXT）　锚点：`87baa72`（master）　当前接盘：待接（上一写者 WorkBuddy，已收工）
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
@@ -23,7 +23,7 @@
 
 ## 3. 现在在哪
 
-**2026-10-30：`npm test` 232/232，`npm run seam` 零命中，`npx tsc -b` 通过，外部消费者 smoke `[smoke] OK`。**
+**2026-10-30：`npm test` 233/233，`npm run seam` 零命中，`npx tsc -b` 通过，外部消费者 smoke `[smoke] OK`。**
 
 - 平台内核（P0–P7）已交付：协议、座位与房主权限、`GameModule` 契约 + 测试夹具、ws 传输、落盘恢复、客户端界面、hostd 壳（host / join / diagnose / stop）。
 - 包边界：`@lizardon386/core-abi`（游戏 ABI）· `@bp/protocol`（wire）· `@lizardon386/pack-format`（.bpmap）· `@lizardon386/game-sdk`（公共门面 + game-kit）· `@lizardon386/sdk-tools`（bpmap CLI / doctor / 模板）。平台包仍是 `@bp/server`、`@bp/client`、`@bp/hostd`、`@bp/testkit`。
@@ -55,7 +55,7 @@
 - **收尾两条硬规则**：Windows `kill('SIGTERM')` 是硬杀，测试别靠 kill 断言 `run.json` 被删，要断言"留下了、`stop` 收掉"；`server.close()` 有 keep-alive/WS 时不回调，先 `closeAllConnections()` + 超时竞速，`transport.close()` 先 `terminate()`。
 - **`.bat` 是启动器**：`start "标题" node …` + `exit /b 0` 结尾；UTF-8 无 BOM + CRLF + 第 2 行 `chcp 65001`，中文只在 chcp 之后；生成走 [gen-bat.mjs](tools/packaging/gen-bat.mjs)（Git Bash 会把 `nul` 改写成 `/dev/null`），由 [bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) 钉住。环境检查失败分支的 `pause` 是故意的。
 - **测试写法**：`node --test` 必须用带引号的 glob（`node --test "packages/*/test/*.test.mjs"`）并带 `--test-timeout`；等消息要按 predicate 等符合条件的那一帧。
-- **UI 验证**：in-app Browser 无可见视口，用 `navigate_page` + `evaluate_script` 驱动 DOM，观感仍需人工确认；要精确量多档桌面尺寸时用无头 Edge + CDP `Emulation.setDeviceMetricsOverride`（本轮 1280×800 / 1440×900 就是这样量的）。
+- **UI 验证**：in-app Browser 无可见视口，用 `navigate_page` + `evaluate_script` 驱动 DOM，观感仍需人工确认；要精确量多档桌面尺寸时用无头 Edge + CDP `Emulation.setDeviceMetricsOverride`（本轮 1280×800 / 1440×900 就是这样量的）。房间高度是一条链：`--bp-room-col-h` 与房间信息块高度绑定（1256×708 下信息 132 / 三栏 319 / `calc(100vh - 389px)`），改房间信息块的内边距或席位行高就要重算，否则页面立刻多出外层滚动条；自绘下拉 `.bp-listbox-trigger` 自带 `min-height:40px`，只写 `height` 会被顶回去，必须同时写 `min-height`。
 - **规则表单与资料**：`ruleConfig` 的字段 key 必须小写（SDK 口径），游戏自己的 `normalizeConfig` 负责把表单 key 映射到玩法配置；资料入口先过 `isValidGameReferenceEntry`，文档过 `parseGameReference`，图片路径只走 `/games` 同源路由，文本一律 `textContent`。
 - **单入口与加入**：加入/重连的 hello 不带大厅选中的游戏版本，只有建房才声明；纯进房不写 `data/`、不写 `run-<port>.json`，`stop` / `diagnose` 只在建过房后生效。若要让纯进房也能被 `stop` 收掉，需要允许一个非房间的 run 文件。
 - **多会话共享一个工作区**：只 stage 自己的文件，禁止 `git add -A` / `git stash`；SDK 包（`core-abi` / `game-sdk` / `sdk-tools` / `INTEGRATION_GUIDE.md`）与平台/客户端分属不同会话，抢写会让 `tsc -b` 和测试互相打断。
@@ -65,7 +65,7 @@
 ## 6. 验证命令
 
 ```bash
-npm test                         # 232 例
+npm test                         # 233 例
 npm run seam                     # 接缝闸门
 npx tsc -b                       # 类型检查
 node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
@@ -89,8 +89,8 @@ node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
 
 ## 8. 交接记录
 
+- 2026-10-30 WorkBuddy：**收工（四块布局定稿）**：房间页四块（房间信息 / 规则配置 / 席位配置 / 房间聊天）已推送 `81fb3ce`，截图更新为房主 / 客人 / 对局中三张（`87baa72`）；`npm test` 233/233、seam OK、`tsc -b` 通过；三档文档同步（README 对局流程、DESIGN 4.5 与验收表、CONTEXT 第 3 节），横幅版旧记录原样沉降到 [压卡备份.md](压卡备份.md)。**留给下一家的两件事**：① 左栏在规则收起时只占 42px、下方留白，可选优化是收起态把摘要铺成清单填满整栏（会改摘要渲染，未擅自做）；② 等用户对四块布局观感与 color-duel 0.2.0 自测的反馈。
 - 2026-10-30 WorkBuddy：**房间 UI 改为四块 + 逐位加电脑**：① 房间信息横贯顶部（房号/房间名/游戏/房间状态/局域网地址/游戏资料，1256×708 实测 132px）；下面从左到右 ② 规则配置 ③ 席位配置 ④ 房间聊天（310/542/325，同高 319px，`clamp(280px, calc(100vh - 389px), 760px)`），页面总高 708 = 视口，规则展开只让左栏自己滚（319/793）。席位每行六格（图标/座位号/名字/身份/准备/行内操作），空位行右侧 **+** 按位加电脑：`hostSeat {op:'addAi', slot}`，引擎点名占位冲突报 `FULL` 不再偷偷换位，电脑名跟着座位号（`电脑 3`）；席位与空位按座位号合并排序，先加 4 号再补 2 号也不会显示成 1、4、2、3。房主桌子级动作（加电脑位/请出/解散/开始）并入席位卡底栏，开局后只留解散；`host-console` 卡片删除，规则卡独占左栏。席位行压到 41px、4 行全显示（`scrollHeight 178 < clientHeight 179`）。颜色沿用原令牌，仍无渐变/关键帧/发光。`npm test` 233/233、seam OK、`tsc -b` 通过；新增「按座位加电脑」服务端测试。
-- 2026-10-30 WorkBuddy：**房间 UI 重排 + 交互修复**（已被上一条取代，保留过程记录）：房信息提升为整幅房间横幅（房名/邀请链接/房号/规则入口横排），邀请链接从 1026px 规则表单底部提到首屏；房主操作拆成独立卡并排在规则之前，解散房间收敛为唯一入口；规则默认收起、展开时滚动到卡片并 sticky「保存规则」；席位改卡槽（圆头像/号码牌/状态徽章/阵营色轨）；聊天空态提示与等宽正文；主按钮禁用态、卡片标题竖排、双滚动条、键盘焦点环一并修掉。颜色沿用原令牌。`npm test` 232/232、seam OK、`tsc -b` 通过；无头 Edge 1256×708 实测横幅 123px、三栏 328px、页面总高 708（无外层滚动条）。
 - 2026-10-28 Qoder：**联调 + 初版包 + 猴测**：color-duel 用 SDK 0.3.0 本地 link，协议 7/7、UI E2E、断线/重启恢复 PASS；初版包 `games/color-duel.bpmap`（102,353 字节，SHA256 `b85db75129c4adbb807c631854aa6cb129d02239fedfb41125b6a05bc70916c8`，gitignored）留给用户自测。猴测：协议 seed 707（夹具）/717（强制 color-duel）0 违规，UI seed 909（4 用户 60 步，强制 color-duel）0 违规；`npm test` 216/216。收工前压卡，旧记录沉降到 [压卡备份.md](压卡备份.md)。
 - 2026-10-28 Qoder：**规则移入房间 + 单入口壳**：规则卡由房主在 lobby 编辑（ruleConfig 命令，非房主 HOSTONLY），改后重算 rulesHash/revision、重置 ready、`RoomExport.config` 落盘；根目录只留 `3178对战平台.bat`，shell 建房时才开 LAN/HostStore，纯进房不写 `data/`。无头 Edge 实测 1280/1440；`npm test` 216/216、seam OK、`tsc -b` 通过；提交 `521b641` / `4753ab4`。
 - 2026-10-28 Qoder：**接盘确认**：新会话 `835cf812` 已按「接盘」核对锚点（平台 `3c9cffa`、游戏 `8c68c06`）并复跑验证：平台 215/215 + seam + tsc，游戏 33/33 + build + doctor；只读，未改文件。此后写者切到该会话。
