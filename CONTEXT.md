@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-10-30　模式：三档（README / DESIGN / CONTEXT）　锚点：`1c4b316`（master）　当前接盘：qoder:34b30598-b681-4b8a-ac60-cdfcdc0aa6b1
+> 最近更新：2026-10-30　模式：三档（README / DESIGN / CONTEXT）　锚点：`8224e06`（master）　当前接盘：qoder:34b30598-b681-4b8a-ac60-cdfcdc0aa6b1
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
