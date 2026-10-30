@@ -591,7 +591,24 @@ export class Engine {
       return this.fanout(room);
     }
     if (msg.op === 'addAi') {
-      const added = room.addSeat({ name: String(msg.seatId ?? `电脑 ${room.occupied()}`), role: 'ai', isAi: true });
+      // 席位行上的 + 号是"就在这个空位加一个电脑"，所以槽位要能指定；不指定时退回第一个空位。
+      // 名字跟着槽位走：按在场人数编号会出现两个都叫「电脑 2」的座位，房主看着像加失败了。
+      let slot = 0;
+      if (typeof msg.slot === 'number') {
+        // 点名了座位就不许换：点 3 号位的 + 却把电脑塞进 2 号位，比直接报错更让人困惑。
+        if (room.seatBySlot(msg.slot)) {
+          return [this.toSeat(room, room.hostSeatId ?? '', { type: 'error', code: 'FULL', message: '这个位子已经有人了' })];
+        }
+        slot = msg.slot;
+      } else {
+        for (let candidate = 1; candidate <= room.seatSlots; candidate += 1) {
+          if (!room.seatBySlot(candidate)) {
+            slot = candidate;
+            break;
+          }
+        }
+      }
+      const added = room.addSeat({ name: `电脑 ${slot}`, role: 'ai', isAi: true, slot });
       if (!added.ok) {
         return [this.toSeat(room, room.hostSeatId ?? '', { type: 'error', code: 'FULL', message: '加不了电脑位（槽满或该游戏不支持填充）' })];
       }

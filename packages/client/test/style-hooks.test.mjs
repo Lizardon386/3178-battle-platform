@@ -107,7 +107,7 @@ test('字体必须同源分发，且 CSS 引用的文件真的在盘上', () => 
 });
 
 test('对局区全宽：游戏拉通整行，席位横排，聊天/房主进可收起侧栏', () => {
-  for (const id of ['room-layout', 'game-host', 'side-panels', 'btn-toggle-drawer', 'btn-close-drawer', 'drawer-backdrop', 'room-playing-head', 'room-left', 'room-meta', 'drawer-host']) {
+  for (const id of ['room-layout', 'game-host', 'side-panels', 'btn-toggle-drawer', 'btn-close-drawer', 'drawer-backdrop', 'room-playing-head', 'room-left', 'room-info', 'room-meta-game', 'room-meta-phase', 'drawer-host']) {
     assert.match(pageHtml, new RegExp(`id="${id}"`), `index.html 缺少 #${id}`);
   }
   assert.match(pageHtml, /aria-controls="side-panels"/, '侧栏按钮要声明控制目标');
@@ -122,7 +122,7 @@ test('对局区全宽：游戏拉通整行，席位横排，聊天/房主进可�
 });
 
 test('规则与资料：房间规则卡、大厅资料入口、抽屉都在', () => {
-  for (const id of ['btn-reference-lobby', 'btn-reference', 'reference-panel', 'reference-body', 'btn-reference-close', 'reference-backdrop', 'rule-config', 'rule-config-body', 'rule-config-hint', 'btn-save-rule-config', 'host-console', 'countdown-block']) {
+  for (const id of ['btn-reference-lobby', 'btn-reference', 'reference-panel', 'reference-body', 'btn-reference-close', 'reference-backdrop', 'rule-config', 'rule-config-body', 'rule-config-hint', 'btn-save-rule-config', 'host-panel', 'seat-actions-config', 'countdown-block']) {
     assert.match(pageHtml, new RegExp(`id="${id}"`), `index.html 缺少 #${id}`);
   }
   const lobbyStart = pageHtml.indexOf('id="screen-lobby"');
@@ -132,30 +132,40 @@ test('规则与资料：房间规则卡、大厅资料入口、抽屉都在', ()
   assert.match(pageHtml, /aria-controls="reference-panel"/, '规则按钮要声明控制目标');
   assert.match(cssCode, /\.reference-panel\s*\{[^}]*visibility:\s*hidden/s, '资料抽屉默认收起');
   assert.match(cssCode, /\.reference-panel\.is-open/, '资料抽屉要有打开态');
-  assert.match(cssCode, /\.host-console-head\s*\{/, '房主操作要有自己的卡片头');
-  assert.match(cssCode, /\.room-layout:not\(\.is-playing\)\s*\{[^}]*grid-template-columns:\s*minmax\(400px,\s*1\.3fr\)\s+minmax\(0,\s*1\.65fr\)\s+minmax\(0,\s*1fr\)/s, 'lobby 三栏按内容比例分宽，席位拿最宽的一列');
-  assert.match(cssCode, /#room-left\s*\{[^}]*gap:\s*10px/s, '房信息、房主操作、本局规则各自成卡，靠间距分组');
+  assert.match(cssCode, /\.seat-actions\s*\{/, '房主的桌子级动作要有席位底栏');
+  assert.match(cssCode, /\.room-layout:not\(\.is-playing\)\s*\{[^}]*grid-template-columns:\s*minmax\(300px,\s*1\.05fr\)\s+minmax\(0,\s*1\.75fr\)\s+minmax\(0,\s*1\.05fr\)/s, 'lobby 三栏按 规则/席位/聊天 分宽，席位拿最宽的一列');
+  assert.match(cssCode, /#room-left\s*\{[^}]*gap:\s*10px/s, '左栏只放规则配置，卡片靠间距分组');
   assert.ok(!/#room-left\s*\{[^}]*border:\s*1px solid/s.test(cssCode), '左栏不再画整卡边框，描边归各张卡');
+  // 四块的阅读顺序：房间信息在最上面，下面从左到右是规则 → 席位 → 聊天。
+  const infoAt = pageHtml.indexOf('id="room-info"');
+  const ruleAt = pageHtml.indexOf('id="rule-panel"');
+  const seatAt = pageHtml.indexOf('id="seat-column"');
+  const chatAt = pageHtml.indexOf('id="chat-panel"');
   const inviteAt = pageHtml.indexOf('id="room-invite"');
-  const hostPanelAt = pageHtml.indexOf('id="host-panel"');
-  const ruleCardAt = pageHtml.indexOf('id="rule-panel"');
-  assert.ok(inviteAt > 0 && inviteAt < hostPanelAt, '邀请链接要挂在房信息卡里，排在房主操作之前，房主首屏就能看见');
-  assert.ok(hostPanelAt > 0 && hostPanelAt < ruleCardAt, '房主操作要排在本局规则之前，不被规则挤到栏底');
+  assert.ok(inviteAt > infoAt && inviteAt < ruleAt, '局域网地址要落在块① 房间信息里，房主首屏就能看见');
+  assert.ok(infoAt > 0 && infoAt < ruleAt && ruleAt < seatAt && seatAt < chatAt, '四块按 房间信息 → 规则 → 席位 → 聊天 排，读起来从左到右');
   assert.match(pageHtml, /id="btn-toggle-rules"/, '本局规则要能收起成一行摘要');
   assert.match(cssCode, /\.rule-panel\.is-collapsed #rule-config\s*\{\s*display:\s*none/s, '收起规则时只留摘要');
   assert.match(appSource, /btn-toggle-rules/, 'app.ts 要绑定规则展开按钮');
   assert.match(cssCode, /\.btn-primary:disabled[^}]*cursor:\s*not-allowed/s, '禁用的主按钮要和可点状态区分开');
   assert.match(cssCode, /\.bp-panel \.card-title\s*\{[^}]*white-space:\s*nowrap/s, '卡片标题不能被右侧按钮挤成竖排');
-  assert.match(cssCode, /grid-template-columns:\s*22px 46px minmax\(0, 1fr\) 64px 88px/, '席位状态列与动作列要固定宽度');
+  assert.match(cssCode, /grid-template-columns:\s*34px 34px minmax\(0, 1fr\) 52px 74px 96px/, '席位六列：图标/座位/名字/身份/准备/动作，后三列定宽');
   assert.match(cssCode, /\.room-layout:not\(\.is-playing\) \.seat-ai-difficulty \{ width: 88px; \}/, '电脑难度要和动作列同宽，状态列才不会错位');
-  assert.match(cssCode, /--bp-room-col-h:\s*clamp\(300px,\s*calc\(100vh - 380px\),\s*760px\)/, '三栏要共用同一个桌面高度，且扣够顶栏、房间横幅与留白');
+  assert.match(cssCode, /--bp-room-col-h:\s*clamp\(280px,\s*calc\(100vh - 389px\),\s*760px\)/, '三栏要共用同一个桌面高度，且扣够顶栏、房间信息块与留白');
   assert.match(cssCode, /#room-left\s*\{[^}]*height:\s*var\(--bp-room-col-h\)/s, '左栏要和右侧两栏等高');
   assert.match(cssCode, /#seat-column\s*\{[^}]*height:\s*var\(--bp-room-col-h\)/s, '席位栏要共用桌面高度');
   assert.match(cssCode, /#chat-panel\s*\{[^}]*height:\s*var\(--bp-room-col-h\)/s, '聊天栏要共用桌面高度');
   assert.match(cssCode, /\.seat-transfer-button\s*\{/, '真人席位行要有转交房主按钮样式');
   assert.match(appSource, /attachSeatTransfer/, '真人席位行要直接渲染转交房主按钮');
   assert.match(appSource, /hostTransfer/, '行内转交要走 hostTransfer');
-  assert.match(pageHtml, /解散房间/, '房主操作卡要有解散房间');
+  assert.match(pageHtml, /解散房间/, '席位底栏要有解散房间');
+  // 块③ 席位配置：每行能直接点 + 加电脑、身份与准备分列、房主有开局与解散。
+  assert.match(appSource, /attachSeatAddAi/, '空位行要能直接点 + 加电脑');
+  assert.match(appSource, /op: 'addAi', slot/, '+ 号要把座位号一起发出去，点哪行就坐哪号位');
+  assert.match(appSource, /seatRoleText/, '席位行要有身份列（房主/玩家/电脑）');
+  assert.match(appSource, /seatReadyText/, '席位行要有准备列');
+  assert.match(cssCode, /\.seat-add-ai\s*\{/, '+ 号按钮要有样式');
+  assert.match(cssCode, /\.seat-role\s*\{/, '身份徽章要有样式');
   assert.match(appSource, /placeRoomChrome/, '房间头与房主台要按 lobby/playing 搬家而不是复制');
   assert.match(cssCode, /\.reference-panel\s*\{[^}]*width:\s*min\(1400px/s, '规则资料面板要接近全屏');
   assert.match(cssCode, /\.reference-body\s*\{[^}]*grid-template-columns:\s*repeat\(2/s, '宽屏资料要双栏');

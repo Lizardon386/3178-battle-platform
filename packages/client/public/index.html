@@ -140,74 +140,59 @@
             <section id="screen-room" class="screen hidden">
               <div id="room-playing-head" class="room-playing-head"></div>
               <div id="room-banner" class="room-banner">
-                <div class="room-head">
-                      <div class="flex-grow-1">
-                        <h2 id="room-title">房间</h2>
-                        <p id="room-meta" class="room-meta"></p>
-                        <p id="connection-bar" class="connection-bar mb-0" role="status"></p>
-                      </div>
-                      <div class="text-end">
-                        <div class="hud-code-label">房号</div>
-                        <div id="room-code-hud" class="hud-code"></div>
-                      </div>
-                      <div id="countdown-block" class="text-end ms-4 hidden">
-                        <div class="hud-code-label">倒计时</div>
-                        <div id="turn-countdown" class="countdown"></div>
-                      </div>
+                <section id="room-info" class="card bp-panel room-info" aria-labelledby="room-info-title">
+                  <div class="card-header">
+                    <h3 id="room-info-title" class="card-title"><i class="ti ti-info-square ti-fw me-2" aria-hidden="true"></i>房间信息</h3>
+                    <div class="card-actions">
                       <button id="btn-reference" class="btn btn-sm btn-outline-secondary" type="button" aria-controls="reference-panel" aria-expanded="false">
                         <i class="ti ti-book-2" aria-hidden="true"></i>
-                        <span>规则与资料</span>
+                        <span>游戏资料</span>
                       </button>
                       <button id="btn-toggle-drawer" class="btn btn-sm btn-outline-secondary room-drawer-toggle hidden" type="button" aria-controls="side-panels" aria-expanded="false" aria-keyshortcuts="D" title="打开聊天与房主面板（快捷键 D）">
                         <i class="ti ti-layout-sidebar-right" aria-hidden="true"></i>
                         <span id="drawer-toggle-label">侧栏</span>
                       </button>
-                      <div id="room-invite" class="room-invite hidden">
-                        <label class="visually-hidden" for="invite-url">邀请链接</label>
-                        <div class="input-group">
-                          <input id="invite-url" class="form-control" readonly placeholder="邀请链接 · 点右边复制" />
-                          <button id="btn-copy-invite" class="btn btn-outline-secondary" type="button" title="复制邀请链接">
-                            <i class="ti ti-copy" aria-hidden="true"></i>
-                          </button>
-                        </div>
-                        <p id="lan-access" class="hint hidden"></p>
-                      </div>
                     </div>
+                  </div>
+                  <div class="room-info-body">
+                    <div class="room-info-item is-code">
+                      <span class="room-info-label">房号</span>
+                      <span id="room-code-hud" class="hud-code"></span>
+                    </div>
+                    <div class="room-info-item is-name">
+                      <span class="room-info-label">房间名</span>
+                      <span id="room-title" class="room-info-value"></span>
+                    </div>
+                    <div class="room-info-item">
+                      <span class="room-info-label">游戏</span>
+                      <span id="room-meta-game" class="room-info-value"></span>
+                    </div>
+                    <div class="room-info-item">
+                      <span class="room-info-label">房间状态</span>
+                      <span id="room-meta-phase" class="room-info-value"></span>
+                    </div>
+                    <div id="countdown-block" class="room-info-item hidden">
+                      <span class="room-info-label">倒计时</span>
+                      <span id="turn-countdown" class="countdown"></span>
+                    </div>
+                    <div id="room-invite" class="room-invite hidden">
+                      <span class="room-info-label">局域网地址</span>
+                      <div class="input-group">
+                        <input id="invite-url" class="form-control" readonly placeholder="邀请链接 · 点右边复制" />
+                        <button id="btn-copy-invite" class="btn btn-outline-secondary" type="button" title="复制邀请链接">
+                          <i class="ti ti-copy" aria-hidden="true"></i>
+                        </button>
+                      </div>
+                      <p id="lan-access" class="hint hidden"></p>
+                    </div>
+                  </div>
+                  <p id="connection-bar" class="connection-bar mb-0" role="status"></p>
+                </section>
               </div>
 
               <div id="room-layout" class="room-layout">
-                <aside id="room-left" class="room-left" aria-label="房主操作与本局规则">
+                <aside id="room-left" class="room-left" aria-label="本局规则">
                   <div id="room-left-host" class="room-left-slot">
-                    <section id="host-console" class="card bp-panel host-console hidden" aria-labelledby="host-console-title">
-                      <div class="host-console-head">
-                        <h3 id="host-console-title" class="host-console-title">房主操作</h3>
-                        <div class="host-console-head-actions">
-                          <button id="btn-start" class="btn btn-primary btn-sm">开始对局</button>
-                        </div>
-                      </div>
-                      <div class="host-console-body">
-                        <div id="host-panel" class="host-actions">
-                          <button id="btn-add-ai" class="btn btn-outline-secondary"><i class="ti ti-robot me-2" aria-hidden="true"></i>加一个电脑位</button>
-
-                          <div id="host-transfer-control">
-                            <label class="form-label" for="transfer-target">移交房主</label>
-                            <div class="input-group">
-                              <select id="transfer-target" class="form-select"></select>
-                              <button id="btn-transfer" class="btn btn-outline-secondary">移交</button>
-                            </div>
-                          </div>
-
-                          <div class="host-kick-row">
-                            <label class="visually-hidden" for="kick-target">请出座位</label>
-                            <select id="kick-target" class="form-select" aria-label="请出座位"></select>
-                            <button id="btn-kick" class="btn btn-outline-danger">请出</button>
-                          </div>
-
-                          <button id="btn-close" class="btn btn-ghost-danger" title="关闭房间，所有人回到大厅；进程在你这里，你一关窗这桌就散了"><i class="ti ti-power me-2" aria-hidden="true"></i>解散房间</button>
-                        </div>
-                      </div>
-                    </section>
-
                     <section id="rule-panel" class="card bp-panel rule-panel hidden" aria-labelledby="rule-panel-title">
                       <div class="rule-panel-head">
                         <button id="btn-toggle-rules" class="rule-panel-toggle" type="button" aria-expanded="true" aria-controls="rule-config">
@@ -231,7 +216,7 @@
                 <div id="seat-column">
                   <div class="card bp-panel">
                     <div class="card-header">
-                      <h3 class="card-title"><i class="ti ti-users ti-fw me-2" aria-hidden="true"></i>席位</h3>
+                      <h3 class="card-title"><i class="ti ti-users ti-fw me-2" aria-hidden="true"></i>席位配置</h3>
                       <div class="card-actions">
                         <button id="btn-ready" class="btn btn-sm btn-outline-success">准备</button>
                         <button id="btn-reconnect" class="btn btn-sm btn-ghost-secondary">重连</button>
@@ -239,12 +224,31 @@
                       </div>
                     </div>
                     <div id="seat-grid" class="seat-grid list-group list-group-flush"></div>
+                    <div id="host-panel" class="seat-actions hidden">
+                      <div id="seat-actions-config" class="seat-actions-row">
+                        <button id="btn-add-ai" class="btn btn-sm btn-outline-secondary"><i class="ti ti-robot me-2" aria-hidden="true"></i>加一个电脑位</button>
+                        <div id="host-transfer-control" class="seat-action-inline">
+                          <label class="visually-hidden" for="transfer-target">移交房主</label>
+                          <select id="transfer-target" class="form-select" aria-label="移交房主给"></select>
+                          <button id="btn-transfer" class="btn btn-sm btn-outline-secondary">移交</button>
+                        </div>
+                        <div class="seat-action-inline host-kick-row">
+                          <label class="visually-hidden" for="kick-target">请出座位</label>
+                          <select id="kick-target" class="form-select" aria-label="请出座位"></select>
+                          <button id="btn-kick" class="btn btn-sm btn-outline-danger">请出</button>
+                        </div>
+                      </div>
+                      <div class="seat-actions-row seat-actions-main">
+                        <button id="btn-close" class="btn btn-ghost-danger" title="关闭房间，所有人回到大厅；进程在你这里，你一关窗这桌就散了"><i class="ti ti-power me-2" aria-hidden="true"></i>解散房间</button>
+                        <button id="btn-start" class="btn btn-primary">开始对局</button>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <div id="game-host" class="game-host hidden"></div>
 
-                <aside id="side-panels" class="side-panels" aria-label="聊天与房主面板" aria-hidden="true">
+                <aside id="side-panels" class="side-panels" aria-label="房间聊天与本局规则" aria-hidden="true">
                   <div class="side-panels-head">
                     <span class="side-panels-title">聊天与规则</span>
                     <button id="btn-close-drawer" class="btn btn-sm btn-ghost-secondary" type="button" aria-label="关闭侧栏">

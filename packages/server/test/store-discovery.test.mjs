@@ -284,3 +284,24 @@ test('房主改过的房规落盘，重启后规则保持', () => {
   assert.equal(restored.config.range, 12);
   assert.equal(restored.rulesHash, rulesHash);
 });
+
+test('加电脑位能指定座位：点哪行的 +，电脑就坐哪号位，名字跟着座位号', () => {
+  // 席位行上的 + 是"就在这一格加电脑"。引擎若忽略 slot，电脑会落到第一个空位，
+  // 房主点 3 号位却看到电脑坐 2 号位，只能反复点碰运气。
+  const { engine } = makeEngine();
+  const transport = { sent: [], send(raw) { this.sent.push(JSON.parse(raw)); }, close() {} };
+  const id = engine.openConn(transport);
+  engine.publish(engine.dispatch(id, { type: 'hello', protocol: 1, nick: '房主', gameId: 'fixture-turn', version: turnBasedFixture.version }));
+  engine.publish(engine.dispatch(id, { type: 'roomCreate', gameId: 'fixture-turn', roomName: '定点加电脑', seatSlots: 4, config: {} }));
+
+  const code = transport.sent.at(-1).room.code;
+  engine.publish(engine.dispatch(id, { type: 'hostSeat', op: 'addAi', slot: 3 }));
+  const ai = engine.registry.get(code).seats.find((s) => s.role === 'ai');
+  assert.ok(ai, '应加出一个电脑位');
+  assert.equal(ai.slot, 3, '点 3 号位的 +，电脑就该坐 3 号位');
+  assert.equal(ai.name, '电脑 3', '名字跟座位号走，不然会出现两个「电脑 2」');
+
+  // 同一行再点一次：该位已占，应当报满而不是把电脑挪去别处
+  engine.publish(engine.dispatch(id, { type: 'hostSeat', op: 'addAi', slot: 3 }));
+  assert.equal(transport.sent.filter((m) => m.type === 'error').at(-1)?.code, 'FULL');
+});

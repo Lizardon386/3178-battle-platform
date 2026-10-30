@@ -446,7 +446,7 @@ export class PlatformApp {
     on('btn-save-rule-config', 'click', () => this.saveRuleConfig());
     on('btn-toggle-rules', 'click', () => {
       this.rulesExpanded = !this.rulesExpanded;
-      this.syncHostConsole();
+      this.syncRulePanel();
       // 展开后表单落在折叠线以下，不滚过去的话看起来像点了没反应。
       if (this.rulesExpanded) el(this.doc, 'rule-panel')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
@@ -470,23 +470,21 @@ export class PlatformApp {
   private drawerHasContent(): boolean {
     const chatVisible = !(this.view.manifest?.ui?.chat === 'game' && this.view.phase === 'playing');
     const rulesVisible = Boolean(this.view.room && this.view.manifest?.ruleConfig);
-    return chatVisible || rulesVisible || isHost(this.view);
+    // 房主操作已经下放到席位卡底栏（对局中席位卡仍然露出那一条），侧栏只装聊天与规则。
+    return chatVisible || rulesVisible;
   }
 
-  // 房间头与房主台在两种布局里各有一个家：lobby 在左栏，playing 在顶部/右侧抽屉。
+  // 房间信息与规则卡在两种布局里各有一个家：lobby 在横幅/左栏，playing 在顶部条/右侧抽屉。
   // 只搬同一份 DOM，不复制表单，否则规则输入框与已填内容会跟着副本分叉。
   private placeRoomChrome(playing: boolean): void {
-    const head = this.doc.querySelector<HTMLElement>('.room-head');
-    const headParent = el(this.doc, playing ? 'room-playing-head' : 'room-banner');
-    if (head && headParent && head.parentElement !== headParent) headParent.append(head);
-    // 横幅的房信息搬去顶部条之后，横幅自己就空了，别留一条 10px 的空槽。
+    const info = el(this.doc, 'room-info');
+    const infoParent = el(this.doc, playing ? 'room-playing-head' : 'room-banner');
+    if (info && infoParent && info.parentElement !== infoParent) infoParent.append(info);
+    // 横幅的房间信息搬去顶部条之后，横幅自己就空了，别留一条 10px 的空槽。
     el(this.doc, 'room-banner')?.classList.toggle('hidden', playing);
-    const hostConsole = el(this.doc, 'host-console');
-    const hostParent = el(this.doc, playing ? 'drawer-host' : 'room-left-host');
-    if (hostConsole && hostParent && hostConsole.parentElement !== hostParent) hostParent.append(hostConsole);
-    // 规则卡跟着房主台一起搬：对局中它和聊天并排躺在侧栏里，lobby 时回到左栏。
     const rulePanel = el(this.doc, 'rule-panel');
-    if (rulePanel && hostParent && rulePanel.parentElement !== hostParent) hostParent.append(rulePanel);
+    const ruleParent = el(this.doc, playing ? 'drawer-host' : 'room-left-host');
+    if (rulePanel && ruleParent && rulePanel.parentElement !== ruleParent) ruleParent.append(rulePanel);
   }
 
   private setDrawerOpen(open: boolean, focus = true): void {
@@ -568,7 +566,7 @@ export class PlatformApp {
       this.ruleConfigSignature = '';
       const summary = el(this.doc, 'rule-panel-summary');
       if (summary) summary.textContent = '';
-      this.syncHostConsole();
+      this.syncRulePanel();
       return;
     }
     const canEdit = isHost(this.view) && this.view.phase === 'lobby';
@@ -679,21 +677,17 @@ export class PlatformApp {
     }
     this.listboxes.attachAll();
     this.listboxes.syncAll();
-    this.syncHostConsole();
+    this.syncRulePanel();
   }
 
-  private syncHostConsole(): void {
-    const panel = el(this.doc, 'host-console');
-    if (!panel) return;
+  /** 规则配置块：进房就有（客人看摘要、房主看表单），没规则的游戏整块消失。 */
+  private syncRulePanel(): void {
     const spec = this.view.manifest?.ruleConfig ? ruleConfigSpec(this.view.manifest.ruleConfig) : null;
     const host = isHost(this.view);
     const inRoom = Boolean(this.view.room);
-    // 房主操作只给房主；规则卡给所有进房的人（客人看摘要，房主看表单）。
-    panel.classList.toggle('hidden', !inRoom || !host);
-    panel.classList.toggle('is-host', host);
-    el(this.doc, 'room-left')?.classList.toggle('has-console', inRoom && (host || Boolean(spec)));
     const rulePanel = el(this.doc, 'rule-panel');
     rulePanel?.classList.toggle('hidden', !inRoom || !spec);
+    el(this.doc, 'room-left')?.classList.toggle('has-console', inRoom && Boolean(spec));
     el(this.doc, 'rule-config')?.classList.toggle('hidden', !spec);
     // 只有房主、只在 lobby 才有「展开/收起」；其余身份看摘要就够了。
     const canEdit = host && this.view.phase === 'lobby';
@@ -834,6 +828,29 @@ export class PlatformApp {
     button.addEventListener('click', () => {
       this.command({ type: 'hostTransfer', seatId: seat.seatId });
     });
+    row.append(button);
+  }
+
+  /**
+   * 空位行上的 +：就在这一个位子加电脑。
+   * 原来只有「加一个电脑位」一个按钮、加完坐哪号位由服务端挑，房主想凑某个位置只能反复点；
+   * 现在点哪一行的 +，电脑就坐哪一行，槽位随命令一起发出去。
+   */
+  private attachSeatAddAi(row: HTMLElement, slot: number): void {
+    if (!isHost(this.view) || this.view.phase !== 'lobby') return;
+    const blocker = aiFillBlocker(this.view);
+    const button = this.doc.createElement('button');
+    button.type = 'button';
+    button.className = 'seat-add-ai';
+    button.disabled = blocker !== null;
+    const label = blocker ?? `在 ${slot} 号位加一个电脑`;
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    const icon = this.doc.createElement('i');
+    icon.className = 'ti ti-plus';
+    icon.setAttribute('aria-hidden', 'true');
+    button.append(icon);
+    button.addEventListener('click', () => this.command({ type: 'hostSeat', op: 'addAi', slot }));
     row.append(button);
   }
 
@@ -1130,14 +1147,17 @@ export class PlatformApp {
     if (chatPanel) {
       chatPanel.classList.toggle('hidden', this.view.manifest?.ui?.chat === 'game' && this.view.phase === 'playing');
     }
+    // 房间信息拆成独立字段：房号、房间名、游戏、状态各占一格，别再拼进一行 "游戏 · 阶段"
+    // ——拼起来的那一格既不能被单独对齐，也没法让"房间状态"自己换色。
     const title = el(this.doc, 'room-title');
-    const meta = el(this.doc, 'room-meta');
+    const gameMeta = el(this.doc, 'room-meta-game');
+    const phaseMeta = el(this.doc, 'room-meta-phase');
     const codeChip = el(this.doc, 'room-code-hud');
-    if (title && this.view.room) {
+    if (this.view.room) {
       const room = this.view.room;
-      const phase = room.phase === 'lobby' ? '等待入座' : room.phase === 'playing' ? '对局中' : '已结束';
-      title.textContent = room.name;
-      if (meta) meta.textContent = `${room.gameName} · ${phase}`;
+      if (title) title.textContent = room.name;
+      if (gameMeta) gameMeta.textContent = room.gameName;
+      if (phaseMeta) phaseMeta.textContent = this.phaseText(room.phase);
     }
     if (codeChip && this.view.room) codeChip.textContent = this.view.room.code;
     this.renderRuleConfig();
@@ -1145,7 +1165,10 @@ export class PlatformApp {
     if (!grid) return;
     grid.replaceChildren();
     // 一律 createElement + textContent：昵称是别人机器上打的字，不能进 innerHTML
-    const pushRow = (className: string, slot: number | null, name: string, state: string, tooltip: string, icon: string | null) => {
+    // 一行六格：图标 / 座位号 / 名字 / 身份 / 准备 / 行内操作。
+    // 身份与准备拆成两列，是因为它们回答两个不同的问题："这个位子是谁"和"他准备好没有"；
+    // 挤成一格时房主那行只能写"房主"，玩家就看不出自己到底准备没准备。
+    const pushRow = (className: string, slot: number | null, name: string, role: string, ready: string, tooltip: string, icon: string | null) => {
       const row = this.doc.createElement('div');
       row.className = className;
       if (tooltip) row.title = tooltip;
@@ -1158,27 +1181,39 @@ export class PlatformApp {
       const nameCell = this.doc.createElement('span');
       nameCell.className = 'seat-name';
       nameCell.textContent = name;
-      const stateCell = this.doc.createElement('span');
-      stateCell.className = 'seat-state';
-      stateCell.textContent = state;
-      row.append(iconCell, slotCell, nameCell, stateCell);
+      const roleCell = this.doc.createElement('span');
+      roleCell.className = 'seat-role';
+      roleCell.textContent = role;
+      const readyCell = this.doc.createElement('span');
+      readyCell.className = 'seat-state';
+      readyCell.textContent = ready;
+      row.append(iconCell, slotCell, nameCell, roleCell, readyCell);
       grid.append(row);
       return row;
     };
-    for (const seat of this.view.seats) {
+    // 席位与空位混在一起按座位号排：先在 4 号位加电脑、再补 2 号位，
+    // 列表若按"先来后到"排就会变成 1、4、2、3，房主一眼看不出哪个位子还空着。
+    const entries: Array<{ slot: number; seat: SeatView | null }> = [
+      ...this.view.seats.map((seat) => ({ slot: seat.slot, seat })),
+      ...emptySlots(this.view).map((slot) => ({ slot, seat: null })),
+    ].sort((a, b) => a.slot - b.slot);
+    for (const entry of entries) {
+      const seat = entry.seat;
+      if (!seat) {
+        const row = pushRow('seat seat-empty', entry.slot, '空位', '—', '等待加入', `${entry.slot} 号位空着`, 'ti-user-plus');
+        this.attachSeatAddAi(row, entry.slot);
+        continue;
+      }
       const me = seat.seatId === this.view.mySeatId;
       const classes = ['seat', `seat-${seat.role}`];
       if (seat.ready && seat.role !== 'spectator' && seat.role !== 'ai') classes.push('is-ready');
       if (me) classes.push('is-me');
       if (!seat.connected && seat.role !== 'ai') classes.push('is-offline');
       const icon = seat.role === 'host' ? 'ti-crown' : seat.role === 'ai' ? 'ti-robot' : seat.role === 'spectator' ? 'ti-eye' : seat.ready ? 'ti-circle-check' : 'ti-user';
-      const row = pushRow(classes.join(' '), seat.slot, seat.name, this.seatStateText(seat), seatLabel(seat), icon);
+      const row = pushRow(classes.join(' '), seat.slot, seat.name, this.seatRoleText(seat), this.seatReadyText(seat), seatLabel(seat), icon);
       this.attachSeatColor(row, seat);
       this.attachAiDifficulty(row, seat);
       this.attachSeatTransfer(row, seat);
-    }
-    for (const slot of emptySlots(this.view)) {
-      pushRow('seat seat-empty', slot, '空位', '等待加入', `${slot} 号位空着`, 'ti-user-plus');
     }
     const invite = el(this.doc, 'invite-url') as HTMLInputElement | null;
     if (invite) {
@@ -1190,8 +1225,10 @@ export class PlatformApp {
     const access = el(this.doc, 'lan-access');
     if (access) {
       const hints = accessHints(this.lanOrigins, this.view.room?.code ?? null);
-      access.textContent = hints.join('\n');
-      access.classList.toggle('hidden', hints.length === 0);
+      // 房间信息块里只留「手动加入」那条：地址已经在上面的输入框里，再列一遍多网卡地址
+      // 只会把这一块撑高，把下面三栏挤到首屏外面去。
+      access.textContent = hints[1] ?? '';
+      access.classList.toggle('hidden', hints.length < 2);
     }
     const countdown = el(this.doc, 'turn-countdown');
     const countdownBlock = el(this.doc, 'countdown-block');
@@ -1204,11 +1241,24 @@ export class PlatformApp {
     if (bar) this.renderConnectionBar();
   }
 
-  private seatStateText(seat: SeatView): string {
-    if (seat.role === 'spectator') return '观战';
-    if (seat.role === 'ai') return '电脑';
-    if (!seat.connected) return '离线';
+  private phaseText(phase: string): string {
+    return phase === 'lobby' ? '等待入座' : phase === 'playing' ? '对局中' : '已结束';
+  }
+
+  /** 身份列：这个位子是谁（房主 / 玩家 / 电脑 / 观战）。 */
+  private seatRoleText(seat: SeatView): string {
     if (seat.role === 'host') return '房主';
+    if (seat.role === 'ai') return '电脑';
+    if (seat.role === 'spectator') return '观战';
+    return '玩家';
+  }
+
+  /** 准备列：房主与电脑不参与准备，写明为什么而不是留一格空白让人猜。 */
+  private seatReadyText(seat: SeatView): string {
+    if (seat.role === 'spectator') return '不参与';
+    if (seat.role === 'ai') return '自动';
+    if (seat.role === 'host') return '开局权';
+    if (!seat.connected) return '离线';
     return seat.ready ? '已准备' : '未准备';
   }
 
@@ -1242,10 +1292,13 @@ export class PlatformApp {
     panel.classList.toggle('hidden', !isHost(this.view));
     // 邀请链接只在房主那里有用，放在房信息卡里，首屏就能看见。
     el(this.doc, 'room-invite')?.classList.toggle('hidden', !isHost(this.view));
+    // 开局之后就不再动席位构成：加电脑/移交/请出都是改桌子的动作，留着只会让人误点把对局搅了。
+    el(this.doc, 'seat-actions-config')?.classList.toggle('hidden', this.view.phase !== 'lobby');
     const blockers = startBlockers(this.view);
     const startButton = el(this.doc, 'btn-start') as HTMLButtonElement | null;
     if (startButton) {
-      startButton.classList.toggle('hidden', !isHost(this.view));
+      // 对局中把「开始对局」收掉：留一个永远点不动的按钮在那里，只会让人一直去点它。
+      startButton.classList.toggle('hidden', !isHost(this.view) || this.view.phase !== 'lobby');
       startButton.disabled = this.view.phase !== 'lobby' || !blockers.ok;
       startButton.textContent = blockers.tooFew
         ? '人还不够'
@@ -1307,7 +1360,7 @@ export class PlatformApp {
       );
       if (candidates.some((s) => s.seatId === previous)) select.value = previous;
     }
-    this.syncHostConsole();
+    this.syncRulePanel();
   }
 
   private renderGame(): void {

@@ -120,10 +120,10 @@
   transition: background-color var(--bp-tap), border-color var(--bp-tap), color var(--bp-tap);
 }
 /* 卡片浮起是参考站同款：hover 换靛紫描边 + translateY(-2px) */
-.bp-panel, .room-head {
+.bp-panel {
   transition: border-color var(--bp-lift), transform var(--bp-lift), background-color var(--bp-lift);
 }
-.bp-panel:hover, .room-head:hover {
+.bp-panel:hover {
   border-color: var(--bp-accent);
   transform: translateY(-2px);
 }
@@ -329,26 +329,32 @@ option:disabled {
 .status { min-height: 26px; margin: 16px 0 0; font: 15px/1.6 var(--bp-font-mono); color: var(--bp-accent-hi); }
 .status:empty { display: none; }
 
-/* ---------- 房间内 HUD 头 ---------- */
+/* ---------- 块① 房间信息：房号 / 房间名 / 游戏 / 状态 / 局域网地址 / 游戏资料 ---------- */
 .room-playing-head:empty { display: none; }
-.room-playing-head:not(:empty) { margin-bottom: 16px; }
-.room-head {
+.room-playing-head:not(:empty) { margin-bottom: 12px; }
+/* 一行铺开而不是竖着堆：这六项都是"进房就要确认一遍"的东西，横排才一屏装得下。
+   用 flex 换行而不是定死列数——局域网地址要吃掉剩下的宽度，倒计时又时有时无。 */
+.room-info-body {
   display: flex;
-  align-items: center;
-  gap: 44px;
-  padding: 26px var(--bp-pad);
-  background: var(--bp-panel);
-  border: 1px solid var(--bp-line);
-  border-radius: 6px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 24px;
+  padding: 6px 16px 8px;
 }
-.room-head h2 { font: 500 var(--bp-title)/1.2 var(--bp-font-display); letter-spacing: 0.06em; }
-.room-meta { margin: 6px 0 0; font: 13.5px/1.5 var(--bp-font-mono); color: var(--bp-accent-hi); }
-.room-meta:empty { display: none; }
+/* 信息块是"先扫一眼"的，卡头不占 65px：一行标题 + 右侧两个按钮就够。 */
+.room-info > .card-header { padding: 8px 16px; }
+.room-info .card-title { font-size: 16px; }
+/* 信息块是"看"的不是"点"的：不跟着 .bp-panel 一起上浮，否则鼠标一过整块跳一下。 */
+.room-info:hover { border-color: var(--bp-line); transform: none; }
+.room-info-item { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.room-info-label { font: 12px/1.2 var(--bp-font-mono); letter-spacing: 0.14em; color: var(--bp-dim); }
+.room-info-value { font-size: 15px; color: var(--bp-text); overflow-wrap: anywhere; }
+.room-info .is-name .room-info-value { font: 500 19px/1.2 var(--bp-font-display); letter-spacing: 0.02em; }
+.room-info .hud-code { margin-top: 0; }
+.room-info .countdown { margin-top: 0; }
 /* 连接条与大厅状态行是**同一类字**（setStatus 同时写这两处），所以字号与颜色都走同一档。 */
-.connection-bar { margin-top: 8px; font: 15px/1.5 var(--bp-font-mono); color: var(--bp-dim-hi); }
+.connection-bar { margin: 0; padding: 0 16px 8px; font: 14px/1.5 var(--bp-font-mono); color: var(--bp-dim-hi); }
 .connection-bar:empty { display: none; }
-/* HUD 上的微标签：比正文标签再小一档，但不再用 0.26em 那种把中文拉开的字距 */
-.hud-code-label { font: 12.5px/1 var(--bp-font-mono); letter-spacing: 0.18em; color: var(--bp-dim-hi); }
 .hud-code {
   margin-top: 8px;
   font: 500 var(--bp-code)/0.9 var(--bp-font-display);
@@ -454,15 +460,15 @@ option:disabled {
 .reference-figure figcaption { margin-top: 6px; font-size: 13.5px; line-height: 1.5; color: var(--bp-dim-hi); }
 .reference-backdrop { position: fixed; inset: 0; z-index: 1050; background: rgba(10, 10, 15, 0.6); }
 
-/* ---------- 房间布局：lobby 左栏房信息 + 房主台，右侧席位与聊天并排；playing 对局区拉通 ---------- */
+/* ---------- 房间布局：lobby 三块（规则 / 席位 / 聊天）并排；playing 对局区拉通 ---------- */
 .room-layout { margin-left: 0; margin-right: 0; }
 .room-layout:not(.is-playing) {
-  /* 三栏共用桌面高度。减掉的 250px = 顶栏 100 + 上下留白；原来写 208 会算高 39px，
-     页面因此永远多出一条竖向滚动条，和左栏自己的滚动条叠成两条。 */
-  --bp-room-col-h: clamp(300px, calc(100vh - 380px), 760px);
+  /* 三栏共用桌面高度。要扣的是顶栏 + 房间信息块 + 上下留白；
+     少扣一样，页面就会多出一条竖向滚动条，和左栏自己的滚动条叠成两条。 */
+  --bp-room-col-h: clamp(280px, calc(100vh - 389px), 760px);
   display: grid;
-  /* 左栏只放房信息、邀请链接与房主操作，宽度让给席位：席位是全程都在看的一栏。 */
-  grid-template-columns: minmax(400px, 1.3fr) minmax(0, 1.65fr) minmax(0, 1fr);
+  /* 按读的顺序从左到右：规则配置（建房时定一次）→ 席位配置（全程在看，拿最宽的一列）→ 房间聊天。 */
+  grid-template-columns: minmax(300px, 1.05fr) minmax(0, 1.75fr) minmax(0, 1.05fr);
   align-items: stretch;
   gap: 16px;
 }
@@ -474,8 +480,7 @@ option:disabled {
   gap: 10px;
   min-width: 0;
   height: var(--bp-room-col-h);
-  /* 左栏不再是一张合并大卡：房信息、房主操作、本局规则各自成卡，靠间距分组。
-     内容超出桌面高度时整栏滚动，卡片本身不被切一半。 */
+  /* 左栏就是块②规则配置：内容超出桌面高度时整栏滚动，卡片本身不被切一半。 */
   overflow-y: auto;
   overflow-x: hidden;
   /* 左栏内容比桌面高时自己滚：滚动条常驻槽位，避免出现/消失时整栏宽度跳一下。 */
@@ -494,49 +499,7 @@ option:disabled {
   flex-direction: column;
   gap: 10px;
 }
-.room-layout:not(.is-playing) #room-left-host .host-console {
-  flex: 0 0 auto;
-  min-height: 0;
-  border: 1px solid var(--bp-line);
-  border-radius: 6px;
-  background: var(--bp-panel);
-}
-.room-layout:not(.is-playing) #room-left-host .host-console:hover {
-  border-color: var(--bp-line);
-  transform: none;
-}
-.room-layout:not(.is-playing) #room-left-host .host-console-head {
-  padding: 14px 18px;
-  background: transparent;
-}
-.room-layout:not(.is-playing) #room-left-host .host-console-body {
-  flex: 0 0 auto;
-  min-height: 0;
-  padding: 14px 18px 16px;
-  overflow: visible;
-}
-.room-layout:not(.is-playing) .room-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 10px 12px;
-  padding: 14px 16px;
-  background: var(--bp-panel);
-  border: 1px solid var(--bp-line);
-  border-radius: 6px;
-}
-.room-layout:not(.is-playing) .room-head:hover {
-  border-color: transparent;
-  transform: none;
-}
-/* 房号与标题同一行：左栏只有 400px，竖着堆两行白占 46px。 */
-.room-layout:not(.is-playing) .room-head > .flex-grow-1 { grid-column: 1; grid-row: 1; }
-.room-layout:not(.is-playing) .room-head > .text-end { grid-column: 2; grid-row: 1; text-align: right !important; }
-.room-layout:not(.is-playing) .room-head #countdown-block { grid-column: 1; grid-row: 2; margin-left: 0; text-align: left !important; }
-.room-layout:not(.is-playing) .room-head #btn-reference { grid-column: 2; grid-row: 2; justify-self: end; align-self: end; }
-.room-layout:not(.is-playing) .room-head h2 { font-size: 22px; line-height: 1.25; }
-.room-layout:not(.is-playing) .room-head .hud-code { font-size: 36px; }
-.room-layout:not(.is-playing) .connection-bar { font-size: 13px; }
+/* 房间信息是顶部独立一整块（见 .room-info-*），不再塞进左栏——左栏只留规则配置。 */
 .room-layout:not(.is-playing) .side-panels,
 .room-layout:not(.is-playing) .side-panels-body { display: contents; }
 .room-layout:not(.is-playing) .side-panels-head { display: none; }
@@ -553,77 +516,39 @@ option:disabled {
   height: var(--bp-room-col-h);
 }
 .room-layout:not(.is-playing) #seat-column > .bp-panel,
-.room-layout:not(.is-playing) #chat-panel > .bp-panel { height: 100%; }
+.room-layout:not(.is-playing) #chat-panel > .bp-panel {
+  height: 100%;
+  /* 卡片自己是列：席位表/聊天记录吃满剩余高度，底栏（房主操作、输入框）钉在卡底。 */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* 席位卡的卡头收窄：一屏里要同时装下 4 个席位和房主底栏，卡头多出的 16px 就是从席位表里抢的。 */
+.room-layout:not(.is-playing) #seat-column > .bp-panel > .card-header { padding: 10px 16px; }
 .room-layout:not(.is-playing) #seat-grid {
   display: grid;
   flex: 1 1 auto;
-  grid-auto-rows: minmax(var(--bp-row), 1fr);
+  /* 42px 一行：4 个席位要在一屏里看全，60px 的卡槽在 768 高的屏上只够摆两个半。 */
+  grid-auto-rows: minmax(40px, 1fr);
+  gap: 3px;
   overflow-y: auto;
 }
 .room-layout:not(.is-playing) #chat-panel .chat-log { flex: 1 1 auto; min-height: 0; }
-.room-layout:not(.is-playing) #room-left .host-console-head {
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-}
-.room-layout:not(.is-playing) #room-left .host-console-head-actions {
-  width: auto;
-  margin-left: auto;
-  justify-content: flex-end;
-}
-.room-layout:not(.is-playing) #room-left .host-console-body {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-}
 .room-layout:not(.is-playing) #room-left .rule-config-panel-body { gap: 10px 14px; }
 .room-layout:not(.is-playing) #room-left .rule-field .hint {
   margin-top: 4px;
   font-size: 13px;
   line-height: 1.5;
 }
-.room-layout:not(.is-playing) #room-left .host-actions {
-  border-left: 0;
-  padding-left: 0;
-  border-top: 1px solid var(--bp-line);
-  padding-top: 14px;
-}
 .drawer-host-slot:empty { display: none; }
 
-/* 房主控制台把「本局规则」和「房主操作」收进同一张卡；非房主只保留只读规则。 */
-.host-console-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 20px;
-  background: var(--bp-panel-alt);
-  border-bottom: 1px solid var(--bp-line);
-}
-.host-console-title { margin: 0; font: 500 18px/1.2 var(--bp-font-display); letter-spacing: 0.08em; }
-.host-console-head-actions { display: flex; align-items: center; gap: 12px; }
-.host-console-hint { font: 13px/1.4 var(--bp-font-mono); color: var(--bp-dim-hi); }
-.room-layout.is-playing #side-panels .host-console-head { align-items: flex-start; flex-direction: column; }
-.room-layout.is-playing #side-panels .host-console-head-actions { width: 100%; justify-content: space-between; }
-.host-console-body { display: block; padding: 16px 20px 18px; }
 .rule-config-section { min-width: 0; }
-.host-console .rule-config-panel-body { padding: 0; }
-.host-console .rule-config-panel-actions { padding: 12px 0 0; }
-.host-actions { display: grid; gap: 10px; min-width: 0; }
-.host-actions .hint { margin: 0; font-size: 12.5px; line-height: 1.55; }
-.host-actions .form-label { margin-bottom: 6px; }
 .host-kick-row { display: flex; gap: 8px; align-items: stretch; }
 .host-kick-row .form-select { flex: 1 1 auto; min-width: 0; }
 
-/* ---------- 邀请链接：挂在房信息卡里，房主首屏可见 ---------- */
-.room-invite { grid-column: 1 / -1; margin-top: 2px; }
-.room-invite-label {
-  display: block;
-  margin-bottom: 6px;
-  font: 12.5px/1 var(--bp-font-mono);
-  letter-spacing: 0.18em;
-  color: var(--bp-dim-hi);
-}
-.room-invite .hint { margin: 8px 0 0; font-size: 12.5px; line-height: 1.6; white-space: pre-line; }
+/* ---------- 邀请链接：挂在房间信息块里，房主首屏可见 ---------- */
+.room-invite { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.room-invite .hint { margin: 6px 0 0; font-size: 12.5px; line-height: 1.6; white-space: pre-line; }
 .room-layout.is-playing .room-invite { display: none; }
 /* 解散房间是「菜单项」不是「状态条」：靠左、去掉填充，别在卡片底部居中发红字。 */
 #btn-close { justify-self: start; padding-left: 2px; }
@@ -764,21 +689,16 @@ option:disabled {
   padding-left: 0;
   padding-right: 0;
 }
-.room-layout.is-playing #side-panels .host-console-body { grid-template-columns: minmax(0, 1fr); }
-.room-layout.is-playing #side-panels .host-actions { border-left: 0; padding-left: 0; border-top: 1px solid var(--bp-line); padding-top: 14px; }
 .room-layout.is-playing #side-panels .chat-log { flex: 1 1 auto; min-height: 240px; }
 .drawer-backdrop { position: fixed; inset: 0; z-index: 1030; background: rgba(10, 10, 15, 0.6); }
 
 @media (max-width: 991.98px) {
-  .room-head { flex-wrap: wrap; gap: 18px 28px; padding: 20px; }
+  .room-info-body { gap: 12px 18px; padding: 12px 16px 14px; }
   .room-layout:not(.is-playing) { grid-template-columns: minmax(0, 1fr); }
   .room-layout:not(.is-playing) #room-left { grid-column: 1; grid-row: 1; height: auto; }
   .room-layout:not(.is-playing) #room-left-host { flex: none; }
-  .room-layout:not(.is-playing) #room-left-host .host-console-body { flex: none; overflow: visible; }
   .room-layout:not(.is-playing) #seat-column { grid-column: 1; grid-row: 2; height: clamp(340px, 48vh, 520px); }
   .room-layout:not(.is-playing) #chat-panel { grid-column: 1; grid-row: 3; height: clamp(340px, 48vh, 520px); }
-  .host-console.has-rules.is-host .host-console-body { grid-template-columns: minmax(0, 1fr); }
-  .host-console.has-rules.is-host .host-actions { border-left: 0; padding-left: 0; border-top: 1px solid var(--bp-line); padding-top: 14px; }
 }
 @media (max-width: 767.98px) {
   .room-layout.is-playing #game-host { height: auto; min-height: 420px; }
@@ -815,12 +735,13 @@ option:disabled {
 }
 .seat-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .seat-state { font: 13.5px/1 var(--bp-font-mono); letter-spacing: 0.06em; color: var(--bp-dim-hi); }
-/* 行内控件按固定列对齐：状态列同宽，右侧永远给动作留一列。 */
+/* 行内控件按固定列对齐：图标 / 座位号 / 名字 / 身份 / 准备 / 动作。
+   身份与准备各占一列（而不是挤成一格），"是谁"和"准备好没"才不用读同一串字去猜。 */
 .room-layout:not(.is-playing) .seat {
   display: grid;
-  grid-template-columns: 22px 46px minmax(0, 1fr) 64px 88px;
-  gap: 12px;
-  padding: 0 20px;
+  grid-template-columns: 34px 34px minmax(0, 1fr) 52px 74px 96px;
+  gap: 10px;
+  padding: 0 14px;
 }
 .room-layout:not(.is-playing) .seat-ai-difficulty { width: 88px; }
 .room-layout:not(.is-playing) .seat-state { text-align: right; white-space: nowrap; }
@@ -1032,7 +953,7 @@ option:disabled {
 
 @media (max-width: 1200px) {
   :root { --bp-code: 46px; --bp-count: 28px; --bp-row: 62px; }
-  .room-head { gap: 26px; }
+  .room-info-body { gap: 12px 20px; }
 }
 @media (max-width: 992px) {
   .chat-log { min-height: 260px; }
@@ -1099,51 +1020,52 @@ option:disabled {
    仍然无渐变、无关键帧、无发光。
    ========================================================================== */
 
-/* ---------- 房间横幅：房名 / 邀请 / 房号 / 入口横排一整条 ---------- */
+/* ---------- 块① 房间信息：一屏看全房号 / 房名 / 游戏 / 状态 / 地址 ---------- */
 .room-banner { margin-bottom: 10px; }
-.room-banner .room-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 380px) auto auto;
-  align-items: center;
-  gap: 8px 20px;
-  padding: 16px 20px;
-  background: var(--bp-panel);
-  border: 1px solid var(--bp-line);
-  border-radius: 6px;
-}
-.room-banner .room-head > .flex-grow-1 { grid-column: 1; grid-row: 1; min-width: 0; }
-.room-banner .room-head .room-invite { grid-column: 2; grid-row: 1; margin: 0; }
-.room-banner .room-head > .text-end { grid-column: 3; grid-row: 1; text-align: right !important; }
-.room-banner .room-head #countdown-block { grid-column: 3; grid-row: 2; margin-left: 0; }
-.room-banner .room-head #btn-reference { grid-column: 4; grid-row: 1; justify-self: end; }
-.room-banner .room-head #btn-toggle-drawer { grid-column: 4; grid-row: 2; justify-self: end; }
-.room-banner .room-head h2 {
-  font: 500 26px/1.2 var(--bp-font-display);
-  letter-spacing: 0.02em;
-}
-.room-banner .room-meta { margin: 6px 0 0; font-size: 13px; }
-.room-banner .hud-code {
-  margin-top: 4px;
-  padding: 2px 10px 4px;
+.room-info .hud-code {
+  padding: 1px 8px 2px;
   border: 1px solid var(--bp-line);
   border-radius: 3px;
   background: var(--bp-panel-alt);
-  font-size: 26px;
+  font-size: 20px;
   letter-spacing: 0.14em;
 }
-.room-banner .hud-code-label { font-size: 11.5px; }
-.room-banner .room-invite .form-control { font-size: 13px; }
+/* 地址是这一块里唯一要"复制走"的东西：标签和输入框横排一行，
+   竖着排（标签一行、输入框一行、提示两行）会把整块顶到 250px，首屏就装不下三栏了。 */
+.room-info .room-invite {
+  flex: 1 1 420px;
+  min-width: 300px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 10px;
+}
+.room-info .room-invite .room-info-label { align-self: center; }
+.room-info .room-invite .input-group { grid-column: 2; }
+.room-info .room-invite .hint { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.4; }
+.room-info .room-invite .form-control { font-size: 13px; }
+/* 对局中：房间信息压成顶部一条，房号与状态还在，但不抢对局区高度。 */
+.room-playing-head .room-info .card-header { padding: 8px 16px; }
+.room-playing-head .room-info-body {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 10px 16px;
+  gap: 10px 20px;
+}
+.room-playing-head .room-info .is-name .room-info-value { font-size: 17px; }
+.room-playing-head .room-info .hud-code { font-size: 19px; }
+.room-playing-head .room-info .connection-bar { padding: 0 16px 10px; }
 
 /* ---------- 席位：从"名单行"改成"卡槽" ---------- */
 .room-layout:not(.is-playing) #seat-grid {
-  padding: 8px;
-  gap: 8px;
+  padding: 2px 4px;
+  gap: 3px;
   border-top: 0;
 }
+/* 卡槽外观（列宽在席位名册那节统一给，这里只管描边与底色）。 */
 .room-layout:not(.is-playing) .seat {
-  grid-template-columns: 40px 40px minmax(0, 1fr) 78px 88px;
-  gap: 14px;
-  padding: 0 16px;
+  /* 基础名册行高是 --bp-row(60px)，那是对局中横排状态条用的；lobby 的席位表要一行装 4 个。 */
+  min-height: 40px;
   border: 1px solid var(--bp-line);
   border-left: 5px solid var(--seat-color, var(--bp-line));
   border-radius: 4px;
@@ -1153,9 +1075,9 @@ option:disabled {
 .room-layout:not(.is-playing) .seat-icon {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  font-size: 18px;
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
   border-radius: 50%;
   border: 1px solid var(--bp-line);
   background: var(--bp-panel);
@@ -1167,23 +1089,24 @@ option:disabled {
   background: var(--bp-panel);
 }
 .room-layout:not(.is-playing) .seat-slot {
-  min-width: 40px;
-  height: 32px;
+  min-width: 32px;
+  height: 26px;
   border-radius: 3px;
   background: var(--bp-panel-alt);
   border: 1px solid var(--bp-line);
+  font-size: 13px;
   color: var(--bp-dim);
 }
 .seat.has-seat-color .seat-slot { color: var(--bp-text); border-color: var(--seat-color); }
-.room-layout:not(.is-playing) .seat-name { font-size: 16px; }
+.room-layout:not(.is-playing) .seat-name { font-size: 14.5px; }
 /* 状态做成徽章，和名字拉开层级 */
 .room-layout:not(.is-playing) .seat-state {
   justify-self: end;
-  padding: 4px 10px;
+  padding: 2px 8px;
   border: 1px solid var(--bp-line);
   border-radius: 999px;
   background: var(--bp-panel-alt);
-  font: 12px/1.2 var(--bp-font-mono);
+  font: 11.5px/1.3 var(--bp-font-mono);
   letter-spacing: 0.04em;
   text-align: center;
   color: var(--bp-dim-hi);
@@ -1194,6 +1117,71 @@ option:disabled {
 .seat-empty { border-style: dashed; border-left-style: solid; border-left-color: var(--bp-line); }
 .seat-empty .seat-icon { border-style: dashed; }
 .seat-empty .seat-slot { border-style: dashed; }
+
+/* 身份徽章：方角、比准备徽章更素——它是"这个人是谁"，不是"他能不能开局"。 */
+.room-layout:not(.is-playing) .seat-role {
+  justify-self: start;
+  padding: 2px 6px;
+  border: 1px solid var(--bp-line);
+  border-radius: 3px;
+  background: var(--bp-panel);
+  font: 11.5px/1.3 var(--bp-font-mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--bp-dim-hi);
+}
+.seat.seat-host .seat-role { color: var(--bp-warn); border-color: var(--bp-warn); }
+.seat.seat-ai .seat-role { color: var(--bp-violet); border-color: var(--bp-violet); }
+.seat.seat-spectator .seat-role { color: var(--bp-magenta); border-color: var(--bp-magenta); }
+
+/* 空位行上的 +：一个方框里一个加号，比"加一个电脑位"这种整句按钮更省地方，
+   也把"加在哪"这件事交给行本身——点哪行就坐哪号位。 */
+.seat-add-ai {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  justify-self: end;
+  font-size: 18px;
+  color: var(--bp-dim-hi);
+  background: transparent;
+  border: 1px dashed var(--bp-line);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.seat-add-ai:hover:not(:disabled) { color: var(--bp-accent-hi); border-color: var(--bp-accent-hi); border-style: solid; }
+.seat-add-ai:disabled { opacity: 0.45; cursor: not-allowed; }
+.seat-add-ai:focus-visible { outline: 2px solid var(--bp-accent-hi); outline-offset: 2px; }
+
+/* ---------- 席位配置底栏：房主的桌子级动作（加位 / 移交 / 请出 / 解散 / 开局） ---------- */
+.seat-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 12px 8px;
+  border-top: 1px solid var(--bp-line);
+  background: var(--bp-panel-alt);
+}
+/* 底栏里的控件统一压到 32px：默认 .btn-sm 也有 40px，两行就把席位表挤掉一整个席位。 */
+.seat-actions .btn { height: 32px; padding: 0 10px; font-size: 13px; }
+/* 自绘下拉自带 min-height:40px，只写 height 会被它顶回去，两个都要压。 */
+.seat-actions .form-select,
+.seat-actions .bp-listbox-trigger {
+  height: 32px;
+  min-height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 13px;
+}
+.seat-actions .btn-primary { height: 36px; font-size: 14px; }
+.seat-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* 席位表是这一屏的主角，底栏只是配菜：下拉收窄到 88px，第一行才塞得进三组控件。 */
+.seat-action-inline { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 0 1 auto; }
+.seat-action-inline .form-select { width: auto; min-width: 88px; flex: 1 1 auto; }
+.seat-action-inline .btn { white-space: nowrap; }
+.seat-actions-main { justify-content: space-between; }
+.seat-actions-main .btn-primary { min-width: 132px; }
 
 /* ---------- 聊天：等宽正文，像终端 ---------- */
 #chat-panel .chat-log { font-family: var(--bp-font-mono); font-size: 14px; }
