@@ -86,6 +86,11 @@ const HIGHLIGHTS = {
     '`reference`：静态资料入口；客户端懒加载，`bpmap doctor` 校验入口与文档，`bpmap.json` 与包头支持 `reference`。',
     '构建模板会把 `src/reference/` 按原样铺到包根并自动写 `reference`。',
   ],
+  '0.4.0': [
+    '`seatOptions`：座位级选项声明（每座电脑难度、座位颜色），`normalizeSeatOptions(role, slot, raw)` 由游戏给默认值。',
+    '`SeatView.options` / `GameSeatInfo.options` 改为必填，平台只透传 `options`，不解释含义。',
+    '新增 `parseSeatOptions()` / `SEAT_OPTIONS_LIMITS`；房主改选项走 `hostSeat { op: "setOptions" }`（平台侧）。',
+  ],
 };
 const highlights = HIGHLIGHTS[version];
 const notes = `# 3178 SDK ${version}
