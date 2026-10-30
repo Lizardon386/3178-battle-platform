@@ -1,4 +1,5 @@
 import type { SeatRole } from './seats.js';
+import type { SeatOptionsSpec } from './seat-options.js';
 
 export interface GameUiOptions {
   /** 游戏内聊天由平台聊天卡提供，还是由游戏自己的界面提供。 */
@@ -79,6 +80,8 @@ export interface GameManifest {
   ruleConfig?: RuleConfigSpec;
   /** 静态资料入口；只声明路径，文档由平台按需取。 */
   reference?: GameReferenceSpec;
+  /** 座位级选项声明；平台只透传值，不解释含义。 */
+  seatOptions?: SeatOptionsSpec;
 }
 
 export interface GameAsset {

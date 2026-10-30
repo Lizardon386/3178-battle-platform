@@ -19,4 +19,6 @@ export interface SeatView {
   team: string | number | null;
   /** 是否为房主座位（role==='host' 的冗余标记，便于前端画 🎮）。 */
   isHost: boolean;
+  /** 座位级选项；平台只透传，不解释含义。 */
+  options: Record<string, unknown>;
 }

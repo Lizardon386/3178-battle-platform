@@ -1,6 +1,6 @@
 {
   "name": "@lizardon386/pack-format",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "3178 单文件游戏包格式：BPMAP 包头、读写、校验、打包和解包缓存",
   "license": "MIT",
   "author": "3178-battle-platform contributors",
@@ -37,7 +37,7 @@
     "src"
   ],
   "dependencies": {
-    "@lizardon386/core-abi": "^0.3.0"
+    "@lizardon386/core-abi": "^0.4.0"
   },
   "publishConfig": {
     "access": "public"

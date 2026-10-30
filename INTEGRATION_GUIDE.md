@@ -63,6 +63,7 @@ SDK 交付的是接入流程、能力和规范，不是游戏运行时，也不�
 | 实时动作、连续输入和高频同步 | 规划中，当前不提供 |
 | game-kit：事件流、聊天、记分板、座位颜色 | 可用 |
 | 规则表单（rule-config）、静态资料（reference） | SDK 0.3.0 起提供 |
+| 座位级选项（seatOptions：每座位难度/颜色） | SDK 0.4.0 提供，未发布（本地 link） |
 | `/api/version`、`bpmap doctor` | 可用 |
 | `bpmap upgrade`、旧包适配器 | 规划中 |
 
@@ -458,7 +459,7 @@ packages/sdk-tools/
 
 | 导入 | 内容 |
 |---|---|
-| `@lizardon386/game-sdk` | `GameModule` / `GameInstance` / `GameContext` / `GameSeatInfo` / `GameAction` / `Effect` / `Outcome` / `Reject` / `reject()` / `isReject()` / `ViewerId` / `stableDigest` / `GameManifest` / `GameAsset` / `GameUiOptions` / `SeatRole` / `RoomPhase` / `SeatView` / `PlatformCode` / `NoticeCode` / `GameMode` / `API_VERSION` / `SUPPORTED_API_VERSIONS` / `GAME_MODES` / `SUPPORTED_MODES` / `DEFAULT_MODE` / `RuleConfigSpec` / `RuleConfigField` / `parseRuleConfig()` / `RULE_CONFIG_LIMITS` / `GameReferenceSpec` / `GameReferenceDocument` / `GameReferenceGroup` / `GameReferenceItem` / `GameReferenceImage` / `parseGameReference()` / `GAME_REFERENCE_LIMITS` / `isValidGameReferenceEntry()` / `isValidPackRelativePath()` |
+| `@lizardon386/game-sdk` | `GameModule` / `GameInstance` / `GameContext` / `GameSeatInfo` / `GameAction` / `Effect` / `Outcome` / `Reject` / `reject()` / `isReject()` / `ViewerId` / `stableDigest` / `GameManifest` / `GameAsset` / `GameUiOptions` / `SeatRole` / `RoomPhase` / `SeatView` / `PlatformCode` / `NoticeCode` / `GameMode` / `API_VERSION` / `SUPPORTED_API_VERSIONS` / `GAME_MODES` / `SUPPORTED_MODES` / `DEFAULT_MODE` / `RuleConfigSpec` / `RuleConfigField` / `parseRuleConfig()` / `RULE_CONFIG_LIMITS` / `GameReferenceSpec` / `GameReferenceDocument` / `GameReferenceGroup` / `GameReferenceItem` / `GameReferenceImage` / `parseGameReference()` / `GAME_REFERENCE_LIMITS` / `isValidGameReferenceEntry()` / `isValidPackRelativePath()` / `SeatOptionsSpec` / `SeatOptionField` / `parseSeatOptions()` / `SEAT_OPTIONS_LIMITS` |
 | `@lizardon386/game-sdk/client` | `GameClientContract` / `GameActions`（只有类型，没有运行时） |
 | `@lizardon386/game-sdk/node` | re-export `@lizardon386/pack-format`，保留 `packDirectory` / `readPack` / `readPackSource` / `extractPack` / `listPackFiles` / 包格式常量和类型 |
 | `@lizardon386/game-sdk/kit` | `ChatPanel` / `FeedPanel` / `ScoreboardPanel` / `seatColor`，以及 `normalizeFeedEntry`、`mergeFeedEntries`、`formatFeedTime`、`normalizeChatLine`、`mergeChatLines`、`chatText`、`resolveColumnValue`、`formatColumnValue`、`sortScoreboardRows`、`buildScoreboardRows`、`connectionLabel` 等纯函数 |
@@ -491,6 +492,8 @@ export interface GameModule {
   ui?: { chat?: 'platform' | 'game' };
   ruleConfig?: RuleConfigSpec;
   reference?: GameReferenceSpec;
+  seatOptions?: SeatOptionsSpec;
+  normalizeSeatOptions?(role: SeatRole, slot: number, raw: Record<string, unknown> | undefined): Record<string, unknown>;
 }
 ```
 
@@ -512,6 +515,8 @@ export interface GameModule {
 | `ui.chat` | 只支持 `chat` 一个键，取值 `platform`（默认）或 `game`；`game` 时父页面在对局阶段隐藏平台聊天卡。 |
 | `ruleConfig` | 可选；规则表单，见 4.11。只声明表单项，默认值由平台用；房主在房间里改，走房主专用命令。 |
 | `reference` | 可选；静态资料入口（包内 JSON 路径），见 4.12。manifest 只带 `entry`，文档懒加载。 |
+| `seatOptions` | 可选；座位级选项声明（如电脑难度、座位颜色），见 4.13。平台只透传值。 |
+| `normalizeSeatOptions` | 可选；按角色和槽位给座位选项默认值/归一化，平台建座和改选项时调用。 |
 
 `seats.min` 是开局人数下限，电脑位也算人数；`seats.max` 和房间槽位限制总座位数。`roles` 里建议写 `ai` 作为声明，但当前代码不会因为缺 `ai` 而拒绝加电脑位。
 
@@ -983,6 +988,84 @@ export interface GameReferenceImage { path: string; alt: string; caption?: strin
 校验用 `parseGameReference(value)`：输入已解析的对象或原始 JSON 文本，返回 `{ ok: true, doc }` 或 `{ ok: false, error }`；`error` 是可直接显示的中文原因。平台客户端与 `bpmap doctor` 共用这一份实现，不要各写一套。上限常量在 `GAME_REFERENCE_LIMITS`。
 
 `reference` 同样是可选增量，不升 `apiVersion`。
+
+### 4.13 座位选项（seatOptions）
+
+有些配置是**按座位**走的：每个电脑位的难度、每个非空座位的颜色。平台不解释这些值的含义，只把 `options` 原样存下来、随座位广播。
+
+声明：
+
+```ts
+export interface SeatOptionFieldBase {
+  key: string;                 // ^[a-z][a-z0-9-]{0,31}$
+  label: string;
+  description?: string;
+  roles: SeatRole[];           // 该字段对哪些座位显示；至少一项
+}
+export type SeatOptionField =
+  | (SeatOptionFieldBase & { type: 'boolean'; default: boolean })
+  | (SeatOptionFieldBase & { type: 'enum'; default: string; options: Array<{ value: string; label: string; color?: string }> })
+  | (SeatOptionFieldBase & { type: 'integer'; default: number; min: number; max: number; step?: number });
+export interface SeatOptionsSpec { fields: SeatOptionField[] }
+```
+
+约束与 rule-config 同口径：字段 1..24；`key` 匹配正则且唯一；`label` ≤40 字、`description` ≤200 字；enum 选项 1..8 个、`value` 匹配 `^[a-z0-9-]{1,32}$`、`label` ≤24 字、`default` 必须命中某个选项；integer 的 `min ≤ default ≤ max`、跨度 ≤1000、`step` 为正整数。`roles` 只接受 `host` / `player` / `spectator` / `ai`，至少一项且不重复。`color` 是可选的 CSS 颜色字符串（≤64 字），只给平台画色块，不参与游戏规则。
+
+值怎么走：
+
+1. 平台新建座位时，用游戏的 `normalizeSeatOptions(role, slot, raw)` 得到该座位的 `options`；没有这个方法时用 spec 的 `default`。
+2. 房主在 `lobby` 阶段改某个座位的选项，平台发房主专用命令；服务端仍然只做透传，推进 revision 并广播，**不重置 ready**。
+3. `SeatView` 和 `GameSeatInfo` 都带必填的 `options: Record<string, unknown>`；没有选项时平台给空对象。
+4. 游戏自己读 `options` 解释难度/颜色；平台不会因为 `color` 改变任何规则，也不会替游戏校验值域。
+
+**默认值必须由游戏给**：如果只声明 `enum` 的 `default` 而不写 `normalizeSeatOptions`，所有座位会拿到同一个默认值（比如全部红色）。
+
+`@lizardon386/game-sdk` 导出 `parseSeatOptions(value)` 和 `SEAT_OPTIONS_LIMITS`；宿主加载模块时按同一口径校验。
+
+示例（电脑难度 + 座位颜色）：
+
+```ts
+const seatOptions: SeatOptionsSpec = {
+  fields: [
+    {
+      key: 'difficulty',
+      label: '电脑难度',
+      type: 'enum',
+      roles: ['ai'],
+      default: 'normal',
+      options: [
+        { value: 'easy', label: '简单' },
+        { value: 'normal', label: '普通' },
+        { value: 'cold', label: '冷酷' },
+      ],
+    },
+    {
+      key: 'color',
+      label: '座位颜色',
+      type: 'enum',
+      roles: ['host', 'player', 'ai'],
+      default: 'red',
+      options: [
+        { value: 'red', label: '红', color: '#ef4444' },
+        { value: 'yellow', label: '黄', color: '#f59e0b' },
+        { value: 'green', label: '绿', color: '#22c55e' },
+        { value: 'blue', label: '蓝', color: '#3b82f6' },
+      ],
+    },
+  ],
+};
+
+normalizeSeatOptions(role, slot, raw) {
+  const palette = ['red', 'yellow', 'green', 'blue'];
+  return {
+    difficulty: 'normal',
+    color: palette[(Math.max(1, slot) - 1) % palette.length],
+    ...raw,
+  };
+}
+```
+
+`seatOptions` 是 0.4.0 的增量可选契约，`apiVersion` 仍为 1；0.4.0 尚未发布到 npm，联调期用本地 link。
 
 ## 5. SDK 版本、自检与升级
 

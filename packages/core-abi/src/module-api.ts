@@ -1,5 +1,6 @@
 import type { NoticeCode, PlatformCode } from './codes.js';
 import type { GameReferenceSpec, GameUiOptions, RuleConfigSpec } from './manifest.js';
+import type { SeatOptionsSpec } from './seat-options.js';
 import type { RoomPhase, SeatRole } from './seats.js';
 
 /**
@@ -48,6 +49,8 @@ export interface GameSeatInfo {
   team: string | number | null;
   ready: boolean;
   connected: boolean;
+  /** 座位级选项；平台只透传，游戏自己解释。 */
+  options: Record<string, unknown>;
 }
 
 export interface GameContext {
@@ -99,4 +102,8 @@ export interface GameModule {
   ruleConfig?: RuleConfigSpec;
   /** 静态资料入口；manifest 只带路径，文档由平台懒加载。 */
   reference?: GameReferenceSpec;
+  /** 座位级选项声明；平台只透传值，不解释含义。 */
+  seatOptions?: SeatOptionsSpec;
+  /** 按角色与槽位给出座位选项默认值；平台建座与改选项时都会调用。 */
+  normalizeSeatOptions?(role: SeatRole, slot: number, raw: Record<string, unknown> | undefined): Record<string, unknown>;
 }

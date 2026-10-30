@@ -4,7 +4,7 @@
 
 导出路径：
 
-- `@lizardon386/game-sdk`：游戏 ABI、版本常量、`reject` / `isReject` / `stableDigest`、规则表单与静态资料的校验（`parseRuleConfig` / `parseGameReference`）
+- `@lizardon386/game-sdk`：游戏 ABI、版本常量、`reject` / `isReject` / `stableDigest`、规则表单 / 静态资料 / 座位选项的校验（`parseRuleConfig` / `parseGameReference` / `parseSeatOptions`）
 - `@lizardon386/game-sdk/client`：客户端契约类型
 - `@lizardon386/game-sdk/node`：`.bpmap` 读写（re-export `@lizardon386/pack-format`）
 - `@lizardon386/game-sdk/kit`：ChatPanel / FeedPanel / ScoreboardPanel / seatColor
