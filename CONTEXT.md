@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-10-30　模式：三档（README / DESIGN / CONTEXT）　锚点：`d87f201`（master）
+> 最近更新：2026-10-30　模式：三档（README / DESIGN / CONTEXT）　锚点：`1c4b316`（master）　当前接盘：qoder:34b30598-b681-4b8a-ac60-cdfcdc0aa6b1
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
@@ -95,6 +95,4 @@ node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
 - 2026-10-28 Qoder：**交接**：平台侧 SDK 0.3.0 契约、全宽对局区、规则表单与资料面板已交付（`7d5b4c3` / `7697d62` / `9495dba`，215/215）；第一款真游戏「变色对决」重构为独立仓库 `D:\agent_workspace\color-duel`（33/33，本地 3 笔，未公开）；下一步是联调、SDK 0.3.0 发布（待用户确认）与公开仓库。交接给会话 `835cf812`。
 - 2026-10-28 Qoder：**收工**：UNO 开工前置条件（四项拍板、外部改名工程、不搬源码）写进「下一步」；锚点 `8dffb71`；最旧一条交接记录沉降到 [压卡备份.md](压卡备份.md)。
 - 2026-10-28 Qoder：**压卡**：CONTEXT 压到 100 行以内，原第 6–8 节（逐阶段凭据、变更记录、旧追加区）逐字移入 [压卡备份.md](压卡备份.md)；四份文档顶部日期统一到 2026-10-28。
-- 2026-10-28 Qoder：**SDK 版本脚本**：`npm run bump:sdk -- <版本>`（`--dry-run` 预览）同步四包 version、内部依赖与 lock；发布手顺改为 bump → test → smoke → pack → tag。
-- 2026-10-28 Qoder：**Trusted Publishing 验证**：`sdk-v0.2.0` tag/Release 已建，workflow 全绿（版本已存在时跳过 publish）；修掉 CI 上唯一跨平台失败（`hostd stop --port` 硬杀断言只在 Windows 跑）。
-- 2026-10-28 Qoder：**SDK 发布到 npm**：scope 改为账号自带的 `@lizardon386`（`@3178` org 不存在，publish 404），四包 `0.2.0` 发布、`latest` 指向 0.2.0；配置 Trusted Publisher + [publish-sdk.yml](.github/workflows/publish-sdk.yml)。
+- 2026-10-30 Qoder：**房间三栏定稿 + color-duel 0.2.0 发布**：平台 lobby 改按比例三栏（左栏房信息与规则同一卡、宽度 495/426/301@1280）、席位状态/动作列对齐、房主「解散房间」、真人行内「转交房主」；提交 `ff2a30b` / `d87f201`，232/232、seam、tsc 通过。真实 color-duel 0.2.0 已公开：main `d761737`、tag/Release `v0.2.0`、包 `72410de4…`（104,268B），平台 `games/` 已装该包；游戏 37/37、doctor、协议 717/UI 909 猴测 0 违规。换包后必须重启壳才加载新 manifest；平台文档日期已统一 2026-10-30。
