@@ -192,3 +192,29 @@ test('规则摘要随房规变，不随房间名变', () => {
   const renamed = roomWith({ rawConfig: { speed: 1 }, name: '乙房' });
   assert.equal(slow.room.rulesHash, renamed.room.rulesHash);
 });
+
+test('座位级选项：新座位按 slot 初始化，房主可改并广播', () => {
+  const module = fakeModule({
+    seatOptions: {
+      fields: [
+        { key: 'difficulty', label: '电脑强度', type: 'enum', roles: ['ai'], default: 'normal', options: [{ value: 'easy', label: '简单' }, { value: 'normal', label: '普通' }] },
+        { key: 'color', label: '颜色', type: 'enum', roles: ['host', 'player', 'ai'], default: 'red', options: [{ value: 'red', label: '红', color: '#ef4444' }, { value: 'blue', label: '蓝', color: '#3b82f6' }] },
+      ],
+    },
+    normalizeSeatOptions: (role, slot, raw) => ({
+      ...(role === 'ai' ? { difficulty: raw?.difficulty === 'easy' ? 'easy' : 'normal' } : {}),
+      color: raw?.color === 'blue' ? 'blue' : slot === 2 ? 'blue' : 'red',
+    }),
+  });
+  const { room } = roomWith({ module });
+  const guest = room.addSeat({ name: '客人', role: 'player' });
+  assert.ok(guest.ok);
+  assert.deepEqual(guest.seat.options, { color: 'blue' });
+  const ai = room.addSeat({ name: '电脑 1', role: 'ai' });
+  assert.ok(ai.ok);
+  assert.deepEqual(ai.seat.options, { difficulty: 'normal', color: 'red' });
+
+  assert.equal(room.setSeatOptions(ai.seat.seatId, { difficulty: 'easy', color: 'blue' }), true);
+  assert.deepEqual(room.seatView(ai.seat.seatId).options, { difficulty: 'easy', color: 'blue' });
+  assert.deepEqual(room.seatView(ai.seat.seatId).options, { difficulty: 'easy', color: 'blue' });
+});

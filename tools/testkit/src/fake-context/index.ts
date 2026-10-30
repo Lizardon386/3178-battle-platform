@@ -18,6 +18,7 @@ export function makeFakeContext(options: FakeContextOptions): GameContext {
     team: seat.team ?? null,
     ready: seat.ready ?? true,
     connected: seat.connected ?? true,
+    options: { ...(seat.options ?? {}) },
   }));
   const now = options.now ?? (() => Date.now());
   const random = options.random ?? (() => Math.random());

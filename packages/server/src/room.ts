@@ -1,6 +1,7 @@
 import { hashSecret, newSeatId, newTicket, secretMatches } from './ids.js';
 import type { GameAsset, GameInstance, GameManifest, GameModule, GameSeatInfo, RoomPhase, SeatRole, SeatView } from './module-api.js';
 import { manifestOf } from './module-api.js';
+import { coerceSeatOptions } from './seat-options.js';
 import type { RoomView } from '@bp/protocol';
 
 /** 传输层的最小投影：房间不许知道 ws 的存在。 */
@@ -23,6 +24,8 @@ export interface SeatRecord {
   lastSeenAt: number;
   transport: TransportHandle | null;
   isAi: boolean;
+  /** 游戏自定义的座位级选项；平台只透传。 */
+  options: Record<string, unknown>;
 }
 
 export interface ChatEntry {
@@ -235,7 +238,27 @@ export class Room {
       lastSeenAt: this.now(),
       transport: null,
       isAi,
+      options: this.defaultSeatOptions(role, slot),
     };
+  }
+
+  private normalizeSeatOptions(role: SeatRole, slot: number, raw: Record<string, unknown> | undefined): Record<string, unknown> {
+    const normalized = this.module.normalizeSeatOptions?.(role, slot, raw);
+    if (normalized) return { ...normalized };
+    return coerceSeatOptions(this.module.seatOptions, role, raw);
+  }
+
+  private defaultSeatOptions(role: SeatRole, slot: number): Record<string, unknown> {
+    return this.normalizeSeatOptions(role, slot, undefined);
+  }
+
+  setSeatOptions(seatId: string, raw: Record<string, unknown> | undefined): boolean {
+    const seat = this.seat(seatId);
+    if (!seat) return false;
+    if (!this.module.normalizeSeatOptions && !this.module.seatOptions) return false;
+    seat.options = this.normalizeSeatOptions(seat.role, seat.slot, raw);
+    this.bump();
+    return true;
   }
 
   /** 入座并下发票据。房主第一席在建房时占用 1 号槽。 */
@@ -339,6 +362,7 @@ export class Room {
       ageMs: seat.connected ? 0 : seat.disconnectedAt === null ? null : Math.max(0, this.now() - seat.disconnectedAt),
       team: seat.team,
       isHost: seat.seatId === this.hostSeatRef,
+      options: { ...seat.options },
     };
   }
 
@@ -355,6 +379,7 @@ export class Room {
         ageMs: s.connected ? 0 : s.disconnectedAt === null ? null : Math.max(0, this.now() - s.disconnectedAt),
         team: s.team,
         isHost: s.seatId === this.hostSeatRef,
+        options: { ...s.options },
       }));
   }
 
@@ -369,6 +394,7 @@ export class Room {
       team: seat.team,
       ready: seat.ready,
       connected: seat.connected,
+      options: { ...seat.options },
     };
   }
 
@@ -381,6 +407,7 @@ export class Room {
       team: s.team,
       ready: s.ready,
       connected: s.connected,
+      options: { ...s.options },
     }));
   }
 
@@ -437,6 +464,7 @@ export class Room {
     for (const seat of data.seats) {
       this.seatsRef.push({
         ...seat,
+        options: { ...(seat.options ?? {}) },
         connected: false,
         transport: null,
         disconnectedAt: data.updatedAt,

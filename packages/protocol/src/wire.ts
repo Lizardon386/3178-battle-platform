@@ -88,10 +88,12 @@ export interface ClientHostTransfer {
 
 export interface ClientHostSeat {
   type: 'hostSeat';
-  op: 'addAi' | 'removeAi' | 'move' | 'setTeam';
+  op: 'addAi' | 'removeAi' | 'move' | 'setTeam' | 'setOptions';
   seatId?: string;
   slot?: number;
   team?: string | number | null;
+  /** 游戏自定义的座位级选项；平台只做房主/相位闸，不解释内容。 */
+  options?: Record<string, unknown>;
 }
 
 export interface ClientRuleConfig {

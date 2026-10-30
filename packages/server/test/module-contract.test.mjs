@@ -42,6 +42,15 @@ test('模块可选携带 ruleConfig 与 reference，并原样进入 manifest', (
   assert.equal(manifestOf(base, {}).reference, undefined);
 });
 
+test('模块可选携带 seatOptions，并原样进入 manifest', () => {
+  const seatOptions = {
+    fields: [{ key: 'color', label: '颜色', type: 'enum', roles: ['player', 'ai'], default: 'red', options: [{ value: 'red', label: '红' }] }],
+  };
+  assert.deepEqual(manifestOf({ ...base, seatOptions }, {}).seatOptions, seatOptions);
+  const bad = { fields: [{ key: 'color', label: '颜色', type: 'enum', roles: ['player'], default: 'blue', options: [{ value: 'red', label: '红' }] }] };
+  assert.equal(manifestOf({ ...base, seatOptions: bad }, {}).seatOptions, undefined);
+});
+
 test('manifestOf 不把坏声明带进房间', () => {
   const badRule = {
     fields: [{ key: 'mode', label: '模式', type: 'enum', default: 'missing', options: [{ value: 'a', label: 'A' }] }],

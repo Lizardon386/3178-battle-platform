@@ -44,7 +44,7 @@ const SPEC: Record<string, Record<string, Kind | `${Kind}?`>> = {
   hostClose: { reason: 'str?' },
   hostKick: { seatId: 'str' },
   hostTransfer: { seatId: 'str' },
-  hostSeat: { op: 'str', seatId: 'str?', slot: 'int?', team: 'any?' },
+  hostSeat: { op: 'str', seatId: 'str?', slot: 'int?', team: 'any?', options: 'obj?' },
   ruleConfig: { config: 'obj' },
   resync: { since: 'int' },
   ping: { nonce: 'str' },

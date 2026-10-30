@@ -9,6 +9,7 @@ import {
   isValidGameReferenceEntry,
   parseGameReference,
   parseRuleConfig,
+  parseSeatOptions,
   type GameMode,
 } from '@lizardon386/core-abi';
 import type { GameModule } from './module-api.js';
@@ -60,6 +61,10 @@ function validateDeclarations(module: GameModule, readReference: (entry: string)
   if (module.ruleConfig !== undefined) {
     const parsed = parseRuleConfig(module.ruleConfig);
     if (!parsed.ok) throw new Error(`规则表单声明不合法：${parsed.error}`);
+  }
+  if (module.seatOptions !== undefined) {
+    const parsed = parseSeatOptions(module.seatOptions);
+    if (!parsed.ok) throw new Error(`座位选项声明不合法：${parsed.error}`);
   }
   if (module.reference) {
     if (!isValidGameReferenceEntry(module.reference.entry)) {

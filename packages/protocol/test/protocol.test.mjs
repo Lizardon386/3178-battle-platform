@@ -102,3 +102,8 @@ test('manifest 形状检查挡住越界声明', () => {
   assert.ok(!isGameManifest({ ...base, ui: 'game' }));
   assert.ok(!isGameManifest({ ...base, ui: { chat: 'game', extra: 1 } }));
 });
+
+test('座位选项命令：hostSeat 允许 options 对象', () => {
+  assert.equal(parseClientMessage({ type: 'hostSeat', op: 'setOptions', seatId: 's1', options: { color: 'blue' } }).ok, true);
+  assert.equal(parseClientMessage({ type: 'hostSeat', op: 'setOptions', seatId: 's1', options: [] }).ok, false);
+});

@@ -1,5 +1,5 @@
 import type { ClientMessage, ServerMessage } from '@bp/protocol';
-import type { GameManifest, SeatView } from '@lizardon386/core-abi';
+import type { GameManifest, SeatOptionField, SeatView } from '@lizardon386/core-abi';
 import { NOTICE_MESSAGES } from '@bp/protocol';
 import { PlatformConnection, browserSocketFactory, type ConnectionHandlers, type ConnectionOptions, type SocketFactory, type Timers, type ConnectionState } from './connection.js';
 import { AddressBook, NickName, SessionVault, type KeyValueStore, type SessionRecord } from './local-store.js';
@@ -8,6 +8,7 @@ import { parseHostAddress, parseInviteLink, wouldBeBlocked, type Endpoint } from
 import { aiFillBlocker, emptyViewModel, inviteLink, accessHints, isHost, mySeat, reduce, resumeCodeFor, seatLabel, seatPickerBlocker, seatPickerCandidates, startBlockers, emptySlots, type ViewModel } from './view-model.js';
 import { fetchGameList, loadGameClientSource, placeholderClient, sandboxChatText, sandboxedClient, type FetchImpl, type GameActions, type GameClientContract } from './module-loader.js';
 import { ruleConfigFromValues, ruleConfigSpec, ruleConfigSummary } from './rule-config.js';
+import { seatOptionFields, seatOptionLabel, seatOptionsSpec, seatOptionValues } from './seat-options.js';
 import { loadGameReference, renderReference, type ReferenceLoad } from './reference.js';
 import { SelectListboxes } from './listbox.js';
 
@@ -64,6 +65,8 @@ export class PlatformApp {
   private referenceSeq = 0;
   private readonly referenceCache = new Map<string, ReferenceLoad>();
   private ruleConfigSignature = '';
+  private seatOptionsSeatId: string | null = null;
+  private seatOptionsTrigger: HTMLElement | null = null;
   private readonly listboxes: SelectListboxes;
 
   constructor(private readonly deps: AppDeps) {
@@ -444,6 +447,9 @@ export class PlatformApp {
     bindReference('btn-reference-lobby');
     on('btn-reference-close', 'click', () => this.closeReference());
     on('reference-backdrop', 'click', () => this.closeReference());
+    on('btn-seat-options-close', 'click', () => this.closeSeatOptions());
+    on('seat-options-backdrop', 'click', () => this.closeSeatOptions());
+    on('btn-save-seat-options', 'click', () => this.saveSeatOptions());
     this.doc.defaultView?.addEventListener('keydown', (event) => this.onRoomShortcut(event));
     this.listboxes.attachAll();
   }
@@ -499,6 +505,11 @@ export class PlatformApp {
 
   private onRoomShortcut(event: KeyboardEvent): void {
     if (event.defaultPrevented) return;
+    if (event.key === 'Escape' && this.seatOptionsSeatId) {
+      event.preventDefault();
+      this.closeSeatOptions();
+      return;
+    }
     if (event.key === 'Escape' && this.referenceOpen) {
       event.preventDefault();
       this.closeReference();
@@ -677,6 +688,207 @@ export class PlatformApp {
     this.command({ type: 'ruleConfig', config });
     const status = el(this.doc, 'rule-config-status');
     if (status) status.textContent = '已提交，等待房间确认…';
+  }
+
+  private seatOptionFieldsFor(seat: SeatView): SeatOptionField[] {
+    const raw = this.view.manifest?.seatOptions;
+    if (!raw) return [];
+    const spec = seatOptionsSpec(raw);
+    return spec ? seatOptionFields(spec, seat.role) : [];
+  }
+
+  private attachSeatOptionsSummary(row: HTMLElement, seat: SeatView): void {
+    const fields = this.seatOptionFieldsFor(seat);
+    if (fields.length === 0) return;
+    const summary = this.doc.createElement('span');
+    summary.className = 'seat-options-summary';
+    for (const field of fields) {
+      const value = seat.options[field.key] ?? field.default;
+      const text = seatOptionLabel(field, value);
+      if (field.type === 'enum') {
+        const option = field.options.find((item) => item.value === value);
+        if (option?.color) {
+          const dot = this.doc.createElement('span');
+          dot.className = 'seat-color-dot';
+          dot.style.backgroundColor = option.color;
+          dot.title = `${field.label}：${text}`;
+          dot.setAttribute('aria-label', `${field.label}：${text}`);
+          summary.append(dot);
+          continue;
+        }
+      }
+      const chip = this.doc.createElement('span');
+      chip.className = 'seat-option-chip';
+      chip.textContent = text;
+      chip.title = `${field.label}：${text}`;
+      summary.append(chip);
+    }
+    row.append(summary);
+  }
+
+  private attachSeatOptionsButton(row: HTMLElement, seat: SeatView): void {
+    if (!isHost(this.view) || this.view.phase !== 'lobby') return;
+    const fields = this.seatOptionFieldsFor(seat);
+    if (fields.length === 0) return;
+    const button = this.doc.createElement('button');
+    button.type = 'button';
+    button.className = 'seat-options-button';
+    button.setAttribute('aria-label', `设置 ${seat.name} 的座位选项`);
+    button.title = '座位设置';
+    button.textContent = '设置';
+    button.addEventListener('click', (event) => this.openSeatOptions(seat.seatId, event.currentTarget as HTMLElement));
+    row.append(button);
+  }
+
+  private syncSeatOptions(): void {
+    if (!this.seatOptionsSeatId) return;
+    const seat = this.view.seats.find((item) => item.seatId === this.seatOptionsSeatId);
+    if (!seat || !isHost(this.view) || this.view.phase !== 'lobby' || this.seatOptionFieldsFor(seat).length === 0) {
+      this.closeSeatOptions(false);
+    }
+  }
+
+  private openSeatOptions(seatId: string, trigger: HTMLElement): void {
+    const seat = this.view.seats.find((item) => item.seatId === seatId);
+    if (!seat) return;
+    const fields = this.seatOptionFieldsFor(seat);
+    if (fields.length === 0) return;
+    this.seatOptionsSeatId = seatId;
+    this.seatOptionsTrigger = trigger;
+    this.closeReference(false);
+    this.setDrawerOpen(false, false);
+    const title = el(this.doc, 'seat-options-title');
+    if (title) title.textContent = `${seat.slot} 号 · ${seat.name}`;
+    const body = el(this.doc, 'seat-options-body');
+    if (!body) return;
+    body.replaceChildren();
+    for (const field of fields) {
+      const wrap = this.doc.createElement('div');
+      wrap.className = 'rule-field';
+      const id = `seat-option-${field.key}`;
+      const current = seat.options[field.key] ?? field.default;
+      if (field.type === 'boolean') {
+        const check = this.doc.createElement('div');
+        check.className = 'form-check form-switch';
+        const input = this.doc.createElement('input');
+        input.className = 'form-check-input';
+        input.type = 'checkbox';
+        input.id = id;
+        input.checked = current === true;
+        const label = this.doc.createElement('label');
+        label.className = 'form-check-label';
+        label.htmlFor = id;
+        label.textContent = field.label;
+        check.append(input, label);
+        wrap.append(check);
+      } else {
+        const label = this.doc.createElement('label');
+        label.className = 'form-label';
+        label.htmlFor = id;
+        label.textContent = field.label;
+        wrap.append(label);
+        if (field.type === 'enum' && field.options.every((option) => option.color)) {
+          const hidden = this.doc.createElement('input');
+          hidden.type = 'hidden';
+          hidden.id = id;
+          hidden.value = typeof current === 'string' && field.options.some((option) => option.value === current)
+            ? current
+            : field.default;
+          const choices = this.doc.createElement('div');
+          choices.className = 'seat-color-choices';
+          choices.setAttribute('role', 'radiogroup');
+          choices.setAttribute('aria-label', field.label);
+          for (const option of field.options) {
+            const choice = this.doc.createElement('button');
+            choice.type = 'button';
+            choice.className = 'seat-color-choice';
+            choice.dataset.value = option.value;
+            choice.style.backgroundColor = option.color ?? '';
+            choice.title = option.label;
+            choice.setAttribute('aria-label', option.label);
+            choice.setAttribute('aria-pressed', String(hidden.value === option.value));
+            choice.addEventListener('click', () => {
+              hidden.value = option.value;
+              for (const node of choices.querySelectorAll<HTMLButtonElement>('.seat-color-choice')) {
+                node.setAttribute('aria-pressed', String(node.dataset.value === option.value));
+              }
+            });
+            choices.append(choice);
+          }
+          wrap.append(hidden, choices);
+        } else if (field.type === 'enum') {
+          const select = this.doc.createElement('select');
+          select.className = 'form-select';
+          select.id = id;
+          for (const option of field.options) {
+            const node = this.doc.createElement('option');
+            node.value = option.value;
+            node.textContent = option.label;
+            select.append(node);
+          }
+          select.value = typeof current === 'string' && field.options.some((option) => option.value === current)
+            ? current
+            : field.default;
+          wrap.append(select);
+        } else {
+          const input = this.doc.createElement('input');
+          input.className = 'form-control';
+          input.type = 'number';
+          input.id = id;
+          input.min = String(field.min);
+          input.max = String(field.max);
+          if (field.step !== undefined) input.step = String(field.step);
+          input.value = String(typeof current === 'number' && Number.isFinite(current) ? current : field.default);
+          wrap.append(input);
+        }
+      }
+      if (field.description) {
+        const hint = this.doc.createElement('p');
+        hint.className = 'hint';
+        hint.textContent = field.description;
+        wrap.append(hint);
+      }
+      body.append(wrap);
+    }
+    const status = el(this.doc, 'seat-options-status');
+    if (status) status.textContent = '';
+    const panel = el(this.doc, 'seat-options-panel');
+    panel?.classList.remove('hidden');
+    panel?.setAttribute('aria-hidden', 'false');
+    panel?.removeAttribute('inert');
+    el(this.doc, 'seat-options-backdrop')?.classList.remove('hidden');
+    el<HTMLButtonElement>(this.doc, 'btn-seat-options-close')?.focus();
+    this.listboxes.attachAll();
+    this.listboxes.syncAll();
+  }
+
+  private saveSeatOptions(): void {
+    if (!this.seatOptionsSeatId) return;
+    const seat = this.view.seats.find((item) => item.seatId === this.seatOptionsSeatId);
+    if (!seat) return;
+    const fields = this.seatOptionFieldsFor(seat);
+    const options = seatOptionValues(fields, (field) => {
+      const node = el(this.doc, `seat-option-${field.key}`) as HTMLInputElement | HTMLSelectElement | null;
+      if (!node) return undefined;
+      return field.type === 'boolean' ? (node as HTMLInputElement).checked : node.value;
+    });
+    this.command({ type: 'hostSeat', op: 'setOptions', seatId: seat.seatId, options });
+    const status = el(this.doc, 'seat-options-status');
+    if (status) status.textContent = '已提交，等待房间确认…';
+  }
+
+  private closeSeatOptions(focus = true): void {
+    if (!this.seatOptionsSeatId) return;
+    this.seatOptionsSeatId = null;
+    const panel = el(this.doc, 'seat-options-panel');
+    panel?.classList.add('hidden');
+    panel?.setAttribute('aria-hidden', 'true');
+    panel?.setAttribute('inert', '');
+    el(this.doc, 'seat-options-backdrop')?.classList.add('hidden');
+    if (!focus) return;
+    const trigger = this.seatOptionsTrigger;
+    if (trigger?.isConnected && !trigger.classList.contains('hidden')) trigger.focus();
+    this.seatOptionsTrigger = null;
   }
 
   private currentReferenceManifest(): GameManifest | null {
@@ -938,6 +1150,7 @@ export class PlatformApp {
     }
     if (codeChip && this.view.room) codeChip.textContent = this.view.room.code;
     this.renderRuleConfig();
+    this.syncSeatOptions();
     const grid = el(this.doc, 'seat-grid');
     if (!grid) return;
     grid.replaceChildren();
@@ -960,6 +1173,7 @@ export class PlatformApp {
       stateCell.textContent = state;
       row.append(iconCell, slotCell, nameCell, stateCell);
       grid.append(row);
+      return row;
     };
     for (const seat of this.view.seats) {
       const me = seat.seatId === this.view.mySeatId;
@@ -968,7 +1182,9 @@ export class PlatformApp {
       if (me) classes.push('is-me');
       if (!seat.connected && seat.role !== 'ai') classes.push('is-offline');
       const icon = seat.role === 'host' ? 'ti-crown' : seat.role === 'ai' ? 'ti-robot' : seat.role === 'spectator' ? 'ti-eye' : seat.ready ? 'ti-circle-check' : 'ti-user';
-      pushRow(classes.join(' '), seat.slot, seat.name, this.seatStateText(seat), seatLabel(seat), icon);
+      const row = pushRow(classes.join(' '), seat.slot, seat.name, this.seatStateText(seat), seatLabel(seat), icon);
+      this.attachSeatOptionsSummary(row, seat);
+      this.attachSeatOptionsButton(row, seat);
     }
     for (const slot of emptySlots(this.view)) {
       pushRow('seat seat-empty', slot, '空位', '等待加入', `${slot} 号位空着`, 'ti-plug');

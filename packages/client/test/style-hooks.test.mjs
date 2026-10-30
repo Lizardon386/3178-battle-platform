@@ -122,7 +122,7 @@ test('对局区全宽：游戏拉通整行，席位横排，聊天/房主进可�
 });
 
 test('规则与资料：房间规则卡、大厅资料入口、抽屉都在', () => {
-  for (const id of ['btn-reference-lobby', 'btn-reference', 'reference-panel', 'reference-body', 'btn-reference-close', 'reference-backdrop', 'rule-config', 'rule-config-body', 'rule-config-hint', 'btn-save-rule-config', 'host-console', 'countdown-block']) {
+  for (const id of ['btn-reference-lobby', 'btn-reference', 'reference-panel', 'reference-body', 'btn-reference-close', 'reference-backdrop', 'rule-config', 'rule-config-body', 'rule-config-hint', 'btn-save-rule-config', 'host-console', 'countdown-block', 'seat-options-panel', 'seat-options-body', 'btn-save-seat-options']) {
     assert.match(pageHtml, new RegExp(`id="${id}"`), `index.html 缺少 #${id}`);
   }
   const lobbyStart = pageHtml.indexOf('id="screen-lobby"');
@@ -137,6 +137,8 @@ test('规则与资料：房间规则卡、大厅资料入口、抽屉都在', ()
   assert.match(cssCode, /height:\s*clamp\(320px,\s*44vh,\s*440px\);/, '席位/聊天高度要一致');
   assert.match(cssCode, /\.reference-panel\s*\{[^}]*width:\s*min\(1400px/s, '规则资料面板要接近全屏');
   assert.match(cssCode, /\.reference-body\s*\{[^}]*grid-template-columns:\s*repeat\(2/s, '宽屏资料要双栏');
+  assert.match(cssCode, /\.seat-options-panel\s*\{/, '座位选项面板要有样式');
+  assert.match(cssCode, /\.seat-color-choice\[aria-pressed="true"\]/, '颜色选项要有选中态');
   assert.match(cssCode, /\.rule-chip\s*\{/, '房间规则摘要要有样式');
   assert.match(cssCode, /\.bp-game-row\s*\{/, '大厅游戏选择与查看规则要同一行');
   assert.match(appSource, /loadGameReference/, 'app.ts 要懒加载资料');

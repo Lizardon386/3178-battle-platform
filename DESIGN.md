@@ -54,7 +54,7 @@
 | 对局布局 | `playing` 时游戏区拉通整行；1280/1440 宽下 ≥1100×560，席位横向状态条，聊天/房主在可收起侧栏 | 无头浏览器实测 + [style-hooks.test.mjs](packages/client/test/style-hooks.test.mjs) |
 | 规则与资料 | `manifest.ruleConfig` / `reference` 透传；房主房间内改规则、非房主 HOSTONLY、ready 重置、`RoomView.config`、资料 404/坏 JSON/HTML 转义/图片路径边界都有测试 | `module-contract` / `room-authority` / [rule-config.test.mjs](packages/client/test/rule-config.test.mjs) / [reference.test.mjs](packages/client/test/reference.test.mjs) |
 | 单入口 | 根目录一个 `.bat`；启动只开本机口，建房时才开 LAN、组播与落盘；纯进房不写 `data/` | [single-shell.test.mjs](packages/hostd/test/single-shell.test.mjs) / [bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) |
-| 当前回归门禁 | `npm test` 216 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
+| 当前回归门禁 | `npm test` 232 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
 
 #### 2.3.2 测试手顺
 
@@ -71,7 +71,7 @@ npm run build
 npm test
 ```
 
-预期 216 例全绿。这一轮会重新生成三个测试夹具，并跑单元、契约、宿主集成和夹具猴测。
+预期 232 例全绿。这一轮会重新生成三个测试夹具，并跑单元、契约、宿主集成和夹具猴测。
 
 3. 接缝检查：
 
@@ -264,6 +264,7 @@ stateDiagram-v2
 - **lobby 两列**：席位与聊天等高并排，「本局规则与房主操作」合并成一条整行控制台（房主可编辑规则和管理房间，非房主只读规则）。进入 `playing` 后游戏区拉通整行，席位压成横向状态条，聊天与同一控制台收进右侧抽屉，默认收起；按钮、`D` 键和 `Esc` 都能操作，关闭时焦点回到触发按钮。没有 deadline 时不显示倒计时块。
 - **桌面实测**：1280×800 下游戏区 1233×560，1440×900 下 1393×630；低于 1100px 宽的桌面不在本档验收范围。
 - **本局规则**：房间页在 `manifest.ruleConfig` 存在时在房主控制台里显示规则区；房主在 `lobby` 阶段可编辑，其他人只读，`playing` 后一律只读。修改走房主专用 `ruleConfig`，服务端用 `normalizeConfig` / `rulesHashOf` 重算，推进 revision，并把所有真人 ready 清零、发系统消息「房规已更新，请重新准备」。`RoomView.config` 与 `rulesHash` 随快照广播，后加入者从 `seatGranted` 的 manifest 和首个快照拿到新值；`RoomExport.config` 落盘，恢复后规则保持。平台不改 `normalizeConfig`，非法值仍由游戏兜底。
+- **座位级选项**：`GameModule.seatOptions` 声明每个座位可配的字段（`roles` 过滤），平台按角色在席位行给房主一个设置面板（颜色色块 / 电脑难度 / 整数），走 `hostSeat {op:'setOptions'}`；只房主、只 lobby，服务端用 `normalizeSeatOptions` 或声明默认值收口，`SeatView.options` / `GameSeatInfo.options` 透传，`RoomExport` 随座位持久化。平台不解释 field 的玩法含义。
 - **资料面板**：`manifest.reference.entry` 指向包内 JSON，第一次展开才请求 `/games/<id>/<entry>`，用 `parseGameReference` 校验；主界面和房间共用接近全屏的双栏弹层。只渲染纯文本与图片，文本走 `textContent`，不解析 HTML；图片走现有 `/games` 路由，`..`、绝对路径和反斜杠一律拒绝。图片 404 时用 `onerror` 显示 alt 文案；读取失败只在面板里说明，不影响对局。
 - **服务端校验**：目录游戏与 `.bpmap` 在加载时用 `parseRuleConfig` / `parseGameReference` 校验声明，坏声明跳过该模块并记错误；`manifestOf` 再挡一次，避免测试或手工构造的模块把坏声明带进房间。包头的 `reference` 与模块里的 `reference` 同时存在但不一致时拒绝加载。
 
@@ -361,6 +362,7 @@ flowchart TD
 | [packages/server/src/authority.ts](packages/server/src/authority.ts) | 权限判定集中处 |
 | [packages/server/src/module-api.ts](packages/server/src/module-api.ts) | 转出 core-abi，并提供 `manifestOf` |
 | [packages/server/src/loader.ts](packages/server/src/loader.ts) | 运行时按 id 动态加载目录游戏或单文件包 |
+| [packages/server/src/seat-options.ts](packages/server/src/seat-options.ts) | 座位选项默认值与声明式兜底收口 |
 | [packages/pack-format/src/pack.ts](packages/pack-format/src/pack.ts) | 单文件游戏包的读取、校验、解包与缓存 |
 | [packages/game-sdk/src/node/pack.ts](packages/game-sdk/src/node/pack.ts) | re-export `@lizardon386/pack-format`，保持 SDK 的 `/node` 公共路径 |
 | [packages/server/src/pack.ts](packages/server/src/pack.ts) | re-export `@lizardon386/pack-format` |
@@ -382,6 +384,7 @@ flowchart TD
 | [packages/game-sdk/src/contract/client.ts](packages/game-sdk/src/contract/client.ts) | re-export core-abi 的客户端入口类型 |
 | [packages/client/src/module-loader.ts](packages/client/src/module-loader.ts) | 游戏模块拉取、哈希校验、沙箱挂载、占位渲染 |
 | [packages/client/src/rule-config.ts](packages/client/src/rule-config.ts) | 规则表单默认值、控件值收口与房间只读摘要 |
+| [packages/client/src/seat-options.ts](packages/client/src/seat-options.ts) | 座位选项按角色过滤、控件值收口与摘要 |
 | [packages/client/src/reference.ts](packages/client/src/reference.ts) | 规则资料懒加载、路径校验与纯文本/图片渲染 |
 | [packages/client/public/game-sandbox.html](packages/client/public/game-sandbox.html) | 沙箱 iframe 页面：执行游戏客户端源码，用 postMessage 桥接 view/action |
 | [packages/client/src/app.ts](packages/client/src/app.ts) | 界面装配：大厅 / 房间内 / 对局挂载点 |
@@ -459,7 +462,7 @@ flowchart TD
 
 ```bash
 npm run build          # tsc -b 项目引用，无打包器
-npm test               # node --test（当前 216 例）
+npm test               # node --test（当前 232 例）
 bash tools/checks/check-seam.sh                        # 闸门：平台包内不得出现玩法词
 npm run portable                                # 绿色便携包（dist-portable/，不入库）
 node tools/checks/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # 协议层猴测
@@ -487,6 +490,7 @@ node tools/checks/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # �
 | 落盘只发生在房间权威所在进程 | “谁是权威”只有一份 | 房主关机这局就没了 |
 | playing 对局区拉通整行，席位横排，聊天/房主进侧栏 | 第一款真游戏的全屏界面在 600×400 牌桌里放不下 | 房间页多一套布局状态与键盘/焦点管理 |
 | 规则表单只声明，值仍由游戏 `normalizeConfig` 收口 | 平台不解释玩法；非法值由游戏按自己的边界处理 | 游戏要保证字段 key 与配置 key 对得上 |
+| 座位选项由游戏声明，平台只透传 `options` | 每座 AI 难度/颜色是玩法语义，不能写进平台 | SDK 增加 `seatOptions` 契约；游戏要提供 `normalizeSeatOptions` |
 | 资料面板只认纯文本与图片，懒加载 | 不在浏览器里解析 Markdown/HTML，注入面只有文本节点 | 游戏要自己准备 JSON 与图片，不能直接塞网页 |
 | 两个形状不同的测试 demo 游戏 | “平台无关玩法”必须有第二个形状做证据 | 多写约 300 行测试用游戏代码 |
 

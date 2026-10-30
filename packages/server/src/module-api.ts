@@ -1,4 +1,4 @@
-import { isValidGameReferenceEntry, parseRuleConfig, type GameAsset, type GameManifest, type GameModule } from '@lizardon386/core-abi';
+import { isValidGameReferenceEntry, parseRuleConfig, parseSeatOptions, type GameAsset, type GameManifest, type GameModule } from '@lizardon386/core-abi';
 
 export * from '@lizardon386/core-abi';
 
@@ -15,6 +15,14 @@ export function manifestOf(
   const reference = module.reference && isValidGameReferenceEntry(module.reference.entry)
     ? { ...module.reference }
     : null;
+  const seatOptions = module.seatOptions && parseSeatOptions(module.seatOptions).ok
+    ? {
+        fields: module.seatOptions.fields.map((field) => ({
+          ...field,
+          ...(field.type === 'enum' ? { options: field.options.map((option) => ({ ...option })) } : {}),
+        })),
+      }
+    : null;
   return {
     id: module.id,
     name: module.name,
@@ -29,5 +37,6 @@ export function manifestOf(
     ...(module.ui ? { ui: { ...module.ui } } : {}),
     ...(ruleConfig ? { ruleConfig } : {}),
     ...(reference ? { reference } : {}),
+    ...(seatOptions ? { seatOptions } : {}),
   };
 }

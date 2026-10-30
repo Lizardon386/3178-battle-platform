@@ -325,3 +325,28 @@ test('房主改规则：规则/哈希变化、真人准备重置、非房主被�
   host.send({ type: 'ruleConfig', config: { range: 9 } });
   assert.equal(host.rec.last('error').code, 'PHASE', '对局开始后规则只读');
 });
+
+test('座位级选项：房主 setOptions 广播，非房主与 playing 被拒', () => {
+  const module = {
+    ...turnBasedFixture,
+    seatOptions: {
+      fields: [{ key: 'color', label: '颜色', type: 'enum', roles: ['host', 'player', 'ai'], default: 'red', options: [{ value: 'red', label: '红' }, { value: 'blue', label: '蓝' }] }],
+    },
+    normalizeSeatOptions: (role, slot, raw) => ({ color: raw?.color === 'blue' ? 'blue' : 'red' }),
+  };
+  const h = harness({ module, config: {} });
+  const host = createRoom(h, { module, seatSlots: 3, config: {} });
+  const code = host.rec.last('snapshot').room.code;
+  const guest = h.join('选项客人');
+  guest.send({ type: 'roomJoin', code });
+  const guestSeat = guest.rec.last('seatGranted');
+  host.send({ type: 'hostSeat', op: 'setOptions', seatId: guestSeat.seatId, options: { color: 'blue' } });
+  const snap = host.rec.last('snapshot');
+  assert.equal(snap.seats.find((s) => s.seatId === guestSeat.seatId).options.color, 'blue');
+  guest.send({ type: 'hostSeat', op: 'setOptions', seatId: guestSeat.seatId, options: { color: 'red' } });
+  assert.equal(guest.rec.last('error').code, 'NOTHOST');
+  guest.send({ type: 'ready', ready: true });
+  host.send({ type: 'hostStart' });
+  host.send({ type: 'hostSeat', op: 'setOptions', seatId: guestSeat.seatId, options: { color: 'red' } });
+  assert.equal(host.rec.last('error').code, 'PHASE');
+});

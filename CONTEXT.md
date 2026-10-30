@@ -23,22 +23,22 @@
 
 ## 3. 现在在哪
 
-**2026-10-28：`npm test` 216/216，`npm run seam` 零命中，`npx tsc -b` 通过，外部消费者 smoke `[smoke] OK`。**
+**2026-10-28：`npm test` 232/232，`npm run seam` 零命中，`npx tsc -b` 通过，外部消费者 smoke `[smoke] OK`。**
 
 - 平台内核（P0–P7）已交付：协议、座位与房主权限、`GameModule` 契约 + 测试夹具、ws 传输、落盘恢复、客户端界面、hostd 壳（host / join / diagnose / stop）。
 - 包边界：`@lizardon386/core-abi`（游戏 ABI）· `@bp/protocol`（wire）· `@lizardon386/pack-format`（.bpmap）· `@lizardon386/game-sdk`（公共门面 + game-kit）· `@lizardon386/sdk-tools`（bpmap CLI / doctor / 模板）。平台包仍是 `@bp/server`、`@bp/client`、`@bp/hostd`、`@bp/testkit`。
 - 游戏下发与兼容闸：`/api/games`、`/games/<id>/*`、客户端 SHA-256 校验（无 `crypto.subtle` 时纯 JS 回退）、`sandbox=allow-scripts` iframe；`mode` / `apiVersion` 写入 `.bpmap` 包头，宿主只加载 `turn` / `1`，`/api/version` 与 `bpmap doctor` 用同一组常量；`fixture-kit` 覆盖事件流 / 资源 / 拒绝。
+- **座位级选项**（SDK 0.4.0 契约 `c326314`）：`SeatOptionsSpec` / `parseSeatOptions`，`SeatView.options` / `GameSeatInfo.options`，`hostSeat {op:'setOptions'}`；平台按角色渲染席位行设置（颜色色块 + AI 难度等），只房主、只 lobby，服务端用游戏 `normalizeSeatOptions`/spec 收口，`RoomExport` 随座位持久化。232/232。
 - 房间 UI 增量：lobby 席位/聊天等高两列，「本局规则与房主操作」合并为整行控制台（非房主只读规则）；`playing` 时游戏区拉通整行，席位横向状态条，聊天/控制台进右侧侧栏（`D` / `Esc`，焦点归还）；无 deadline 不显示倒计时块；“规则与资料”改为接近全屏双栏弹层。1280×800 实测游戏区 1233×560，1440×900 实测 1393×630。房间页「本局规则」卡由房主在 lobby 编辑（`ruleConfig` 命令，非房主 HOSTONLY），改后刷新 `RoomView.config` / `rulesHash`、重置真人 ready 并发系统消息；`RoomExport.config` 落盘，重启保持。`manifest.reference` 首次展开才请求，`parseGameReference` 校验，文本用 `textContent`、图片走 `/games`，图片 404 显示 alt，失败只影响面板。服务端在模块加载时还会校验 `ruleConfig` / `reference` 文档，坏声明跳过并记 `errors`；`manifestOf` 再挡一次；包头与模块 reference 不一致拒绝加载。
 - 单入口壳：根目录只有 `3178对战平台.bat`，启动 `cli.js shell`；先只开 `127.0.0.1:3178` 与本机大厅，点「建房」时调 `/api/host/ready` 再开 `0.0.0.0:3000`、组播与 `HostStore`。纯进房不创建 `HostStore`、不写 `data/`；建房后 `run-<port>.json` / `stop` / `diagnose` 与旧入口一致。`host` / `join` 子命令保留给命令行。
-- SDK 0.3.0 已发 npm（四包 `@lizardon386/*`，`latest` 均为 0.3.0，2026-10-29）；Trusted Publisher + [publish-sdk.yml](.github/workflows/publish-sdk.yml) 的首次真实 CI 发布已绿；`sdk-v0.3.0` tag/Release 已建（Release 资产来自 `dist-sdk/`，含 SHA256SUMS）。`sdk-v0.2.0` 保留可回退。
+- SDK 0.3.0 已发 npm（四包 `@lizardon386/*`，`latest` 均为 0.3.0，2026-10-29）；Trusted Publisher + [publish-sdk.yml](.github/workflows/publish-sdk.yml) 的首次真实 CI 发布已绿；`sdk-v0.3.0` tag/Release 已建（Release 资产来自 `dist-sdk/`，含 SHA256SUMS）。`sdk-v0.2.0` 保留可回退。**SDK 0.4.0 座位选项契约已在仓库（`c326314`），未打包/未发 npm/未打 tag**；游戏侧需本地 link 0.4.0。
 - **第一款真游戏「变色对决」已落地为独立仓库 `D:\agent_workspace\color-duel`，公开仓库尚未创建/推送。** 完整版：2~8 人、观战、三档电脑、5 个规则开关 + 手牌上限 + 关闭倒计时、规则资料与 rule-config 声明。`npm test` 33/33、`npm run build`、`bpmap doctor` 通过；本地 7 笔提交，HEAD `1a78b9e`。SDK 依赖已切 `^0.3.0`、lock 指向 npm registry（提交 `1a78b9e`）。**联调 PASS**（协议级 7/7、1280×800 UI 端到端、断线/票据与重启恢复）。初版包在 `games/color-duel.bpmap`（102,353 字节，SHA256 `b85db75129c4adbb807c631854aa6cb129d02239fedfb41125b6a05bc70916c8`，gitignored），留给用户自测；`uno-online` 未动。
 
 ## 4. 下一步
 
 1. **等用户自测初版 color-duel 包**：包在 `games/color-duel.bpmap`（gitignored），用「3178对战平台.bat」建房/改规则/开局即可；用户反馈后先修游戏或平台，不急着发版。平台侧猴测结果：协议猴测 seed 707 夹具 0 违规；强制 color-duel 的协议猴测 seed 717 0 违规；UI 猴测 seed 909（4 用户 60 步）0 违规。
 2. **SDK 0.3.0 已发布（2026-10-29）**，color-duel 依赖已切 `^0.3.0` 并提交（`1a78b9e`，lock 指向 registry）；下一步 `gh repo create Lizardon386/color-duel --public` 推首个提交，CI 绿后打 `v0.1.0`。
-3. **双机实测**：同 WiFi 组播房间发现、首次绑定防火墙弹窗行为、`--tunnel` 真隧道（需 cloudflared）。
-4. **便携包与单文件 exe**：先在真正没装 Node 的机器上跑 `dist-portable/`；单文件 exe 之前必须先做 Node SEA hello-world 实验（本机 SAC = On，可能直接拦），未跑实验前不投入打包链路。
+3. **双机与交付实测**：同 WiFi 组播、首次防火墙弹窗、`--tunnel` 真隧道（cloudflared）；便携包上无 Node 机器；单文件 exe 前先做 Node SEA hello-world 实验（SAC = On 可能直接拦）。
 6. 刻意不做：目录服务器 / 账号 / 好友 / 段位 / 匹配 / 反作弊仲裁 / 自动写防火墙规则。
 
 ## 5. 关键约束与易踩的坑
@@ -65,7 +65,7 @@
 ## 6. 验证命令
 
 ```bash
-npm test                         # 216 例
+npm test                         # 232 例
 npm run seam                     # 接缝闸门
 npx tsc -b                       # 类型检查
 node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke

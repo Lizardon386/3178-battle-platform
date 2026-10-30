@@ -1,6 +1,7 @@
 export * from './ids.js';
 export * from './module-api.js';
 export * from './room.js';
+export * from './seat-options.js';
 export * from './registry.js';
 export * from './authority.js';
 export * from './engine.js';

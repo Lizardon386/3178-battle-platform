@@ -578,6 +578,18 @@ export class Engine {
   }
 
   private seatOp(room: Room, msg: Extract<ClientMessage, { type: 'hostSeat' }>): Outbound[] {
+    if (msg.op === 'setOptions') {
+      if (room.phase !== 'lobby') {
+        return [this.toSeat(room, room.hostSeatId ?? '', { type: 'error', code: 'PHASE', message: '对局开始后不能改座位选项' })];
+      }
+      if (!msg.seatId || !room.seat(msg.seatId)) {
+        return [this.toSeat(room, room.hostSeatId ?? '', { type: 'error', code: 'NOSEAT', message: '座位已失效' })];
+      }
+      if (!room.setSeatOptions(msg.seatId, msg.options)) {
+        return [this.toSeat(room, room.hostSeatId ?? '', { type: 'error', code: 'BADMSG', message: '这个游戏没有提供座位选项' })];
+      }
+      return this.fanout(room);
+    }
     if (msg.op === 'addAi') {
       const added = room.addSeat({ name: String(msg.seatId ?? `电脑 ${room.occupied()}`), role: 'ai', isAi: true });
       if (!added.ok) {
@@ -827,6 +839,7 @@ export class Engine {
       team: seat.team,
       ready: seat.ready,
       connected: seat.connected,
+      options: { ...seat.options },
     };
   }
 
