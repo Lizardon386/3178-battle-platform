@@ -419,7 +419,7 @@ option:disabled {
 .room-layout:not(.is-playing) {
   --bp-room-col-h: clamp(520px, calc(100vh - 208px), 760px);
   display: grid;
-  grid-template-columns: minmax(300px, 340px) minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-columns: minmax(340px, 380px) minmax(0, 3fr) minmax(0, 2fr);
   align-items: stretch;
   gap: 16px;
 }
@@ -428,12 +428,17 @@ option:disabled {
   grid-row: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
   min-width: 0;
   height: var(--bp-room-col-h);
+  overflow: hidden;
+  background: var(--bp-panel);
+  border: 1px solid var(--bp-line);
+  border-radius: 6px;
 }
 .room-left-slot:empty { display: none; }
 .room-layout:not(.is-playing) #room-left:not(.has-console) { height: auto; }
+.room-layout:not(.is-playing) #room-left:not(.has-console) .room-head { border-bottom: 0; }
 .room-layout:not(.is-playing) #room-left-host {
   flex: 1 1 auto;
   min-height: 0;
@@ -442,27 +447,47 @@ option:disabled {
 .room-layout:not(.is-playing) #room-left-host .host-console {
   flex: 1 1 auto;
   min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.room-layout:not(.is-playing) #room-left-host .host-console:hover {
+  border-color: transparent;
+  transform: none;
+}
+.room-layout:not(.is-playing) #room-left-host .host-console-head {
+  padding: 14px 18px;
+  background: transparent;
 }
 .room-layout:not(.is-playing) #room-left-host .host-console-body {
   flex: 1 1 auto;
   align-content: start;
   min-height: 0;
+  padding: 14px 18px 16px;
   overflow-y: auto;
 }
 .room-layout:not(.is-playing) .room-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
-  gap: 14px 16px;
-  padding: 20px;
+  gap: 10px 12px;
+  padding: 18px;
+  background: var(--bp-panel-alt);
+  border: 0;
+  border-bottom: 1px solid var(--bp-line);
+  border-radius: 0;
+}
+.room-layout:not(.is-playing) .room-head:hover {
+  border-color: transparent;
+  transform: none;
 }
 .room-layout:not(.is-playing) .room-head > .flex-grow-1 { grid-column: 1 / -1; }
 .room-layout:not(.is-playing) .room-head > .text-end { grid-column: 1; text-align: left !important; }
 .room-layout:not(.is-playing) .room-head #countdown-block { grid-column: 2; margin-left: 0; }
-.room-layout:not(.is-playing) .room-head #btn-reference { grid-column: 1 / -1; justify-self: start; }
-.room-layout:not(.is-playing) .room-head h2 { font-size: 24px; line-height: 1.25; }
-.room-layout:not(.is-playing) .room-head .hud-code { font-size: 42px; }
-.room-layout:not(.is-playing) .connection-bar { font-size: 13.5px; }
+.room-layout:not(.is-playing) .room-head #btn-reference { grid-column: 2; grid-row: 2; justify-self: end; align-self: end; }
+.room-layout:not(.is-playing) .room-head h2 { font-size: 22px; line-height: 1.25; }
+.room-layout:not(.is-playing) .room-head .hud-code { font-size: 36px; }
+.room-layout:not(.is-playing) .connection-bar { font-size: 13px; }
 .room-layout:not(.is-playing) .side-panels,
 .room-layout:not(.is-playing) .side-panels-body { display: contents; }
 .room-layout:not(.is-playing) .side-panels-head { display: none; }
@@ -498,13 +523,19 @@ option:disabled {
 }
 .room-layout:not(.is-playing) #room-left .host-console-body {
   grid-template-columns: minmax(0, 1fr);
-  gap: 18px;
+  gap: 14px;
+}
+.room-layout:not(.is-playing) #room-left .rule-config-panel-body { gap: 10px 14px; }
+.room-layout:not(.is-playing) #room-left .rule-field .hint {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
 }
 .room-layout:not(.is-playing) #room-left .host-actions {
   border-left: 0;
   padding-left: 0;
   border-top: 1px solid var(--bp-line);
-  padding-top: 16px;
+  padding-top: 14px;
 }
 .drawer-host-slot:empty { display: none; }
 
