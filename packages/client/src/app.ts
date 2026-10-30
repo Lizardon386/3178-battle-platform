@@ -65,6 +65,11 @@ export class PlatformApp {
   private referenceSeq = 0;
   private readonly referenceCache = new Map<string, ReferenceLoad>();
   private ruleConfigSignature = '';
+  /** 房主在 lobby 里是否展开了规则表单；默认收起，把首屏让给房号与邀请链接。 */
+  private rulesExpanded = false;
+  /** 最近一条一次性提示（复制成功、保存结果等）；渲染时并入连接条，几秒后自己退场。 */
+  private statusMessage = '';
+  private statusTimer: number | null = null;
   private readonly listboxes: SelectListboxes;
 
   constructor(private readonly deps: AppDeps) {
@@ -304,7 +309,7 @@ export class PlatformApp {
           this.renderGame();
         },
       });
-      this.setStatus(result.verified ? `已挂载 ${manifest.name}（沙箱，哈希校验通过）` : `已挂载 ${manifest.name}（沙箱，房主未声明哈希，未校验）`);
+      this.setStatus(result.verified ? `已加载 ${manifest.name}` : `已加载 ${manifest.name}（未校验哈希）`);
     } else {
       this.client = placeholderClient(manifest);
       this.setStatus(result.reason ?? '用占位界面显示原始状态');
@@ -439,6 +444,12 @@ export class PlatformApp {
     on('btn-close-drawer', 'click', () => this.setDrawerOpen(false));
     on('drawer-backdrop', 'click', () => this.setDrawerOpen(false));
     on('btn-save-rule-config', 'click', () => this.saveRuleConfig());
+    on('btn-toggle-rules', 'click', () => {
+      this.rulesExpanded = !this.rulesExpanded;
+      this.syncHostConsole();
+      // 展开后表单落在折叠线以下，不滚过去的话看起来像点了没反应。
+      if (this.rulesExpanded) el(this.doc, 'rule-panel')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
     const bindReference = (id: string) => {
       el(this.doc, id)?.addEventListener('click', (event) => {
         this.openReference(event.currentTarget as HTMLElement);
@@ -466,11 +477,16 @@ export class PlatformApp {
   // 只搬同一份 DOM，不复制表单，否则规则输入框与已填内容会跟着副本分叉。
   private placeRoomChrome(playing: boolean): void {
     const head = this.doc.querySelector<HTMLElement>('.room-head');
-    const headParent = el(this.doc, playing ? 'room-playing-head' : 'room-left-head');
+    const headParent = el(this.doc, playing ? 'room-playing-head' : 'room-banner');
     if (head && headParent && head.parentElement !== headParent) headParent.append(head);
+    // 横幅的房信息搬去顶部条之后，横幅自己就空了，别留一条 10px 的空槽。
+    el(this.doc, 'room-banner')?.classList.toggle('hidden', playing);
     const hostConsole = el(this.doc, 'host-console');
     const hostParent = el(this.doc, playing ? 'drawer-host' : 'room-left-host');
     if (hostConsole && hostParent && hostConsole.parentElement !== hostParent) hostParent.append(hostConsole);
+    // 规则卡跟着房主台一起搬：对局中它和聊天并排躺在侧栏里，lobby 时回到左栏。
+    const rulePanel = el(this.doc, 'rule-panel');
+    if (rulePanel && hostParent && rulePanel.parentElement !== hostParent) hostParent.append(rulePanel);
   }
 
   private setDrawerOpen(open: boolean, focus = true): void {
@@ -550,6 +566,8 @@ export class PlatformApp {
     if (!spec || !this.view.room) {
       panel.classList.add('hidden');
       this.ruleConfigSignature = '';
+      const summary = el(this.doc, 'rule-panel-summary');
+      if (summary) summary.textContent = '';
       this.syncHostConsole();
       return;
     }
@@ -567,9 +585,12 @@ export class PlatformApp {
     if (signature === this.ruleConfigSignature) return;
     this.ruleConfigSignature = signature;
     panel.classList.remove('hidden');
-    const hint = el(this.doc, 'rule-config-hint');
-    if (hint) {
-      hint.textContent = canEdit ? '仅房主可操作' : isHost(this.view) ? '对局中不可修改' : '只有房主可以修改';
+    // 收起时只剩这一行摘要，房主不用展开也能确认规则没被改坏。
+    const summary = el(this.doc, 'rule-panel-summary');
+    if (summary) {
+      summary.textContent = ruleConfigSummary(spec, config)
+        .map((row) => `${row.label} ${row.text}`)
+        .join(' · ');
     }
     el(this.doc, 'rule-config-actions')?.classList.toggle('hidden', !canEdit);
     const status = el(this.doc, 'rule-config-status');
@@ -666,19 +687,29 @@ export class PlatformApp {
     if (!panel) return;
     const spec = this.view.manifest?.ruleConfig ? ruleConfigSpec(this.view.manifest.ruleConfig) : null;
     const host = isHost(this.view);
-    const show = Boolean(this.view.room) && (Boolean(spec) || host);
-    panel.classList.toggle('hidden', !show);
-    el(this.doc, 'room-left')?.classList.toggle('has-console', show);
-    panel.classList.toggle('has-rules', Boolean(spec));
+    const inRoom = Boolean(this.view.room);
+    // 房主操作只给房主；规则卡给所有进房的人（客人看摘要，房主看表单）。
+    panel.classList.toggle('hidden', !inRoom || !host);
     panel.classList.toggle('is-host', host);
+    el(this.doc, 'room-left')?.classList.toggle('has-console', inRoom && (host || Boolean(spec)));
+    const rulePanel = el(this.doc, 'rule-panel');
+    rulePanel?.classList.toggle('hidden', !inRoom || !spec);
     el(this.doc, 'rule-config')?.classList.toggle('hidden', !spec);
-    const title = el(this.doc, 'rule-config-title');
-    if (title) title.textContent = spec ? (host ? '本局规则与房主操作' : '本局规则') : (host ? '房主控制台' : '');
+    // 只有房主、只在 lobby 才有「展开/收起」；其余身份看摘要就够了。
+    const canEdit = host && this.view.phase === 'lobby';
+    if (!canEdit) this.rulesExpanded = false;
+    const toggle = el<HTMLButtonElement>(this.doc, 'btn-toggle-rules');
+    toggle?.classList.toggle('hidden', !canEdit);
+    rulePanel?.classList.toggle('is-collapsed', canEdit && !this.rulesExpanded);
+    if (toggle) toggle.setAttribute('aria-expanded', String(!(canEdit && !this.rulesExpanded)));
+    const caret = el(this.doc, 'rule-panel-caret');
+    if (caret) caret.textContent = canEdit && !this.rulesExpanded ? '展开修改' : '收起';
+    const title = el(this.doc, 'rule-panel-title');
+    if (title) title.textContent = '本局规则';
     const hint = el(this.doc, 'rule-config-hint');
     if (hint) {
-      hint.textContent = spec
-        ? (host && this.view.phase === 'lobby' ? '仅房主可操作' : host ? '对局中不可修改' : '只有房主可以修改')
-        : (host ? '仅房主可操作' : '');
+      // 房主自己能改的时候，「仅房主可修改」和「展开修改」说的是同一件事，让位给规则摘要。
+      hint.textContent = !spec || canEdit ? '' : host ? '对局中不可修改' : '只有房主可以修改';
     }
   }
 
@@ -986,14 +1017,33 @@ export class PlatformApp {
 
   private copyInvite(): void {
     void this.loadSelfInfo().then(() => {
-      const link = this.inviteUrl();
       const node = el(this.doc, 'invite-url') as HTMLInputElement | null;
+      // 127.0.0.1 的链接只有本机能开，复制给朋友等于给一条死链，先说清原因。
+      if (!this.inviteShareable()) {
+        if (node) {
+          node.value = '';
+          node.placeholder = '只有本机地址，朋友打不开';
+        }
+        this.setStatus('现在只有本机地址：换到局域网（默认 3000 端口）或用 --tunnel 才有能发给朋友的链接');
+        return;
+      }
+      const link = this.inviteUrl();
       if (node) node.value = link;
       void this.doc.defaultView?.navigator.clipboard?.writeText(link).then(
         () => this.setStatus('邀请链接已复制，发给朋友点开就填好地址和房号'),
         () => this.setStatus(`复制失败，手动拷这条：${link}`),
       );
     });
+  }
+
+  /** 邀请地址能不能给别人用：本机回环地址只有自己打得开。 */
+  private inviteShareable(): boolean {
+    try {
+      const host = new URL(this.inviteOrigin).hostname.replace(/^\[|\]$/g, '');
+      return host !== '127.0.0.1' && host !== 'localhost' && host !== '::1';
+    } catch {
+      return false;
+    }
   }
 
   private inviteUrl(): string {
@@ -1004,10 +1054,34 @@ export class PlatformApp {
   }
 
   private setStatus(text: string): void {
+    this.statusMessage = text;
     const node = el(this.doc, 'lobby-status');
     if (node) node.textContent = text;
+    this.renderConnectionBar();
+    // 一次性提示会自己退场：常驻的「已加载 xx」会把房信息卡撑成两行，也挡住房号。
+    if (this.statusTimer !== null) clearTimeout(this.statusTimer);
+    this.statusTimer = text
+      ? (setTimeout(() => {
+          this.statusMessage = '';
+          this.statusTimer = null;
+          this.renderConnectionBar();
+        }, 6000) as unknown as number)
+      : null;
+  }
+
+  private renderConnectionBar(): void {
     const bar = el(this.doc, 'connection-bar');
-    if (bar && this.view.room) bar.textContent = text;
+    if (!bar) return;
+    // 连上了又没事要说就整行留白，别拿「已连本机壳」这种内部叫法占一行高度。
+    const notice = this.view.lastNotice ? this.view.lastNotice.text || NOTICE_MESSAGES[this.view.lastNotice.code] : '';
+    const parts = [
+      this.connState.status === 'open' ? '' : `连接：${this.connState.status}`,
+      this.statusMessage,
+      notice,
+      this.view.lastError?.message ?? '',
+      this.connState.lastError ?? '',
+    ].filter(Boolean);
+    bar.textContent = parts.join(' · ');
   }
 
   // ---------------- 渲染 ----------------
@@ -1104,10 +1178,15 @@ export class PlatformApp {
       this.attachSeatTransfer(row, seat);
     }
     for (const slot of emptySlots(this.view)) {
-      pushRow('seat seat-empty', slot, '空位', '等待加入', `${slot} 号位空着`, 'ti-plug');
+      pushRow('seat seat-empty', slot, '空位', '等待加入', `${slot} 号位空着`, 'ti-user-plus');
     }
     const invite = el(this.doc, 'invite-url') as HTMLInputElement | null;
-    if (invite && !invite.value) invite.value = this.inviteUrl();
+    if (invite) {
+      // 本机回环地址发给朋友打不开：不填值，直接写清楚为什么。
+      const shareable = this.inviteShareable();
+      invite.placeholder = shareable ? '邀请链接 · 点右边复制' : '只有本机地址，朋友打不开';
+      invite.value = shareable ? this.inviteUrl() : '';
+    }
     const access = el(this.doc, 'lan-access');
     if (access) {
       const hints = accessHints(this.lanOrigins, this.view.room?.code ?? null);
@@ -1122,13 +1201,7 @@ export class PlatformApp {
         this.deadlineAt === null ? '' : `剩 ${Math.max(0, Math.round((this.deadlineAt - this.clock.now()) / 1000))} 秒`;
     }
     const bar = el(this.doc, 'connection-bar');
-    if (bar) {
-      const link = isHost(this.view) ? '你就是房主（已连本机壳）' : '已连房主';
-      const status = this.connState.status === 'open' ? link : `连接：${this.connState.status}`;
-      const notice = this.view.lastNotice ? ` · ${this.view.lastNotice.text || NOTICE_MESSAGES[this.view.lastNotice.code]}` : '';
-      const error = this.view.lastError ? ` · ${this.view.lastError.message}` : '';
-      bar.textContent = `${status}${notice}${error}${this.connState.lastError ? ` · ${this.connState.lastError}` : ''}`;
-    }
+    if (bar) this.renderConnectionBar();
   }
 
   private seatStateText(seat: SeatView): string {
@@ -1142,6 +1215,16 @@ export class PlatformApp {
   private renderChat(): void {
     const log = el(this.doc, 'chat-log');
     if (!log) return;
+    if (this.view.chat.length === 0) {
+      // 空白面板只会让人以为聊天坏了；这里顺手告诉房主下一步该干什么。
+      const empty = this.doc.createElement('div');
+      empty.className = 'chat-line chat-empty';
+      empty.textContent = isHost(this.view)
+        ? '还没有人说话。把上面的邀请链接发给朋友，他们点开就进得来。'
+        : '还没有人说话。等房主开局，或者先打个招呼。';
+      log.replaceChildren(empty);
+      return;
+    }
     log.replaceChildren(
       ...this.view.chat.slice(-60).map((line) => {
         const row = this.doc.createElement('div');
@@ -1157,6 +1240,8 @@ export class PlatformApp {
     const panel = el(this.doc, 'host-panel');
     if (!panel) return;
     panel.classList.toggle('hidden', !isHost(this.view));
+    // 邀请链接只在房主那里有用，放在房信息卡里，首屏就能看见。
+    el(this.doc, 'room-invite')?.classList.toggle('hidden', !isHost(this.view));
     const blockers = startBlockers(this.view);
     const startButton = el(this.doc, 'btn-start') as HTMLButtonElement | null;
     if (startButton) {
@@ -1171,8 +1256,10 @@ export class PlatformApp {
     const leaveButton = el(this.doc, 'btn-leave') as HTMLButtonElement | null;
     if (leaveButton) {
       const host = isHost(this.view);
-      leaveButton.textContent = host ? '解散房间' : '离开';
-      leaveButton.title = host ? '关闭房间，所有人回到大厅' : '离开座位，回到大厅';
+      // 房主不能「离开」：解散房间只在房主操作卡里，别和「重连」并排放，少一个误点入口。
+      leaveButton.classList.toggle('hidden', host);
+      leaveButton.textContent = '离开';
+      leaveButton.title = '离开座位，回到大厅';
     }
     // lobby 用席位行里的「转交房主」；对局中席位压成状态条，退回房主台的下拉。
     el(this.doc, 'host-transfer-control')?.classList.toggle('hidden', this.view.phase === 'lobby');

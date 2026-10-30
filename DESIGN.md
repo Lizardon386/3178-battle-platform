@@ -52,6 +52,7 @@
 | 局域网源码校验 | 非安全上下文（局域网 HTTP）没有 `crypto.subtle` 时，仍能按 `seatGranted` 的 assets 校验客户端源码并执行 | 纯 JS SHA-256 测试 + 局域网 IP 浏览器实测 |
 | 版本闸 | 当前只加载 `turn` / `1`；`/api/version` 与 `bpmap doctor` 用同一组常量 | `pack-loader` / `bpmap-cli` 测试 |
 | 对局布局 | `playing` 时游戏区拉通整行；1280/1440 宽下 ≥1100×560，席位横向状态条，聊天/房主在可收起侧栏 | 无头浏览器实测 + [style-hooks.test.mjs](packages/client/test/style-hooks.test.mjs) |
+| 房间横幅与三栏 | 房名 / 邀请链接 / 房号 / 规则入口横排成一条横幅；下面房主操作、席位、聊天三栏；席位是卡槽不是名单行；邀请链接在房主首屏，规则默认收起 | 无头 Edge 实测 1256×708：横幅 123px，三栏 328px，页面总高 708 = 视口（无外层滚动条） |
 | 规则与资料 | `manifest.ruleConfig` / `reference` 透传；房主房间内改规则、非房主 HOSTONLY、ready 重置、`RoomView.config`、资料 404/坏 JSON/HTML 转义/图片路径边界都有测试 | `module-contract` / `room-authority` / [rule-config.test.mjs](packages/client/test/rule-config.test.mjs) / [reference.test.mjs](packages/client/test/reference.test.mjs) |
 | 单入口 | 根目录一个 `.bat`；启动只开本机口，建房时才开 LAN、组播与落盘；纯进房不写 `data/` | [single-shell.test.mjs](packages/hostd/test/single-shell.test.mjs) / [bat-entries.test.mjs](packages/hostd/test/bat-entries.test.mjs) |
 | 当前回归门禁 | `npm test` 232 例全绿、`npm run seam` 零命中、`tsc -b` 通过 | 每次提交 |
@@ -261,9 +262,9 @@ stateDiagram-v2
 
 ### 4.5 房间界面：对局区、规则与资料
 
-- **lobby 三栏等高**：三栏按内容比例分宽（左栏至少 430px，1280×800 实测左 495 / 席位 426 / 聊天 301），不再把左栏钉死在窄列。房信息与「本局规则与房主操作」合成一张连续卡：房号/连接信息在上半，规则区紧贴其下，没有第二张卡的间距和重复边框；规则正文收紧到 13px，房主台在栏内滚动。右侧席位与聊天并排；三栏共用 `calc(100vh - 208px)` 的高度，桌面底边对齐。席位行按固定列对齐：状态列同宽，最右侧固定 88px 动作列；真人席位行由房主直接点「转交房主」，电脑难度下拉也占这一列；房主的顶部按钮是「解散房间」而不是无意义的「离开」。进入 `playing` 后房间头移到顶部，游戏区拉通整行，席位压成横向状态条，聊天与同一控制台收进右侧抽屉，默认收起；按钮、`D` 键和 `Esc` 都能操作，关闭时焦点回到触发按钮。没有 deadline 时不显示倒计时块。
-- **非房主视图**：左栏只保留房间名/房号/连接状态和规则摘要，开局、加电脑位、移交、请出、邀请和关房全部隐藏；座位号码牌不是颜色入口，电脑难度下拉只读。席位与聊天位置和房主一致，`lobby` 只多一个「准备」按钮。截图见 [room-guest-lobby-1280.png](docs/images/room-guest-lobby-1280.png)。
-- **桌面实测**：1280×800 下三栏同高 592px，左栏房信息 184px、房主台 407px，游戏区 1248×560；席位状态列右边界全部一致。低于 1100px 宽的桌面不在本档验收范围。
+- **房间横幅 + 三栏**：房名、邀请链接、房号与「规则与资料」横排成一条整幅横幅（`.room-banner`），下面三栏是房主操作 / 席位 / 聊天，1256 视口实测 400 / 493 / 299。邀请链接在横幅里，房主首屏可见（旧版埋在 1026px 规则表单底下，要滚 4 屏）。席位从"名单行"改成"卡槽"：圆形头像、方形号码牌、状态徽章、左侧 5px 阵营色轨，空位用虚线；聊天正文改等宽字体。**颜色沿用原令牌，没有新增色值**，仍然无渐变、无关键帧、无发光。房主操作独立成卡，包含开始对局、加电脑位、请出座位、解散房间；解散房间只留这一个入口，席位栏的「离开」对房主隐藏。本局规则默认收起成一行摘要，房主点开才出表单，表单比一屏长时「保存规则」sticky 在栏底。三栏共用 `clamp(300px, calc(100vh - 380px), 760px)`：横幅占掉的高度也算在内，页面本身不再出竖向滚动条。进入 `playing` 后横幅收进顶部条，游戏区拉通整行，席位压成横向状态条，聊天与房主台、规则卡一起收进右侧抽屉，默认收起；按钮、`D` 键和 `Esc` 都能操作，关闭时焦点回到触发按钮。
+- **非房主视图**：横幅里没有邀请链接，左栏的房主操作整卡隐藏，只剩规则摘要；座位号码牌不是颜色入口，电脑难度下拉只读。席位与聊天位置和房主一致，`lobby` 只多一个「准备」按钮。截图见 [room-guest-lobby-1280.png](docs/images/room-guest-lobby-1280.png)。
+- **桌面实测**：1256×708 下横幅 123px，三栏同高 328px；席位 493px 宽，卡片标题单行不竖排，页面总高正好等于视口（无外层滚动条）。低于 1100px 宽的桌面不在本档验收范围。
 - **本局规则**：房间页在 `manifest.ruleConfig` 存在时在房主控制台里显示规则区；房主在 `lobby` 阶段可编辑，其他人只读，`playing` 后一律只读。修改走房主专用 `ruleConfig`，服务端用 `normalizeConfig` / `rulesHashOf` 重算，推进 revision，并把所有真人 ready 清零、发系统消息「房规已更新，请重新准备」。`RoomView.config` 与 `rulesHash` 随快照广播，后加入者从 `seatGranted` 的 manifest 和首个快照拿到新值；`RoomExport.config` 落盘，恢复后规则保持。平台不改 `normalizeConfig`，非法值仍由游戏兜底。
 - **座位级选项**：`GameModule.seatOptions` 声明每个座位可配的字段（`roles` 过滤）。颜色字段直接驱动席位行的左侧色条/图标/号码牌，房主在 lobby 点号码牌选色；电脑座位在行内显示难度下拉；不再有通用“设置”按钮。变更走 `hostSeat {op:'setOptions'}`；只房主、只 lobby，服务端用 `normalizeSeatOptions` 或声明默认值收口，`SeatView.options` / `GameSeatInfo.options` 透传，`RoomExport` 随座位持久化。平台不解释 field 的玩法含义。
 - **资料面板**：`manifest.reference.entry` 指向包内 JSON，第一次展开才请求 `/games/<id>/<entry>`，用 `parseGameReference` 校验；主界面和房间共用接近全屏的双栏弹层。只渲染纯文本与图片，文本走 `textContent`，不解析 HTML；图片走现有 `/games` 路由，`..`、绝对路径和反斜杠一律拒绝。图片 404 时用 `onerror` 显示 alt 文案；读取失败只在面板里说明，不影响对局。

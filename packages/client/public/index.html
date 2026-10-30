@@ -139,10 +139,8 @@
             <!-- ================= 房间内 ================= -->
             <section id="screen-room" class="screen hidden">
               <div id="room-playing-head" class="room-playing-head"></div>
-              <div id="room-layout" class="room-layout">
-                <aside id="room-left" class="room-left" aria-label="房间信息与本局规则">
-                  <div id="room-left-head" class="room-left-slot">
-                    <div class="room-head">
+              <div id="room-banner" class="room-banner">
+                <div class="room-head">
                       <div class="flex-grow-1">
                         <h2 id="room-title">房间</h2>
                         <p id="room-meta" class="room-meta"></p>
@@ -164,60 +162,66 @@
                         <i class="ti ti-layout-sidebar-right" aria-hidden="true"></i>
                         <span id="drawer-toggle-label">侧栏</span>
                       </button>
+                      <div id="room-invite" class="room-invite hidden">
+                        <label class="visually-hidden" for="invite-url">邀请链接</label>
+                        <div class="input-group">
+                          <input id="invite-url" class="form-control" readonly placeholder="邀请链接 · 点右边复制" />
+                          <button id="btn-copy-invite" class="btn btn-outline-secondary" type="button" title="复制邀请链接">
+                            <i class="ti ti-copy" aria-hidden="true"></i>
+                          </button>
+                        </div>
+                        <p id="lan-access" class="hint hidden"></p>
+                      </div>
                     </div>
-                  </div>
+              </div>
 
+              <div id="room-layout" class="room-layout">
+                <aside id="room-left" class="room-left" aria-label="房主操作与本局规则">
                   <div id="room-left-host" class="room-left-slot">
-                    <section id="host-console" class="card bp-panel host-console hidden" aria-labelledby="rule-config-title">
+                    <section id="host-console" class="card bp-panel host-console hidden" aria-labelledby="host-console-title">
                       <div class="host-console-head">
-                        <h3 id="rule-config-title" class="host-console-title">本局规则与房主操作</h3>
+                        <h3 id="host-console-title" class="host-console-title">房主操作</h3>
                         <div class="host-console-head-actions">
-                          <span id="rule-config-hint" class="host-console-hint"></span>
                           <button id="btn-start" class="btn btn-primary btn-sm">开始对局</button>
                         </div>
                       </div>
                       <div class="host-console-body">
-                        <section id="rule-config" class="rule-config-section">
-                          <div id="rule-config-body" class="rule-config-panel-body"></div>
-                          <div id="rule-config-actions" class="rule-config-panel-actions hidden">
-                            <button id="btn-save-rule-config" class="btn btn-primary btn-sm" type="button">保存规则</button>
-                            <span id="rule-config-status" class="rule-config-status" role="status" aria-live="polite"></span>
-                          </div>
-                        </section>
-
                         <div id="host-panel" class="host-actions">
-                          <h4 class="host-actions-title">房主操作</h4>
-                          <div class="host-actions-body d-grid gap-3">
-                            <button id="btn-add-ai" class="btn btn-outline-secondary"><i class="ti ti-robot me-2" aria-hidden="true"></i>加一个电脑位</button>
+                          <button id="btn-add-ai" class="btn btn-outline-secondary"><i class="ti ti-robot me-2" aria-hidden="true"></i>加一个电脑位</button>
 
-                            <div id="host-transfer-control">
-                              <label class="form-label" for="transfer-target">移交房主</label>
-                              <div class="input-group">
-                                <select id="transfer-target" class="form-select"></select>
-                                <button id="btn-transfer" class="btn btn-outline-secondary">移交</button>
-                              </div>
+                          <div id="host-transfer-control">
+                            <label class="form-label" for="transfer-target">移交房主</label>
+                            <div class="input-group">
+                              <select id="transfer-target" class="form-select"></select>
+                              <button id="btn-transfer" class="btn btn-outline-secondary">移交</button>
                             </div>
-
-                            <div>
-                              <label class="form-label" for="kick-target">请出座位</label>
-                              <div class="input-group">
-                                <select id="kick-target" class="form-select"></select>
-                                <button id="btn-kick" class="btn btn-outline-danger">请出</button>
-                              </div>
-                            </div>
-
-                            <div class="pt-2">
-                              <label class="form-label" for="invite-url">邀请链接</label>
-                              <div class="input-group">
-                                <input id="invite-url" class="form-control" readonly placeholder="点下面按钮生成" />
-                                <button id="btn-copy-invite" class="btn btn-outline-secondary"><i class="ti ti-copy" aria-hidden="true"></i></button>
-                              </div>
-                              <p id="lan-access" class="hint hidden"></p>
-                            </div>
-
-                            <button id="btn-close" class="btn btn-ghost-danger mt-2"><i class="ti ti-power me-2" aria-hidden="true"></i>关闭房间</button>
-                            <p class="hint">移交只转移权限，进程还在你这台机器上；你一关窗，这桌就散了。</p>
                           </div>
+
+                          <div class="host-kick-row">
+                            <label class="visually-hidden" for="kick-target">请出座位</label>
+                            <select id="kick-target" class="form-select" aria-label="请出座位"></select>
+                            <button id="btn-kick" class="btn btn-outline-danger">请出</button>
+                          </div>
+
+                          <button id="btn-close" class="btn btn-ghost-danger" title="关闭房间，所有人回到大厅；进程在你这里，你一关窗这桌就散了"><i class="ti ti-power me-2" aria-hidden="true"></i>解散房间</button>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section id="rule-panel" class="card bp-panel rule-panel hidden" aria-labelledby="rule-panel-title">
+                      <div class="rule-panel-head">
+                        <button id="btn-toggle-rules" class="rule-panel-toggle" type="button" aria-expanded="true" aria-controls="rule-config">
+                          <span id="rule-panel-title" class="rule-panel-title">本局规则</span>
+                          <span id="rule-panel-caret" class="rule-panel-caret" aria-hidden="true">收起</span>
+                        </button>
+                        <span id="rule-panel-summary" class="rule-panel-summary"></span>
+                        <span id="rule-config-hint" class="rule-panel-hint"></span>
+                      </div>
+                      <div id="rule-config" class="rule-config-section">
+                        <div id="rule-config-body" class="rule-config-panel-body"></div>
+                        <div id="rule-config-actions" class="rule-config-panel-actions hidden">
+                          <button id="btn-save-rule-config" class="btn btn-primary btn-sm" type="button">保存规则</button>
+                          <span id="rule-config-status" class="rule-config-status" role="status" aria-live="polite"></span>
                         </div>
                       </div>
                     </section>

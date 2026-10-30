@@ -104,7 +104,7 @@
   --bp-title: 26px;
   --bp-code: 58px;
   --bp-count: 34px;
-  --bp-row: 68px;
+  --bp-row: 60px;
   --bp-control: 52px;
   --bp-pad: 28px;
   /* 动效预算：全站只有这一档时长，最长 0.3 秒（style-hooks.test.mjs 会钉住） */
@@ -174,6 +174,10 @@ body {
   overflow: hidden;
 }
 .bp-panel > .card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
   padding: 20px var(--bp-pad);
   background: var(--bp-panel-alt);
   border-bottom: 1px solid var(--bp-line);
@@ -181,12 +185,15 @@ body {
 .bp-panel .card-title {
   display: flex;
   align-items: center;
+  /* 标题不许被右侧按钮挤成竖排（「席/位」两个字上下叠就是被挤出来的）。 */
+  flex: 0 0 auto;
+  white-space: nowrap;
   font: 500 20px/1.2 var(--bp-font-display);
   letter-spacing: 0.1em;
   color: var(--bp-text);
 }
 .bp-panel .card-title .ti { color: var(--bp-accent); font-size: 21px; }
-.bp-panel .card-actions { display: flex; gap: 10px; }
+.bp-panel .card-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-left: auto; }
 .bp-panel > .card-body { padding: var(--bp-pad); }
 /* 同一行里的面板卡默认底边对齐：Bootstrap 只把列拉平，卡本身还是按内容长高，
    于是一排卡一高一矮（大厅两张差 29.6px；房间内席位卡比聊天/房主面板矮一大截）。
@@ -263,16 +270,48 @@ option:disabled {
 }
 .btn:hover, .btn:focus { background: var(--bp-raised); border-color: var(--bp-accent); color: var(--bp-text); box-shadow: none; }
 .btn:disabled { background: var(--bp-panel-alt); border-color: var(--bp-line); color: var(--bp-dim-2); opacity: 1; }
+/* 键盘焦点统一一圈强调色描边，鼠标点击不触发；深色底上默认焦点环几乎看不见。
+   Tabler 给 .btn / 表单控件自带一圈深靛蓝 focus ring（对比度不到 2:1），这里按类覆盖掉。 */
+:focus-visible { outline: 2px solid var(--bp-accent-hi); outline-offset: 2px; }
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.bp-listbox-trigger:focus-visible {
+  outline: 2px solid var(--bp-accent-hi);
+  outline-offset: 2px;
+  box-shadow: none;
+}
 .btn-lg { height: var(--bp-control); padding: 0 22px; font-size: 17px; }
 .btn-sm { height: 40px; padding: 0 14px; font-size: 14px; }
 /* 白字压在 #6366f1 上是 4.47:1，差一点不到 AA（按钮字号不算"大字"）；参考站自己也没过。
    所以静止态降一档到 #4f46e5，hover 才抬到参考站那个 #6366f1/#818cf8。 */
-.btn-primary, .btn-primary:disabled { background: var(--bp-accent-dim); border-color: var(--bp-accent-dim); color: #fff; }
+.btn-primary { background: var(--bp-accent-dim); border-color: var(--bp-accent-dim); color: #fff; }
+/* 禁用的主按钮必须看得出来不能点：实心紫 + 白字看着就是全屏最该按的东西，点了却没反应。
+   改成描边 + 灰字 + not-allowed，和可点的实心按钮区分开。 */
+.btn-primary:disabled,
+.btn-primary.disabled {
+  background: transparent;
+  border-color: var(--bp-line);
+  color: var(--bp-dim-2);
+  cursor: not-allowed;
+}
 .btn-primary:hover, .btn-primary:focus { background: var(--bp-accent); border-color: var(--bp-accent); color: #fff; }
+.btn-primary:disabled:hover, .btn-primary:disabled:focus {
+  background: transparent;
+  border-color: var(--bp-line);
+  color: var(--bp-dim-2);
+}
 .btn-outline-success { color: var(--bp-ok); border-color: var(--bp-ok); }
 .btn-outline-success:hover { background: var(--bp-ok); color: var(--bp-bg); }
 .btn-outline-danger { color: var(--bp-bad); border-color: var(--bp-bad); }
 .btn-outline-danger:hover { background: var(--bp-bad); color: var(--bp-bg); }
+/* 禁用时别继续用语义色：绿色/红色描边会让人以为还能点。 */
+.btn-outline-success:disabled, .btn-outline-danger:disabled {
+  color: var(--bp-dim-2);
+  border-color: var(--bp-line);
+  background: transparent;
+  cursor: not-allowed;
+}
 .btn-ghost-danger { color: var(--bp-bad); border-color: transparent; background: transparent; }
 .btn-ghost-danger:hover { background: rgba(239, 68, 68, 0.14); border-color: var(--bp-bad); color: #fca5a5; }
 
@@ -307,6 +346,7 @@ option:disabled {
 .room-meta:empty { display: none; }
 /* 连接条与大厅状态行是**同一类字**（setStatus 同时写这两处），所以字号与颜色都走同一档。 */
 .connection-bar { margin-top: 8px; font: 15px/1.5 var(--bp-font-mono); color: var(--bp-dim-hi); }
+.connection-bar:empty { display: none; }
 /* HUD 上的微标签：比正文标签再小一档，但不再用 0.26em 那种把中文拉开的字距 */
 .hud-code-label { font: 12.5px/1 var(--bp-font-mono); letter-spacing: 0.18em; color: var(--bp-dim-hi); }
 .hud-code {
@@ -417,9 +457,12 @@ option:disabled {
 /* ---------- 房间布局：lobby 左栏房信息 + 房主台，右侧席位与聊天并排；playing 对局区拉通 ---------- */
 .room-layout { margin-left: 0; margin-right: 0; }
 .room-layout:not(.is-playing) {
-  --bp-room-col-h: clamp(520px, calc(100vh - 208px), 760px);
+  /* 三栏共用桌面高度。减掉的 250px = 顶栏 100 + 上下留白；原来写 208 会算高 39px，
+     页面因此永远多出一条竖向滚动条，和左栏自己的滚动条叠成两条。 */
+  --bp-room-col-h: clamp(300px, calc(100vh - 380px), 760px);
   display: grid;
-  grid-template-columns: minmax(430px, 1.65fr) minmax(0, 1.45fr) minmax(0, 1fr);
+  /* 左栏只放房信息、邀请链接与房主操作，宽度让给席位：席位是全程都在看的一栏。 */
+  grid-template-columns: minmax(400px, 1.3fr) minmax(0, 1.65fr) minmax(0, 1fr);
   align-items: stretch;
   gap: 16px;
 }
@@ -428,31 +471,38 @@ option:disabled {
   grid-row: 1;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 10px;
   min-width: 0;
   height: var(--bp-room-col-h);
-  overflow: hidden;
-  background: var(--bp-panel);
-  border: 1px solid var(--bp-line);
-  border-radius: 6px;
+  /* 左栏不再是一张合并大卡：房信息、房主操作、本局规则各自成卡，靠间距分组。
+     内容超出桌面高度时整栏滚动，卡片本身不被切一半。 */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* 左栏内容比桌面高时自己滚：滚动条常驻槽位，避免出现/消失时整栏宽度跳一下。 */
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 .room-left-slot:empty { display: none; }
 .room-layout:not(.is-playing) #room-left:not(.has-console) { height: auto; }
-.room-layout:not(.is-playing) #room-left:not(.has-console) .room-head { border-bottom: 0; }
 .room-layout:not(.is-playing) #room-left-host {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
   display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .room-layout:not(.is-playing) #room-left-host .host-console {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+  border: 1px solid var(--bp-line);
+  border-radius: 6px;
+  background: var(--bp-panel);
 }
 .room-layout:not(.is-playing) #room-left-host .host-console:hover {
-  border-color: transparent;
+  border-color: var(--bp-line);
   transform: none;
 }
 .room-layout:not(.is-playing) #room-left-host .host-console-head {
@@ -460,30 +510,29 @@ option:disabled {
   background: transparent;
 }
 .room-layout:not(.is-playing) #room-left-host .host-console-body {
-  flex: 1 1 auto;
-  align-content: start;
+  flex: 0 0 auto;
   min-height: 0;
   padding: 14px 18px 16px;
-  overflow-y: auto;
+  overflow: visible;
 }
 .room-layout:not(.is-playing) .room-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: 10px 12px;
-  padding: 18px;
-  background: var(--bp-panel-alt);
-  border: 0;
-  border-bottom: 1px solid var(--bp-line);
-  border-radius: 0;
+  padding: 14px 16px;
+  background: var(--bp-panel);
+  border: 1px solid var(--bp-line);
+  border-radius: 6px;
 }
 .room-layout:not(.is-playing) .room-head:hover {
   border-color: transparent;
   transform: none;
 }
-.room-layout:not(.is-playing) .room-head > .flex-grow-1 { grid-column: 1 / -1; }
-.room-layout:not(.is-playing) .room-head > .text-end { grid-column: 1; text-align: left !important; }
-.room-layout:not(.is-playing) .room-head #countdown-block { grid-column: 2; margin-left: 0; }
+/* 房号与标题同一行：左栏只有 400px，竖着堆两行白占 46px。 */
+.room-layout:not(.is-playing) .room-head > .flex-grow-1 { grid-column: 1; grid-row: 1; }
+.room-layout:not(.is-playing) .room-head > .text-end { grid-column: 2; grid-row: 1; text-align: right !important; }
+.room-layout:not(.is-playing) .room-head #countdown-block { grid-column: 1; grid-row: 2; margin-left: 0; text-align: left !important; }
 .room-layout:not(.is-playing) .room-head #btn-reference { grid-column: 2; grid-row: 2; justify-self: end; align-self: end; }
 .room-layout:not(.is-playing) .room-head h2 { font-size: 22px; line-height: 1.25; }
 .room-layout:not(.is-playing) .room-head .hud-code { font-size: 36px; }
@@ -513,13 +562,14 @@ option:disabled {
 }
 .room-layout:not(.is-playing) #chat-panel .chat-log { flex: 1 1 auto; min-height: 0; }
 .room-layout:not(.is-playing) #room-left .host-console-head {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
 }
 .room-layout:not(.is-playing) #room-left .host-console-head-actions {
-  width: 100%;
-  justify-content: space-between;
+  width: auto;
+  margin-left: auto;
+  justify-content: flex-end;
 }
 .room-layout:not(.is-playing) #room-left .host-console-body {
   grid-template-columns: minmax(0, 1fr);
@@ -554,15 +604,85 @@ option:disabled {
 .host-console-hint { font: 13px/1.4 var(--bp-font-mono); color: var(--bp-dim-hi); }
 .room-layout.is-playing #side-panels .host-console-head { align-items: flex-start; flex-direction: column; }
 .room-layout.is-playing #side-panels .host-console-head-actions { width: 100%; justify-content: space-between; }
-.host-console-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px 20px 18px; }
-.host-console.has-rules.is-host .host-console-body { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
-.host-console.has-rules.is-host .host-actions { border-left: 1px solid var(--bp-line); padding-left: 18px; }
+.host-console-body { display: block; padding: 16px 20px 18px; }
 .rule-config-section { min-width: 0; }
 .host-console .rule-config-panel-body { padding: 0; }
 .host-console .rule-config-panel-actions { padding: 12px 0 0; }
-.host-actions { min-width: 0; }
-.host-actions-title { margin: 0 0 4px; font: 500 15px/1.3 var(--bp-font-display); letter-spacing: 0.08em; color: var(--bp-dim-hi); }
-.host-actions-body { padding-top: 4px; }
+.host-actions { display: grid; gap: 10px; min-width: 0; }
+.host-actions .hint { margin: 0; font-size: 12.5px; line-height: 1.55; }
+.host-actions .form-label { margin-bottom: 6px; }
+.host-kick-row { display: flex; gap: 8px; align-items: stretch; }
+.host-kick-row .form-select { flex: 1 1 auto; min-width: 0; }
+
+/* ---------- 邀请链接：挂在房信息卡里，房主首屏可见 ---------- */
+.room-invite { grid-column: 1 / -1; margin-top: 2px; }
+.room-invite-label {
+  display: block;
+  margin-bottom: 6px;
+  font: 12.5px/1 var(--bp-font-mono);
+  letter-spacing: 0.18em;
+  color: var(--bp-dim-hi);
+}
+.room-invite .hint { margin: 8px 0 0; font-size: 12.5px; line-height: 1.6; white-space: pre-line; }
+.room-layout.is-playing .room-invite { display: none; }
+/* 解散房间是「菜单项」不是「状态条」：靠左、去掉填充，别在卡片底部居中发红字。 */
+#btn-close { justify-self: start; padding-left: 2px; }
+
+/* ---------- 本局规则卡：默认收起成一行摘要，房主点开才出表单 ---------- */
+.rule-panel { flex: 0 0 auto; border: 1px solid var(--bp-line); border-radius: 6px; background: var(--bp-panel); }
+/* .bp-panel 默认 overflow:hidden，会把「保存规则」的 sticky 定位锚在卡片自己身上而不是左栏滚动区。 */
+.rule-panel { overflow: visible; }
+.rule-panel:hover { border-color: var(--bp-line); transform: none; }
+.rule-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+}
+.rule-panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: 500 15px/1.3 var(--bp-font-display);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.rule-panel-toggle:hover .rule-panel-caret { color: var(--bp-accent-hi); }
+.rule-panel-title { color: var(--bp-text); white-space: nowrap; }
+.rule-panel-caret { font: 12.5px/1 var(--bp-font-mono); color: var(--bp-accent); letter-spacing: 0.04em; white-space: nowrap; }
+.rule-panel-hint { flex: 0 0 auto; font: 12.5px/1.4 var(--bp-font-mono); color: var(--bp-dim-hi); white-space: nowrap; }
+.rule-panel-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font: 12.5px/1.5 var(--bp-font-mono);
+  color: var(--bp-dim-hi);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rule-panel.is-collapsed #rule-config { display: none; }
+.rule-panel:not(.is-collapsed) .rule-panel-summary { display: none; }
+.rule-panel .rule-config-section { padding: 0 18px 16px; }
+/* 规则表单比一屏长，「保存规则」要一直贴在左栏底部，别让人滚到底才找得到。 */
+.rule-panel .rule-config-panel-actions {
+  position: sticky;
+  bottom: -1px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0 6px;
+  margin-top: 6px;
+  background: var(--bp-panel);
+  border-top: 1px solid var(--bp-line);
+}
+.room-layout.is-playing #side-panels .rule-panel-head { padding: 10px 14px; }
+.room-layout.is-playing #side-panels .rule-panel .rule-config-section { padding: 0 14px 14px; }
 
 .room-layout.is-playing {
   display: grid;
@@ -743,7 +863,7 @@ option:disabled {
   /* 原来写死 height:460px：整排卡对齐之后（卡被拉到 650+），记录区与输入条之间会空出 44px。
      改成"至少 460，能长就多长"，输入条才贴得住底。 */
   flex: 1 1 auto;
-  min-height: 460px;
+  min-height: 180px;
   padding: 18px 20px;
   overflow-y: auto;
   font-size: 15px;
@@ -752,6 +872,13 @@ option:disabled {
 }
 .chat-line { padding: 6px 0; border-bottom: 1px dotted var(--bp-line); word-break: break-word; }
 .chat-line:last-child { border-bottom: none; }
+.chat-line.chat-empty {
+  padding: 2px 0 0;
+  border-bottom: none;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--bp-dim-hi);
+}
 .chat-say { color: var(--bp-text); }
 .chat-system { font: 14px/1.6 var(--bp-font-mono); color: var(--bp-dim-hi); }
 .chat-system::before { content: "▸ "; color: var(--bp-accent); }
@@ -963,3 +1090,115 @@ option:disabled {
   padding: 0 10px;
   font-size: 13px;
 }
+
+
+/* ==========================================================================
+   房间内：按 RTS 房间的排版重排（参考 war3 房间 / 红警2 联机面板）
+   只动结构与尺寸：整幅房间横幅、槽位化的席位、铭牌、等宽聊天。
+   颜色全部沿用原令牌（--bp-panel / --bp-line / --bp-dim…），不引入新色；
+   仍然无渐变、无关键帧、无发光。
+   ========================================================================== */
+
+/* ---------- 房间横幅：房名 / 邀请 / 房号 / 入口横排一整条 ---------- */
+.room-banner { margin-bottom: 10px; }
+.room-banner .room-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 380px) auto auto;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 16px 20px;
+  background: var(--bp-panel);
+  border: 1px solid var(--bp-line);
+  border-radius: 6px;
+}
+.room-banner .room-head > .flex-grow-1 { grid-column: 1; grid-row: 1; min-width: 0; }
+.room-banner .room-head .room-invite { grid-column: 2; grid-row: 1; margin: 0; }
+.room-banner .room-head > .text-end { grid-column: 3; grid-row: 1; text-align: right !important; }
+.room-banner .room-head #countdown-block { grid-column: 3; grid-row: 2; margin-left: 0; }
+.room-banner .room-head #btn-reference { grid-column: 4; grid-row: 1; justify-self: end; }
+.room-banner .room-head #btn-toggle-drawer { grid-column: 4; grid-row: 2; justify-self: end; }
+.room-banner .room-head h2 {
+  font: 500 26px/1.2 var(--bp-font-display);
+  letter-spacing: 0.02em;
+}
+.room-banner .room-meta { margin: 6px 0 0; font-size: 13px; }
+.room-banner .hud-code {
+  margin-top: 4px;
+  padding: 2px 10px 4px;
+  border: 1px solid var(--bp-line);
+  border-radius: 3px;
+  background: var(--bp-panel-alt);
+  font-size: 26px;
+  letter-spacing: 0.14em;
+}
+.room-banner .hud-code-label { font-size: 11.5px; }
+.room-banner .room-invite .form-control { font-size: 13px; }
+
+/* ---------- 席位：从"名单行"改成"卡槽" ---------- */
+.room-layout:not(.is-playing) #seat-grid {
+  padding: 8px;
+  gap: 8px;
+  border-top: 0;
+}
+.room-layout:not(.is-playing) .seat {
+  grid-template-columns: 40px 40px minmax(0, 1fr) 78px 88px;
+  gap: 14px;
+  padding: 0 16px;
+  border: 1px solid var(--bp-line);
+  border-left: 5px solid var(--seat-color, var(--bp-line));
+  border-radius: 4px;
+  background: var(--bp-panel-alt);
+}
+.room-layout:not(.is-playing) .seat:hover { background: var(--bp-raised); border-color: var(--bp-line); border-left-color: var(--seat-color, var(--bp-line)); }
+.room-layout:not(.is-playing) .seat-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--bp-line);
+  background: var(--bp-panel);
+  color: var(--bp-dim);
+}
+.seat.has-seat-color .seat-icon {
+  color: var(--bp-text);
+  border-color: var(--seat-color);
+  background: var(--bp-panel);
+}
+.room-layout:not(.is-playing) .seat-slot {
+  min-width: 40px;
+  height: 32px;
+  border-radius: 3px;
+  background: var(--bp-panel-alt);
+  border: 1px solid var(--bp-line);
+  color: var(--bp-dim);
+}
+.seat.has-seat-color .seat-slot { color: var(--bp-text); border-color: var(--seat-color); }
+.room-layout:not(.is-playing) .seat-name { font-size: 16px; }
+/* 状态做成徽章，和名字拉开层级 */
+.room-layout:not(.is-playing) .seat-state {
+  justify-self: end;
+  padding: 4px 10px;
+  border: 1px solid var(--bp-line);
+  border-radius: 999px;
+  background: var(--bp-panel-alt);
+  font: 12px/1.2 var(--bp-font-mono);
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--bp-dim-hi);
+}
+.seat.is-ready .seat-state { color: var(--bp-ok); border-color: var(--bp-ok); }
+.seat.seat-host .seat-state { color: var(--bp-warn); border-color: var(--bp-warn); }
+.seat.is-offline .seat-state { color: var(--bp-bad); border-color: var(--bp-bad); }
+.seat-empty { border-style: dashed; border-left-style: solid; border-left-color: var(--bp-line); }
+.seat-empty .seat-icon { border-style: dashed; }
+.seat-empty .seat-slot { border-style: dashed; }
+
+/* ---------- 聊天：等宽正文，像终端 ---------- */
+#chat-panel .chat-log { font-family: var(--bp-font-mono); font-size: 14px; }
+#chat-panel .chat-empty { font-family: var(--bp-font-mono); }
+
+/* 横幅里的状态行固定占一行高度：提示出现/消失时横幅不再长高，三栏高度才不会跳。 */
+.room-banner .connection-bar { min-height: 17px; }
+.room-banner .connection-bar:empty { display: block; }
