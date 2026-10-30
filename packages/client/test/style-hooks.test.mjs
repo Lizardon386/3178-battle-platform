@@ -133,9 +133,11 @@ test('规则与资料：房间规则卡、大厅资料入口、抽屉都在', ()
   assert.match(cssCode, /\.reference-panel\s*\{[^}]*visibility:\s*hidden/s, '资料抽屉默认收起');
   assert.match(cssCode, /\.reference-panel\.is-open/, '资料抽屉要有打开态');
   assert.match(cssCode, /\.host-console-head\s*\{/, '规则与房主操作要有合并后的卡片头');
-  assert.match(cssCode, /\.room-layout:not\(\.is-playing\)\s*\{[^}]*grid-template-columns:\s*minmax\(340px,\s*380px\)\s+minmax\(0,\s*3fr\)\s+minmax\(0,\s*2fr\)/s, 'lobby 要三栏：左栏房信息/房主台，席位与聊天并排');
+  assert.match(cssCode, /\.room-layout:not\(\.is-playing\)\s*\{[^}]*grid-template-columns:\s*minmax\(430px,\s*1\.65fr\)\s+minmax\(0,\s*1\.45fr\)\s+minmax\(0,\s*1fr\)/s, 'lobby 三栏按内容比例分宽，左栏不能固定窄列');
   assert.match(cssCode, /#room-left\s*\{[^}]*gap:\s*0/s, '房信息与规则要连成一张左栏卡');
   assert.match(cssCode, /#room-left\s*\{[^}]*border:\s*1px solid var\(--bp-line\)/s, '左栏要有自己的整卡边框');
+  assert.match(cssCode, /grid-template-columns:\s*22px 46px minmax\(0, 1fr\) 64px 88px/, '席位状态列与动作列要固定宽度');
+  assert.match(cssCode, /\.room-layout:not\(\.is-playing\) \.seat-ai-difficulty \{ width: 88px; \}/, '电脑难度要和动作列同宽，状态列才不会错位');
   assert.match(cssCode, /--bp-room-col-h:\s*clamp\(520px,\s*calc\(100vh - 208px\),\s*760px\)/, '三栏要共用同一个桌面高度');
   assert.match(cssCode, /#room-left\s*\{[^}]*height:\s*var\(--bp-room-col-h\)/s, '左栏要和右侧两栏等高');
   assert.match(cssCode, /#seat-column\s*\{[^}]*height:\s*var\(--bp-room-col-h\)/s, '席位栏要共用桌面高度');

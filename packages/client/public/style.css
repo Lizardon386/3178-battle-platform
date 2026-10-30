@@ -419,7 +419,7 @@ option:disabled {
 .room-layout:not(.is-playing) {
   --bp-room-col-h: clamp(520px, calc(100vh - 208px), 760px);
   display: grid;
-  grid-template-columns: minmax(340px, 380px) minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-columns: minmax(430px, 1.65fr) minmax(0, 1.45fr) minmax(0, 1fr);
   align-items: stretch;
   gap: 16px;
 }
@@ -698,8 +698,11 @@ option:disabled {
 /* 行内控件按固定列对齐：状态列同宽，右侧永远给动作留一列。 */
 .room-layout:not(.is-playing) .seat {
   display: grid;
-  grid-template-columns: 22px 46px minmax(0, 1fr) 72px minmax(88px, auto);
+  grid-template-columns: 22px 46px minmax(0, 1fr) 64px 88px;
+  gap: 12px;
+  padding: 0 20px;
 }
+.room-layout:not(.is-playing) .seat-ai-difficulty { width: 88px; }
 .room-layout:not(.is-playing) .seat-state { text-align: right; white-space: nowrap; }
 .room-layout:not(.is-playing) .seat-transfer-button,
 .room-layout:not(.is-playing) .seat-ai-difficulty { justify-self: end; }
