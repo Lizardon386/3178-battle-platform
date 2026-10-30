@@ -134,8 +134,15 @@ test('规则与资料：房间规则卡、大厅资料入口、抽屉都在', ()
   assert.match(cssCode, /\.reference-panel\.is-open/, '资料抽屉要有打开态');
   assert.match(cssCode, /\.host-console-head\s*\{/, '规则与房主操作要有合并后的卡片头');
   assert.match(cssCode, /\.room-layout:not\(\.is-playing\)\s*\{[^}]*grid-template-columns:\s*minmax\(300px,\s*340px\)\s+minmax\(0,\s*3fr\)\s+minmax\(0,\s*2fr\)/s, 'lobby 要三栏：左栏房信息/房主台，席位与聊天并排');
-  assert.match(cssCode, /\.room-layout:not\(\.is-playing\) #seat-column\s*\{[^}]*height:\s*clamp\(420px,\s*56vh,\s*600px\)/s, '席位高度要留够');
-  assert.match(cssCode, /\.room-layout:not\(\.is-playing\) #chat-panel\s*\{[^}]*height:\s*clamp\(420px,\s*56vh,\s*600px\)/s, '聊天与席位等高');
+  assert.match(cssCode, /--bp-room-col-h:\s*clamp\(520px,\s*calc\(100vh - 208px\),\s*760px\)/, '三栏要共用同一个桌面高度');
+  assert.match(cssCode, /#room-left\s*\{[^}]*height:\s*var\(--bp-room-col-h\)/s, '左栏要和右侧两栏等高');
+  assert.match(cssCode, /#seat-column\s*\{[^}]*height:\s*var\(--bp-room-col-h\)/s, '席位栏要共用桌面高度');
+  assert.match(cssCode, /#chat-panel\s*\{[^}]*height:\s*var\(--bp-room-col-h\)/s, '聊天栏要共用桌面高度');
+  assert.match(cssCode, /#room-left-host \.host-console-body\s*\{[^}]*overflow-y:\s*auto/s, '左栏房主台要在栏内滚动，不能把整栏撑破');
+  assert.match(cssCode, /\.seat-transfer-button\s*\{/, '真人席位行要有转交房主按钮样式');
+  assert.match(appSource, /attachSeatTransfer/, '真人席位行要直接渲染转交房主按钮');
+  assert.match(appSource, /hostTransfer/, '行内转交要走 hostTransfer');
+  assert.match(appSource, /解散房间/, '房主的离开按钮要改成解散房间');
   assert.match(appSource, /placeRoomChrome/, '房间头与房主台要按 lobby/playing 搬家而不是复制');
   assert.match(cssCode, /\.reference-panel\s*\{[^}]*width:\s*min\(1400px/s, '规则资料面板要接近全屏');
   assert.match(cssCode, /\.reference-body\s*\{[^}]*grid-template-columns:\s*repeat\(2/s, '宽屏资料要双栏');

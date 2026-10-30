@@ -417,9 +417,10 @@ option:disabled {
 /* ---------- 房间布局：lobby 左栏房信息 + 房主台，右侧席位与聊天并排；playing 对局区拉通 ---------- */
 .room-layout { margin-left: 0; margin-right: 0; }
 .room-layout:not(.is-playing) {
+  --bp-room-col-h: clamp(520px, calc(100vh - 208px), 760px);
   display: grid;
   grid-template-columns: minmax(300px, 340px) minmax(0, 3fr) minmax(0, 2fr);
-  align-items: start;
+  align-items: stretch;
   gap: 16px;
 }
 .room-layout:not(.is-playing) #room-left {
@@ -429,8 +430,25 @@ option:disabled {
   flex-direction: column;
   gap: 16px;
   min-width: 0;
+  height: var(--bp-room-col-h);
 }
 .room-left-slot:empty { display: none; }
+.room-layout:not(.is-playing) #room-left:not(.has-console) { height: auto; }
+.room-layout:not(.is-playing) #room-left-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+.room-layout:not(.is-playing) #room-left-host .host-console {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.room-layout:not(.is-playing) #room-left-host .host-console-body {
+  flex: 1 1 auto;
+  align-content: start;
+  min-height: 0;
+  overflow-y: auto;
+}
 .room-layout:not(.is-playing) .room-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -452,17 +470,22 @@ option:disabled {
   grid-column: 2;
   grid-row: 1;
   min-width: 0;
-  height: clamp(420px, 56vh, 600px);
+  height: var(--bp-room-col-h);
 }
 .room-layout:not(.is-playing) #chat-panel {
   grid-column: 3;
   grid-row: 1;
   min-width: 0;
-  height: clamp(420px, 56vh, 600px);
+  height: var(--bp-room-col-h);
 }
 .room-layout:not(.is-playing) #seat-column > .bp-panel,
 .room-layout:not(.is-playing) #chat-panel > .bp-panel { height: 100%; }
-.room-layout:not(.is-playing) #seat-grid { overflow-y: auto; }
+.room-layout:not(.is-playing) #seat-grid {
+  display: grid;
+  flex: 1 1 auto;
+  grid-auto-rows: minmax(var(--bp-row), 1fr);
+  overflow-y: auto;
+}
 .room-layout:not(.is-playing) #chat-panel .chat-log { flex: 1 1 auto; min-height: 0; }
 .room-layout:not(.is-playing) #room-left .host-console-head {
   flex-direction: column;
@@ -598,7 +621,9 @@ option:disabled {
 @media (max-width: 991.98px) {
   .room-head { flex-wrap: wrap; gap: 18px 28px; padding: 20px; }
   .room-layout:not(.is-playing) { grid-template-columns: minmax(0, 1fr); }
-  .room-layout:not(.is-playing) #room-left { grid-column: 1; grid-row: 1; }
+  .room-layout:not(.is-playing) #room-left { grid-column: 1; grid-row: 1; height: auto; }
+  .room-layout:not(.is-playing) #room-left-host { flex: none; }
+  .room-layout:not(.is-playing) #room-left-host .host-console-body { flex: none; overflow: visible; }
   .room-layout:not(.is-playing) #seat-column { grid-column: 1; grid-row: 2; height: clamp(340px, 48vh, 520px); }
   .room-layout:not(.is-playing) #chat-panel { grid-column: 1; grid-row: 3; height: clamp(340px, 48vh, 520px); }
   .host-console.has-rules.is-host .host-console-body { grid-template-columns: minmax(0, 1fr); }
@@ -639,6 +664,15 @@ option:disabled {
 }
 .seat-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .seat-state { font: 13.5px/1 var(--bp-font-mono); letter-spacing: 0.06em; color: var(--bp-dim-hi); }
+/* 行内控件按固定列对齐：状态列同宽，右侧永远给动作留一列。 */
+.room-layout:not(.is-playing) .seat {
+  display: grid;
+  grid-template-columns: 22px 46px minmax(0, 1fr) 72px minmax(88px, auto);
+}
+.room-layout:not(.is-playing) .seat-state { text-align: right; white-space: nowrap; }
+.room-layout:not(.is-playing) .seat-transfer-button,
+.room-layout:not(.is-playing) .seat-ai-difficulty { justify-self: end; }
+
 /* 左轨优先级：身份（房主）> 状态（已准备）> 角色默认。靠特异度，不靠书写顺序。 */
 .seat-player { border-left-color: var(--bp-accent); }
 .seat-ai { border-left-color: var(--bp-violet); border-left-style: dashed; }
@@ -661,7 +695,7 @@ option:disabled {
 .is-offline { color: var(--bp-dim); }
 .is-offline .seat-state { color: var(--bp-bad); }
 .seat-empty {
-  min-height: 58px;
+  min-height: var(--bp-row);
   color: var(--bp-dim);
   background: var(--bp-panel-alt);
 }
@@ -889,3 +923,9 @@ option:disabled {
   border-radius: 4px;
 }
 .seat-ai-difficulty:disabled { opacity: 0.75; }
+.seat-transfer-button {
+  flex: none;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
+}

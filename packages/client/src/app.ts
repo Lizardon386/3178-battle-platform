@@ -389,7 +389,10 @@ export class PlatformApp {
     });
     on('btn-send', 'click', () => this.sendChat());
     on('btn-leave', 'click', () => {
-      if (isHost(this.view)) return this.setStatus('你是房主：要么移交房主，要么关闭房间，不能直接走。');
+      if (isHost(this.view)) {
+        this.command({ type: 'hostClose', reason: '房主解散房间' });
+        return;
+      }
       this.command({ type: 'seatLeave' });
       this.leaveToLobby();
     });
@@ -665,6 +668,7 @@ export class PlatformApp {
     const host = isHost(this.view);
     const show = Boolean(this.view.room) && (Boolean(spec) || host);
     panel.classList.toggle('hidden', !show);
+    el(this.doc, 'room-left')?.classList.toggle('has-console', show);
     panel.classList.toggle('has-rules', Boolean(spec));
     panel.classList.toggle('is-host', host);
     el(this.doc, 'rule-config')?.classList.toggle('hidden', !spec);
@@ -786,6 +790,20 @@ export class PlatformApp {
       this.command({ type: 'hostSeat', op: 'setOptions', seatId: seat.seatId, options });
     });
     row.append(select);
+  }
+
+  private attachSeatTransfer(row: HTMLElement, seat: SeatView): void {
+    if (!isHost(this.view) || this.view.phase !== 'lobby' || seat.role !== 'player') return;
+    const button = this.doc.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-sm btn-outline-secondary seat-transfer-button';
+    button.textContent = '转交房主';
+    button.title = `把房主转交给 ${seat.name}`;
+    button.setAttribute('aria-label', `把房主转交给 ${seat.name}`);
+    button.addEventListener('click', () => {
+      this.command({ type: 'hostTransfer', seatId: seat.seatId });
+    });
+    row.append(button);
   }
 
   private currentReferenceManifest(): GameManifest | null {
@@ -1083,6 +1101,7 @@ export class PlatformApp {
       const row = pushRow(classes.join(' '), seat.slot, seat.name, this.seatStateText(seat), seatLabel(seat), icon);
       this.attachSeatColor(row, seat);
       this.attachAiDifficulty(row, seat);
+      this.attachSeatTransfer(row, seat);
     }
     for (const slot of emptySlots(this.view)) {
       pushRow('seat seat-empty', slot, '空位', '等待加入', `${slot} 号位空着`, 'ti-plug');
@@ -1149,6 +1168,14 @@ export class PlatformApp {
           ? `等准备：${blockers.unready.join('、')}`
           : '开始对局';
     }
+    const leaveButton = el(this.doc, 'btn-leave') as HTMLButtonElement | null;
+    if (leaveButton) {
+      const host = isHost(this.view);
+      leaveButton.textContent = host ? '解散房间' : '离开';
+      leaveButton.title = host ? '关闭房间，所有人回到大厅' : '离开座位，回到大厅';
+    }
+    // lobby 用席位行里的「转交房主」；对局中席位压成状态条，退回房主台的下拉。
+    el(this.doc, 'host-transfer-control')?.classList.toggle('hidden', this.view.phase === 'lobby');
     const readyButton = el(this.doc, 'btn-ready') as HTMLButtonElement | null;
     const seat = mySeat(this.view);
     if (readyButton) {
