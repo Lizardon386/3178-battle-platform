@@ -85,6 +85,7 @@ node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
 
 ## 9. 交接记录
 
+- 2026-11-09 Claude Code：**收工复核**：`--check` / `--fix` 通过；`handoff/PROMPT.md` 的跨任务规则路径修正为 `D:\agent_workspace\PROJECT_RULES.md`；技能命令面问题已交接 V4（源仓库 `2714529`）；项目无代码改动，`feaedda` 已推送。
 - 2026-11-09 Claude Code：**文档布局迁移（--doc）**：README 留在根，DESIGN / INTEGRATION_GUIDE 移入 `docs/`（含 images），CONTEXT / COMPACT_BACKUP 在 `handoff/`；五份文档补 `scope` 标记，目录表/跨目录链接与 4 个包 README、`pack-sdk.mjs` 的 GitHub URL 同步；`--doc --guard` 复查 OK。
 - 2026-10-30 WorkBuddy：**收工（四块布局定稿）**：房间页四块（房间信息 / 规则配置 / 席位配置 / 房间聊天）已推送 `81fb3ce`，截图更新为房主 / 客人 / 对局中三张（`87baa72`）；`npm test` 233/233、seam OK、`tsc -b` 通过；三档文档同步（README 对局流程、DESIGN 4.5 与验收表、CONTEXT 第 3 节），横幅版旧记录原样沉降到 [COMPACT_BACKUP.md](COMPACT_BACKUP.md)。**留给下一家的两件事**：① 左栏在规则收起时只占 42px、下方留白，可选优化是收起态把摘要铺成清单填满整栏（会改摘要渲染，未擅自做）；② 等用户对四块布局观感与 color-duel 0.2.0 自测的反馈。
 - 2026-10-30 WorkBuddy：**房间 UI 改为四块 + 逐位加电脑**：① 房间信息横贯顶部（房号/房间名/游戏/房间状态/局域网地址/游戏资料，1256×708 实测 132px）；下面从左到右 ② 规则配置 ③ 席位配置 ④ 房间聊天（310/542/325，同高 319px，`clamp(280px, calc(100vh - 389px), 760px)`），页面总高 708 = 视口，规则展开只让左栏自己滚（319/793）。席位每行六格（图标/座位号/名字/身份/准备/行内操作），空位行右侧 **+** 按位加电脑：`hostSeat {op:'addAi', slot}`，引擎点名占位冲突报 `FULL` 不再偷偷换位，电脑名跟着座位号（`电脑 3`）；席位与空位按座位号合并排序，先加 4 号再补 2 号也不会显示成 1、4、2、3。房主桌子级动作（加电脑位/请出/解散/开始）并入席位卡底栏，开局后只留解散；`host-console` 卡片删除，规则卡独占左栏。席位行压到 41px、4 行全显示（`scrollHeight 178 < clientHeight 179`）。颜色沿用原令牌，仍无渐变/关键帧/发光。`npm test` 233/233、seam OK、`tsc -b` 通过；新增「按座位加电脑」服务端测试。
@@ -93,7 +94,6 @@ node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
 - 2026-10-28 Qoder：**接盘确认**：新会话 `835cf812` 已按「接盘」核对锚点（平台 `3c9cffa`、游戏 `8c68c06`）并复跑验证：平台 215/215 + seam + tsc，游戏 33/33 + build + doctor；只读，未改文件。此后写者切到该会话。
 - 2026-10-28 Qoder：**交接**：平台侧 SDK 0.3.0 契约、全宽对局区、规则表单与资料面板已交付（`7d5b4c3` / `7697d62` / `9495dba`，215/215）；第一款真游戏「变色对决」重构为独立仓库 `D:\agent_workspace\color-duel`（33/33，本地 3 笔，未公开）；下一步是联调、SDK 0.3.0 发布（待用户确认）与公开仓库。交接给会话 `835cf812`。
 - 2026-10-28 Qoder：**收工**：UNO 开工前置条件（四项拍板、外部改名工程、不搬源码）写进「下一步」；锚点 `8dffb71`；最旧一条交接记录沉降到 [COMPACT_BACKUP.md](COMPACT_BACKUP.md)。
-- 2026-10-28 Qoder：**压卡**：CONTEXT 压到 100 行以内，原第 6–8 节（逐阶段凭据、变更记录、旧追加区）逐字移入 [COMPACT_BACKUP.md](COMPACT_BACKUP.md)；四份文档顶部日期统一到 2026-10-28。
 - 2026-10-30 Qoder：**房间三栏定稿 + color-duel 0.2.0 发布**：平台 lobby 改按比例三栏（左栏房信息与规则同一卡、宽度 495/426/301@1280）、席位状态/动作列对齐、房主「解散房间」、真人行内「转交房主」；提交 `ff2a30b` / `d87f201`，232/232、seam、tsc 通过。真实 color-duel 0.2.0 已公开：main `d761737`、tag/Release `v0.2.0`、包 `72410de4…`（104,268B），平台 `games/` 已装该包；游戏 37/37、doctor、协议 717/UI 909 猴测 0 违规。换包后必须重启壳才加载新 manifest；平台文档日期已统一 2026-10-30。
 
 <!-- multi-agent-task-handoff: scope=handoff -->
