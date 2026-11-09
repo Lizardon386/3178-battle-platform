@@ -4,6 +4,6 @@
 
 这是 Node.js 库；游戏运行时通常通过 `@lizardon386/game-sdk/node` 使用，构建/打包则由 `@lizardon386/sdk-tools` 的 `bpmap` CLI 调用。
 
-接入文档：[INTEGRATION_GUIDE.md](https://github.com/Lizardon386/3178-battle-platform/blob/master/INTEGRATION_GUIDE.md)
+接入文档：[INTEGRATION_GUIDE.md](https://github.com/Lizardon386/3178-battle-platform/blob/master/docs/INTEGRATION_GUIDE.md)
 
 License: MIT

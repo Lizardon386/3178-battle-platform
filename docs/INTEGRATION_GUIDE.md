@@ -1,17 +1,17 @@
 # 3178-battle-platform（3178 对战平台）· 平台 SDK 接入开发指南
 
 > 面向准备把游戏接入 3178 的开发者：内容覆盖 SDK 获取、从零接入、GameModule / GameInstance、客户端沙箱、.bpmap 打包、game-kit，以及回合制与实时模式的边界和当前可用范围。
-> 最近更新：2026-10-30
+> 最近更新：2026-11-09
 
 ## 1. 文档目录
 
 | 文档 | 阅读对象 | 内容 |
 |---|---|---|
-| [README.md](README.md) | 玩家 / 房主 | 平台概述、运行环境与入口、对局流程、网络连接、数据存储、命令行用法、使用限制 |
+| [README.md](../README.md) | 玩家 / 房主 | 平台概述、运行环境与入口、对局流程、网络连接、数据存储、命令行用法、使用限制 |
 | [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 设计方向（目标 / 约束 / 验收标准 / 测试手顺）；运行模式（host 双监听 / join 单监听）；核心流程（建房、入座、准备、开局、动作广播、断线重连、存档恢复）；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)（本文） | 游戏开发者 / 接入方 | SDK 获取与从零接入、GameModule/GameInstance/Effect[]、客户端入口、单文件包、回合制与实时模式边界、game-kit（事件流/聊天/记分板）、沙箱限制、版本自检与升级 |
-| [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
-| [dogfood-output/猴测报告.md](dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条问题（4 高 / 9 中 / 2 低）、修法、实测证据、复跑次数、猴测台自身 9 个缺陷与未覆盖范围 |
+| [CONTEXT.md](../handoff/CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
+| [dogfood-output/猴测报告.md](../dogfood-output/猴测报告.md) | 测试 / 维护者 | 15 条问题（4 高 / 9 中 / 2 低）、修法、实测证据、复跑次数、猴测台自身 9 个缺陷与未覆盖范围 |
 
 ## 2. SDK 设计思路、作用与边界
 
@@ -121,7 +121,7 @@ npm install --save-dev \
 
 #### 3.1.2 离线安装（setup-sdk.mjs 脚本）
 
-脚本在 SDK 仓库的 [setup-sdk.mjs](packages/sdk-tools/templates/scripts/setup-sdk.mjs)，也可以直接从 GitHub Release 下载；安装后同一份也在 `node_modules/@lizardon386/sdk-tools/templates/scripts/`。
+脚本在 SDK 仓库的 [setup-sdk.mjs](../packages/sdk-tools/templates/scripts/setup-sdk.mjs)，也可以直接从 GitHub Release 下载；安装后同一份也在 `node_modules/@lizardon386/sdk-tools/templates/scripts/`。
 
 前置条件：Node.js >= 20.19、npm。游戏工程可以还没有 `package.json`，脚本会创建一个最小版本。
 
@@ -335,7 +335,7 @@ bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 
 ### 3.8 用 build.mjs 一键完成
 
-`build.mjs` 在 SDK 工具包的 [build.mjs](packages/sdk-tools/templates/scripts/build.mjs)，复制到游戏工程的 `scripts/`。它把 3.5–3.7 串起来：构建、生成清单、打包、校验，可选复制到平台、查宿主、启动宿主。
+`build.mjs` 在 SDK 工具包的 [build.mjs](../packages/sdk-tools/templates/scripts/build.mjs)，复制到游戏工程的 `scripts/`。它把 3.5–3.7 串起来：构建、生成清单、打包、校验，可选复制到平台、查宿主、启动宿主。
 
 前置条件：
 
@@ -808,7 +808,7 @@ bpmap unpack dist/mygame.bpmap ./unpacked
 bpmap doctor dist-pack
 ```
 
-日常构建也可以用 3.8 的 [build.mjs](packages/sdk-tools/templates/scripts/build.mjs)，这些子命令留给单独排查和手工检查。
+日常构建也可以用 3.8 的 [build.mjs](../packages/sdk-tools/templates/scripts/build.mjs)，这些子命令留给单独排查和手工检查。
 
 `@lizardon386/game-sdk/node` 的公共函数：
 
@@ -1125,7 +1125,7 @@ bpmap doctor dist-pack
 bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 ```
 
-用 3.8 的 [build.mjs](packages/sdk-tools/templates/scripts/build.mjs) 时，跑 `node scripts/build.mjs --host http://127.0.0.1:3178` 就行，同样要先启动宿主。
+用 3.8 的 [build.mjs](../packages/sdk-tools/templates/scripts/build.mjs) 时，跑 `node scripts/build.mjs --host http://127.0.0.1:3178` 就行，同样要先启动宿主。
 
 - 源目录：检查 `bpmap.json`、服务端/客户端入口；读取 `mode` / `apiVersion`（缺省 `turn` / `1`）。有 `reference.entry` 时再检查入口是合法包内 `.json` 路径、文件存在，并用 `parseGameReference` 校验文档。
 - 单文件包：检查包格式、服务端入口和清单；从包头读 `mode` / `apiVersion`，旧包头缺字段时按 `turn` / `1`。包头有 `reference` 时，检查入口在文件清单里并解析文档内容。
@@ -1199,3 +1199,5 @@ bpmap doctor dist/mygame.bpmap --host http://127.0.0.1:3178
 - 单独的 `client-only` 模式，理由见 4.5；
 - 全局账号、成就、排行榜；
 - 未经作者授权或来源不明的 `.bpmap`。
+
+<!-- multi-agent-task-handoff: scope=docs -->

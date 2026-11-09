@@ -10,6 +10,6 @@
 - `@lizardon386/game-sdk/kit`：ChatPanel / FeedPanel / ScoreboardPanel / seatColor
 - `@lizardon386/game-sdk/kit/server`：FeedLog
 
-接入文档：[INTEGRATION_GUIDE.md](https://github.com/Lizardon386/3178-battle-platform/blob/master/INTEGRATION_GUIDE.md)
+接入文档：[INTEGRATION_GUIDE.md](https://github.com/Lizardon386/3178-battle-platform/blob/master/docs/INTEGRATION_GUIDE.md)
 
 License: MIT

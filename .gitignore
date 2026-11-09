@@ -8,3 +8,9 @@ data/
 
 # 运行时游戏包（测试夹具生成的包也不入库）
 games/*.bpmap
+
+# 宿主工作记忆（本机私有，不进版本库）
+.workbuddy-ai/
+
+# 交接指针自动生成，本机私有
+handoff/PROMPT.md

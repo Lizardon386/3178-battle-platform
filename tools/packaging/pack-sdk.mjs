@@ -134,7 +134,7 @@ ${install}
 sha256sum -c SHA256SUMS
 \`\`\`
 
-接入文档：https://github.com/Lizardon386/3178-battle-platform/blob/master/INTEGRATION_GUIDE.md
+接入文档：https://github.com/Lizardon386/3178-battle-platform/blob/master/docs/INTEGRATION_GUIDE.md
 `;
 writeFileSync(join(OUT, 'RELEASE_NOTES.md'), notes, 'utf8');
 

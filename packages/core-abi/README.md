@@ -4,6 +4,6 @@
 
 游戏工程通常通过 `@lizardon386/game-sdk` 使用这些类型，不需要直接安装本包。需要单独引用 ABI 时可以直接依赖。
 
-接入文档：[INTEGRATION_GUIDE.md](https://github.com/Lizardon386/3178-battle-platform/blob/master/INTEGRATION_GUIDE.md)
+接入文档：[INTEGRATION_GUIDE.md](https://github.com/Lizardon386/3178-battle-platform/blob/master/docs/INTEGRATION_GUIDE.md)
 
 License: MIT

@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 使用说明
 
 > 游戏无关的宿主制联机对战平台：谁建房谁的进程就是服务器，别人从局域网列表或邀请链接进房，类似 war3 对战平台。
-> 最近更新：2026-10-30
+> 最近更新：2026-11-09
 <!-- 日期必须留在这个 blockquote 里：check-docs.sh 的 [新]/[旧]/[期] 只读这里。改日期时 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部要同一天。 -->
 
 ## 1. 文档目录
@@ -11,9 +11,9 @@
 | 文档 | 阅读对象 | 内容 |
 |---|---|---|
 | [README.md](README.md)（本文） | 玩家 / 房主 | 平台概述、运行环境与入口、对局流程、网络连接、数据存储、命令行用法、使用限制 |
-| [DESIGN.md](DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 设计方向（目标 / 约束 / 验收标准 / 测试手顺）；运行模式；核心流程；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
-| [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | SDK 获取与从零接入、GameModule/GameInstance/Effect[]、客户端入口、单文件包、回合制与实时模式边界、game-kit（事件流/聊天/记分板）、沙箱限制、版本自检与升级 |
-| [CONTEXT.md](CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
+| [DESIGN.md](docs/DESIGN.md) | 开发者 / 二次开发 / 方案评审 | 设计方向（目标 / 约束 / 验收标准 / 测试手顺）；运行模式；核心流程；架构与三处接缝；线协议；开发与构建；关键设计决策；已定语义与边界 |
+| [INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md) | 游戏开发者 / 接入方 | SDK 获取与从零接入、GameModule/GameInstance/Effect[]、客户端入口、单文件包、回合制与实时模式边界、game-kit（事件流/聊天/记分板）、沙箱限制、版本自检与升级 |
+| [CONTEXT.md](handoff/CONTEXT.md) | 维护者 / 交接的 agent | 逐阶段验收凭据、遗留问题、关键约束、变更记录、agent 交接记录 |
 
 ## 2. 平台概述
 
@@ -27,7 +27,7 @@
 - **按座位裁剪状态**：快照按座位生成，观战看不到别人的秘密。
 - **不用打包**：浏览器直接吃原生 ESM，离线可用；界面覆盖大厅、房间内和对局挂载点，键盘可完整操作。
 
-> 想接新游戏？按 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) 安装 SDK，实现 `GameModule` / `GameInstance`，按需写客户端入口和 game-kit 面板，再用 `bpmap` 打包。当前回合制接入可用，实时模式在规划中。
+> 想接新游戏？按 [INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md) 安装 SDK，实现 `GameModule` / `GameInstance`，按需写客户端入口和 game-kit 面板，再用 `bpmap` 打包。当前回合制接入可用，实时模式在规划中。
 
 ## 3. 快速开始
 
@@ -142,3 +142,5 @@ node packages/hostd/dist/cli.js stop --port 3178
 
 本项目从同工作区的 `uno-online` 剥离连接层重写而来，那边代码一行没动；玩法改动归那边，连接/身份/分发改动归这里。
 
+
+<!-- multi-agent-task-handoff: scope=root -->
