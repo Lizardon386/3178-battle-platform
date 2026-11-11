@@ -27,12 +27,13 @@
   /* 席位标记色。琥珀 / 靛紫直接引用 --bp-warn / --bp-accent 共享令牌，锁死不动，
      与主 UI（警示、强调高亮、身份色）保持同一色系；其余令牌与状态语义解耦。 */
   --bp-seat-amber:var(--bp-warn);--bp-seat-indigo:var(--bp-accent);--bp-seat-green:var(--bp-ok);
-  --bp-seat-pink:var(--bp-magenta);--bp-seat-red:var(--bp-bad);
-  /* 8 色按色相环排布 0/38/84/142/189/239/292/330°（HSV 实测）。
-     原橙距琥珀仅 13°、原紫距靛紫仅 19°，替换为青柠 / 品红后分别拉到 46° / 53°；
-     全局最小 30° 落在「粉→红」回环处，二者在色板里分属首末位、不相邻显示。
-     新增三色同属 500 系饱和度：青 / 青柠 / 品红。 */
-  --bp-seat-cyan:#06b6d4;--bp-seat-lime:#84cc16;--bp-seat-fuchsia:#d946ef;
+  --bp-seat-red:var(--bp-bad);
+  /* 8 色按色相环排布 0/38/84/142/189/239/280/325°（HSV 实测），最小相邻差 ≥35°。
+     琥珀与靛紫直接引用共享令牌，锁死不动；红仍引用 --bp-bad。
+     品红偏紫会靠近靛紫，因此改成 280° 紫红；粉改成 325°，与红的回环差达到 35°。
+     AI 席位使用中性的 --bp-dim-hi，不再另占一个与靛紫相近的紫色。 */
+  --bp-seat-pink:#ed47a8;
+  --bp-seat-cyan:#06b6d4;--bp-seat-lime:#84cc16;--bp-seat-fuchsia:#b045e5;
   --bp-row:60px;--bp-control-h:52px;--bp-pad:28px;--bp-foot-h:73px;
   --bp-font-display:"BP Display","BP UI",sans-serif;
   --bp-font-ui:"BP UI","PingFang SC","Microsoft YaHei UI","Microsoft YaHei",sans-serif;
@@ -118,8 +119,9 @@ input.is-invalid:focus-visible,select.is-invalid:focus-visible{border-color:var(
 
 .stage{padding:12px;display:flex;justify-content:center}
 .device{width:100%;max-width:none;background:var(--bp-bg);border:1px solid var(--bp-line);border-radius:var(--bp-radius);overflow:hidden;position:relative;min-height:calc(100vh - 80px);display:flex;flex-direction:column}
-.device.is-mobile{max-width:320px;min-height:640px}
-/* 手机网页客人没有托盘：桌面房主端专属控件在 320px 档不出现 */
+.device.is-mobile{max-width:360px;min-height:640px}
+.device.is-mobile.is-phone-320{max-width:320px}
+/* 手机档按 360 CSS px 模拟常见真实手机；320 保留为极限窄屏。DPR 只影响清晰度，不改变布局宽度 */
 .device.is-mobile #btn-tray{display:none}
 
 .bp-topbar{padding:18px var(--bp-pad);background:var(--bp-panel-alt);border-bottom:1px solid var(--bp-line);display:flex;align-items:center;gap:16px;flex:none;flex-wrap:wrap}
@@ -128,8 +130,8 @@ input.is-invalid:focus-visible,select.is-invalid:focus-visible{border-color:var(
 .brand-text strong{font:500 30px/1 var(--bp-font-display);letter-spacing:.16em;color:var(--bp-text)}
 .brand-text small{font:13px/1.4 var(--bp-font-mono);letter-spacing:.18em;color:var(--bp-dim-hi)}
 .nick-field{margin-left:auto;display:flex;align-items:center;gap:12px}
-.nick-field .form-label{margin:0;font:700 var(--bp-title)/1.2 var(--bp-font-ui);letter-spacing:.08em;color:var(--bp-accent-hi);white-space:nowrap}
-.nick-field input{width:220px}
+.nick-field .form-label{margin:0;font:600 22px/1.2 var(--bp-font-ui);letter-spacing:.08em;color:var(--bp-accent-hi);white-space:nowrap}
+.nick-field input{width:240px;font-size:22px;font-weight:600;color:#fff}
 
 .screen{padding:16px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 .panel{background:var(--bp-panel);border:1px solid var(--bp-line);border-radius:6px;overflow:hidden;transition-duration:var(--bp-motion-slow)}
@@ -159,6 +161,8 @@ h3{font-size:14px}
 .room-info-value{font-size:var(--bp-step);color:var(--bp-text)}
 .invite{flex:1 1 260px;min-width:260px;max-width:460px;font-family:var(--bp-font-mono);font-size:14px}
 .entries{display:flex;gap:10px;flex-wrap:wrap}
+#btn-copy{min-height:44px;font-size:14px;padding:0 14px}
+.room-actions{display:contents}
 .entries button{min-height:44px;font-size:14px;padding:0 16px;border-color:var(--bp-accent);color:var(--bp-accent-hi)}
 
 .two-col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
@@ -168,24 +172,33 @@ h3{font-size:14px}
 /* 席位身份色：一个变量同时驱动左轨 / 图标 / 编号铭牌 / 角色徽章，不再各写一套 */
 /* 三个互不覆盖的通道：--bp-seat 身份（左轨 + 徽章边框，只读）、--bp-seat-tag 标记（图标 + 编号牌，用户可改）；
    状态由文字与勾图标表达，不再抢颜色变量，所以改座位色不会压掉「已准备」。 */
-.seat{--bp-seat:var(--bp-dim);--bp-seat-tag:var(--bp-seat);display:grid;grid-template-columns:34px 46px minmax(0,1fr) 62px 78px 96px;gap:12px;align-items:center;min-height:var(--bp-row);padding:0 var(--bp-pad);border-bottom:1px solid var(--bp-line);border-left:4px solid var(--bp-seat);font-size:var(--bp-step)}
+.seat{--bp-seat:var(--bp-dim);--bp-seat-tag:var(--bp-seat);display:grid;grid-template-columns:44px 46px minmax(0,1fr) 62px 78px 96px;gap:12px;align-items:center;min-height:var(--bp-row);padding:0 var(--bp-pad);border-bottom:1px solid var(--bp-line);border-left:4px solid var(--bp-seat);font-size:var(--bp-step)}
 .seat:hover{background:var(--bp-raised)}
 .seat-icon{color:var(--bp-seat-tag);display:flex;justify-content:center}
-.seat-slot{display:grid;place-items:center;min-width:46px;height:34px;font:700 15px/1 var(--bp-font-mono);color:var(--bp-seat-tag);background:var(--bp-panel-alt);border:1px solid var(--bp-seat-tag);border-radius:4px}
-.seat-name{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 空位前面的加号就是添加入口，不再在尾部重复一个加号；44px 触控目标 */
+.seat-add{min-width:44px;min-height:44px;height:44px;padding:0;border-color:transparent;background:transparent;color:var(--bp-dim)}
+.seat-add:hover{border-color:var(--bp-accent);background:var(--bp-raised);color:var(--bp-accent-hi)}
+/* 尾部叉是删除：电脑直接删，真人先经房主确认 */
+.seat-remove{min-width:44px;min-height:44px;padding:0;color:var(--bp-dim-hi)}
+.seat-remove:hover{color:var(--bp-bad);border-color:var(--bp-bad);background:rgba(239,68,68,.14)}
+.seat-slot{display:grid;place-items:center;min-width:46px;height:44px;font:700 19px/1 var(--bp-font-mono);color:var(--bp-seat-tag);background:var(--bp-panel-alt);border:1px solid var(--bp-seat-tag);border-radius:4px}
+.seat-name{min-width:0;display:flex;align-items:center}
+.seat-name-text{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .is-me{font-weight:700;color:#fff}
-.is-me .seat-name::after{content:"你";margin-left:10px;padding:2px 8px;font:11px/1.4 var(--bp-font-mono);letter-spacing:0;color:var(--bp-bg);background:var(--bp-accent-hi);border-radius:100px}
+.is-me .seat-name::after{content:"你";flex:none;margin-left:10px;padding:2px 8px;font:11px/1.4 var(--bp-font-mono);letter-spacing:0;color:var(--bp-bg);background:var(--bp-accent-hi);border-radius:100px}
 /* 徽章文字用 --bp-dim-hi（6.99:1），身份色由边框承载；避免 12px 小字落到 4.21:1 */
 .seat-role{font:12px/1 var(--bp-font-mono);letter-spacing:.06em;color:var(--bp-dim-hi);border:1px solid var(--bp-seat-tag);border-radius:4px;padding:4px 6px;text-align:center;white-space:nowrap}
 .seat-state{font:13.5px/1 var(--bp-font-mono);letter-spacing:.06em;color:var(--bp-dim-hi);text-align:right;white-space:nowrap}
 .seat-state.ok{color:var(--bp-ok)}
 .seat-state.ok .i{width:14px;height:14px;vertical-align:-2px;margin-right:4px}
-.seat-action{justify-self:end}
-/* 身份定义：房主琥珀 / 玩家靛紫 / 电脑紫虚线。
-   已准备不再改席位颜色变量，改由 .seat-state.ok 的绿色文字 + 勾图标表达（双通道，不只靠颜色）。 */
+.seat-action{justify-self:end;display:grid;place-items:center;width:44px;min-height:44px}
+.seat-action .dim{line-height:1}
+/* 身份定义：房主琥珀 / 玩家靛紫 / 电脑中性灰。
+   AI 不再用距靛紫仅 19.6° 的紫色；机器人图标 +「电脑」徽章已能区分身份。
+   已准备不改席位颜色变量，由 .seat-state.ok 的绿色文字 + 勾图标表达（双通道）。 */
 .seat-host{--bp-seat:var(--bp-warn)}
 .seat-player{--bp-seat:var(--bp-accent)}
-.seat-ai{--bp-seat:var(--bp-violet)}
+.seat-ai{--bp-seat:var(--bp-dim-hi)}
 /* 占用席位：编号铭牌实心身份色，与房主 1 号牌同一形态 */
 .seat-host .seat-slot,.seat-player .seat-slot,.seat-ai .seat-slot{color:var(--bp-bg);background:var(--bp-seat-tag);border-color:var(--bp-seat-tag)}
 .seat.seat-host{background:var(--bp-raised)}
@@ -195,21 +208,21 @@ h3{font-size:14px}
 /* 编号牌可点击改座位颜色；缩放用 transform，不挤动布局 */
 .seat-slot[role="button"]{cursor:pointer}
 .seat-slot[role="button"]:hover{transform:scale(1.08)}
-.color-pop{position:absolute;z-index:25;width:224px;padding:12px;background:var(--bp-raised);border:1px solid var(--bp-accent);border-radius:var(--bp-radius)}
+.color-pop{position:absolute;z-index:25;width:240px;padding:12px;background:var(--bp-raised);border:1px solid var(--bp-accent);border-radius:var(--bp-radius)}
 .color-pop-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;font:13px/1.4 var(--bp-font-mono);color:var(--bp-dim-hi)}
-.color-pop-head button{min-height:28px;padding:0 4px;font-size:16px;background:transparent;border:none}
+.color-pop-head button{min-height:44px;min-width:44px;padding:0;font-size:20px;background:transparent;border:none}
 .color-pop-head .i{width:14px;height:14px}
 .color-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .color-dot{position:relative;height:44px;min-height:44px;padding:0;border:2px solid transparent;border-radius:4px}
 .color-dot:hover{transform:translateY(-2px)}
 .color-dot.is-current{border-color:var(--bp-text)}
-/* 已被别的席位占用：色块保留可辨识，但压暗 + 写明占用席位号 + not-allowed，不隐藏、不让色板跳尺寸 */
-.color-dot.is-taken{cursor:not-allowed;filter:saturate(.35) brightness(.6)}
+/* 已被别的席位占用：色块保留可辨识，中央深色编号牌写明占用席位，不靠压低彩色文字的对比度 */
+.color-dot.is-taken{cursor:not-allowed;border-color:var(--bp-line)}
 .color-dot.is-taken:hover{transform:none}
-.color-dot.is-taken::after{content:attr(data-taken-by);position:absolute;inset:0;display:grid;place-items:center;font:700 15px/1 var(--bp-font-mono);color:var(--bp-text)}
+.color-dot.is-taken::after{content:attr(data-taken-by);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:4px 6px;font:700 15px/1 var(--bp-font-mono);color:var(--bp-text);background:var(--bp-bg);border:1px solid var(--bp-line);border-radius:4px}
 .color-pop-note{font:11px/1.5 var(--bp-font-mono);color:var(--bp-dim-hi);margin:-4px 0 12px}
 .color-pop-foot{margin-top:12px}
-.color-pop-foot button{width:100%;min-height:36px;font-size:13px;padding:0 12px}
+.color-pop-foot button{width:100%;min-height:44px;font-size:13px;padding:0 12px}
 
 .chat-log{flex:1 1 auto;min-height:120px;max-height:none;padding:22px var(--bp-pad);overflow:auto;font-size:var(--bp-step);line-height:1.75;background:var(--bp-panel-alt)}
 /* 所有聊天行统一排版：同字族、同字号、同行高、同昵称格式、同分隔符、同箭头前缀。
@@ -221,6 +234,9 @@ h3{font-size:14px}
 .chat-line::before{content:"▸";display:inline-block;margin-right:10px;font-weight:700;color:var(--bp-chat-mark,var(--bp-accent-hi))}
 .chat-line .chat-who{font-weight:500;color:var(--bp-text)}
 .chat-line.sys{color:var(--bp-dim-hi)}
+.chat-collapsed{display:none}
+#btn-chat-close{display:none;min-width:44px;min-height:44px;padding:0}
+.chat-scrim{position:fixed;inset:0;background:rgba(5,5,10,.86);z-index:35}
 
 .host-bar,.guest-bar,.chat-input{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--bp-line);box-sizing:border-box;height:var(--bp-foot-h);min-height:var(--bp-foot-h);flex:0 0 var(--bp-foot-h);background:var(--bp-panel-alt)}
 .host-bar button,.guest-bar button,.chat-input button,.chat-input input{height:var(--bp-control-h);min-height:var(--bp-control-h);box-sizing:border-box}
@@ -318,29 +334,44 @@ h3{font-size:14px}
 .device.is-compact .brand-mark{width:42px;height:42px}
 .device.is-compact .brand-text strong{font-size:23px}
 .device.is-compact .brand-text small{font-size:11px;letter-spacing:.12em}
-.device.is-compact .nick-field .form-label{font-size:20px}
-.device.is-compact .nick-field input{width:150px}
+.device.is-compact .nick-field .form-label{font-size:18px}
+.device.is-compact .nick-field input{width:160px;font-size:18px}
 .device.is-narrow .bp-topbar{padding:10px 14px;gap:8px}
 .device.is-narrow .brand-mark{width:34px;height:34px}
 .device.is-narrow .brand-text strong{font-size:18px}
 .device.is-narrow .brand-text small{font-size:9px;letter-spacing:.1em}
 .device.is-narrow .nick-field{width:100%;margin-left:0}
 .device.is-narrow .nick-field .form-label{font-size:16px}
-.device.is-narrow .nick-field input{width:auto;flex:1;min-height:40px;font-size:13px}
+.device.is-narrow .nick-field input{width:auto;flex:1;min-width:0;min-height:44px;font-size:16px;font-weight:600}
 .device.is-narrow .screen{padding:10px}
 
 /* 卡片与信息条 */
 .device.is-compact .card-title{font-size:18px}
 .device.is-narrow .card-title{font-size:16px;letter-spacing:.06em}
 .device.is-narrow .card-head{padding:10px 14px}
-.device.is-narrow .room-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:14px}
-.device.is-narrow .room-info-block{border-left:none;padding:0}
-.device.is-narrow .room-info .invite,
-.device.is-narrow .room-info .entries,
-.device.is-narrow .room-info #btn-copy{grid-column:1/-1;max-width:none}
-.device.is-narrow .room-info #btn-copy{justify-self:start}
-.device.is-narrow .room-info .entries button{flex:1;min-height:44px}
-.device.is-narrow .chat-log{min-height:120px}
+.device.is-narrow .room-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px}
+.device.is-narrow .room-info-block{border-left:none;padding:0;gap:4px}
+/* 窄屏不常显读不完的原始 URL；复制按钮仍从会话数据复制完整链接 */
+.device.is-narrow .room-info .invite{display:none}
+/* 窄档把复制 / 规则 / 资料挤成一排：复制保留图标与无障碍名称，文字不再占位 */
+.device.is-narrow .room-info .room-actions{grid-column:1/-1;display:flex;align-items:center;gap:8px;min-width:0}
+.device.is-narrow .room-info #btn-copy{width:44px;min-width:44px;padding:0;font-size:0}
+.device.is-narrow .room-info .entries{flex:1;min-width:0;flex-wrap:nowrap;gap:8px}
+.device.is-narrow .room-info .entries button{flex:1;min-width:0;min-height:44px;padding:0 8px;font-size:13px}
+/* 窄档聊天默认收成摘要条，打开后复用同一卡片变成右侧抽屉，不复制消息 DOM */
+.device.is-narrow .chat-panel:not(.is-open) .card-head,
+.device.is-narrow .chat-panel:not(.is-open) .chat-log,
+.device.is-narrow .chat-panel:not(.is-open) .chat-input{display:none}
+.device.is-narrow .chat-collapsed{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:0 14px;border:0;border-radius:0;background:var(--bp-panel);font:500 var(--bp-step)/1.4 var(--bp-font-ui);text-align:left}
+.chat-collapsed-meta{margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:12px/1.4 var(--bp-font-mono);color:var(--bp-dim-hi)}
+.device.is-narrow .chat-panel.is-open{position:fixed;z-index:36;right:0;width:min(78vw,320px);max-width:100%;display:flex;flex-direction:column;background:var(--bp-bg);border-color:var(--bp-accent);border-radius:0;overflow:hidden}
+.device.is-narrow .chat-panel.is-open:hover{transform:none;border-color:var(--bp-accent)}
+.device.is-narrow .chat-panel.is-open .chat-collapsed{display:none}
+.device.is-narrow .chat-panel.is-open .card-head{display:flex;flex:0 0 auto}
+.device.is-narrow .chat-panel.is-open .card-head .muted{display:none}
+.device.is-narrow .chat-panel.is-open #btn-chat-close{display:block}
+.device.is-narrow .chat-panel.is-open .chat-log{display:block;flex:1 1 auto;min-height:0;max-height:none;padding:12px 14px}
+.device.is-narrow .chat-panel.is-open .chat-input{display:flex}
 .device.is-narrow .ref-text{font-size:var(--bp-step)}
 .device.is-narrow .toast{min-width:0;max-width:88%;font-size:15px;padding:14px 18px}
 
@@ -354,13 +385,16 @@ h3{font-size:14px}
 .device.is-narrow .modal-head,.device.is-narrow .modal-foot{padding:12px 14px}
 
 /* 席位行：六列 → 四列（隐藏角色徽章与行内操作），名字永不竖排 */
-.device.is-compact .seat,.device.is-narrow .seat{grid-template-columns:28px 40px minmax(0,1fr) 76px;gap:10px;padding:0 var(--bp-pad);font-size:var(--bp-step)}
-.device.is-compact .seat-slot,.device.is-narrow .seat-slot{min-width:0;width:40px}
+.device.is-compact .seat,.device.is-narrow .seat{grid-template-columns:44px 44px minmax(0,1fr) 76px;gap:10px;padding:0 var(--bp-pad);font-size:var(--bp-step)}
+.device.is-compact .seat-slot,.device.is-narrow .seat-slot{min-width:0;width:44px}
+.device.is-narrow .seat{grid-template-columns:44px 44px minmax(0,1fr) 68px;gap:8px;padding:0 10px}
+/* 窄档只显示已占用席位；容量由「3 / 8 席」表达，底栏加电脑落到第一个空位 */
+.device.is-narrow .seat-empty{display:none}
 .device.is-compact .seat-role,.device.is-compact .seat-action,
 .device.is-narrow .seat-role,.device.is-narrow .seat-action{display:none}
 /* 窄档席位字号由 --bp-step=14px 驱动，不再单独写死 */
 
-/* 底栏：五按钮一行 → 3+2 两行铺满；控件高度不变，两卡 footer 仍等高 */
+/* 底栏：五按钮一行 → 3+2 两行铺满；中档两卡 footer 等高，窄档堆叠后聊天输入恢复单行 */
 .device.is-compact .host-bar,.device.is-narrow .host-bar{
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
   grid-template-rows:repeat(2,var(--bp-control-h));align-content:center;gap:8px
@@ -371,17 +405,22 @@ h3{font-size:14px}
 /* 客人底栏在窄档改两行：按钮与说明各占一行，不再被压成竖排 */
 .device.is-compact .guest-bar,.device.is-narrow .guest-bar{
   flex-direction:column;align-items:stretch;justify-content:center;gap:8px;
-  height:auto;min-height:0;flex:0 0 auto
+  height:var(--bp-foot-h);min-height:var(--bp-foot-h);flex:0 0 var(--bp-foot-h)
 }
 .device.is-compact .guest-bar button,.device.is-narrow .guest-bar button{flex:0 0 auto;width:100%;min-height:var(--bp-control-h)}
 .device.is-compact .guest-bar .note,.device.is-narrow .guest-bar .note{border-left:none;padding-left:0;font-size:13px;line-height:1.5}
 .device.is-compact .chat-input input,.device.is-compact .chat-input button,
 .device.is-narrow .chat-input input,.device.is-narrow .chat-input button{min-width:0}
+/* 窄档两卡上下堆叠，不再为左右对齐保留双行聊天底栏；44px 控件 + 20px 留白 + 1px 顶线 */
+.device.is-narrow .chat-input{height:calc(var(--bp-control-h) + 21px);min-height:calc(var(--bp-control-h) + 21px);flex:0 0 calc(var(--bp-control-h) + 21px)}
 
 /* 预览控制条在窄面板里收起次要信息，保留实际宽度读数 */
 .toolbar .readout{font:11px/1 var(--bp-font-mono);color:var(--bp-accent-hi);white-space:nowrap}
 @media (max-width:700px){
+  .stage{padding:0}
+  .device.is-mobile{max-width:none}
   .toolbar{padding:8px;gap:6px}
+  .toolbar .group{flex-wrap:wrap}
   .toolbar .label,.toolbar .hint{display:none}
   .toolbar button{min-height:32px;font-size:12px;padding:0 8px}
 }
@@ -429,7 +468,8 @@ h3{font-size:14px}
   <span class="label">视口</span>
   <div class="group" id="vp-group">
     <button type="button" data-vp="desktop" class="on">桌面 1256</button>
-    <button type="button" data-vp="mobile">手机 320</button>
+    <button type="button" data-vp="mobile">手机 360</button>
+    <button type="button" data-vp="narrow320">窄屏 320</button>
   </div>
   <span class="label">连接</span>
   <div class="group" id="conn-group">
@@ -504,10 +544,12 @@ h3{font-size:14px}
       <div class="room-info-block"><span class="room-info-label">游戏</span><span class="room-info-value">变色对决</span></div>
       <div class="room-info-block"><span class="room-info-label">房间状态</span><span class="room-info-value"><span class="dot"></span> 等待入座</span></div>
       <input class="invite" id="invite" value="http://192.168.1.20:3000/?r=893F&amp;g=color-duel" readonly aria-label="邀请链接" title="链接内含房号 r=893F，对方点开自动填入">
-      <button type="button" class="primary" id="btn-copy" style="min-height:44px;font-size:14px;padding:0 14px"><svg class="i"><use href="#i-copy"/></svg> 复制</button>
-      <div class="entries">
-        <button type="button" id="btn-rules"><svg class="i"><use href="#i-settings"/></svg> 规则设置</button>
-        <button type="button" id="btn-ref"><svg class="i"><use href="#i-book"/></svg> 游戏资料</button>
+      <div class="room-actions">
+        <button type="button" class="primary" id="btn-copy" aria-label="复制邀请链接" title="复制邀请链接"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg> 复制</button>
+        <div class="entries">
+          <button type="button" id="btn-rules"><svg class="i" aria-hidden="true"><use href="#i-settings"/></svg> 规则设置</button>
+          <button type="button" id="btn-ref"><svg class="i" aria-hidden="true"><use href="#i-book"/></svg> 游戏资料</button>
+        </div>
       </div>
     </div>
 
@@ -528,8 +570,9 @@ h3{font-size:14px}
         </div>
       </div>
 
-      <div class="panel">
-        <div class="card-head"><h3 class="card-title"><svg class="i"><use href="#i-message"/></svg>房间聊天</h3><span class="muted" style="font:12px/1 var(--bp-font-mono);letter-spacing:.14em">会话消息</span></div>
+      <div class="panel chat-panel" id="chat-panel">
+        <button type="button" class="chat-collapsed" id="btn-chat-open" aria-expanded="false" aria-controls="chat-panel"><svg class="i" aria-hidden="true"><use href="#i-message"/></svg><span>房间聊天</span><span class="chat-collapsed-meta" id="chat-collapsed-meta">4 条</span><span aria-hidden="true">›</span></button>
+        <div class="card-head"><h3 class="card-title"><svg class="i" aria-hidden="true"><use href="#i-message"/></svg>房间聊天</h3><span class="muted" style="font:12px/1 var(--bp-font-mono);letter-spacing:.14em">会话消息</span><button type="button" class="ghost" id="btn-chat-close" aria-label="关闭聊天"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
         <div class="chat-log" id="chat-log" aria-live="polite">
           <p class="chat-line sys" data-chat-role="host"><span class="chat-who" data-nick="host">房主老周</span>　创建了房间</p>
           <p class="chat-line sys" data-chat-role="guest"><span class="chat-who" data-nick="guest">小林</span>　进入房间</p>
@@ -553,6 +596,8 @@ h3{font-size:14px}
       <p class="ref-text">规则设置、席位配置、房间聊天、游戏资料仍可从房间页打开。对局画面、结算与再来一局都在游戏窗口里进行。关掉这个窗口，会话不会中断。</p>
     </div>
   </section>
+
+  <div class="chat-scrim" id="chat-scrim" hidden></div>
 
   <div class="modal" id="modal-rules" hidden>
     <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="rules-title">
@@ -616,7 +661,21 @@ h3{font-size:14px}
     </div>
   </div>
 
-  <div class="color-pop" id="color-pop" hidden>
+  <div class="modal" id="modal-remove" hidden>
+    <div class="modal-box small" role="dialog" aria-modal="true" aria-labelledby="remove-title">
+      <div class="modal-head"><h2 id="remove-title">请出真人玩家</h2><span class="grow"></span><button type="button" class="ghost" data-close="remove" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
+      <div class="modal-body transfer-body">
+        <p class="hint">确认将 <strong id="remove-name"></strong> 请出房间吗？</p>
+        <p class="hint dim">该席位会恢复为空位，对方可重新加入。电脑位可直接删除，真人玩家需要这次确认。</p>
+      </div>
+      <div class="modal-foot transfer-foot">
+        <span class="note">请出后，该席位颜色与准备状态一并清除。</span>
+        <div class="foot-actions"><button type="button" data-close="remove">取消</button><button type="button" class="danger" id="btn-remove-ok">确认请出</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="color-pop" id="color-pop" role="dialog" aria-label="座位颜色" hidden>
     <div class="color-pop-head"><span id="color-pop-title">座位颜色</span><button type="button" id="color-pop-close" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
     <p class="color-pop-note" id="color-pop-note">每个颜色只能给一个席位使用</p>
     <div class="color-grid" id="color-grid"></div>
@@ -630,10 +689,11 @@ h3{font-size:14px}
 <script>
 (function(){
   function emptySeat(n){return {n:n,kind:'empty',who:null,name:null,color:null};}
-  /* 8 色 = 8 席上限，按色相环排列（0/38/82/142/189/239/292/330°），最小间距 38°。
-     琥珀与靛紫是共享令牌色，锁死不改；原「橙」「紫」因与它们过近，换为青柠与品红。 */
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  /* 8 色 = 8 席上限，按色相环排列（0/38/84/142/189/239/280/325°），最小相邻差 ≥35°。
+     琥珀与靛紫是共享令牌色，锁死不改；AI 默认中性灰，不占用色板颜色。 */
   var SEAT_COLORS=[['红','var(--bp-seat-red)'],['琥珀','var(--bp-seat-amber)'],['青柠','var(--bp-seat-lime)'],['绿','var(--bp-seat-green)'],
-                   ['青','var(--bp-seat-cyan)'],['靛紫','var(--bp-seat-indigo)'],['品红','var(--bp-seat-fuchsia)'],['粉','var(--bp-seat-pink)']];
+                   ['青','var(--bp-seat-cyan)'],['靛紫','var(--bp-seat-indigo)'],['紫红','var(--bp-seat-fuchsia)'],['粉','var(--bp-seat-pink)']];
   var state={
     view:'room',role:'host',vp:'desktop',conn:'ok',guestReady:true,
     nick:{host:'房主老周',guest:'小林'},
@@ -647,7 +707,8 @@ h3{font-size:14px}
   var device=document.getElementById('device');
   var toast=document.getElementById('toast');
   var readout=document.getElementById('width-readout');
-  var lastFocus=null,toastTimer=null,lastTier='';
+  var lastFocus=null,toastTimer=null,lastTier='',openModalId=null,colorTrigger=null;
+  var chatOpen=false,chatReturnFocus=null,bodyOverflow='';
 
   function showToast(text){
     document.getElementById('toast-text').textContent=text;toast.hidden=false;
@@ -675,7 +736,7 @@ h3{font-size:14px}
     empty:    {tone:'',        text:'',                                                lan:'局域网暂无房间 · 可手动填写房主地址',    status:'空：局域网无房间、地址簿为空'},
     error:    {tone:'is-bad',  text:'地址不可达 · 检查房主地址后重试',               lan:'发现失败 · 检查地址后重试',             status:'错误：地址非法、连不上、版本或玩法参数不符', retry:true},
     recovered:{tone:'is-ok',   text:'连接已恢复 · 会话状态已同步',                   lan:'暂未发现房间 · 刷新或手动填地址',        status:'成功恢复：状态行将自动清除'},
-    limited:  {tone:'is-warn', text:'你是客人 · 建房与邀请链接仅房主可用',           lan:'暂未发现房间 · 刷新或手动填地址',        status:'权限受限：切「身份=客人」可复现只读参数与客人底栏'},
+    limited:  {tone:'is-warn', text:'客人权限受限 · 建房与邀请链接仅房主可用',           lan:'暂未发现房间 · 刷新或手动填地址',        status:'权限受限：切「身份=客人」可复现只读参数与客人底栏'},
     offline:  {tone:'is-bad',  text:'连接断开 · 命令已本地拒绝，未静默排队（第 2 次重试）', lan:'发现服务不可用 · 恢复后自动重试', status:'离线重试：重连中（含退避次数）、断开并说明原因', retry:true}
   };
   var connTimer=null;
@@ -728,8 +789,9 @@ h3{font-size:14px}
       device.classList.toggle('is-compact',tier!=='wide');
       device.classList.toggle('is-narrow',tier==='narrow');
       lastTier=tier;
+      if(tier!=='narrow'&&chatOpen)closeChat();
     }
-    readout.textContent='实际 '+Math.round(w)+'px · '+({wide:'宽档',compact:'中档',narrow:'窄档'}[tier]);
+    readout.textContent='实际 '+Math.round(w)+'px · '+({wide:'宽档',compact:'中档',narrow:'窄档'}[tier])+' · DPR '+window.devicePixelRatio;
   }
 
   /* ── 席位数据驱动：加电脑 / 请出 / 改色都落在同一份状态上 ────────── */
@@ -749,17 +811,19 @@ h3{font-size:14px}
       var ready=(s.kind==='player'&&state.guestReady)?' is-ready':'';
       var me=(s.who&&s.who===state.role)?' is-me':'';
       var style=s.color?' style="--bp-seat-tag:'+s.color+'"':'';
-      var action;
-      if(s.kind==='empty')action='<button type="button" class="ghost" data-add="'+s.n+'" style="min-height:32px;font-size:12px;padding:0 8px" aria-label="在 '+s.n+' 号位加电脑">+</button>';
-      else if(s.kind==='player'&&state.role==='host')action='<button type="button" class="ghost" id="btn-inline-transfer" style="min-height:32px;font-size:12px;padding:0 8px">转交房主</button>';
+      var action,icon;
+      if(s.kind==='empty')action='<span class="dim">—</span>';
+      else if(state.role==='host'&&(s.kind==='player'||s.kind==='ai'))action='<button type="button" class="ghost seat-remove" data-remove="'+s.n+'" aria-label="删除 '+s.n+' 号位 '+esc(seatName(s))+'" title="删除该席位"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>';
       else action='<span class="dim">—</span>';
+      if(s.kind==='empty'&&state.role==='host')icon='<button type="button" class="seat-add" data-add="'+s.n+'" aria-label="在 '+s.n+' 号位加电脑" title="在 '+s.n+' 号位加电脑"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>';
+      else icon='<span class="seat-icon"><svg class="i" aria-hidden="true"><use href="#'+seatIcon(s.kind)+'"/></svg></span>';
       var slotAttrs=s.kind==='empty'
         ? 'data-slot="'+s.n+'" title="'+s.n+' 号位是空位，加人或加电脑后才能设置颜色"'
         : 'data-slot="'+s.n+'" role="button" tabindex="0" aria-label="'+s.n+' 号位，点击改座位颜色"';
       html+='<div class="seat '+kindCls+ready+me+'" data-n="'+s.n+'"'+style+'>'+
-        '<span class="seat-icon"><svg class="i"><use href="#'+seatIcon(s.kind)+'"/></svg></span>'+
+        icon+
         '<span class="seat-slot" '+slotAttrs+'>'+s.n+'</span>'+
-        '<span class="seat-name"'+(s.who?' data-nick="'+s.who+'"':'')+'>'+seatName(s)+'</span>'+
+        '<span class="seat-name"><span class="seat-name-text"'+(s.who?' data-nick="'+s.who+'"':'')+'>'+esc(seatName(s))+'</span></span>'+
         '<span class="seat-role">'+seatRole(s.kind)+'</span>'+
         '<span class="seat-state'+(s.kind==='player'&&state.guestReady?' ok':'')+'">'+(s.kind==='player'&&state.guestReady?'<svg class="i" aria-hidden="true"><use href="#i-check"/></svg>':'')+seatState(s)+'</span>'+
         '<span class="seat-action">'+action+'</span>'+
@@ -791,22 +855,27 @@ h3{font-size:14px}
     kickTarget=list[0].n;
     document.getElementById('kick-list').innerHTML=list.map(function(s,i){
       return '<button type="button" class="pick'+(i===0?' is-selected':'')+'" role="radio" aria-checked="'+(i===0?'true':'false')+'" data-kick="'+s.n+'">'+
-        '<span class="pick-slot">'+s.n+'</span><span class="pick-name"'+(s.who?' data-nick="'+s.who+'"':'')+'>'+seatName(s)+'</span>'+
+        '<span class="pick-slot">'+s.n+'</span><span class="pick-name"'+(s.who?' data-nick="'+s.who+'"':'')+'>'+esc(seatName(s))+'</span>'+
         '<span class="pick-meta">'+seatRole(s.kind)+'</span></button>';
     }).join('');
     openModal('kick');
   }
   var colorSeat=0;
+  function defaultSeatColor(s){
+    return s.kind==='host'?'var(--bp-seat-amber)':s.kind==='player'?'var(--bp-seat-indigo)':null;
+  }
+  function effectiveSeatColor(s){return s.color||defaultSeatColor(s);}
   function usedColors(exceptSeat){
     var used={};
-    state.seats.forEach(function(s){if(s.color&&s.n!==exceptSeat)used[s.color]=s.n;});
+    /* 默认身份色也占名额：房主琥珀 / 真人靛紫未被自定义覆盖时，别的席位不能再选 */
+    state.seats.forEach(function(s){var c=effectiveSeatColor(s);if(c&&s.n!==exceptSeat)used[c]=s.n;});
     return used;
   }
   function openColorPop(n,slotEl){
     var seat=state.seats[n-1];
     if(!seat||seat.kind==='empty')return;           /* 空位不适用，事件层也拦一道 */
-    colorSeat=n;
-    var cur=seat.color,used=usedColors(n);
+    colorSeat=n;colorTrigger=slotEl;
+    var cur=effectiveSeatColor(seat),used=usedColors(n);
     document.getElementById('color-pop-title').textContent=n+' 号位 · 座位颜色';
     var usedCount=0;
     SEAT_COLORS.forEach(function(c){if(used[c[1]])usedCount++;});
@@ -819,21 +888,30 @@ h3{font-size:14px}
               :' title="'+c[0]+'" aria-label="'+c[0]+'"')+'></button>';
     }).join('');
     var reset=document.getElementById('btn-color-reset');
-    reset.disabled=!cur;
-    reset.title=cur?'释放当前颜色，恢复成该席位默认身份色':'该席位已是默认颜色';
+    var def=defaultSeatColor(seat),defaultTaken=def&&used[def];
+    reset.disabled=!seat.color||!!defaultTaken;
+    reset.title=!seat.color?'该席位已是默认颜色'
+      :defaultTaken?'默认色正被 '+defaultTaken+' 号位使用，请先让其释放'
+      :'释放当前颜色，恢复成该席位默认身份色';
     var pop=document.getElementById('color-pop');pop.hidden=false;
     var dr=device.getBoundingClientRect(),r=slotEl.getBoundingClientRect();
     var left=r.left-dr.left,top=r.bottom-dr.top+8;
-    if(left+224>dr.width)left=dr.width-232;
-    if(top+228>dr.height)top=r.top-dr.top-236;
+    if(left+240>dr.width)left=dr.width-248;
+    if(top+260>dr.height)top=r.top-dr.top-268;
     pop.style.left=Math.max(8,left)+'px';pop.style.top=Math.max(8,top)+'px';
+    var first=pop.querySelector('.color-dot:not(.is-taken)');
+    if(first)first.focus();
   }
-  function closeColorPop(){document.getElementById('color-pop').hidden=true;}
+  function closeColorPop(restore){
+    document.getElementById('color-pop').hidden=true;
+    if(restore!==false&&colorTrigger&&colorTrigger.isConnected)colorTrigger.focus();
+    colorTrigger=null;
+  }
   document.getElementById('seat-list').addEventListener('click',function(e){
     var add=e.target.closest('[data-add]');
     if(add){addComputer(parseInt(add.getAttribute('data-add'),10));return;}
-    var tr=e.target.closest('#btn-inline-transfer');
-    if(tr){openTransfer(document.getElementById('btn-transfer'));return;}
+    var remove=e.target.closest('[data-remove]');
+    if(remove){requestRemove(parseInt(remove.getAttribute('data-remove'),10),remove);return;}
     var slot=e.target.closest('[data-slot]');
     if(slot){var n=parseInt(slot.getAttribute('data-slot'),10);if(state.seats[n-1].kind==='empty')return;openColorPop(n,slot);return;}
   });
@@ -849,26 +927,48 @@ h3{font-size:14px}
       x.classList.toggle('is-selected',x===b);x.setAttribute('aria-checked',x===b?'true':'false');
     });
   });
-  document.getElementById('btn-kick-ok').addEventListener('click',function(){
-    var s=state.seats[kickTarget-1];
-    if(!s||s.kind==='empty'||s.kind==='host'){closeModal('kick');return;}
+  var removeTarget=0;
+  function removeNow(n){
+    var s=state.seats[n-1];
+    if(!s||s.kind==='empty'||s.kind==='host')return;
     var name=seatName(s);
     if(s.kind==='player')state.guestReady=false;
     s.kind='empty';s.who=null;s.name=null;s.color=null;   /* 席位空出来，颜色一并释放 */
     addSystem(name+' 已被请出房间');
-    closeModal('kick');apply();showToast(name+' 已请出，'+kickTarget+' 号位恢复空位');
+    apply();showToast(name+' 已请出，'+n+' 号位恢复空位');
+  }
+  function requestRemove(n,trigger){
+    var s=state.seats[n-1];
+    if(state.role!=='host'||!s||s.kind==='empty'||s.kind==='host')return;
+    if(s.kind==='ai'){removeNow(n);return;}
+    removeTarget=n;
+    document.getElementById('remove-name').textContent=seatName(s);
+    openModal('remove',trigger);
+  }
+  document.getElementById('btn-remove-ok').addEventListener('click',function(){
+    closeModal('remove');removeNow(removeTarget);
+    var add=document.querySelector('[data-add="'+removeTarget+'"]');if(add)add.focus();
+  });
+  document.getElementById('btn-kick-ok').addEventListener('click',function(){
+    var s=state.seats[kickTarget-1];
+    if(!s||s.kind==='empty'||s.kind==='host'){closeModal('kick');return;}
+    closeModal('kick');removeNow(kickTarget);
   });
   document.getElementById('color-grid').addEventListener('click',function(e){
     var b=e.target.closest('[data-color]');if(!b)return;
     var taken=b.getAttribute('data-taken-by');
     if(taken){showToast('该颜色已由 '+taken+' 号位使用，请先在 '+taken+' 号位释放或另选一色');return;}
     state.seats[colorSeat-1].color=b.getAttribute('data-color');
-    closeColorPop();apply();showToast(colorSeat+' 号位颜色已改');
+    closeColorPop(false);apply();
+    var selectedSlot=document.querySelector('[data-slot="'+colorSeat+'"]');if(selectedSlot)selectedSlot.focus();
+    showToast(colorSeat+' 号位颜色已改');
   });
   document.getElementById('btn-color-reset').addEventListener('click',function(){
     if(!state.seats[colorSeat-1].color)return;
     state.seats[colorSeat-1].color=null;
-    closeColorPop();apply();showToast(colorSeat+' 号位已恢复默认颜色');
+    closeColorPop(false);apply();
+    var resetSlot=document.querySelector('[data-slot="'+colorSeat+'"]');if(resetSlot)resetSlot.focus();
+    showToast(colorSeat+' 号位已恢复默认颜色');
   });
   document.getElementById('color-pop-close').addEventListener('click',closeColorPop);
   document.addEventListener('click',function(e){
@@ -877,8 +977,40 @@ h3{font-size:14px}
     closeColorPop();
   });
 
+  function positionChatDrawer(){
+    var panel=document.getElementById('chat-panel'),dr=device.getBoundingClientRect();
+    var top=Math.max(0,dr.top),bottom=Math.min(window.innerHeight,dr.bottom);
+    panel.style.top=top+'px';panel.style.height=Math.max(0,bottom-top)+'px';
+    panel.style.right=Math.max(0,window.innerWidth-dr.right)+'px';
+  }
+  function openChat(){
+    if(!device.classList.contains('is-narrow')||chatOpen)return;
+    chatReturnFocus=document.getElementById('btn-chat-open');chatOpen=true;
+    var panel=document.getElementById('chat-panel');
+    panel.classList.add('is-open');panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','房间聊天');
+    document.getElementById('btn-chat-open').setAttribute('aria-expanded','true');
+    document.getElementById('chat-scrim').hidden=false;
+    bodyOverflow=document.body.style.overflow;document.body.style.overflow='hidden';
+    positionChatDrawer();document.getElementById('btn-chat-close').focus();
+  }
+  function closeChat(){
+    if(!chatOpen)return;chatOpen=false;
+    var panel=document.getElementById('chat-panel');
+    panel.classList.remove('is-open');panel.removeAttribute('role');panel.removeAttribute('aria-modal');panel.removeAttribute('aria-label');
+    panel.style.top='';panel.style.height='';panel.style.right='';
+    document.getElementById('btn-chat-open').setAttribute('aria-expanded','false');
+    document.getElementById('chat-scrim').hidden=true;document.body.style.overflow=bodyOverflow;
+    if(chatReturnFocus&&chatReturnFocus.isConnected&&chatReturnFocus.offsetWidth)chatReturnFocus.focus();
+    chatReturnFocus=null;
+  }
+  document.getElementById('btn-chat-open').addEventListener('click',openChat);
+  document.getElementById('btn-chat-close').addEventListener('click',closeChat);
+  document.getElementById('chat-scrim').addEventListener('click',closeChat);
+
   function apply(){
-    device.classList.toggle('is-mobile',state.vp==='mobile');
+    if(state.view!=='room'&&chatOpen)closeChat();
+    device.classList.toggle('is-mobile',state.vp==='mobile'||state.vp==='narrow320');
+    device.classList.toggle('is-phone-320',state.vp==='narrow320');
     ['lobby','room','open'].forEach(function(v){document.getElementById('screen-'+v).hidden=(state.view!==v);});
     var isHost=state.role==='host';
     var nickInput=document.getElementById('nick');
@@ -894,7 +1026,7 @@ h3{font-size:14px}
     var start=document.getElementById('btn-start');
     start.disabled=!state.guestReady||!hasPlayer;
     start.innerHTML=hasPlayer
-      ?(state.guestReady?'<svg class="i"><use href="#i-flag"/></svg> 开始游戏':'等 '+state.nick.guest+' 准备')
+      ?(state.guestReady?'<svg class="i"><use href="#i-flag"/></svg> 开始游戏':'等 '+esc(state.nick.guest)+' 准备')
       :'需有真人玩家';
     var ready=document.getElementById('btn-ready');
     ready.innerHTML='<svg class="i"><use href="#i-check"/></svg> '+(state.guestReady?'取消准备':'准备');
@@ -912,13 +1044,14 @@ h3{font-size:14px}
   }
 
   function openModal(id,trigger){
-    lastFocus=trigger||document.activeElement;
+    lastFocus=trigger||document.activeElement;openModalId=id;
     document.getElementById('modal-'+id).hidden=false;
     var first=document.querySelector('#modal-'+id+' button');
     if(first)first.focus();
   }
   function closeModal(id){
     document.getElementById('modal-'+id).hidden=true;
+    if(openModalId===id)openModalId=null;
     /* 触发按钮可能被 renderSeats 重绘销毁，别把焦点还给游离节点 */
     if(lastFocus&&lastFocus.isConnected!==false&&lastFocus.focus)lastFocus.focus();
   }
@@ -928,9 +1061,19 @@ h3{font-size:14px}
     b.addEventListener('click',function(){closeModal(b.getAttribute('data-close'));});
   });
   document.addEventListener('keydown',function(e){
-    if(e.key!=='Escape')return;
-    ['rules','ref','transfer','kick'].forEach(function(id){if(!document.getElementById('modal-'+id).hidden)closeModal(id);});
-    closeColorPop();
+    var modal=openModalId?document.getElementById('modal-'+openModalId):null;
+    var pop=document.getElementById('color-pop');
+    var scope=modal||(chatOpen?document.getElementById('chat-panel'):(!pop.hidden?pop:null));
+    if(e.key==='Escape'){
+      ['rules','ref','transfer','kick','remove'].forEach(function(id){if(!document.getElementById('modal-'+id).hidden)closeModal(id);});
+      closeColorPop();closeChat();return;
+    }
+    if(e.key!=='Tab'||!scope)return;
+    var items=Array.prototype.filter.call(scope.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex="0"]'),function(el){return el.offsetWidth||el.offsetHeight;});
+    if(!items.length)return;
+    var first=items[0],last=items[items.length-1],active=document.activeElement;
+    if(e.shiftKey&&(active===first||!scope.contains(active))){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&(active===last||!scope.contains(active))){e.preventDefault();first.focus();}
   });
 
   /* 箭头颜色：优先取该用户席位的标记色，未选色时回落到角色默认（房主琥珀 / 客人靛紫）。
@@ -945,6 +1088,8 @@ h3{font-size:14px}
     Array.prototype.forEach.call(document.querySelectorAll('[data-chat-role]'),function(p){
       p.setAttribute('style','--bp-chat-mark:'+chatMarkFor(p.getAttribute('data-chat-role')));
     });
+    var lines=document.querySelectorAll('#chat-log .chat-line'),last=lines[lines.length-1];
+    document.getElementById('chat-collapsed-meta').textContent=lines.length+' 条'+(last?' · '+last.textContent:'');
   }
   function appendChatLine(p){
     var log=document.getElementById('chat-log');
@@ -1002,12 +1147,12 @@ h3{font-size:14px}
     if(!players.length){showToast('没有可接任的真人玩家');return;}
     var html=players.map(function(s,i){
       return '<button type="button" class="pick'+(i===0?' is-selected':'')+'" role="radio" aria-checked="'+(i===0?'true':'false')+'" data-transfer="'+s.n+'">'+
-        '<span class="pick-slot">'+s.n+'</span><span class="pick-name" data-nick="'+s.who+'">'+seatName(s)+'</span>'+
+        '<span class="pick-slot">'+s.n+'</span><span class="pick-name" data-nick="'+s.who+'">'+esc(seatName(s))+'</span>'+
         '<span class="pick-meta">真人 · 可接任</span></button>';
     }).join('');
     state.seats.filter(function(s){return s.kind==='ai';}).forEach(function(s){
       html+='<div class="pick is-disabled" aria-disabled="true"><span class="pick-slot">'+s.n+'</span>'+
-        '<span class="pick-name">'+seatName(s)+'</span><span class="pick-meta">电脑位不能接任</span></div>';
+        '<span class="pick-name">'+esc(seatName(s))+'</span><span class="pick-meta">电脑位不能接任</span></div>';
     });
     html+='<div class="pick is-disabled" aria-disabled="true"><span class="pick-slot">1</span>'+
       '<span class="pick-name">当前房主</span><span class="pick-meta">不能移交给自己</span></div>';
@@ -1030,7 +1175,7 @@ h3{font-size:14px}
   apply();
   syncConnButtons();applyConn();
   if(window.ResizeObserver){new ResizeObserver(syncWidth).observe(device);}
-  else{window.addEventListener('resize',syncWidth);}
+  window.addEventListener('resize',function(){syncWidth();if(chatOpen)positionChatDrawer();});
   syncWidth();
 })();
 </script>
