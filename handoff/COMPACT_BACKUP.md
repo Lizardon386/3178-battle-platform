@@ -225,4 +225,8 @@
 
 - 2026-10-30 WorkBuddy：**四块布局定稿**：房间页四块（房间信息 / 规则配置 / 席位配置 / 房间聊天）推送 `81fb3ce`，截图 `87baa72`；233/233、seam、tsc 通过；三档文档同步。留给下一家的两件事（左栏收起态留白、等用户自测反馈）中，后者已被本次 D3 决定取代，前者随规则改弹层自动消失。
 
+- 2026-11-09 Claude Code：**文档布局迁移（--doc）**：README 留在根，DESIGN / INTEGRATION_GUIDE 移入 `docs/`（含 images），CONTEXT / COMPACT_BACKUP 在 `handoff/`；五份文档补 `scope` 标记，目录表 / 跨目录链接与包 README、pack-sdk 的 GitHub URL 同步；`--doc --guard` 复查 OK。
+
+- 2026-11-09 Claude Code：**收工复核**：`--check` / `--fix` 通过；`handoff/PROMPT.md` 的跨任务规则路径修正为工作区根 `PROJECT_RULES.md`；技能命令面问题已交接 V4；项目无代码改动，`feaedda` 已推送。
+
 <!-- multi-agent-task-handoff: scope=handoff -->

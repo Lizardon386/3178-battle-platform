@@ -1,0 +1,34 @@
+{
+  "protocolVersion": 0,
+  "platformErrors": [
+    {"code":"PROTOCOL","retryable":false,"summary":"协议版本或帧格式不兼容"},
+    {"code":"VERSION","retryable":false,"summary":"游戏版本与目标会话不符"},
+    {"code":"RULES","retryable":false,"summary":"rulesHash 与目标会话不符"},
+    {"code":"UNKNOWN_GAME","retryable":false,"summary":"游戏 id 未注册"},
+    {"code":"NOROOM","retryable":false,"summary":"会话不存在或已关闭"},
+    {"code":"NOSEAT","retryable":false,"summary":"当前连接没有有效座位"},
+    {"code":"FULL","retryable":true,"summary":"席位已满或目标席位不可用"},
+    {"code":"NOTHOST","retryable":false,"summary":"当前成员不是房主"},
+    {"code":"HOSTONLY","retryable":false,"summary":"该动作只允许房主"},
+    {"code":"PASSWORD","retryable":false,"summary":"会话密码错误或缺失"},
+    {"code":"PHASE","retryable":false,"summary":"当前进程或会话状态不允许该动作"},
+    {"code":"RATE","retryable":true,"summary":"触发平台限流"},
+    {"code":"SEATLOST","retryable":true,"summary":"座位已失效，可重新加入"},
+    {"code":"BADMSG","retryable":false,"summary":"消息缺字段、类型错误、含额外字段或超过限制"},
+    {"code":"NOTREADY","retryable":true,"summary":"开始闸未满足：缺真人或仍有真人未准备"},
+    {"code":"GAMEFAILED","retryable":true,"summary":"游戏进程启动失败、超时或致命退出"},
+    {"code":"HANDOFF","retryable":true,"summary":"handoffCode 无效、过期、已使用或绑定不符"},
+    {"code":"FORBIDDEN","retryable":false,"summary":"受限 gameTicket 尝试平台管理动作"},
+    {"code":"INTERNAL","retryable":true,"summary":"平台内部错误"}
+  ],
+  "platformNotices": [
+    {"code":"HOSTLEFT","summary":"房主连接断开"},
+    {"code":"HOST_CHANGED","summary":"房主权限已移交"},
+    {"code":"ROOM_CLOSED","summary":"会话已关闭"},
+    {"code":"SEAT_EJECTED","summary":"成员被请出"},
+    {"code":"RULES_MISMATCH","summary":"配置摘要已变化"},
+    {"code":"REJOINED","summary":"已恢复原座位"},
+    {"code":"TOO_FEW","summary":"真人数量不足"}
+  ],
+  "gameErrors": "由游戏自定义并经 AuthorityDeliver 投递；平台不注册、不翻译、不解释"
+}

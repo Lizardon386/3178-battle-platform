@@ -1,0 +1,1 @@
+{"type":"start","gameId":"color-duel","version":"0.3.0","sessionCode":"893F","sessionConfig":{"handLimit":7},"members":[{"seatId":1,"kind":"player","ready":true,"profile":{"nick":"房主老周","displayColor":"#f59e0b"},"connected":true,"options":{}},{"seatId":2,"kind":"player","ready":true,"profile":{"nick":"小林","displayColor":"#6366f1"},"connected":true,"options":{}}],"revision":5}

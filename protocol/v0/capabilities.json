@@ -1,0 +1,15 @@
+{
+  "protocolVersion": 0,
+  "items": [
+    {"id":"toSeat","required":false,"summary":"权威可按 seatId 定向投递"},
+    {"id":"resume","required":true,"summary":"平台票据重连与掉线宽限"},
+    {"id":"discovery.lan","required":false,"summary":"UDP 组播发现局域网会话"},
+    {"id":"tunnel","required":false,"summary":"由平台管理隧道子进程"},
+    {"id":"wss","required":false,"summary":"网页客人通过 TLS WebSocket 接入"},
+    {"id":"game.installed","required":false,"summary":"原生游戏已安装"},
+    {"id":"game.handoff","required":true,"summary":"独立 origin 游戏入口与受限 gameTicket"},
+    {"id":"profile.avatar","required":false,"summary":"profile 包含经平台校验的头像资源"},
+    {"id":"ready","required":true,"summary":"平台成员通用准备标记"},
+    {"id":"start","required":true,"summary":"房主开始闸与开始后拉起权威"}
+  ]
+}
