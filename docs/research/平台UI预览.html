@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3178 对战平台 · 界面预览（演示数据）</title>
+<style>
+@font-face{font-family:"BP Display";src:url("fonts/Tektur-Regular.ttf") format("truetype");font-weight:400;font-display:block}
+@font-face{font-family:"BP Display";src:url("fonts/Tektur-Medium.ttf") format("truetype");font-weight:500 700;font-display:block}
+@font-face{font-family:"BP UI";src:url("fonts/Outfit-Regular.ttf") format("truetype");font-weight:400;font-display:block}
+@font-face{font-family:"BP UI";src:url("fonts/Outfit-Bold.ttf") format("truetype");font-weight:600 700;font-display:block}
+@font-face{font-family:"BP Mono";src:url("fonts/GeistMono-Regular.ttf") format("truetype");font-weight:400;font-display:block}
+@font-face{font-family:"BP Mono";src:url("fonts/GeistMono-Bold.ttf") format("truetype");font-weight:700;font-display:block}
+:root{
+  --bp-bg:#0a0a0f;--bp-panel:#16161f;--bp-panel-alt:#111118;--bp-raised:#1c1c28;
+  --bp-hover:#2a2a42;--bp-line:#23233a;--bp-accent:#6366f1;--bp-accent-hi:#818cf8;
+  --bp-accent-dim:#4f46e5;--bp-violet:#8b5cf6;--bp-magenta:#ec4899;
+  --bp-text:#e8e8ed;--bp-dim:#8b8b9e;--bp-dim-hi:#9c9cb2;--bp-dim-2:#5c5c72;
+  --bp-ok:#22c55e;--bp-warn:#f59e0b;--bp-bad:#ef4444;
+  --bp-radius:6px;
+  --bp-field-px:20px;--bp-label-gap:12px;
+  --bp-motion-fast:160ms;--bp-motion-base:220ms;--bp-motion-slow:300ms;
+  --bp-ease:cubic-bezier(.22,.61,.36,1);
+  --bp-lift-y:-2px;
+  --bp-step:16.5px;--bp-title:26px;--bp-code:58px;--bp-count:34px;
+  --bp-row:60px;--bp-control-h:52px;--bp-pad:28px;--bp-foot-h:73px;
+  --bp-font-display:"BP Display","BP UI",sans-serif;
+  --bp-font-ui:"BP UI","PingFang SC","Microsoft YaHei UI","Microsoft YaHei",sans-serif;
+  --bp-font-mono:"BP Mono",Consolas,"Microsoft YaHei UI","Microsoft YaHei",monospace;
+}
+/* ── 全局动效契约：一处定义，全站共用 ─────────────────────────────
+   统一交互：hover / focus / focus-within 一律整圈 1px 靛紫高亮。
+   只有单层边框，不再叠左轨 + 外环，所以点击时不会显粗、显挤。
+   零关键帧动画；过渡属性显式列出，绝不用 all；线性、无弹跳。 */
+*,*::before,*::after{animation:none!important}
+*{box-sizing:border-box}
+:where(button,input,select,textarea,label,.form-label,.panel,.seat,.card-head,.card-title,
+       .room-info,.seat-list,.seat-slot,.chat-log,.host-bar,.guest-bar,.chat-input,.cfg-row,.field,
+       .modal-box,.modal-head,.modal-foot,.toast,.pick,.color-dot,.entries button,.toolbar button){
+  transition-property:color,background-color,border-color,box-shadow,transform,outline-color,opacity;
+  transition-duration:var(--bp-motion-base);
+  transition-timing-function:var(--bp-ease);
+}
+.panel{transition-duration:var(--bp-motion-slow)}
+:where(button,.panel):active{transform:none}
+button:disabled:hover{transform:none}
+
+/* 区域联动：只有可编辑控件聚焦时，所属整块区域才一起高亮。
+   排除 readonly / disabled —— 点只读邀请链接后焦点会留在框上，否则整块一直亮着不退。 */
+.panel:has(input:focus:not([readonly]):not(:disabled),select:focus:not(:disabled)),
+.modal-box:has(input:focus:not([readonly]):not(:disabled),select:focus:not(:disabled)){border-color:var(--bp-accent)}
+@media (hover:hover) and (prefers-reduced-motion:no-preference){
+  .panel:hover{border-color:var(--bp-accent);transform:translateY(var(--bp-lift-y))}
+  .host-bar:has(.danger:hover){border-top-color:var(--bp-bad)}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition:none!important;transform:none!important;scroll-behavior:auto!important}
+}
+html,body{margin:0;padding:0;background:#05050a;color:var(--bp-text);font-family:var(--bp-font-ui);font-size:var(--bp-step);line-height:1.6}
+button,input,select{font:inherit}
+button{cursor:pointer;border-radius:4px;border:1px solid var(--bp-line);background:var(--bp-panel-alt);color:var(--bp-text);min-height:var(--bp-control-h);padding:0 18px;font:500 15.5px/1.3 var(--bp-font-display);letter-spacing:.08em;white-space:nowrap;box-shadow:none}
+button:hover{background:var(--bp-raised);border-color:var(--bp-accent)}
+button.primary{background:var(--bp-accent-dim);border-color:var(--bp-accent-dim);color:#fff}
+button.primary:hover{background:var(--bp-accent);border-color:var(--bp-accent);color:#fff}
+button.danger{border-color:var(--bp-bad);color:var(--bp-bad)}
+button.danger:hover{background:rgba(239,68,68,.14)}
+button.ghost{background:transparent}
+button:disabled{background:transparent!important;border-color:var(--bp-line)!important;color:var(--bp-dim-2)!important;cursor:not-allowed;opacity:1}
+/* 焦点指示：不在外面再加一圈 outline，直接把原有高亮边框加粗 1px。
+   用 inset shadow 实现，盒模型不变、文字不抖；鼠标点击与键盘 Tab 同一套表现。 */
+:focus-visible{outline:none}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  border-color:var(--bp-accent);box-shadow:inset 0 0 0 1px var(--bp-accent)
+}
+/* 输入框：单层 1px 边框 + 整圈靛紫高亮；内边距走全局令牌 */
+input,select{background:var(--bp-panel-alt);border:1px solid var(--bp-line);color:var(--bp-text);border-radius:4px;padding:14px var(--bp-field-px);font-size:16px;min-height:var(--bp-control-h);width:100%}
+input:hover,select:hover{border-color:var(--bp-accent)}
+input:focus,select:focus{border-color:var(--bp-accent);background:var(--bp-raised);transition-duration:var(--bp-motion-fast)}
+input[readonly],input:disabled,select:disabled{border-style:dashed;color:var(--bp-dim-hi)}
+input.is-invalid,select.is-invalid{border-color:var(--bp-bad)}
+input.is-invalid:focus-visible,select.is-invalid:focus-visible{border-color:var(--bp-bad);box-shadow:inset 0 0 0 1px var(--bp-bad)}
+/* 标签与控件：裸 label 和 .form-label 共用同一套间距，全局一致 */
+.field label,.form-label{display:block;margin-bottom:var(--bp-label-gap);font:13.5px/1.4 var(--bp-font-mono);letter-spacing:.08em;color:var(--bp-dim-hi)}
+.field:focus-within label,.field:focus-within .form-label,.cfg-row:focus-within .grow{color:var(--bp-accent-hi)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+[hidden]{display:none!important}
+.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;display:inline-block;vertical-align:-3px}
+
+.toolbar{background:#111118;border-bottom:1px solid var(--bp-line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar .tag{font-size:11px;color:var(--bp-warn);border:1px solid var(--bp-warn);border-radius:4px;padding:2px 8px;margin-right:6px;font-family:var(--bp-font-mono)}
+.toolbar .label{font-size:12px;color:var(--bp-dim-hi);margin-right:2px}
+.toolbar .group{display:flex;gap:4px;align-items:center}
+.toolbar button{min-height:36px;font-size:13px;padding:0 12px}
+.toolbar button.on{background:var(--bp-accent-dim);border-color:var(--bp-accent-dim)}
+.toolbar .spacer{flex:1}
+.toolbar .hint{font-size:11px;color:var(--bp-dim-2);font-family:var(--bp-font-mono)}
+
+.stage{padding:12px;display:flex;justify-content:center}
+.device{width:100%;max-width:none;background:var(--bp-bg);border:1px solid var(--bp-line);border-radius:var(--bp-radius);overflow:hidden;position:relative;min-height:calc(100vh - 80px);display:flex;flex-direction:column}
+.device.is-mobile{max-width:320px;min-height:640px}
+
+.bp-topbar{padding:18px var(--bp-pad);background:var(--bp-panel-alt);border-bottom:1px solid var(--bp-line);display:flex;align-items:center;gap:16px;flex:none;flex-wrap:wrap}
+.brand-mark{width:54px;height:54px;flex:none}
+.brand-text{display:flex;flex-direction:column;gap:3px}
+.brand-text strong{font:500 30px/1 var(--bp-font-display);letter-spacing:.16em;color:var(--bp-text)}
+.brand-text small{font:13px/1.4 var(--bp-font-mono);letter-spacing:.18em;color:var(--bp-dim-hi)}
+.nick-field{margin-left:auto;display:flex;align-items:center;gap:12px}
+.nick-field .form-label{margin:0;font:700 26px/1.2 var(--bp-font-ui);letter-spacing:.08em;color:var(--bp-accent-hi);white-space:nowrap}
+.nick-field input{width:220px}
+
+.screen{padding:16px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.panel{background:var(--bp-panel);border:1px solid var(--bp-line);border-radius:6px;overflow:hidden;transition-duration:var(--bp-motion-slow)}
+.pad{padding:var(--bp-pad)}
+.muted{color:var(--bp-dim-hi)}
+.dim{color:var(--bp-dim-2)}
+.grow{flex:1;min-width:0}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+h1,h2,h3{margin:0;font-weight:500}
+h2{font-size:18px}
+h3{font-size:14px}
+.card-head{padding:16px var(--bp-pad);background:var(--bp-panel-alt);border-bottom:1px solid var(--bp-line);display:flex;justify-content:space-between;align-items:center;gap:16px;flex:0 0 auto}
+.card-title{font:500 20px/1.2 var(--bp-font-display);letter-spacing:.1em;color:var(--bp-text);display:flex;align-items:center;gap:12px;white-space:nowrap}
+.card-title .i{color:var(--bp-accent);width:21px;height:21px}
+.bp-subtitle{font:13.5px/1.4 var(--bp-font-mono);letter-spacing:.08em;color:var(--bp-dim-hi);margin:0 0 12px}
+.hint{font-size:15.5px;line-height:1.8;color:var(--bp-dim-hi)}
+.status{font:15px/1.6 var(--bp-font-mono);color:var(--bp-accent-hi)}
+.form-label{display:block;margin-bottom:10px;font:13.5px/1.4 var(--bp-font-mono);letter-spacing:.08em;color:var(--bp-dim-hi)}
+.field{margin:14px 0}
+
+.room-info{display:flex;gap:20px;align-items:center;flex-wrap:wrap;padding:16px var(--bp-pad);flex:0 0 auto}
+.room-info-block{display:flex;flex-direction:column;gap:6px;padding:0 16px;border-left:1px solid var(--bp-line)}
+.room-info-block:first-child{padding-left:0;border-left:none}
+.room-code{font:500 var(--bp-code)/.9 var(--bp-font-display);letter-spacing:.1em;color:var(--bp-accent-hi)}
+.room-info-label{font:12px/1.2 var(--bp-font-mono);letter-spacing:.14em;color:var(--bp-dim)}
+.room-info-value{font-size:16px;color:var(--bp-text)}
+.invite{flex:1 1 260px;min-width:260px;max-width:460px;font-family:var(--bp-font-mono);font-size:14px}
+.entries{display:flex;gap:10px;flex-wrap:wrap}
+.entries button{min-height:44px;font-size:14px;padding:0 16px;border-color:var(--bp-accent);color:var(--bp-accent-hi)}
+
+.two-col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+#screen-room .two-col{flex:1 1 auto;min-height:0}
+.two-col > .panel{display:flex;flex-direction:column;min-height:0}
+.seat-list{flex:1 1 auto;min-height:0;overflow:auto;border-top:1px solid var(--bp-line)}
+/* 席位身份色：一个变量同时驱动左轨 / 图标 / 编号铭牌 / 角色徽章，不再各写一套 */
+.seat{--bp-seat:var(--bp-dim);display:grid;grid-template-columns:34px 46px minmax(0,1fr) 62px 78px 96px;gap:12px;align-items:center;min-height:var(--bp-row);padding:0 var(--bp-pad);border-bottom:1px solid var(--bp-line);border-left:4px solid var(--bp-seat);font-size:16px}
+.seat:hover{background:var(--bp-raised)}
+.seat-icon{color:var(--bp-seat);display:flex;justify-content:center}
+.seat-slot{display:grid;place-items:center;min-width:46px;height:34px;font:700 15px/1 var(--bp-font-mono);color:var(--bp-seat);background:var(--bp-panel-alt);border:1px solid var(--bp-seat);border-radius:4px}
+.seat-name{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.is-me{font-weight:700;color:#fff}
+.is-me .seat-name::after{content:"你";margin-left:10px;padding:2px 8px;font:11px/1.4 var(--bp-font-mono);letter-spacing:0;color:var(--bp-bg);background:var(--bp-accent-hi);border-radius:100px}
+.seat-role{font:12px/1 var(--bp-font-mono);letter-spacing:.06em;color:var(--bp-seat);border:1px solid var(--bp-seat);border-radius:4px;padding:4px 6px;text-align:center;white-space:nowrap}
+.seat-state{font:13.5px/1 var(--bp-font-mono);letter-spacing:.06em;color:var(--bp-dim-hi);text-align:right;white-space:nowrap}
+.seat-state.ok{color:var(--bp-ok)}
+.seat-action{justify-self:end}
+/* 身份定义：房主琥珀 / 玩家靛紫 / 电脑紫虚线 / 已准备绿（优先级最高） */
+.seat-host{--bp-seat:var(--bp-warn)}
+.seat-player{--bp-seat:var(--bp-accent)}
+.seat-ai{--bp-seat:var(--bp-violet);border-left-style:dashed}
+.seat.is-ready{--bp-seat:var(--bp-ok)}
+/* 占用席位：编号铭牌实心身份色，与房主 1 号牌同一形态 */
+.seat-host .seat-slot,.seat-player .seat-slot,.seat-ai .seat-slot{color:var(--bp-bg);background:var(--bp-seat);border-color:var(--bp-seat)}
+.seat.seat-host{background:var(--bp-raised)}
+/* 空位：只用极暗灰，不画成一排彩色牌 */
+.seat-empty{--bp-seat:var(--bp-dim-2);border-left-color:transparent;color:var(--bp-dim);background:var(--bp-panel-alt)}
+.seat-empty .seat-slot{color:var(--bp-dim);background:var(--bp-panel-alt);border-color:var(--bp-line)}
+/* 编号牌可点击改座位颜色；缩放用 transform，不挤动布局 */
+.seat-slot[role="button"]{cursor:pointer}
+.seat-slot[role="button"]:hover{transform:scale(1.08)}
+.color-pop{position:absolute;z-index:25;width:224px;padding:12px;background:var(--bp-raised);border:1px solid var(--bp-accent);border-radius:var(--bp-radius)}
+.color-pop-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;font:13px/1.4 var(--bp-font-mono);color:var(--bp-dim-hi)}
+.color-pop-head button{min-height:28px;padding:0 4px;font-size:16px;background:transparent;border:none}
+.color-pop-head .i{width:14px;height:14px}
+.color-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.color-dot{height:40px;min-height:40px;padding:0;border:2px solid transparent;border-radius:4px}
+.color-dot:hover{transform:translateY(-2px)}
+.color-dot.is-current{border-color:var(--bp-text)}
+
+.chat-log{flex:1 1 auto;min-height:120px;max-height:none;padding:22px var(--bp-pad);overflow:auto;font-size:16px;line-height:1.75;background:var(--bp-panel-alt)}
+.chat-line{padding:9px 0;border-bottom:1px dotted var(--bp-line);word-break:break-word;max-width:60ch;margin:0}
+.chat-line:last-child{border-bottom:none}
+.chat-line.sys{font:14px/1.6 var(--bp-font-mono);color:var(--bp-dim-hi)}
+.chat-line.sys::before{content:"▸ ";color:var(--bp-accent)}
+
+.host-bar,.guest-bar,.chat-input{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--bp-line);box-sizing:border-box;height:var(--bp-foot-h);min-height:var(--bp-foot-h);flex:0 0 var(--bp-foot-h);background:var(--bp-panel-alt)}
+.host-bar button,.guest-bar button,.chat-input button,.chat-input input{height:var(--bp-control-h);min-height:var(--bp-control-h);box-sizing:border-box}
+.host-bar button{flex:1 1 auto;min-width:64px;font-size:14px;padding:0 12px}
+.host-bar button .i{width:16px;height:16px}
+.guest-bar button{flex:0 0 168px}
+.guest-bar .note{flex:1;min-width:0;padding-left:16px;border-left:1px solid var(--bp-line);font:14px/1.6 var(--bp-font-mono);color:var(--bp-dim-hi)}
+.chat-input input{flex:1 1 auto;min-width:0}
+.chat-input button{flex:0 0 auto}
+
+.open-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:var(--bp-pad)}
+.open-bar .grow{min-width:160px}
+.lobby-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.lobby-card{padding:var(--bp-pad)}
+.lobby-card .card-title{margin-bottom:14px}
+#screen-lobby .lobby-grid{flex:1 1 auto;align-content:start}
+#screen-open .panel:last-child{flex:1 1 auto}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--bp-ok);display:inline-block;flex:none}
+
+.modal{position:absolute;inset:0;background:rgba(5,5,10,.86);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+/* 弹层按内容自适应：宽度有上限、高度随文本量收缩；列数 auto-fit 随可用宽度从 2 列降为 1 列 */
+.modal-box{background:var(--bp-bg);border:1px solid var(--bp-accent);border-radius:8px;width:min(1040px,92%);max-height:min(90%,760px);display:flex;flex-direction:column;overflow:hidden}
+.modal-box.small{width:min(440px,92%)}
+.modal-head{display:flex;align-items:center;gap:16px;padding:20px 28px;border-bottom:1px solid var(--bp-line);background:var(--bp-panel-alt)}
+.modal-head h2{font:500 23px/1.25 var(--bp-font-display);letter-spacing:.08em}
+.modal-head .muted{font:14px/1.5 var(--bp-font-mono);letter-spacing:.08em}
+.modal-head .grow{flex:1}
+.modal-head button{min-height:44px;font-size:20px;padding:0 14px}
+.modal-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:20px;padding:28px;overflow:auto;align-content:start}
+.modal-body h3{font:500 19px/1.35 var(--bp-font-display);letter-spacing:.06em;color:var(--bp-accent-hi);margin:0 0 16px}
+.modal-foot{display:flex;gap:14px;align-items:center;padding:16px 28px;border-top:1px solid var(--bp-line);background:var(--bp-panel-alt);flex-wrap:wrap}
+.modal-foot .note{flex:1;min-width:220px;font:14.5px/1.6 var(--bp-font-mono);color:var(--bp-dim-hi)}
+.modal-foot button{min-height:48px;font-size:15px;padding:0 18px}
+.cfg-row{display:flex;align-items:center;gap:14px;padding:12px 14px;border-bottom:1px solid var(--bp-line);min-height:60px}
+.cfg-row .grow{flex:1;font:15px/1.5 var(--bp-font-mono);letter-spacing:.06em;color:var(--bp-dim-hi)}
+.cfg-row input,.cfg-row select{width:120px;text-align:center;min-height:48px;padding:12px 16px}
+.ref-text{font-size:16px;line-height:1.8;color:var(--bp-text);max-width:58ch;margin:0 0 14px;white-space:pre-line}
+.ref-img{border:1px dashed var(--bp-line);border-radius:4px;padding:22px;color:var(--bp-dim-2);font-size:15px;text-align:center}
+/* 转交房主：自定义候选列表（不用原生 select，避开系统下拉样式） + 两行式 footer */
+.transfer-body{display:block}
+.transfer-body .hint{margin:0 0 16px}
+.pick-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.pick{display:flex;align-items:center;gap:14px;width:100%;min-height:56px;padding:12px var(--bp-field-px);text-align:left;font-family:var(--bp-font-ui);white-space:nowrap;border:1px solid var(--bp-line);border-radius:4px;background:var(--bp-panel-alt)}
+.pick-slot{display:grid;place-items:center;flex:none;width:30px;height:30px;font:700 14px/1 var(--bp-font-mono);color:var(--bp-dim);background:var(--bp-panel);border:1px solid var(--bp-line);border-radius:4px}
+.pick-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px;color:var(--bp-text)}
+.pick-meta{flex:none;font:13px/1.4 var(--bp-font-mono);color:var(--bp-dim-hi)}
+.pick.is-selected{border-color:var(--bp-accent);background:var(--bp-raised)}
+.pick.is-selected .pick-slot{background:var(--bp-accent-dim);border-color:var(--bp-accent-dim);color:#fff}
+.pick.is-disabled{background:transparent;border-style:dashed;color:var(--bp-dim-2);cursor:not-allowed}
+.pick.is-disabled .pick-name,.pick.is-disabled .pick-meta,.pick.is-disabled .pick-slot{color:var(--bp-dim-2)}
+.transfer-foot{flex-direction:column;align-items:stretch;gap:16px}
+.transfer-foot .note{min-width:0;font-size:14px}
+.foot-actions{display:flex;justify-content:flex-end;gap:12px}
+.foot-actions button{min-width:112px}
+.toast{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;min-width:280px;max-width:min(560px,88%);padding:18px 24px;background:var(--bp-raised);border:1px solid var(--bp-accent);border-radius:var(--bp-radius);font:500 17px/1.5 var(--bp-font-ui);letter-spacing:.02em;color:var(--bp-text);z-index:30}
+.toast .i{width:22px;height:22px;color:var(--bp-accent-hi)}
+
+/* ── 响应式分档：按 device 实际宽度自动切换（宽 / 中 / 窄） ──────────
+   宽档 ≥1120：两栏等宽、席位六列、底栏五按钮一行
+   中档 700–1119：令牌降一档、席位四列、底栏 3+2 两行
+   窄档 <700：两栏堆叠单列、信息条网格化、弹层全屏单栏
+   手动「手机 320」只负责把 device 限宽，档位由宽度自动判定。
+   每档 --bp-foot-h = 控件高 × 行数 + 行间距 + 上下 padding + 1 边框，
+   保证任何宽度下席位卡与聊天卡的底栏顶边 / 底边始终对齐。 */
+.device.is-compact{--bp-pad:20px;--bp-code:44px;--bp-row:52px;--bp-control-h:46px;--bp-foot-h:121px;--bp-step:15.5px}
+.device.is-narrow{--bp-pad:14px;--bp-code:34px;--bp-row:48px;--bp-control-h:44px;--bp-foot-h:117px;--bp-step:14px}
+
+/* 顶栏 */
+.device.is-compact .bp-topbar{padding:14px 20px;gap:12px}
+.device.is-compact .brand-mark{width:42px;height:42px}
+.device.is-compact .brand-text strong{font-size:23px}
+.device.is-compact .brand-text small{font-size:11px;letter-spacing:.12em}
+.device.is-compact .nick-field .form-label{font-size:20px}
+.device.is-compact .nick-field input{width:150px}
+.device.is-narrow .bp-topbar{padding:10px 14px;gap:8px}
+.device.is-narrow .brand-mark{width:34px;height:34px}
+.device.is-narrow .brand-text strong{font-size:18px}
+.device.is-narrow .brand-text small{font-size:9px;letter-spacing:.1em}
+.device.is-narrow .nick-field{width:100%;margin-left:0}
+.device.is-narrow .nick-field .form-label{font-size:16px}
+.device.is-narrow .nick-field input{width:auto;flex:1;min-height:40px;font-size:13px}
+.device.is-narrow .screen{padding:10px}
+
+/* 卡片与信息条 */
+.device.is-compact .card-title{font-size:18px}
+.device.is-narrow .card-title{font-size:16px;letter-spacing:.06em}
+.device.is-narrow .card-head{padding:10px 14px}
+.device.is-narrow .room-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:14px}
+.device.is-narrow .room-info-block{border-left:none;padding:0}
+.device.is-narrow .room-info .invite,
+.device.is-narrow .room-info .entries,
+.device.is-narrow .room-info #btn-copy{grid-column:1/-1;max-width:none}
+.device.is-narrow .room-info #btn-copy{justify-self:start}
+.device.is-narrow .room-info .entries button{flex:1;min-height:44px}
+.device.is-narrow .chat-log{min-height:120px}
+.device.is-narrow .ref-text{font-size:15px}
+.device.is-narrow .toast{min-width:0;max-width:88%;font-size:15px;padding:14px 18px}
+
+/* 两栏 → 单列 */
+.device.is-narrow .two-col,.device.is-narrow .lobby-grid,.device.is-narrow .modal-body{grid-template-columns:minmax(0,1fr)}
+.device.is-narrow #screen-room .two-col{flex:0 0 auto}
+.device.is-narrow .modal-box{width:100%;height:100%;max-height:none}
+.device.is-narrow .modal-box.small{width:min(440px,94%);height:auto;max-height:90%}
+.device.is-narrow .modal{padding:0}
+.device.is-narrow .modal-body{padding:14px}
+.device.is-narrow .modal-head,.device.is-narrow .modal-foot{padding:12px 14px}
+
+/* 席位行：六列 → 四列（隐藏角色徽章与行内操作），名字永不竖排 */
+.device.is-compact .seat,.device.is-narrow .seat{grid-template-columns:28px 40px minmax(0,1fr) 76px;gap:10px;padding:0 var(--bp-pad);font-size:15px}
+.device.is-compact .seat-slot,.device.is-narrow .seat-slot{min-width:0;width:40px}
+.device.is-compact .seat-role,.device.is-compact .seat-action,
+.device.is-narrow .seat-role,.device.is-narrow .seat-action{display:none}
+.device.is-narrow .seat{font-size:14px}
+
+/* 底栏：五按钮一行 → 3+2 两行铺满；控件高度不变，两卡 footer 仍等高 */
+.device.is-compact .host-bar,.device.is-narrow .host-bar{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-rows:repeat(2,var(--bp-control-h));align-content:center;gap:8px
+}
+.device.is-compact .host-bar button,.device.is-narrow .host-bar button{min-width:0;font-size:14px;padding:0 6px}
+.device.is-narrow .host-bar button{font-size:12px}
+.device.is-compact .host-bar button:last-child,.device.is-narrow .host-bar button:last-child{grid-column:span 2}
+/* 客人底栏在窄档改两行：按钮与说明各占一行，不再被压成竖排 */
+.device.is-compact .guest-bar,.device.is-narrow .guest-bar{
+  flex-direction:column;align-items:stretch;justify-content:center;gap:8px;
+  height:auto;min-height:0;flex:0 0 auto
+}
+.device.is-compact .guest-bar button,.device.is-narrow .guest-bar button{flex:0 0 auto;width:100%;min-height:var(--bp-control-h)}
+.device.is-compact .guest-bar .note,.device.is-narrow .guest-bar .note{border-left:none;padding-left:0;font-size:13px;line-height:1.5}
+.device.is-compact .chat-input input,.device.is-compact .chat-input button,
+.device.is-narrow .chat-input input,.device.is-narrow .chat-input button{min-width:0}
+
+/* 预览控制条在窄面板里收起次要信息，保留实际宽度读数 */
+.toolbar .readout{font:11px/1 var(--bp-font-mono);color:var(--bp-accent-hi);white-space:nowrap}
+@media (max-width:700px){
+  .toolbar{padding:8px;gap:6px}
+  .toolbar .label,.toolbar .hint{display:none}
+  .toolbar button{min-height:32px;font-size:12px;padding:0 8px}
+}
+</style>
+</head>
+<body>
+<h2 class="sr-only">3178 对战平台界面预览，演示数据，不连接真实服务</h2>
+
+<svg style="display:none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-info" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2"/><path d="M16 6a3 3 0 0 1 0 6M18 13a5 5 0 0 1 3 5v2"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H8l-5 3 1-6a8 8 0 1 1 17-5z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h6v18H6a2 2 0 0 1-2-2zM20 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="8" cy="17" r="2" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+  <symbol id="i-robot" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 13h.01M15 13h.01M12 8V4M9 20v2M15 20v2"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus-user" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a5 5 0 0 1 5-5h2M16 11h6"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h16l-3-3M20 16H4l3 3"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V5M5 5h12l-2 4 2 4H5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 18h16M4 18l-2-9 5 4 5-7 5 7 5-4-2 9"/></symbol>
+  <symbol id="i-login" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"/></symbol>
+  <symbol id="i-device" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></symbol>
+</svg>
+
+<div class="toolbar" role="group" aria-label="预览控制（非产品界面）">
+  <span class="tag">演示数据 · 不连服务</span>
+  <span class="label">视图</span>
+  <div class="group" id="view-group">
+    <button type="button" data-view="lobby">大厅</button>
+    <button type="button" data-view="room" class="on">房间</button>
+    <button type="button" data-view="open">对局中</button>
+  </div>
+  <span class="label">身份</span>
+  <div class="group" id="role-group">
+    <button type="button" data-role="host" class="on">房主</button>
+    <button type="button" data-role="guest">客人</button>
+  </div>
+  <span class="label">视口</span>
+  <div class="group" id="vp-group">
+    <button type="button" data-vp="desktop" class="on">桌面 1256</button>
+    <button type="button" data-vp="mobile">手机 320</button>
+  </div>
+  <span class="spacer"></span>
+  <span class="readout" id="width-readout">—</span>
+  <span class="hint">字体：Tektur / Outfit / Geist Mono · OFL 同源分发</span>
+</div>
+
+<div class="stage">
+<div class="device" id="device">
+
+  <header class="bp-topbar">
+    <svg class="brand-mark" viewBox="0 0 56 56" role="img" aria-label="3178 对战平台徽记">
+      <path d="M28 3 53 28 28 53 3 28Z" fill="#6366f1"/>
+      <path d="M28 12 44 28 28 44 12 28Z" fill="#111118"/>
+      <path d="M28 21 35 28 28 35 21 28Z" fill="#f59e0b"/>
+      <path d="M3 28 12 19 12 37Z" fill="#8b5cf6"/>
+      <path d="M53 28 44 37 44 19Z" fill="#8b5cf6"/>
+    </svg>
+    <span class="brand-text">
+      <strong>3178 对战平台</strong>
+      <small>HOST AS SERVER · 类 war3 房间</small>
+    </span>
+    <label class="nick-field">
+      <span class="form-label">昵称</span>
+      <input id="nick" value="房主老周" aria-label="昵称">
+    </label>
+  </header>
+
+  <section class="screen" id="screen-lobby" hidden>
+    <div class="lobby-grid">
+      <div class="panel lobby-card">
+        <h3 class="card-title"><svg class="i"><use href="#i-crown"/></svg>创建房间 · 我当房主</h3>
+        <div class="field"><label for="game1">游戏</label><input id="game1" value="变色对决 0.2.2" readonly></div>
+        <div class="field"><label for="roomname">房间名</label><input id="roomname" value="周末一局"></div>
+        <div class="row"><div class="grow field"><label for="slots">座位数</label><input id="slots" value="8"></div><div class="grow field"><label for="pwd">房间密码</label><input id="pwd" value="" placeholder="留空即公开"></div></div>
+        <button type="button" class="primary" id="btn-create" style="width:100%"><svg class="i"><use href="#i-flag"/></svg> 建房并坐 1 号位</button>
+        <p class="hint">房主权限只在你这个进程里：开局、踢人、关房、移交都得你点。</p>
+      </div>
+      <div class="panel lobby-card">
+        <h3 class="card-title"><svg class="i"><use href="#i-login"/></svg>加入房间</h3>
+        <div class="field"><label for="addr">房主地址</label><input id="addr" value="192.168.1.20:3000"></div>
+        <div class="row"><div class="grow field"><label for="code2">房号</label><input id="code2" value="893F" style="font-family:var(--bp-font-mono);letter-spacing:.42em"></div><div class="grow field"><label for="pwd2">密码</label><input id="pwd2" placeholder="可留空"></div></div>
+        <button type="button" id="btn-join" style="width:100%;margin-bottom:16px"><svg class="i"><use href="#i-login"/></svg> 进房</button>
+        <h4 class="bp-subtitle">地址簿 · 你去过的房主</h4>
+        <div class="field"><input id="addrbook" value="192.168.1.20:3000" readonly></div>
+        <h4 class="bp-subtitle" style="margin-top:16px">局域网房间</h4>
+        <div class="panel pad dim" style="font-size:14.5px">暂未发现房间 · 刷新或手动填地址</div>
+      </div>
+    </div>
+    <p class="status" id="lobby-status" role="status"></p>
+  </section>
+
+  <section class="screen" id="screen-room">
+    <div class="panel room-info">
+      <div class="room-info-block"><span class="room-info-label">房号</span><span class="room-code">893F</span></div>
+      <div class="room-info-block"><span class="room-info-label">房间名</span><span class="room-info-value">周末一局</span></div>
+      <div class="room-info-block"><span class="room-info-label">游戏</span><span class="room-info-value">变色对决</span></div>
+      <div class="room-info-block"><span class="room-info-label">房间状态</span><span class="room-info-value"><span class="dot"></span> 等待入座</span></div>
+      <input class="invite" id="invite" value="http://192.168.1.20:3000/?r=893F&amp;g=color-duel" readonly aria-label="邀请链接" title="链接内含房号 r=893F，对方点开自动填入">
+      <button type="button" class="primary" id="btn-copy" style="min-height:44px;font-size:14px;padding:0 14px"><svg class="i"><use href="#i-copy"/></svg> 复制</button>
+      <div class="entries">
+        <button type="button" id="btn-rules"><svg class="i"><use href="#i-settings"/></svg> 规则设置</button>
+        <button type="button" id="btn-ref"><svg class="i"><use href="#i-book"/></svg> 游戏资料</button>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <div class="card-head"><h3 class="card-title"><svg class="i"><use href="#i-users"/></svg>席位配置</h3><span class="muted" id="seat-count" style="font:12px/1 var(--bp-font-mono);letter-spacing:.14em">3 / 8 席</span></div>
+        <div class="seat-list" id="seat-list"></div>
+        <div class="host-bar" id="host-bar">
+          <button type="button" id="btn-ai"><svg class="i"><use href="#i-robot"/></svg> 加电脑</button>
+          <button type="button" id="btn-kick"><svg class="i"><use href="#i-minus-user"/></svg> 请出房间</button>
+          <button type="button" id="btn-transfer"><svg class="i"><use href="#i-swap"/></svg> 转交房主</button>
+          <button type="button" class="danger" id="btn-close"><svg class="i"><use href="#i-power"/></svg> 解散</button>
+          <button type="button" class="primary" id="btn-start"><svg class="i"><use href="#i-flag"/></svg> 开始游戏</button>
+        </div>
+        <div class="guest-bar" id="guest-bar" hidden>
+          <button type="button" class="primary" id="btn-ready" aria-pressed="false"><svg class="i"><use href="#i-check"/></svg> 准备</button>
+          <span class="note">你是客人，桌子级操作仅房主可用 · 玩法参数只读</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="card-head"><h3 class="card-title"><svg class="i"><use href="#i-message"/></svg>房间聊天</h3><span class="muted" style="font:12px/1 var(--bp-font-mono);letter-spacing:.14em">会话消息</span></div>
+        <div class="chat-log" id="chat-log" aria-live="polite">
+          <p class="chat-line sys"><span data-nick="host">房主老周</span> 创建了房间</p>
+          <p class="chat-line sys"><span data-nick="guest">小林</span> 进入房间</p>
+          <p class="chat-line"><span data-nick="guest">小林</span>　准备好了</p>
+          <p class="chat-line"><span data-nick="host">房主老周</span>　等齐人再开</p>
+        </div>
+        <div class="chat-input"><input id="chat-text" placeholder="说点什么" aria-label="聊天输入"><button type="button" class="primary" id="btn-send" aria-label="发送"><svg class="i"><use href="#i-send"/></svg></button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-open" hidden>
+    <div class="panel open-bar">
+      <span class="dot"></span>
+      <div class="grow"><h3 class="card-title"><svg class="i"><use href="#i-device"/></svg>会话进行中</h3><div class="muted" style="font:14px/1.5 var(--bp-font-mono);margin-top:6px">房号 893F · 3/8 席 · 游戏由独立进程渲染，平台不承载游戏画面</div></div>
+      <button type="button" class="primary" id="btn-open-game"><svg class="i"><use href="#i-device"/></svg> 打开游戏</button>
+      <button type="button" id="btn-tray">最小化托盘</button>
+    </div>
+    <div class="panel pad" style="margin-top:12px">
+      <h3 class="card-title" style="margin-bottom:12px"><svg class="i"><use href="#i-info"/></svg>平台在这一相位只剩状态条</h3>
+      <p class="ref-text">规则设置、席位配置、房间聊天、游戏资料都退回入口或按需面板。对局画面、结算、再来一局全部由游戏自己的进程负责。关掉这个窗口，会话仍在。</p>
+    </div>
+  </section>
+
+  <div class="modal" id="modal-rules" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+      <div class="modal-head"><h2 id="rules-title">游戏规则 · 选配</h2><span class="muted">房主选配玩法参数 · 仅 lobby 阶段可改</span><span class="grow"></span><button type="button" class="ghost" data-close="rules" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
+      <div class="modal-body">
+        <div class="panel pad"><h3>玩法参数</h3>
+          <div class="cfg-row"><span class="grow">手牌上限</span><input id="cfg-hand" value="7" aria-label="手牌上限"></div>
+          <div class="cfg-row"><span class="grow">关闭倒计时</span><select id="cfg-timer" aria-label="关闭倒计时"><option>开</option><option>关</option></select></div>
+          <div class="cfg-row"><span class="grow">允许质疑</span><select id="cfg-claim" aria-label="允许质疑"><option>开</option><option>关</option></select></div>
+          <div class="cfg-row"><span class="grow">起手牌数</span><input id="cfg-deal" value="7" aria-label="起手牌数"></div>
+          <p class="hint" style="font-family:var(--bp-font-mono);font-size:14.5px;margin-top:16px">值来自中立清单 sessionConfig 段，平台只透传、不解释语义。</p>
+        </div>
+        <div class="panel pad"><h3>规则说明 · 复用游戏资料</h3>
+          <p class="ref-text">每人起手 7 张，出牌须跟色或跟数字。无法出牌时摸一张。</p>
+          <p class="ref-text">报牌窗口 5 秒，质疑窗口 10 秒。功能牌按牌面结算。</p>
+          <p class="ref-text">房主修改玩法参数后，所有真人回到未准备，需要重新准备。</p>
+          <div class="ref-img">纯文本 / 图片占位（资料只渲染纯文本与图片）</div>
+        </div>
+      </div>
+      <div class="modal-foot"><span class="note" id="rules-note">保存后：重算 rulesHash · 推进 revision · 真人 ready 清零 · 发系统消息 · 落盘</span><button type="button" id="btn-rules-cancel" data-close="rules">取消</button><button type="button" class="primary" id="btn-rules-save">保存选配</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-ref" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="ref-title">
+      <div class="modal-head"><h2 id="ref-title">规则与资料</h2><span class="grow"></span><button type="button" class="ghost" data-close="ref" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
+      <div class="modal-body">
+        <div class="panel pad"><h3>玩法摘要</h3><p class="ref-text">变色对决：2~8 人，支持观战与三档电脑。出牌跟色或跟数字，先出完手牌者胜。</p></div>
+        <div class="panel pad"><h3>牌面</h3><div class="ref-img">图片占位</div><p class="ref-text" style="margin-top:10px">资料只渲染纯文本与图片，路径走清单资源路由。</p></div>
+      </div>
+      <div class="modal-foot"><span class="note">这是静态说明，不描述界面位置，改布局不用改文案。</span><button type="button" data-close="ref">关闭</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-transfer" hidden>
+    <div class="modal-box small" role="dialog" aria-modal="true" aria-labelledby="transfer-title">
+      <div class="modal-head"><h2 id="transfer-title">转交房主</h2><span class="grow"></span><button type="button" class="ghost" data-close="transfer" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
+      <div class="modal-body transfer-body">
+        <p class="hint">选择接任的真人玩家。只转移权限，进程仍在原房主机。</p>
+        <div class="pick-list" id="transfer-list" role="radiogroup" aria-label="接任者"></div>
+        <p class="hint dim">空位与观战位同样不能接任。</p>
+      </div>
+      <div class="modal-foot transfer-foot">
+        <span class="note">移交后原房主再发房主命令会被拒绝。</span>
+        <div class="foot-actions"><button type="button" data-close="transfer">取消</button><button type="button" class="primary" id="btn-transfer-ok">确认移交</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-kick" hidden>
+    <div class="modal-box small" role="dialog" aria-modal="true" aria-labelledby="kick-title">
+      <div class="modal-head"><h2 id="kick-title">请出房间</h2><span class="grow"></span><button type="button" class="ghost" data-close="kick" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
+      <div class="modal-body transfer-body">
+        <p class="hint">选择要请出的成员。房主自己不能请出，空位不在列表里。</p>
+        <div class="pick-list" id="kick-list" role="radiogroup" aria-label="请出目标"></div>
+      </div>
+      <div class="modal-foot transfer-foot">
+        <span class="note">请出后该席位恢复为空位，可重新加电脑或等待玩家加入。</span>
+        <div class="foot-actions"><button type="button" data-close="kick">取消</button><button type="button" class="danger" id="btn-kick-ok">请出房间</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="color-pop" id="color-pop" hidden>
+    <div class="color-pop-head"><span id="color-pop-title">座位颜色</span><button type="button" id="color-pop-close" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="color-grid" id="color-grid"></div>
+  </div>
+
+  <div class="toast" id="toast" hidden role="status"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg><span id="toast-text"></span></div>
+</div>
+</div>
+
+<script>
+(function(){
+  function emptySeat(n){return {n:n,kind:'empty',who:null,name:null,color:null};}
+  var SEAT_COLORS=[['琥珀','var(--bp-warn)'],['靛紫','var(--bp-accent)'],['绿','var(--bp-ok)'],
+                   ['紫','var(--bp-violet)'],['粉','var(--bp-magenta)'],['红','var(--bp-bad)']];
+  var state={
+    view:'room',role:'host',vp:'desktop',guestReady:true,
+    nick:{host:'房主老周',guest:'小林'},
+    seats:[
+      {n:1,kind:'host',who:'host',name:null,color:null},
+      {n:2,kind:'player',who:'guest',name:null,color:null},
+      {n:3,kind:'ai',who:null,name:'电脑 3',color:null},
+      emptySeat(4),emptySeat(5),emptySeat(6),emptySeat(7),emptySeat(8)
+    ]
+  };
+  var device=document.getElementById('device');
+  var toast=document.getElementById('toast');
+  var readout=document.getElementById('width-readout');
+  var lastFocus=null,toastTimer=null,lastTier='';
+
+  function showToast(text){
+    document.getElementById('toast-text').textContent=text;toast.hidden=false;
+    if(toastTimer)clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){toast.hidden=true;},2600);
+  }
+  function btnGroups(id,key){
+    var group=document.getElementById(id);
+    group.addEventListener('click',function(e){
+      var b=e.target.closest('button[data-'+key+']');if(!b)return;
+      state[key]=b.getAttribute('data-'+key);
+      Array.prototype.forEach.call(group.querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});
+      apply();
+    });
+  }
+  btnGroups('view-group','view');btnGroups('role-group','role');btnGroups('vp-group','vp');
+
+  /* 昵称是会话身份：一处改动，席位名 / 聊天 / 转交候选 / 后续发言全部跟着走 */
+  document.getElementById('nick').addEventListener('input',function(e){
+    state.nick[state.role]=e.target.value;apply();
+  });
+  document.getElementById('modal-transfer').addEventListener('click',function(e){
+    var b=e.target.closest('.pick[role="radio"]');if(!b)return;
+    Array.prototype.forEach.call(this.querySelectorAll('.pick[role="radio"]'),function(x){
+      x.classList.remove('is-selected');x.setAttribute('aria-checked','false');
+    });
+    b.classList.add('is-selected');b.setAttribute('aria-checked','true');
+  });
+
+  function syncWidth(){
+    var w=device.getBoundingClientRect().width;
+    var tier=w>=1120?'wide':(w>=700?'compact':'narrow');
+    if(tier!==lastTier){
+      device.classList.toggle('is-compact',tier!=='wide');
+      device.classList.toggle('is-narrow',tier==='narrow');
+      lastTier=tier;
+    }
+    readout.textContent='实际 '+Math.round(w)+'px · '+({wide:'宽档',compact:'中档',narrow:'窄档'}[tier]);
+  }
+
+  /* ── 席位数据驱动：加电脑 / 请出 / 改色都落在同一份状态上 ────────── */
+  function seatIcon(k){return k==='host'?'i-crown':k==='player'?'i-users':k==='ai'?'i-robot':'i-plus';}
+  function seatRole(k){return k==='host'?'房主':k==='player'?'玩家':k==='ai'?'电脑':'—';}
+  function seatName(s){return s.who?state.nick[s.who]:(s.name||'空位');}
+  function seatState(s){
+    if(s.kind==='host')return '主持中';
+    if(s.kind==='player')return state.guestReady?'已准备':'未准备';
+    if(s.kind==='ai')return '自动';
+    return '等待加入';
+  }
+  function renderSeats(){
+    var html='';
+    state.seats.forEach(function(s){
+      var kindCls=s.kind==='host'?'seat-host':s.kind==='player'?'seat-player':s.kind==='ai'?'seat-ai':'seat-empty';
+      var ready=(s.kind==='player'&&state.guestReady)?' is-ready':'';
+      var me=(s.who&&s.who===state.role)?' is-me':'';
+      var style=s.color?' style="--bp-seat:'+s.color+'"':'';
+      var action;
+      if(s.kind==='empty')action='<button type="button" class="ghost" data-add="'+s.n+'" style="min-height:32px;font-size:12px;padding:0 8px" aria-label="在 '+s.n+' 号位加电脑">+</button>';
+      else if(s.kind==='player'&&state.role==='host')action='<button type="button" class="ghost" id="btn-inline-transfer" style="min-height:32px;font-size:12px;padding:0 8px">转交房主</button>';
+      else action='<span class="dim">—</span>';
+      html+='<div class="seat '+kindCls+ready+me+'" data-n="'+s.n+'"'+style+'>'+
+        '<span class="seat-icon"><svg class="i"><use href="#'+seatIcon(s.kind)+'"/></svg></span>'+
+        '<span class="seat-slot" data-slot="'+s.n+'" role="button" tabindex="0" aria-label="'+s.n+' 号位，点击改座位颜色">'+s.n+'</span>'+
+        '<span class="seat-name"'+(s.who?' data-nick="'+s.who+'"':'')+'>'+seatName(s)+'</span>'+
+        '<span class="seat-role">'+seatRole(s.kind)+'</span>'+
+        '<span class="seat-state'+(s.kind==='player'&&state.guestReady?' ok':'')+'">'+seatState(s)+'</span>'+
+        '<span class="seat-action">'+action+'</span>'+
+      '</div>';
+    });
+    document.getElementById('seat-list').innerHTML=html;
+    var used=state.seats.filter(function(s){return s.kind!=='empty';}).length;
+    document.getElementById('seat-count').textContent=used+' / 8 席';
+    var aiBtn=document.getElementById('btn-ai'),kickBtn=document.getElementById('btn-kick');
+    aiBtn.disabled=!state.seats.some(function(s){return s.kind==='empty';});
+    aiBtn.title=aiBtn.disabled?'8 席已满，先请出一位':'在第一个空位添加电脑';
+    kickBtn.disabled=!state.seats.some(function(s){return s.kind==='player'||s.kind==='ai';});
+    kickBtn.title=kickBtn.disabled?'没有可请出的成员':'选择成员请出房间';
+    var transferBtn=document.getElementById('btn-transfer');
+    transferBtn.disabled=!state.seats.some(function(s){return s.kind==='player';});
+    transferBtn.title=transferBtn.disabled?'没有可接任的真人玩家':'选择接任的真人玩家';
+  }
+  function addComputer(n){
+    var s=n?state.seats[n-1]:state.seats.filter(function(x){return x.kind==='empty';})[0];
+    if(!s||s.kind!=='empty'){showToast('该席位已占用，或 8 席已满');return;}
+    s.kind='ai';s.who=null;s.name='电脑 '+s.n;
+    addSystem('房主在 '+s.n+' 号位添加了 '+s.name);
+    apply();showToast(s.n+' 号位已添加 '+s.name);
+  }
+  var kickTarget=0;
+  function openKick(){
+    var list=state.seats.filter(function(s){return s.kind==='player'||s.kind==='ai';});
+    if(!list.length){showToast('没有可请出的成员');return;}
+    kickTarget=list[0].n;
+    document.getElementById('kick-list').innerHTML=list.map(function(s,i){
+      return '<button type="button" class="pick'+(i===0?' is-selected':'')+'" role="radio" aria-checked="'+(i===0?'true':'false')+'" data-kick="'+s.n+'">'+
+        '<span class="pick-slot">'+s.n+'</span><span class="pick-name"'+(s.who?' data-nick="'+s.who+'"':'')+'>'+seatName(s)+'</span>'+
+        '<span class="pick-meta">'+seatRole(s.kind)+'</span></button>';
+    }).join('');
+    openModal('kick');
+  }
+  var colorSeat=0;
+  function openColorPop(n,slotEl){
+    colorSeat=n;
+    document.getElementById('color-pop-title').textContent=n+' 号位 · 座位颜色';
+    var cur=state.seats[n-1].color;
+    document.getElementById('color-grid').innerHTML=SEAT_COLORS.map(function(c){
+      return '<button type="button" class="color-dot'+(cur===c[1]?' is-current':'')+'" style="background:'+c[1]+'" data-color="'+c[1]+'" title="'+c[0]+'" aria-label="'+c[0]+'"></button>';
+    }).join('');
+    var pop=document.getElementById('color-pop');pop.hidden=false;
+    var dr=device.getBoundingClientRect(),r=slotEl.getBoundingClientRect();
+    var left=r.left-dr.left,top=r.bottom-dr.top+8;
+    if(left+224>dr.width)left=dr.width-232;
+    if(top+150>dr.height)top=r.top-dr.top-158;
+    pop.style.left=Math.max(8,left)+'px';pop.style.top=Math.max(8,top)+'px';
+  }
+  function closeColorPop(){document.getElementById('color-pop').hidden=true;}
+  document.getElementById('seat-list').addEventListener('click',function(e){
+    var add=e.target.closest('[data-add]');
+    if(add){addComputer(parseInt(add.getAttribute('data-add'),10));return;}
+    var tr=e.target.closest('#btn-inline-transfer');
+    if(tr){openTransfer(document.getElementById('btn-transfer'));return;}
+    var slot=e.target.closest('[data-slot]');
+    if(slot){openColorPop(parseInt(slot.getAttribute('data-slot'),10),slot);return;}
+  });
+  document.getElementById('seat-list').addEventListener('keydown',function(e){
+    if(e.key!=='Enter'&&e.key!==' ')return;
+    var slot=e.target.closest('[data-slot]');
+    if(slot){e.preventDefault();openColorPop(parseInt(slot.getAttribute('data-slot'),10),slot);}
+  });
+  document.getElementById('kick-list').addEventListener('click',function(e){
+    var b=e.target.closest('[data-kick]');if(!b)return;
+    kickTarget=parseInt(b.getAttribute('data-kick'),10);
+    Array.prototype.forEach.call(this.querySelectorAll('[data-kick]'),function(x){
+      x.classList.toggle('is-selected',x===b);x.setAttribute('aria-checked',x===b?'true':'false');
+    });
+  });
+  document.getElementById('btn-kick-ok').addEventListener('click',function(){
+    var s=state.seats[kickTarget-1];
+    if(!s||s.kind==='empty'||s.kind==='host'){closeModal('kick');return;}
+    var name=seatName(s);
+    if(s.kind==='player')state.guestReady=false;
+    s.kind='empty';s.who=null;s.name=null;
+    addSystem(name+' 已被请出房间');
+    closeModal('kick');apply();showToast(name+' 已请出，'+kickTarget+' 号位恢复空位');
+  });
+  document.getElementById('color-grid').addEventListener('click',function(e){
+    var b=e.target.closest('[data-color]');if(!b)return;
+    state.seats[colorSeat-1].color=b.getAttribute('data-color');
+    closeColorPop();apply();showToast(colorSeat+' 号位颜色已改');
+  });
+  document.getElementById('color-pop-close').addEventListener('click',closeColorPop);
+  document.addEventListener('click',function(e){
+    if(document.getElementById('color-pop').hidden)return;
+    if(e.target.closest('#color-pop')||e.target.closest('[data-slot]'))return;
+    closeColorPop();
+  });
+
+  function apply(){
+    device.classList.toggle('is-mobile',state.vp==='mobile');
+    ['lobby','room','open'].forEach(function(v){document.getElementById('screen-'+v).hidden=(state.view!==v);});
+    var isHost=state.role==='host';
+    var nickInput=document.getElementById('nick');
+    if(nickInput.value!==state.nick[state.role])nickInput.value=state.nick[state.role];
+    Array.prototype.forEach.call(document.querySelectorAll('[data-nick]'),function(el){
+      el.textContent=state.nick[el.getAttribute('data-nick')];
+    });
+    document.getElementById('host-bar').hidden=!isHost;
+    document.getElementById('guest-bar').hidden=isHost;
+    renderSeats();
+    var hasPlayer=state.seats.some(function(s){return s.kind==='player';});
+    var start=document.getElementById('btn-start');
+    start.disabled=!state.guestReady||!hasPlayer;
+    start.innerHTML=hasPlayer
+      ?(state.guestReady?'<svg class="i"><use href="#i-flag"/></svg> 开始游戏':'等 '+state.nick.guest+' 准备')
+      :'需有真人玩家';
+    var ready=document.getElementById('btn-ready');
+    ready.innerHTML='<svg class="i"><use href="#i-check"/></svg> '+(state.guestReady?'取消准备':'准备');
+    ready.setAttribute('aria-pressed',state.guestReady?'true':'false');
+    ready.classList.toggle('primary',!state.guestReady);
+    ready.disabled=!hasPlayer;
+    ready.title=ready.disabled?'席位里已没有真人玩家':'切换准备状态';
+    document.getElementById('rules-title').textContent=isHost?'游戏规则 · 选配':'游戏规则 · 只读';
+    ['cfg-hand','cfg-timer','cfg-claim','cfg-deal'].forEach(function(id){document.getElementById(id).disabled=!isHost;});
+    document.getElementById('btn-rules-save').hidden=!isHost;
+    document.getElementById('btn-rules-cancel').textContent=isHost?'取消':'关闭';
+    document.getElementById('rules-note').textContent=isHost
+      ?'保存后：重算 rulesHash · 推进 revision · 真人 ready 清零 · 发系统消息 · 落盘'
+      :'你是客人，玩法参数只读。仅房主可在 lobby 阶段选配。';
+  }
+
+  function openModal(id,trigger){
+    lastFocus=trigger||document.activeElement;
+    document.getElementById('modal-'+id).hidden=false;
+    var first=document.querySelector('#modal-'+id+' button');
+    if(first)first.focus();
+  }
+  function closeModal(id){
+    document.getElementById('modal-'+id).hidden=true;
+    /* 触发按钮可能被 renderSeats 重绘销毁，别把焦点还给游离节点 */
+    if(lastFocus&&lastFocus.isConnected!==false&&lastFocus.focus)lastFocus.focus();
+  }
+  document.getElementById('btn-rules').addEventListener('click',function(e){openModal('rules',e.currentTarget);});
+  document.getElementById('btn-ref').addEventListener('click',function(e){openModal('ref',e.currentTarget);});
+  Array.prototype.forEach.call(document.querySelectorAll('[data-close]'),function(b){
+    b.addEventListener('click',function(){closeModal(b.getAttribute('data-close'));});
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key!=='Escape')return;
+    ['rules','ref','transfer','kick'].forEach(function(id){if(!document.getElementById('modal-'+id).hidden)closeModal(id);});
+    closeColorPop();
+  });
+
+  function addSystem(text){
+    var log=document.getElementById('chat-log');var p=document.createElement('p');
+    p.className='chat-line sys';p.textContent=text;log.appendChild(p);log.scrollTop=log.scrollHeight;
+  }
+  function addSystemAs(role,text){
+    var log=document.getElementById('chat-log');var p=document.createElement('p');
+    p.className='chat-line sys';
+    var who=document.createElement('span');who.setAttribute('data-nick',role);who.textContent=state.nick[role];
+    p.appendChild(who);p.appendChild(document.createTextNode(' '+text));
+    log.appendChild(p);log.scrollTop=log.scrollHeight;
+  }
+  function addChatAs(role,text){
+    var log=document.getElementById('chat-log');var p=document.createElement('p');
+    p.className='chat-line';
+    var who=document.createElement('span');who.setAttribute('data-nick',role);who.textContent=state.nick[role];
+    p.appendChild(who);p.appendChild(document.createTextNode('　'+text));
+    log.appendChild(p);log.scrollTop=log.scrollHeight;
+  }
+  document.getElementById('btn-rules-save').addEventListener('click',function(){
+    addSystem('玩法参数已更新，请重新准备');
+    state.guestReady=false;apply();
+    closeModal('rules');showToast('玩法参数已保存 · 真人准备状态已重置（房主不参与准备闸）');
+  });
+  document.getElementById('btn-copy').addEventListener('click',function(){showToast('邀请链接已复制 · 点开自动填好地址与房号');});
+  document.getElementById('btn-send').addEventListener('click',function(){
+    var input=document.getElementById('chat-text');var text=input.value.trim();
+    if(!text){
+      input.classList.add('is-invalid');input.focus();
+      showToast('输入内容后才能发送');
+      setTimeout(function(){input.classList.remove('is-invalid');},1600);
+      return;
+    }
+    input.classList.remove('is-invalid');
+    addChatAs(state.role,text);input.value='';
+  });
+  document.getElementById('chat-text').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('btn-send').click();});
+  document.getElementById('btn-start').addEventListener('click',function(){
+    if(!state.guestReady||!state.seats.some(function(s){return s.kind==='player';}))return;
+    state.view='open';apply();showToast('开始游戏（演示）');
+  });
+  document.getElementById('btn-ready').addEventListener('click',function(){
+    state.guestReady=!state.guestReady;apply();
+    addSystemAs('guest',state.guestReady?'已准备':'取消准备');
+    showToast(state.guestReady?'已准备':'已取消准备');
+  });
+  function openTransfer(e){
+    var el=e&&(e.currentTarget||e);
+    var players=state.seats.filter(function(s){return s.kind==='player';});
+    if(!players.length){showToast('没有可接任的真人玩家');return;}
+    var html=players.map(function(s,i){
+      return '<button type="button" class="pick'+(i===0?' is-selected':'')+'" role="radio" aria-checked="'+(i===0?'true':'false')+'" data-transfer="'+s.n+'">'+
+        '<span class="pick-slot">'+s.n+'</span><span class="pick-name" data-nick="'+s.who+'">'+seatName(s)+'</span>'+
+        '<span class="pick-meta">真人 · 可接任</span></button>';
+    }).join('');
+    state.seats.filter(function(s){return s.kind==='ai';}).forEach(function(s){
+      html+='<div class="pick is-disabled" aria-disabled="true"><span class="pick-slot">'+s.n+'</span>'+
+        '<span class="pick-name">'+seatName(s)+'</span><span class="pick-meta">电脑位不能接任</span></div>';
+    });
+    html+='<div class="pick is-disabled" aria-disabled="true"><span class="pick-slot">1</span>'+
+      '<span class="pick-name">当前房主</span><span class="pick-meta">不能移交给自己</span></div>';
+    document.getElementById('transfer-list').innerHTML=html;
+    openModal('transfer',el);
+  }
+  document.getElementById('btn-transfer').addEventListener('click',openTransfer);
+  document.getElementById('btn-transfer-ok').addEventListener('click',function(){
+    var picked=document.querySelector('.pick.is-selected .pick-name');
+    closeModal('transfer');showToast('已转交房主给 '+(picked?picked.textContent:'该玩家')+'（演示）');
+  });
+  document.getElementById('btn-open-game').addEventListener('click',function(){showToast('拉起独立游戏进程（演示）');});
+  document.getElementById('btn-tray').addEventListener('click',function(){showToast('最小化到托盘，会话继续（演示）');});
+  document.getElementById('btn-create').addEventListener('click',function(){state.view='room';apply();showToast('建房成功，房号 893F（演示）');});
+  document.getElementById('btn-join').addEventListener('click',function(){state.view='room';apply();showToast('已入座 2 号位（演示）');});
+  document.getElementById('btn-ai').addEventListener('click',function(){addComputer(0);});
+  document.getElementById('btn-kick').addEventListener('click',openKick);
+  document.getElementById('btn-close').addEventListener('click',function(){showToast('解散房间（演示，不连服务）');});
+
+  apply();
+  if(window.ResizeObserver){new ResizeObserver(syncWidth).observe(device);}
+  else{window.addEventListener('resize',syncWidth);}
+  syncWidth();
+})();
+</script>
+</body>
+</html>

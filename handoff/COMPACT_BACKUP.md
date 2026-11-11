@@ -193,4 +193,32 @@
 
 - 2026-10-28 Qoder：**压卡**：CONTEXT 压到 100 行以内，原第 6–8 节（逐阶段凭据、变更记录、旧追加区）逐字移入 [COMPACT_BACKUP.md](COMPACT_BACKUP.md)；四份文档顶部日期统一到 2026-10-28。
 
+
+## 状态流水与交接记录沉降（2026-11-11 收工）
+
+> 按协议原样沉降，供追溯；CONTEXT.md 只保留当前状态。
+
+### 旧「现在在哪」逐版本流水（原第 3 节 26–36 行）
+
+**2026-10-30：`npm test` 233/233，`npm run seam` 零命中，`npx tsc -b` 通过，外部消费者 smoke `[smoke] OK`。**
+
+- **文档布局（2026-11-09）**：README 在根；设计与接入文档在 `docs/`（DESIGN / INTEGRATION_GUIDE / images）；交接文档在 `handoff/`（CONTEXT / COMPACT_BACKUP）；五份文档末行均带 `scope` 标记，目录表与跨目录链接已校直。
+- 平台内核（P0–P7）已交付：协议、座位与房主权限、`GameModule` 契约 + 测试夹具、ws 传输、落盘恢复、客户端界面、hostd 壳（host / join / diagnose / stop）。
+- 包边界：`@lizardon386/core-abi`（游戏 ABI）· `@bp/protocol`（wire）· `@lizardon386/pack-format`（.bpmap）· `@lizardon386/game-sdk`（公共门面 + game-kit）· `@lizardon386/sdk-tools`（bpmap CLI / doctor / 模板）。平台包仍是 `@bp/server`、`@bp/client`、`@bp/hostd`、`@bp/testkit`。
+- 游戏下发与兼容闸：`/api/games`、`/games/<id>/*`、客户端 SHA-256 校验（无 `crypto.subtle` 时纯 JS 回退）、`sandbox=allow-scripts` iframe；`mode` / `apiVersion` 写入 `.bpmap` 包头，宿主只加载 `turn` / `1`，`/api/version` 与 `bpmap doctor` 用同一组常量；`fixture-kit` 覆盖事件流 / 资源 / 拒绝。
+- **座位级选项**（SDK 0.4.0 契约 `c326314`）：`SeatOptionsSpec` / `parseSeatOptions`，`SeatView.options` / `GameSeatInfo.options`，`hostSeat {op:'setOptions'}`；平台把颜色直接映射到席位左侧色条/图标/号码牌，房主点号码牌选色；电脑行内显示难度下拉，无通用“设置”按钮；只房主、只 lobby，服务端用游戏 `normalizeSeatOptions`/spec 收口，`RoomExport` 随座位持久化。**变色对决 0.2.0 已声明并用真实包实测**：房主座位蓝/红/绿可切，电脑 1/2 各自选简单/中等/冷酷；非房主看不到颜色入口，难度下拉只读。1280×800 截图 [seat-options-1280.png](../docs/images/seat-options-1280.png)。232/232。
+- 房间 UI（2026-10-30 四块）：① **房间信息**横贯顶部（房号 / 房间名 / 游戏 / 房间状态 / 局域网地址 / 游戏资料，1256 实测 132px）；下面从左到右 ② **规则配置** ③ **席位配置** ④ **房间聊天**（310 / 542 / 325，同高 319px，共用 `clamp(280px, calc(100vh - 389px), 760px)`），页面总高等于视口。席位每行六格：图标 / 座位号 / 名字 / 身份（房主·玩家·电脑·观战）/ 准备 / 行内操作；空位行右侧 **+** 按位加电脑（`hostSeat {op:'addAi', slot}`，点名占位冲突报 `FULL`），席位与空位按座位号合并排序，先加 4 号再补 2 号也不会显示成 1、4、2、3。房主桌子级动作（加电脑位 / 请出 / 解散 / 开始）在席位卡底栏，开局后只留「解散房间」。**颜色全部沿用原令牌，未新增色值**，仍无渐变/关键帧/发光。规则默认收起成一行摘要，点「展开修改」出表单，「保存规则」sticky 在栏底。非房主看不到底栏与邀请链接，规则只有只读摘要。`playing` 时房间信息收进顶部条，游戏区拉通整行，席位横向状态条（卡底保留解散房间），聊天/规则卡进右侧侧栏（`D` / `Esc`，焦点归还）；无 deadline 不显示倒计时块。房间页「本局规则」由房主在 lobby 编辑（`ruleConfig`，非房主 HOSTONLY），改后刷新 `RoomView.config` / `rulesHash`、重置真人 ready 并发系统消息；`RoomExport.config` 落盘。`manifest.reference` 首次展开才请求，`parseGameReference` 校验，文本 `textContent`、图片走 `/games`。服务端加载时校验 `ruleConfig` / `reference`，坏声明跳过并记 `errors`；包头与模块 reference 不一致拒绝加载。
+- 单入口壳：根目录只有 `3178对战平台.bat`，启动 `cli.js shell`；先只开 `127.0.0.1:3178` 与本机大厅，点「建房」时调 `/api/host/ready` 再开 `0.0.0.0:3000`、组播与 `HostStore`。纯进房不创建 `HostStore`、不写 `data/`；建房后 `run-<port>.json` / `stop` / `diagnose` 与旧入口一致。`host` / `join` 子命令保留给命令行。
+- SDK 0.4.0 已发 npm（四包 `latest` 均为 0.4.0，2026-10-30；tag `sdk-v0.4.0`、Release 资产含 SHA256SUMS，`setup-sdk.mjs --release sdk-v0.4.0` 实测可装）；0.3.0 仍可回退。座位选项契约 `c326314` 已随 0.4.0 发布；color-duel 依赖已切 `^0.4.0`（lock 指向 registry）。
+- **第一款真游戏「变色对决」已落地为独立公开仓库 `Lizardon386/color-duel`：main `d761737`，v0.2.0 已发布（tag `v0.2.0`，Release 附 `.bpmap` + SHA256SUMS）。** 完整版：2~8 人、观战、三档电脑、5 个规则开关 + 手牌上限 + 关闭倒计时、规则资料、rule-config 与 seatOptions（座位颜色 + 每电脑位难度）声明。`npm test` 37/37、`npm run build`、`bpmap doctor` 通过；本地与远端一致。SDK 依赖已切 `^0.4.0`、lock 指向 registry；不再 link。**联调 PASS**（协议级 7/7、1280×800 UI 端到端、断线/票据与重启恢复）。运行包 `72410de4f486fffcfe880a6586299cbe1e1a35326184390e881d65406eb9b3ac`（104,268 字节，0.2.0），`games/color-duel.bpmap` 已是该包（gitignored）；**运行中的壳在启动时加载旧包，必须重启平台才会出现颜色/难度控件**；`uno-online` 未动。平台侧最新猴测：协议 seed 707（夹具）/717（强制 color-duel）、UI seed 909（4 用户 60 步）均 0 违规。
+
+### 最旧 6 条交接记录（原第 9 节 92–97 行）
+
+- 2026-10-28 Qoder：**联调 + 初版包 + 猴测**：color-duel 用 SDK 0.3.0 本地 link，协议 7/7、UI E2E、断线/重启恢复 PASS；初版包 `games/color-duel.bpmap`（102,353 字节，SHA256 `b85db75129c4adbb807c631854aa6cb129d02239fedfb41125b6a05bc70916c8`，gitignored）留给用户自测。猴测：协议 seed 707（夹具）/717（强制 color-duel）0 违规，UI seed 909（4 用户 60 步，强制 color-duel）0 违规；`npm test` 216/216。收工前压卡，旧记录沉降到 [COMPACT_BACKUP.md](COMPACT_BACKUP.md)。
+- 2026-10-28 Qoder：**规则移入房间 + 单入口壳**：规则卡由房主在 lobby 编辑（ruleConfig 命令，非房主 HOSTONLY），改后重算 rulesHash/revision、重置 ready、`RoomExport.config` 落盘；根目录只留 `3178对战平台.bat`，shell 建房时才开 LAN/HostStore，纯进房不写 `data/`。无头 Edge 实测 1280/1440；`npm test` 216/216、seam OK、`tsc -b` 通过；提交 `521b641` / `4753ab4`。
+- 2026-10-28 Qoder：**接盘确认**：新会话 `835cf812` 已按「接盘」核对锚点（平台 `3c9cffa`、游戏 `8c68c06`）并复跑验证：平台 215/215 + seam + tsc，游戏 33/33 + build + doctor；只读，未改文件。此后写者切到该会话。
+- 2026-10-28 Qoder：**交接**：平台侧 SDK 0.3.0 契约、全宽对局区、规则表单与资料面板已交付（`7d5b4c3` / `7697d62` / `9495dba`，215/215）；第一款真游戏「变色对决」重构为独立仓库 `D:\agent_workspace\color-duel`（33/33，本地 3 笔，未公开）；下一步是联调、SDK 0.3.0 发布（待用户确认）与公开仓库。交接给会话 `835cf812`。
+- 2026-10-28 Qoder：**收工**：UNO 开工前置条件（四项拍板、外部改名工程、不搬源码）写进「下一步」；锚点 `8dffb71`；最旧一条交接记录沉降到 [COMPACT_BACKUP.md](COMPACT_BACKUP.md)。
+- 2026-10-30 Qoder：**房间三栏定稿 + color-duel 0.2.0 发布**：平台 lobby 改按比例三栏（左栏房信息与规则同一卡、宽度 495/426/301@1280）、席位状态/动作列对齐、房主「解散房间」、真人行内「转交房主」；提交 `ff2a30b` / `d87f201`，232/232、seam、tsc 通过。真实 color-duel 0.2.0 已公开：main `d761737`、tag/Release `v0.2.0`、包 `72410de4…`（104,268B），平台 `games/` 已装该包；游戏 37/37、doctor、协议 717/UI 909 猴测 0 违规。换包后必须重启壳才加载新 manifest；平台文档日期已统一 2026-10-30。
+
 <!-- multi-agent-task-handoff: scope=handoff -->
