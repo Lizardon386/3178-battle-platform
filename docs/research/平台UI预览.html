@@ -22,7 +22,17 @@
   --bp-motion-fast:160ms;--bp-motion-base:220ms;--bp-motion-slow:300ms;
   --bp-ease:cubic-bezier(.22,.61,.36,1);
   --bp-lift-y:-2px;
-  --bp-step:16.5px;--bp-title:26px;--bp-code:58px;--bp-count:34px;
+  /* 字阶：--bp-step 是唯一随三档降级的正文基准；--bp-title 昵称；--bp-code 房号 */
+  --bp-step:16.5px;--bp-title:26px;--bp-code:58px;
+  /* 席位标记色。琥珀 / 靛紫直接引用 --bp-warn / --bp-accent 共享令牌，锁死不动，
+     与主 UI（警示、强调高亮、身份色）保持同一色系；其余令牌与状态语义解耦。 */
+  --bp-seat-amber:var(--bp-warn);--bp-seat-indigo:var(--bp-accent);--bp-seat-green:var(--bp-ok);
+  --bp-seat-pink:var(--bp-magenta);--bp-seat-red:var(--bp-bad);
+  /* 8 色按色相环排布 0/38/84/142/189/239/292/330°（HSV 实测）。
+     原橙距琥珀仅 13°、原紫距靛紫仅 19°，替换为青柠 / 品红后分别拉到 46° / 53°；
+     全局最小 30° 落在「粉→红」回环处，二者在色板里分属首末位、不相邻显示。
+     新增三色同属 500 系饱和度：青 / 青柠 / 品红。 */
+  --bp-seat-cyan:#06b6d4;--bp-seat-lime:#84cc16;--bp-seat-fuchsia:#d946ef;
   --bp-row:60px;--bp-control-h:52px;--bp-pad:28px;--bp-foot-h:73px;
   --bp-font-display:"BP Display","BP UI",sans-serif;
   --bp-font-ui:"BP UI","PingFang SC","Microsoft YaHei UI","Microsoft YaHei",sans-serif;
@@ -61,7 +71,8 @@ button,input,select{font:inherit}
 button{cursor:pointer;border-radius:4px;border:1px solid var(--bp-line);background:var(--bp-panel-alt);color:var(--bp-text);min-height:var(--bp-control-h);padding:0 18px;font:500 15.5px/1.3 var(--bp-font-display);letter-spacing:.08em;white-space:nowrap;box-shadow:none}
 button:hover{background:var(--bp-raised);border-color:var(--bp-accent)}
 button.primary{background:var(--bp-accent-dim);border-color:var(--bp-accent-dim);color:#fff}
-button.primary:hover{background:var(--bp-accent);border-color:var(--bp-accent);color:#fff}
+/* 悬停只提亮边框，底色保持 accent-dim：白字对比度恒为 6.29:1，不因 hover 跌到 4.47:1 */
+button.primary:hover{background:var(--bp-accent-dim);border-color:var(--bp-accent-hi);color:#fff}
 button.danger{border-color:var(--bp-bad);color:var(--bp-bad)}
 button.danger:hover{background:rgba(239,68,68,.14)}
 button.ghost{background:transparent}
@@ -76,7 +87,17 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 input,select{background:var(--bp-panel-alt);border:1px solid var(--bp-line);color:var(--bp-text);border-radius:4px;padding:14px var(--bp-field-px);font-size:16px;min-height:var(--bp-control-h);width:100%}
 input:hover,select:hover{border-color:var(--bp-accent)}
 input:focus,select:focus{border-color:var(--bp-accent);background:var(--bp-raised);transition-duration:var(--bp-motion-fast)}
-input[readonly],input:disabled,select:disabled{border-style:dashed;color:var(--bp-dim-hi)}
+/* 线型全站统一实线。readonly 与 disabled 必须分开：
+   readonly 仍是要点击 / 选中 / 复制的可操作对象，静态观感用更暗凹底 + 灰字表达「不可编辑」，
+   但 hover（整圈靛紫）、focus（raised 底 + 快进过渡）、focus-visible（inset 加粗）
+   一律沿用普通输入框的同一套动效，不做任何抑制；光标保持文本态以便选中复制。
+   :not(:focus) 只约束静态底色，避免同特异性覆盖 input:focus 的抬升。
+   只有 disabled 是真正不可操作，才抑制 hover。
+   区域联动 :has() 仍排除 readonly —— 点只读邀请框后焦点常驻，否则整块卡片一直亮着不退。 */
+input[readonly]{color:var(--bp-dim-hi)}
+input[readonly]:not(:focus){background:var(--bp-bg)}
+input:disabled,select:disabled{background:var(--bp-bg);color:var(--bp-dim-hi);cursor:not-allowed}
+input:disabled:hover,select:disabled:hover{border-color:var(--bp-line)}
 input.is-invalid,select.is-invalid{border-color:var(--bp-bad)}
 input.is-invalid:focus-visible,select.is-invalid:focus-visible{border-color:var(--bp-bad);box-shadow:inset 0 0 0 1px var(--bp-bad)}
 /* 标签与控件：裸 label 和 .form-label 共用同一套间距，全局一致 */
@@ -93,11 +114,13 @@ input.is-invalid:focus-visible,select.is-invalid:focus-visible{border-color:var(
 .toolbar button{min-height:36px;font-size:13px;padding:0 12px}
 .toolbar button.on{background:var(--bp-accent-dim);border-color:var(--bp-accent-dim)}
 .toolbar .spacer{flex:1}
-.toolbar .hint{font-size:11px;color:var(--bp-dim-2);font-family:var(--bp-font-mono)}
+.toolbar .hint{font-size:11px;color:var(--bp-dim);font-family:var(--bp-font-mono)}
 
 .stage{padding:12px;display:flex;justify-content:center}
 .device{width:100%;max-width:none;background:var(--bp-bg);border:1px solid var(--bp-line);border-radius:var(--bp-radius);overflow:hidden;position:relative;min-height:calc(100vh - 80px);display:flex;flex-direction:column}
 .device.is-mobile{max-width:320px;min-height:640px}
+/* 手机网页客人没有托盘：桌面房主端专属控件在 320px 档不出现 */
+.device.is-mobile #btn-tray{display:none}
 
 .bp-topbar{padding:18px var(--bp-pad);background:var(--bp-panel-alt);border-bottom:1px solid var(--bp-line);display:flex;align-items:center;gap:16px;flex:none;flex-wrap:wrap}
 .brand-mark{width:54px;height:54px;flex:none}
@@ -105,14 +128,15 @@ input.is-invalid:focus-visible,select.is-invalid:focus-visible{border-color:var(
 .brand-text strong{font:500 30px/1 var(--bp-font-display);letter-spacing:.16em;color:var(--bp-text)}
 .brand-text small{font:13px/1.4 var(--bp-font-mono);letter-spacing:.18em;color:var(--bp-dim-hi)}
 .nick-field{margin-left:auto;display:flex;align-items:center;gap:12px}
-.nick-field .form-label{margin:0;font:700 26px/1.2 var(--bp-font-ui);letter-spacing:.08em;color:var(--bp-accent-hi);white-space:nowrap}
+.nick-field .form-label{margin:0;font:700 var(--bp-title)/1.2 var(--bp-font-ui);letter-spacing:.08em;color:var(--bp-accent-hi);white-space:nowrap}
 .nick-field input{width:220px}
 
 .screen{padding:16px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 .panel{background:var(--bp-panel);border:1px solid var(--bp-line);border-radius:6px;overflow:hidden;transition-duration:var(--bp-motion-slow)}
 .pad{padding:var(--bp-pad)}
 .muted{color:var(--bp-dim-hi)}
-.dim{color:var(--bp-dim-2)}
+/* 说明文字用 --bp-dim（5.04~5.63:1）；--bp-dim-2 只留给禁用态与空位等刻意弱化的位置 */
+.dim{color:var(--bp-dim)}
 .grow{flex:1;min-width:0}
 .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 h1,h2,h3{margin:0;font-weight:500}
@@ -132,7 +156,7 @@ h3{font-size:14px}
 .room-info-block:first-child{padding-left:0;border-left:none}
 .room-code{font:500 var(--bp-code)/.9 var(--bp-font-display);letter-spacing:.1em;color:var(--bp-accent-hi)}
 .room-info-label{font:12px/1.2 var(--bp-font-mono);letter-spacing:.14em;color:var(--bp-dim)}
-.room-info-value{font-size:16px;color:var(--bp-text)}
+.room-info-value{font-size:var(--bp-step);color:var(--bp-text)}
 .invite{flex:1 1 260px;min-width:260px;max-width:460px;font-family:var(--bp-font-mono);font-size:14px}
 .entries{display:flex;gap:10px;flex-wrap:wrap}
 .entries button{min-height:44px;font-size:14px;padding:0 16px;border-color:var(--bp-accent);color:var(--bp-accent-hi)}
@@ -142,24 +166,28 @@ h3{font-size:14px}
 .two-col > .panel{display:flex;flex-direction:column;min-height:0}
 .seat-list{flex:1 1 auto;min-height:0;overflow:auto;border-top:1px solid var(--bp-line)}
 /* 席位身份色：一个变量同时驱动左轨 / 图标 / 编号铭牌 / 角色徽章，不再各写一套 */
-.seat{--bp-seat:var(--bp-dim);display:grid;grid-template-columns:34px 46px minmax(0,1fr) 62px 78px 96px;gap:12px;align-items:center;min-height:var(--bp-row);padding:0 var(--bp-pad);border-bottom:1px solid var(--bp-line);border-left:4px solid var(--bp-seat);font-size:16px}
+/* 三个互不覆盖的通道：--bp-seat 身份（左轨 + 徽章边框，只读）、--bp-seat-tag 标记（图标 + 编号牌，用户可改）；
+   状态由文字与勾图标表达，不再抢颜色变量，所以改座位色不会压掉「已准备」。 */
+.seat{--bp-seat:var(--bp-dim);--bp-seat-tag:var(--bp-seat);display:grid;grid-template-columns:34px 46px minmax(0,1fr) 62px 78px 96px;gap:12px;align-items:center;min-height:var(--bp-row);padding:0 var(--bp-pad);border-bottom:1px solid var(--bp-line);border-left:4px solid var(--bp-seat);font-size:var(--bp-step)}
 .seat:hover{background:var(--bp-raised)}
-.seat-icon{color:var(--bp-seat);display:flex;justify-content:center}
-.seat-slot{display:grid;place-items:center;min-width:46px;height:34px;font:700 15px/1 var(--bp-font-mono);color:var(--bp-seat);background:var(--bp-panel-alt);border:1px solid var(--bp-seat);border-radius:4px}
+.seat-icon{color:var(--bp-seat-tag);display:flex;justify-content:center}
+.seat-slot{display:grid;place-items:center;min-width:46px;height:34px;font:700 15px/1 var(--bp-font-mono);color:var(--bp-seat-tag);background:var(--bp-panel-alt);border:1px solid var(--bp-seat-tag);border-radius:4px}
 .seat-name{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .is-me{font-weight:700;color:#fff}
 .is-me .seat-name::after{content:"你";margin-left:10px;padding:2px 8px;font:11px/1.4 var(--bp-font-mono);letter-spacing:0;color:var(--bp-bg);background:var(--bp-accent-hi);border-radius:100px}
-.seat-role{font:12px/1 var(--bp-font-mono);letter-spacing:.06em;color:var(--bp-seat);border:1px solid var(--bp-seat);border-radius:4px;padding:4px 6px;text-align:center;white-space:nowrap}
+/* 徽章文字用 --bp-dim-hi（6.99:1），身份色由边框承载；避免 12px 小字落到 4.21:1 */
+.seat-role{font:12px/1 var(--bp-font-mono);letter-spacing:.06em;color:var(--bp-dim-hi);border:1px solid var(--bp-seat-tag);border-radius:4px;padding:4px 6px;text-align:center;white-space:nowrap}
 .seat-state{font:13.5px/1 var(--bp-font-mono);letter-spacing:.06em;color:var(--bp-dim-hi);text-align:right;white-space:nowrap}
 .seat-state.ok{color:var(--bp-ok)}
+.seat-state.ok .i{width:14px;height:14px;vertical-align:-2px;margin-right:4px}
 .seat-action{justify-self:end}
-/* 身份定义：房主琥珀 / 玩家靛紫 / 电脑紫虚线 / 已准备绿（优先级最高） */
+/* 身份定义：房主琥珀 / 玩家靛紫 / 电脑紫虚线。
+   已准备不再改席位颜色变量，改由 .seat-state.ok 的绿色文字 + 勾图标表达（双通道，不只靠颜色）。 */
 .seat-host{--bp-seat:var(--bp-warn)}
 .seat-player{--bp-seat:var(--bp-accent)}
-.seat-ai{--bp-seat:var(--bp-violet);border-left-style:dashed}
-.seat.is-ready{--bp-seat:var(--bp-ok)}
+.seat-ai{--bp-seat:var(--bp-violet)}
 /* 占用席位：编号铭牌实心身份色，与房主 1 号牌同一形态 */
-.seat-host .seat-slot,.seat-player .seat-slot,.seat-ai .seat-slot{color:var(--bp-bg);background:var(--bp-seat);border-color:var(--bp-seat)}
+.seat-host .seat-slot,.seat-player .seat-slot,.seat-ai .seat-slot{color:var(--bp-bg);background:var(--bp-seat-tag);border-color:var(--bp-seat-tag)}
 .seat.seat-host{background:var(--bp-raised)}
 /* 空位：只用极暗灰，不画成一排彩色牌 */
 .seat-empty{--bp-seat:var(--bp-dim-2);border-left-color:transparent;color:var(--bp-dim);background:var(--bp-panel-alt)}
@@ -171,16 +199,28 @@ h3{font-size:14px}
 .color-pop-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;font:13px/1.4 var(--bp-font-mono);color:var(--bp-dim-hi)}
 .color-pop-head button{min-height:28px;padding:0 4px;font-size:16px;background:transparent;border:none}
 .color-pop-head .i{width:14px;height:14px}
-.color-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.color-dot{height:40px;min-height:40px;padding:0;border:2px solid transparent;border-radius:4px}
+.color-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.color-dot{position:relative;height:44px;min-height:44px;padding:0;border:2px solid transparent;border-radius:4px}
 .color-dot:hover{transform:translateY(-2px)}
 .color-dot.is-current{border-color:var(--bp-text)}
+/* 已被别的席位占用：色块保留可辨识，但压暗 + 写明占用席位号 + not-allowed，不隐藏、不让色板跳尺寸 */
+.color-dot.is-taken{cursor:not-allowed;filter:saturate(.35) brightness(.6)}
+.color-dot.is-taken:hover{transform:none}
+.color-dot.is-taken::after{content:attr(data-taken-by);position:absolute;inset:0;display:grid;place-items:center;font:700 15px/1 var(--bp-font-mono);color:var(--bp-text)}
+.color-pop-note{font:11px/1.5 var(--bp-font-mono);color:var(--bp-dim-hi);margin:-4px 0 12px}
+.color-pop-foot{margin-top:12px}
+.color-pop-foot button{width:100%;min-height:36px;font-size:13px;padding:0 12px}
 
-.chat-log{flex:1 1 auto;min-height:120px;max-height:none;padding:22px var(--bp-pad);overflow:auto;font-size:16px;line-height:1.75;background:var(--bp-panel-alt)}
-.chat-line{padding:9px 0;border-bottom:1px dotted var(--bp-line);word-break:break-word;max-width:60ch;margin:0}
+.chat-log{flex:1 1 auto;min-height:120px;max-height:none;padding:22px var(--bp-pad);overflow:auto;font-size:var(--bp-step);line-height:1.75;background:var(--bp-panel-alt)}
+/* 所有聊天行统一排版：同字族、同字号、同行高、同昵称格式、同分隔符、同箭头前缀。
+   sys 只保留正文色稍弱这一处语义区分，不再另起一套 mono / 小字号。
+   箭头颜色由 --bp-chat-mark 提供，跟随该用户席位的标记色；默认房主琥珀 / 客人靛紫，
+   与锁定的两个共享令牌同色系。 */
+.chat-line{padding:9px 0;border-bottom:1px solid var(--bp-line);word-break:break-word;max-width:60ch;margin:0;font-size:var(--bp-step);line-height:1.75;color:var(--bp-text)}
 .chat-line:last-child{border-bottom:none}
-.chat-line.sys{font:14px/1.6 var(--bp-font-mono);color:var(--bp-dim-hi)}
-.chat-line.sys::before{content:"▸ ";color:var(--bp-accent)}
+.chat-line::before{content:"▸";display:inline-block;margin-right:10px;font-weight:700;color:var(--bp-chat-mark,var(--bp-accent-hi))}
+.chat-line .chat-who{font-weight:500;color:var(--bp-text)}
+.chat-line.sys{color:var(--bp-dim-hi)}
 
 .host-bar,.guest-bar,.chat-input{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--bp-line);box-sizing:border-box;height:var(--bp-foot-h);min-height:var(--bp-foot-h);flex:0 0 var(--bp-foot-h);background:var(--bp-panel-alt)}
 .host-bar button,.guest-bar button,.chat-input button,.chat-input input{height:var(--bp-control-h);min-height:var(--bp-control-h);box-sizing:border-box}
@@ -199,6 +239,31 @@ h3{font-size:14px}
 #screen-lobby .lobby-grid{flex:1 1 auto;align-content:start}
 #screen-open .panel:last-child{flex:1 1 auto}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--bp-ok);display:inline-block;flex:none}
+/* ── 连接告警带：置于顶栏之下、内容区之上，把 §2.7 的加载 / 错误 / 恢复 / 离线重试
+   做成可逐项复现的界面状态。品牌栏始终是页面锚点，不被异常态挤到第二行；
+   告警带全宽紧贴顶栏、正常态整条隐藏，仍是内容之前最先被看到的一层。
+   状态不只靠颜色：文字 + role=status + 状态点三通道；语义色只落在状态点上。
+   零关键帧、零发光、线型统一实线；重试是条内唯一主操作，动作与原因同组。 */
+.conn-bar{display:flex;align-items:center;gap:12px;flex:none;padding:10px var(--bp-pad);background:var(--bp-panel-alt);border-bottom:1px solid var(--bp-line);font:13px/1.5 var(--bp-font-mono);color:var(--bp-text)}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--bp-dim-hi);flex:none}
+.conn-bar.is-warn .conn-dot{background:var(--bp-warn)}
+.conn-bar.is-bad .conn-dot{background:var(--bp-bad)}
+.conn-bar.is-ok .conn-dot{background:var(--bp-ok)}
+.conn-text{flex:1;min-width:0}
+/* 错误 / 离线：文案放大加粗，让告警原因本身先被读到，而不是只靠右侧小按钮 */
+.conn-bar.is-bad .conn-text{font:500 var(--bp-step)/1.5 var(--bp-font-ui);letter-spacing:.02em;color:var(--bp-text)}
+/* 重试是这条告警的主操作：实心主行动色 + 循环图标 + 16.5px 展示体 + 44px 触控目标。
+   白字在 accent-dim 上恒 6.29:1；hover 只提亮边框，不换底色（避免掉到 4.47:1）。 */
+.conn-retry{display:inline-flex;align-items:center;gap:10px;flex:none;min-height:44px;padding:0 20px;background:var(--bp-accent-dim);border:1px solid var(--bp-accent-dim);color:#fff;font:500 var(--bp-step)/1.2 var(--bp-font-display);letter-spacing:.08em;white-space:nowrap}
+.conn-retry:hover{background:var(--bp-accent-dim);border-color:var(--bp-accent-hi);color:#fff}
+.conn-retry .i{width:18px;height:18px}
+/* 局域网房间提示按状态分级：默认克制，加载琥珀、故障主文字色；文字始终有状态点陪同（不只靠颜色） */
+#lan-rooms{display:flex;align-items:center;gap:10px;font-size:var(--bp-step);color:var(--bp-dim)}
+#lan-rooms::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--bp-dim);flex:none}
+#lan-rooms.is-busy{color:var(--bp-warn);font-weight:500}
+#lan-rooms.is-busy::before{background:var(--bp-warn)}
+#lan-rooms.is-alert{color:var(--bp-text);font-weight:500}
+#lan-rooms.is-alert::before{background:var(--bp-bad)}
 
 .modal{position:absolute;inset:0;background:rgba(5,5,10,.86);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
 /* 弹层按内容自适应：宽度有上限、高度随文本量收缩；列数 auto-fit 随可用宽度从 2 列降为 1 列 */
@@ -217,8 +282,8 @@ h3{font-size:14px}
 .cfg-row{display:flex;align-items:center;gap:14px;padding:12px 14px;border-bottom:1px solid var(--bp-line);min-height:60px}
 .cfg-row .grow{flex:1;font:15px/1.5 var(--bp-font-mono);letter-spacing:.06em;color:var(--bp-dim-hi)}
 .cfg-row input,.cfg-row select{width:120px;text-align:center;min-height:48px;padding:12px 16px}
-.ref-text{font-size:16px;line-height:1.8;color:var(--bp-text);max-width:58ch;margin:0 0 14px;white-space:pre-line}
-.ref-img{border:1px dashed var(--bp-line);border-radius:4px;padding:22px;color:var(--bp-dim-2);font-size:15px;text-align:center}
+.ref-text{font-size:var(--bp-step);line-height:1.8;color:var(--bp-text);max-width:58ch;margin:0 0 14px;white-space:pre-line}
+.ref-img{border:1px solid var(--bp-line);border-radius:4px;padding:22px;color:var(--bp-dim);font-size:15px;text-align:center}
 /* 转交房主：自定义候选列表（不用原生 select，避开系统下拉样式） + 两行式 footer */
 .transfer-body{display:block}
 .transfer-body .hint{margin:0 0 16px}
@@ -229,7 +294,7 @@ h3{font-size:14px}
 .pick-meta{flex:none;font:13px/1.4 var(--bp-font-mono);color:var(--bp-dim-hi)}
 .pick.is-selected{border-color:var(--bp-accent);background:var(--bp-raised)}
 .pick.is-selected .pick-slot{background:var(--bp-accent-dim);border-color:var(--bp-accent-dim);color:#fff}
-.pick.is-disabled{background:transparent;border-style:dashed;color:var(--bp-dim-2);cursor:not-allowed}
+.pick.is-disabled{background:transparent;color:var(--bp-dim-2);cursor:not-allowed}
 .pick.is-disabled .pick-name,.pick.is-disabled .pick-meta,.pick.is-disabled .pick-slot{color:var(--bp-dim-2)}
 .transfer-foot{flex-direction:column;align-items:stretch;gap:16px}
 .transfer-foot .note{min-width:0;font-size:14px}
@@ -276,7 +341,7 @@ h3{font-size:14px}
 .device.is-narrow .room-info #btn-copy{justify-self:start}
 .device.is-narrow .room-info .entries button{flex:1;min-height:44px}
 .device.is-narrow .chat-log{min-height:120px}
-.device.is-narrow .ref-text{font-size:15px}
+.device.is-narrow .ref-text{font-size:var(--bp-step)}
 .device.is-narrow .toast{min-width:0;max-width:88%;font-size:15px;padding:14px 18px}
 
 /* 两栏 → 单列 */
@@ -289,11 +354,11 @@ h3{font-size:14px}
 .device.is-narrow .modal-head,.device.is-narrow .modal-foot{padding:12px 14px}
 
 /* 席位行：六列 → 四列（隐藏角色徽章与行内操作），名字永不竖排 */
-.device.is-compact .seat,.device.is-narrow .seat{grid-template-columns:28px 40px minmax(0,1fr) 76px;gap:10px;padding:0 var(--bp-pad);font-size:15px}
+.device.is-compact .seat,.device.is-narrow .seat{grid-template-columns:28px 40px minmax(0,1fr) 76px;gap:10px;padding:0 var(--bp-pad);font-size:var(--bp-step)}
 .device.is-compact .seat-slot,.device.is-narrow .seat-slot{min-width:0;width:40px}
 .device.is-compact .seat-role,.device.is-compact .seat-action,
 .device.is-narrow .seat-role,.device.is-narrow .seat-action{display:none}
-.device.is-narrow .seat{font-size:14px}
+/* 窄档席位字号由 --bp-step=14px 驱动，不再单独写死 */
 
 /* 底栏：五按钮一行 → 3+2 两行铺满；控件高度不变，两卡 footer 仍等高 */
 .device.is-compact .host-bar,.device.is-narrow .host-bar{
@@ -342,8 +407,10 @@ h3{font-size:14px}
   <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V5M5 5h12l-2 4 2 4H5"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol>
   <symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 18h16M4 18l-2-9 5 4 5-7 5 7 5-4-2 9"/></symbol>
-  <symbol id="i-login" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"/></symbol>
+  <!-- 进房不是登入：项目无账号系统，图标语义是「进入房间」，不用 login 命名 -->
+  <symbol id="i-enter" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"/></symbol>
   <symbol id="i-device" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></symbol>
+  <symbol id="i-retry" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
 </svg>
 
 <div class="toolbar" role="group" aria-label="预览控制（非产品界面）">
@@ -363,6 +430,16 @@ h3{font-size:14px}
   <div class="group" id="vp-group">
     <button type="button" data-vp="desktop" class="on">桌面 1256</button>
     <button type="button" data-vp="mobile">手机 320</button>
+  </div>
+  <span class="label">连接</span>
+  <div class="group" id="conn-group">
+    <button type="button" data-conn="ok" class="on">默认</button>
+    <button type="button" data-conn="loading">加载</button>
+    <button type="button" data-conn="empty">空</button>
+    <button type="button" data-conn="error">错误</button>
+    <button type="button" data-conn="recovered">恢复</button>
+    <button type="button" data-conn="limited">受限</button>
+    <button type="button" data-conn="offline">离线</button>
   </div>
   <span class="spacer"></span>
   <span class="readout" id="width-readout">—</span>
@@ -390,6 +467,12 @@ h3{font-size:14px}
     </label>
   </header>
 
+  <div class="conn-bar" id="conn-bar" role="status" aria-live="polite" hidden>
+    <span class="conn-dot" aria-hidden="true"></span>
+    <span class="conn-text" id="conn-text"></span>
+    <button type="button" class="conn-retry" id="btn-retry" hidden><svg class="i" aria-hidden="true"><use href="#i-retry"/></svg>重试连接</button>
+  </div>
+
   <section class="screen" id="screen-lobby" hidden>
     <div class="lobby-grid">
       <div class="panel lobby-card">
@@ -398,17 +481,17 @@ h3{font-size:14px}
         <div class="field"><label for="roomname">房间名</label><input id="roomname" value="周末一局"></div>
         <div class="row"><div class="grow field"><label for="slots">座位数</label><input id="slots" value="8"></div><div class="grow field"><label for="pwd">房间密码</label><input id="pwd" value="" placeholder="留空即公开"></div></div>
         <button type="button" class="primary" id="btn-create" style="width:100%"><svg class="i"><use href="#i-flag"/></svg> 建房并坐 1 号位</button>
-        <p class="hint">房主权限只在你这个进程里：开局、踢人、关房、移交都得你点。</p>
+        <p class="hint">房主权限在你这边：开始游戏、请出房间、解散、移交都得你点。</p>
       </div>
       <div class="panel lobby-card">
-        <h3 class="card-title"><svg class="i"><use href="#i-login"/></svg>加入房间</h3>
+        <h3 class="card-title"><svg class="i"><use href="#i-enter"/></svg>加入房间</h3>
         <div class="field"><label for="addr">房主地址</label><input id="addr" value="192.168.1.20:3000"></div>
         <div class="row"><div class="grow field"><label for="code2">房号</label><input id="code2" value="893F" style="font-family:var(--bp-font-mono);letter-spacing:.42em"></div><div class="grow field"><label for="pwd2">密码</label><input id="pwd2" placeholder="可留空"></div></div>
-        <button type="button" id="btn-join" style="width:100%;margin-bottom:16px"><svg class="i"><use href="#i-login"/></svg> 进房</button>
+        <button type="button" id="btn-join" style="width:100%;margin-bottom:16px"><svg class="i"><use href="#i-enter"/></svg> 进房</button>
         <h4 class="bp-subtitle">地址簿 · 你去过的房主</h4>
         <div class="field"><input id="addrbook" value="192.168.1.20:3000" readonly></div>
         <h4 class="bp-subtitle" style="margin-top:16px">局域网房间</h4>
-        <div class="panel pad dim" style="font-size:14.5px">暂未发现房间 · 刷新或手动填地址</div>
+        <div class="panel pad dim" id="lan-rooms">暂未发现房间 · 刷新或手动填地址</div>
       </div>
     </div>
     <p class="status" id="lobby-status" role="status"></p>
@@ -441,17 +524,17 @@ h3{font-size:14px}
         </div>
         <div class="guest-bar" id="guest-bar" hidden>
           <button type="button" class="primary" id="btn-ready" aria-pressed="false"><svg class="i"><use href="#i-check"/></svg> 准备</button>
-          <span class="note">你是客人，桌子级操作仅房主可用 · 玩法参数只读</span>
+          <span class="note">你是客人，席位调整与开始游戏仅房主可用 · 玩法参数只读</span>
         </div>
       </div>
 
       <div class="panel">
         <div class="card-head"><h3 class="card-title"><svg class="i"><use href="#i-message"/></svg>房间聊天</h3><span class="muted" style="font:12px/1 var(--bp-font-mono);letter-spacing:.14em">会话消息</span></div>
         <div class="chat-log" id="chat-log" aria-live="polite">
-          <p class="chat-line sys"><span data-nick="host">房主老周</span> 创建了房间</p>
-          <p class="chat-line sys"><span data-nick="guest">小林</span> 进入房间</p>
-          <p class="chat-line"><span data-nick="guest">小林</span>　准备好了</p>
-          <p class="chat-line"><span data-nick="host">房主老周</span>　等齐人再开</p>
+          <p class="chat-line sys" data-chat-role="host"><span class="chat-who" data-nick="host">房主老周</span>　创建了房间</p>
+          <p class="chat-line sys" data-chat-role="guest"><span class="chat-who" data-nick="guest">小林</span>　进入房间</p>
+          <p class="chat-line" data-chat-role="guest"><span class="chat-who" data-nick="guest">小林</span>　准备好了</p>
+          <p class="chat-line" data-chat-role="host"><span class="chat-who" data-nick="host">房主老周</span>　等齐人再开</p>
         </div>
         <div class="chat-input"><input id="chat-text" placeholder="说点什么" aria-label="聊天输入"><button type="button" class="primary" id="btn-send" aria-label="发送"><svg class="i"><use href="#i-send"/></svg></button></div>
       </div>
@@ -461,26 +544,26 @@ h3{font-size:14px}
   <section class="screen" id="screen-open" hidden>
     <div class="panel open-bar">
       <span class="dot"></span>
-      <div class="grow"><h3 class="card-title"><svg class="i"><use href="#i-device"/></svg>会话进行中</h3><div class="muted" style="font:14px/1.5 var(--bp-font-mono);margin-top:6px">房号 893F · 3/8 席 · 游戏由独立进程渲染，平台不承载游戏画面</div></div>
+      <div class="grow"><h3 class="card-title"><svg class="i"><use href="#i-device"/></svg>会话进行中</h3><div class="muted" style="font:14px/1.5 var(--bp-font-mono);margin-top:6px">房号 893F · 3/8 席 · 会话保持连接</div></div>
       <button type="button" class="primary" id="btn-open-game"><svg class="i"><use href="#i-device"/></svg> 打开游戏</button>
-      <button type="button" id="btn-tray">最小化托盘</button>
+      <button type="button" id="btn-tray">收起到后台</button>
     </div>
     <div class="panel pad" style="margin-top:12px">
-      <h3 class="card-title" style="margin-bottom:12px"><svg class="i"><use href="#i-info"/></svg>平台在这一相位只剩状态条</h3>
-      <p class="ref-text">规则设置、席位配置、房间聊天、游戏资料都退回入口或按需面板。对局画面、结算、再来一局全部由游戏自己的进程负责。关掉这个窗口，会话仍在。</p>
+      <h3 class="card-title" style="margin-bottom:12px"><svg class="i"><use href="#i-info"/></svg>房间功能收起后</h3>
+      <p class="ref-text">规则设置、席位配置、房间聊天、游戏资料仍可从房间页打开。对局画面、结算与再来一局都在游戏窗口里进行。关掉这个窗口，会话不会中断。</p>
     </div>
   </section>
 
   <div class="modal" id="modal-rules" hidden>
     <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="rules-title">
-      <div class="modal-head"><h2 id="rules-title">游戏规则 · 选配</h2><span class="muted">房主选配玩法参数 · 仅 lobby 阶段可改</span><span class="grow"></span><button type="button" class="ghost" data-close="rules" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
+      <div class="modal-head"><h2 id="rules-title">游戏规则 · 选配</h2><span class="muted">房主选配玩法参数 · 仅准备阶段可改</span><span class="grow"></span><button type="button" class="ghost" data-close="rules" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
       <div class="modal-body">
         <div class="panel pad"><h3>玩法参数</h3>
           <div class="cfg-row"><span class="grow">手牌上限</span><input id="cfg-hand" value="7" aria-label="手牌上限"></div>
           <div class="cfg-row"><span class="grow">关闭倒计时</span><select id="cfg-timer" aria-label="关闭倒计时"><option>开</option><option>关</option></select></div>
           <div class="cfg-row"><span class="grow">允许质疑</span><select id="cfg-claim" aria-label="允许质疑"><option>开</option><option>关</option></select></div>
           <div class="cfg-row"><span class="grow">起手牌数</span><input id="cfg-deal" value="7" aria-label="起手牌数"></div>
-          <p class="hint" style="font-family:var(--bp-font-mono);font-size:14.5px;margin-top:16px">值来自中立清单 sessionConfig 段，平台只透传、不解释语义。</p>
+          <p class="hint" style="font-family:var(--bp-font-mono);font-size:14.5px;margin-top:16px">这些参数由房主为本局选配，保存后所有真人需重新准备。</p>
         </div>
         <div class="panel pad"><h3>规则说明 · 复用游戏资料</h3>
           <p class="ref-text">每人起手 7 张，出牌须跟色或跟数字。无法出牌时摸一张。</p>
@@ -489,7 +572,7 @@ h3{font-size:14px}
           <div class="ref-img">纯文本 / 图片占位（资料只渲染纯文本与图片）</div>
         </div>
       </div>
-      <div class="modal-foot"><span class="note" id="rules-note">保存后：重算 rulesHash · 推进 revision · 真人 ready 清零 · 发系统消息 · 落盘</span><button type="button" id="btn-rules-cancel" data-close="rules">取消</button><button type="button" class="primary" id="btn-rules-save">保存选配</button></div>
+      <div class="modal-foot"><span class="note" id="rules-note">保存后：玩法参数生效 · 所有真人需重新准备 · 房间状态同步</span><button type="button" id="btn-rules-cancel" data-close="rules">取消</button><button type="button" class="primary" id="btn-rules-save">保存选配</button></div>
     </div>
   </div>
 
@@ -498,9 +581,9 @@ h3{font-size:14px}
       <div class="modal-head"><h2 id="ref-title">规则与资料</h2><span class="grow"></span><button type="button" class="ghost" data-close="ref" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
       <div class="modal-body">
         <div class="panel pad"><h3>玩法摘要</h3><p class="ref-text">变色对决：2~8 人，支持观战与三档电脑。出牌跟色或跟数字，先出完手牌者胜。</p></div>
-        <div class="panel pad"><h3>牌面</h3><div class="ref-img">图片占位</div><p class="ref-text" style="margin-top:10px">资料只渲染纯文本与图片，路径走清单资源路由。</p></div>
+        <div class="panel pad"><h3>牌面</h3><div class="ref-img">图片占位</div><p class="ref-text" style="margin-top:10px">资料仅展示文本与图片。</p></div>
       </div>
-      <div class="modal-foot"><span class="note">这是静态说明，不描述界面位置，改布局不用改文案。</span><button type="button" data-close="ref">关闭</button></div>
+      <div class="modal-foot"><span class="note">规则说明来自游戏资料，不随界面布局变化。</span><button type="button" data-close="ref">关闭</button></div>
     </div>
   </div>
 
@@ -508,12 +591,12 @@ h3{font-size:14px}
     <div class="modal-box small" role="dialog" aria-modal="true" aria-labelledby="transfer-title">
       <div class="modal-head"><h2 id="transfer-title">转交房主</h2><span class="grow"></span><button type="button" class="ghost" data-close="transfer" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
       <div class="modal-body transfer-body">
-        <p class="hint">选择接任的真人玩家。只转移权限，进程仍在原房主机。</p>
+        <p class="hint">选择接任的真人玩家。只转移房主权限，房间不变。</p>
         <div class="pick-list" id="transfer-list" role="radiogroup" aria-label="接任者"></div>
         <p class="hint dim">空位与观战位同样不能接任。</p>
       </div>
       <div class="modal-foot transfer-foot">
-        <span class="note">移交后原房主再发房主命令会被拒绝。</span>
+        <span class="note">移交后由新房主管理房间。</span>
         <div class="foot-actions"><button type="button" data-close="transfer">取消</button><button type="button" class="primary" id="btn-transfer-ok">确认移交</button></div>
       </div>
     </div>
@@ -535,7 +618,9 @@ h3{font-size:14px}
 
   <div class="color-pop" id="color-pop" hidden>
     <div class="color-pop-head"><span id="color-pop-title">座位颜色</span><button type="button" id="color-pop-close" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <p class="color-pop-note" id="color-pop-note">每个颜色只能给一个席位使用</p>
     <div class="color-grid" id="color-grid"></div>
+    <div class="color-pop-foot"><button type="button" id="btn-color-reset" disabled>恢复默认颜色</button></div>
   </div>
 
   <div class="toast" id="toast" hidden role="status"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg><span id="toast-text"></span></div>
@@ -545,10 +630,12 @@ h3{font-size:14px}
 <script>
 (function(){
   function emptySeat(n){return {n:n,kind:'empty',who:null,name:null,color:null};}
-  var SEAT_COLORS=[['琥珀','var(--bp-warn)'],['靛紫','var(--bp-accent)'],['绿','var(--bp-ok)'],
-                   ['紫','var(--bp-violet)'],['粉','var(--bp-magenta)'],['红','var(--bp-bad)']];
+  /* 8 色 = 8 席上限，按色相环排列（0/38/82/142/189/239/292/330°），最小间距 38°。
+     琥珀与靛紫是共享令牌色，锁死不改；原「橙」「紫」因与它们过近，换为青柠与品红。 */
+  var SEAT_COLORS=[['红','var(--bp-seat-red)'],['琥珀','var(--bp-seat-amber)'],['青柠','var(--bp-seat-lime)'],['绿','var(--bp-seat-green)'],
+                   ['青','var(--bp-seat-cyan)'],['靛紫','var(--bp-seat-indigo)'],['品红','var(--bp-seat-fuchsia)'],['粉','var(--bp-seat-pink)']];
   var state={
-    view:'room',role:'host',vp:'desktop',guestReady:true,
+    view:'room',role:'host',vp:'desktop',conn:'ok',guestReady:true,
     nick:{host:'房主老周',guest:'小林'},
     seats:[
       {n:1,kind:'host',who:'host',name:null,color:null},
@@ -577,6 +664,50 @@ h3{font-size:14px}
     });
   }
   btnGroups('view-group','view');btnGroups('role-group','role');btnGroups('vp-group','vp');
+
+  /* ── 连接状态机：把设计方案 §2.7 的加载 / 空 / 错误 / 成功恢复 / 权限受限 / 离线重试
+     做成预览控制条上可逐项点开的界面状态。只驱动展示层（状态条 / 局域网区 / 大厅状态行 / 地址输入），
+     不改席位与准备闸状态，因此不影响已有交互链路。
+     默认态与空态不显示状态条；恢复态 2.6s 后自动收回（对应「恢复后自动清状态行」）。 */
+  var CONN={
+    ok:       {tone:'',        text:'',                                                lan:'暂未发现房间 · 刷新或手动填地址',        status:'已连接 · 会话正常'},
+    loading:  {tone:'is-warn', text:'正在连接房主 · 发现局域网房间…',                 lan:'正在发现局域网房间…',                   status:'加载：连接中、发现中、成员同步中'},
+    empty:    {tone:'',        text:'',                                                lan:'局域网暂无房间 · 可手动填写房主地址',    status:'空：局域网无房间、地址簿为空'},
+    error:    {tone:'is-bad',  text:'地址不可达 · 检查房主地址后重试',               lan:'发现失败 · 检查地址后重试',             status:'错误：地址非法、连不上、版本或玩法参数不符', retry:true},
+    recovered:{tone:'is-ok',   text:'连接已恢复 · 会话状态已同步',                   lan:'暂未发现房间 · 刷新或手动填地址',        status:'成功恢复：状态行将自动清除'},
+    limited:  {tone:'is-warn', text:'你是客人 · 建房与邀请链接仅房主可用',           lan:'暂未发现房间 · 刷新或手动填地址',        status:'权限受限：切「身份=客人」可复现只读参数与客人底栏'},
+    offline:  {tone:'is-bad',  text:'连接断开 · 命令已本地拒绝，未静默排队（第 2 次重试）', lan:'发现服务不可用 · 恢复后自动重试', status:'离线重试：重连中（含退避次数）、断开并说明原因', retry:true}
+  };
+  var connTimer=null;
+  function syncConnButtons(){
+    Array.prototype.forEach.call(document.querySelectorAll('#conn-group button'),function(b){
+      b.classList.toggle('on',b.getAttribute('data-conn')===state.conn);
+    });
+  }
+  function applyConn(){
+    var c=CONN[state.conn]||CONN.ok,bar=document.getElementById('conn-bar');
+    bar.hidden=!c.tone;
+    bar.className='conn-bar'+(c.tone?' '+c.tone:'');
+    document.getElementById('conn-text').textContent=c.text;
+    document.getElementById('btn-retry').hidden=!c.retry;
+    var lan=document.getElementById('lan-rooms');
+    lan.textContent=c.lan;
+    lan.classList.toggle('is-busy',state.conn==='loading');
+    lan.classList.toggle('is-alert',state.conn==='error'||state.conn==='offline');
+    document.getElementById('lobby-status').textContent=c.status;
+    document.getElementById('addr').classList.toggle('is-invalid',state.conn==='error');
+    if(state.conn==='recovered'){
+      if(connTimer)clearTimeout(connTimer);
+      connTimer=setTimeout(function(){state.conn='ok';syncConnButtons();applyConn();},2600);
+    }else if(connTimer){clearTimeout(connTimer);connTimer=null;}
+  }
+  document.getElementById('conn-group').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-conn]');if(!b)return;
+    state.conn=b.getAttribute('data-conn');syncConnButtons();applyConn();
+  });
+  document.getElementById('btn-retry').addEventListener('click',function(){
+    state.conn='recovered';syncConnButtons();applyConn();showToast('重试成功 · 会话已恢复（演示）');
+  });
 
   /* 昵称是会话身份：一处改动，席位名 / 聊天 / 转交候选 / 后续发言全部跟着走 */
   document.getElementById('nick').addEventListener('input',function(e){
@@ -617,17 +748,20 @@ h3{font-size:14px}
       var kindCls=s.kind==='host'?'seat-host':s.kind==='player'?'seat-player':s.kind==='ai'?'seat-ai':'seat-empty';
       var ready=(s.kind==='player'&&state.guestReady)?' is-ready':'';
       var me=(s.who&&s.who===state.role)?' is-me':'';
-      var style=s.color?' style="--bp-seat:'+s.color+'"':'';
+      var style=s.color?' style="--bp-seat-tag:'+s.color+'"':'';
       var action;
       if(s.kind==='empty')action='<button type="button" class="ghost" data-add="'+s.n+'" style="min-height:32px;font-size:12px;padding:0 8px" aria-label="在 '+s.n+' 号位加电脑">+</button>';
       else if(s.kind==='player'&&state.role==='host')action='<button type="button" class="ghost" id="btn-inline-transfer" style="min-height:32px;font-size:12px;padding:0 8px">转交房主</button>';
       else action='<span class="dim">—</span>';
+      var slotAttrs=s.kind==='empty'
+        ? 'data-slot="'+s.n+'" title="'+s.n+' 号位是空位，加人或加电脑后才能设置颜色"'
+        : 'data-slot="'+s.n+'" role="button" tabindex="0" aria-label="'+s.n+' 号位，点击改座位颜色"';
       html+='<div class="seat '+kindCls+ready+me+'" data-n="'+s.n+'"'+style+'>'+
         '<span class="seat-icon"><svg class="i"><use href="#'+seatIcon(s.kind)+'"/></svg></span>'+
-        '<span class="seat-slot" data-slot="'+s.n+'" role="button" tabindex="0" aria-label="'+s.n+' 号位，点击改座位颜色">'+s.n+'</span>'+
+        '<span class="seat-slot" '+slotAttrs+'>'+s.n+'</span>'+
         '<span class="seat-name"'+(s.who?' data-nick="'+s.who+'"':'')+'>'+seatName(s)+'</span>'+
         '<span class="seat-role">'+seatRole(s.kind)+'</span>'+
-        '<span class="seat-state'+(s.kind==='player'&&state.guestReady?' ok':'')+'">'+seatState(s)+'</span>'+
+        '<span class="seat-state'+(s.kind==='player'&&state.guestReady?' ok':'')+'">'+(s.kind==='player'&&state.guestReady?'<svg class="i" aria-hidden="true"><use href="#i-check"/></svg>':'')+seatState(s)+'</span>'+
         '<span class="seat-action">'+action+'</span>'+
       '</div>';
     });
@@ -646,7 +780,7 @@ h3{font-size:14px}
   function addComputer(n){
     var s=n?state.seats[n-1]:state.seats.filter(function(x){return x.kind==='empty';})[0];
     if(!s||s.kind!=='empty'){showToast('该席位已占用，或 8 席已满');return;}
-    s.kind='ai';s.who=null;s.name='电脑 '+s.n;
+    s.kind='ai';s.who=null;s.name='电脑 '+s.n;s.color=null;
     addSystem('房主在 '+s.n+' 号位添加了 '+s.name);
     apply();showToast(s.n+' 号位已添加 '+s.name);
   }
@@ -663,18 +797,35 @@ h3{font-size:14px}
     openModal('kick');
   }
   var colorSeat=0;
+  function usedColors(exceptSeat){
+    var used={};
+    state.seats.forEach(function(s){if(s.color&&s.n!==exceptSeat)used[s.color]=s.n;});
+    return used;
+  }
   function openColorPop(n,slotEl){
+    var seat=state.seats[n-1];
+    if(!seat||seat.kind==='empty')return;           /* 空位不适用，事件层也拦一道 */
     colorSeat=n;
+    var cur=seat.color,used=usedColors(n);
     document.getElementById('color-pop-title').textContent=n+' 号位 · 座位颜色';
-    var cur=state.seats[n-1].color;
+    var usedCount=0;
+    SEAT_COLORS.forEach(function(c){if(used[c[1]])usedCount++;});
+    document.getElementById('color-pop-note').textContent='每个颜色只能给一个席位使用 · 已被占用 '+usedCount+'/'+SEAT_COLORS.length;
     document.getElementById('color-grid').innerHTML=SEAT_COLORS.map(function(c){
-      return '<button type="button" class="color-dot'+(cur===c[1]?' is-current':'')+'" style="background:'+c[1]+'" data-color="'+c[1]+'" title="'+c[0]+'" aria-label="'+c[0]+'"></button>';
+      var taken=used[c[1]];
+      var cls='color-dot'+(cur===c[1]?' is-current':'')+(taken?' is-taken':'');
+      return '<button type="button" class="'+cls+'" style="background:'+c[1]+'" data-color="'+c[1]+'"'+
+        (taken?' data-taken-by="'+taken+'" aria-disabled="true" title="'+c[0]+' · 已由 '+taken+' 号位使用"'
+              :' title="'+c[0]+'" aria-label="'+c[0]+'"')+'></button>';
     }).join('');
+    var reset=document.getElementById('btn-color-reset');
+    reset.disabled=!cur;
+    reset.title=cur?'释放当前颜色，恢复成该席位默认身份色':'该席位已是默认颜色';
     var pop=document.getElementById('color-pop');pop.hidden=false;
     var dr=device.getBoundingClientRect(),r=slotEl.getBoundingClientRect();
     var left=r.left-dr.left,top=r.bottom-dr.top+8;
     if(left+224>dr.width)left=dr.width-232;
-    if(top+150>dr.height)top=r.top-dr.top-158;
+    if(top+228>dr.height)top=r.top-dr.top-236;
     pop.style.left=Math.max(8,left)+'px';pop.style.top=Math.max(8,top)+'px';
   }
   function closeColorPop(){document.getElementById('color-pop').hidden=true;}
@@ -684,12 +835,12 @@ h3{font-size:14px}
     var tr=e.target.closest('#btn-inline-transfer');
     if(tr){openTransfer(document.getElementById('btn-transfer'));return;}
     var slot=e.target.closest('[data-slot]');
-    if(slot){openColorPop(parseInt(slot.getAttribute('data-slot'),10),slot);return;}
+    if(slot){var n=parseInt(slot.getAttribute('data-slot'),10);if(state.seats[n-1].kind==='empty')return;openColorPop(n,slot);return;}
   });
   document.getElementById('seat-list').addEventListener('keydown',function(e){
     if(e.key!=='Enter'&&e.key!==' ')return;
     var slot=e.target.closest('[data-slot]');
-    if(slot){e.preventDefault();openColorPop(parseInt(slot.getAttribute('data-slot'),10),slot);}
+    if(slot){var n=parseInt(slot.getAttribute('data-slot'),10);if(state.seats[n-1].kind==='empty')return;e.preventDefault();openColorPop(n,slot);}
   });
   document.getElementById('kick-list').addEventListener('click',function(e){
     var b=e.target.closest('[data-kick]');if(!b)return;
@@ -703,14 +854,21 @@ h3{font-size:14px}
     if(!s||s.kind==='empty'||s.kind==='host'){closeModal('kick');return;}
     var name=seatName(s);
     if(s.kind==='player')state.guestReady=false;
-    s.kind='empty';s.who=null;s.name=null;
+    s.kind='empty';s.who=null;s.name=null;s.color=null;   /* 席位空出来，颜色一并释放 */
     addSystem(name+' 已被请出房间');
     closeModal('kick');apply();showToast(name+' 已请出，'+kickTarget+' 号位恢复空位');
   });
   document.getElementById('color-grid').addEventListener('click',function(e){
     var b=e.target.closest('[data-color]');if(!b)return;
+    var taken=b.getAttribute('data-taken-by');
+    if(taken){showToast('该颜色已由 '+taken+' 号位使用，请先在 '+taken+' 号位释放或另选一色');return;}
     state.seats[colorSeat-1].color=b.getAttribute('data-color');
     closeColorPop();apply();showToast(colorSeat+' 号位颜色已改');
+  });
+  document.getElementById('btn-color-reset').addEventListener('click',function(){
+    if(!state.seats[colorSeat-1].color)return;
+    state.seats[colorSeat-1].color=null;
+    closeColorPop();apply();showToast(colorSeat+' 号位已恢复默认颜色');
   });
   document.getElementById('color-pop-close').addEventListener('click',closeColorPop);
   document.addEventListener('click',function(e){
@@ -728,6 +886,7 @@ h3{font-size:14px}
     Array.prototype.forEach.call(document.querySelectorAll('[data-nick]'),function(el){
       el.textContent=state.nick[el.getAttribute('data-nick')];
     });
+    refreshChatMarks();
     document.getElementById('host-bar').hidden=!isHost;
     document.getElementById('guest-bar').hidden=isHost;
     renderSeats();
@@ -748,8 +907,8 @@ h3{font-size:14px}
     document.getElementById('btn-rules-save').hidden=!isHost;
     document.getElementById('btn-rules-cancel').textContent=isHost?'取消':'关闭';
     document.getElementById('rules-note').textContent=isHost
-      ?'保存后：重算 rulesHash · 推进 revision · 真人 ready 清零 · 发系统消息 · 落盘'
-      :'你是客人，玩法参数只读。仅房主可在 lobby 阶段选配。';
+      ?'保存后：玩法参数生效 · 所有真人需重新准备 · 房间状态同步'
+      :'你是客人，玩法参数只读。仅房主可在准备阶段选配。';
   }
 
   function openModal(id,trigger){
@@ -774,28 +933,46 @@ h3{font-size:14px}
     closeColorPop();
   });
 
+  /* 箭头颜色：优先取该用户席位的标记色，未选色时回落到角色默认（房主琥珀 / 客人靛紫）。
+     席位被请出或恢复默认后，apply() 会重算，历史消息的箭头跟着回落，不显示旧数据。 */
+  function chatMarkFor(role){
+    if(role==='sys')return 'var(--bp-dim-hi)';
+    var seat=state.seats.filter(function(s){return s.who===role;})[0];
+    if(seat&&seat.color)return seat.color;
+    return role==='host'?'var(--bp-seat-amber)':'var(--bp-seat-indigo)';
+  }
+  function refreshChatMarks(){
+    Array.prototype.forEach.call(document.querySelectorAll('[data-chat-role]'),function(p){
+      p.setAttribute('style','--bp-chat-mark:'+chatMarkFor(p.getAttribute('data-chat-role')));
+    });
+  }
+  function appendChatLine(p){
+    var log=document.getElementById('chat-log');
+    log.appendChild(p);log.scrollTop=log.scrollHeight;refreshChatMarks();
+  }
   function addSystem(text){
-    var log=document.getElementById('chat-log');var p=document.createElement('p');
-    p.className='chat-line sys';p.textContent=text;log.appendChild(p);log.scrollTop=log.scrollHeight;
+    var p=document.createElement('p');
+    p.className='chat-line sys';p.setAttribute('data-chat-role','sys');p.textContent=text;
+    appendChatLine(p);
   }
   function addSystemAs(role,text){
-    var log=document.getElementById('chat-log');var p=document.createElement('p');
-    p.className='chat-line sys';
-    var who=document.createElement('span');who.setAttribute('data-nick',role);who.textContent=state.nick[role];
-    p.appendChild(who);p.appendChild(document.createTextNode(' '+text));
-    log.appendChild(p);log.scrollTop=log.scrollHeight;
+    var p=document.createElement('p');
+    p.className='chat-line sys';p.setAttribute('data-chat-role',role);
+    var who=document.createElement('span');who.className='chat-who';who.setAttribute('data-nick',role);who.textContent=state.nick[role];
+    p.appendChild(who);p.appendChild(document.createTextNode('　'+text));
+    appendChatLine(p);
   }
   function addChatAs(role,text){
-    var log=document.getElementById('chat-log');var p=document.createElement('p');
-    p.className='chat-line';
-    var who=document.createElement('span');who.setAttribute('data-nick',role);who.textContent=state.nick[role];
+    var p=document.createElement('p');
+    p.className='chat-line';p.setAttribute('data-chat-role',role);
+    var who=document.createElement('span');who.className='chat-who';who.setAttribute('data-nick',role);who.textContent=state.nick[role];
     p.appendChild(who);p.appendChild(document.createTextNode('　'+text));
-    log.appendChild(p);log.scrollTop=log.scrollHeight;
+    appendChatLine(p);
   }
   document.getElementById('btn-rules-save').addEventListener('click',function(){
     addSystem('玩法参数已更新，请重新准备');
     state.guestReady=false;apply();
-    closeModal('rules');showToast('玩法参数已保存 · 真人准备状态已重置（房主不参与准备闸）');
+    closeModal('rules');showToast('玩法参数已保存 · 所有真人需重新准备');
   });
   document.getElementById('btn-copy').addEventListener('click',function(){showToast('邀请链接已复制 · 点开自动填好地址与房号');});
   document.getElementById('btn-send').addEventListener('click',function(){
@@ -842,8 +1019,8 @@ h3{font-size:14px}
     var picked=document.querySelector('.pick.is-selected .pick-name');
     closeModal('transfer');showToast('已转交房主给 '+(picked?picked.textContent:'该玩家')+'（演示）');
   });
-  document.getElementById('btn-open-game').addEventListener('click',function(){showToast('拉起独立游戏进程（演示）');});
-  document.getElementById('btn-tray').addEventListener('click',function(){showToast('最小化到托盘，会话继续（演示）');});
+  document.getElementById('btn-open-game').addEventListener('click',function(){showToast('打开游戏窗口（演示）');});
+  document.getElementById('btn-tray').addEventListener('click',function(){showToast('收起到后台，会话继续（演示）');});
   document.getElementById('btn-create').addEventListener('click',function(){state.view='room';apply();showToast('建房成功，房号 893F（演示）');});
   document.getElementById('btn-join').addEventListener('click',function(){state.view='room';apply();showToast('已入座 2 号位（演示）');});
   document.getElementById('btn-ai').addEventListener('click',function(){addComputer(0);});
@@ -851,6 +1028,7 @@ h3{font-size:14px}
   document.getElementById('btn-close').addEventListener('click',function(){showToast('解散房间（演示，不连服务）');});
 
   apply();
+  syncConnButtons();applyConn();
   if(window.ResizeObserver){new ResizeObserver(syncWidth).observe(device);}
   else{window.addEventListener('resize',syncWidth);}
   syncWidth();
