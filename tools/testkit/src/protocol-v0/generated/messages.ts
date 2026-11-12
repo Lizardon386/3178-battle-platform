@@ -203,7 +203,6 @@ export interface ClientSessionCreate {
     config:          { [key: string]: unknown };
     gameId:          string;
     memberSlots:     number;
-    options:         { [key: string]: unknown };
     password?:       string;
     profile:         Profile;
     roomName:        string;
@@ -314,14 +313,18 @@ export interface PlatformMemberJoin {
 }
 
 export interface Member {
-    connected: boolean;
-    memberId:  string;
-    options:   { [key: string]: unknown };
-    profile:   Profile;
-    ready:     boolean;
-    role:      Role;
-    slot?:     number;
+    gameConnected: boolean;
+    graceUntil?:   number;
+    memberId:      string;
+    options:       { [key: string]: unknown };
+    presence:      Presence;
+    profile:       Profile;
+    ready:         boolean;
+    role:          Role;
+    slot?:         number;
 }
+
+export type Presence = "online" | "grace";
 
 export type PlatformMemberJoinType = "memberJoin";
 
@@ -812,7 +815,6 @@ const typeMap: any = {
         { json: "config", js: "config", typ: m("any") },
         { json: "gameId", js: "gameId", typ: "" },
         { json: "memberSlots", js: "memberSlots", typ: 0 },
-        { json: "options", js: "options", typ: m("any") },
         { json: "password", js: "password", typ: u(undefined, "") },
         { json: "profile", js: "profile", typ: r("Profile") },
         { json: "roomName", js: "roomName", typ: "" },
@@ -888,9 +890,11 @@ const typeMap: any = {
         { json: "type", js: "type", typ: r("PlatformMemberJoinType") },
     ], false),
     "Member": o([
-        { json: "connected", js: "connected", typ: true },
+        { json: "gameConnected", js: "gameConnected", typ: true },
+        { json: "graceUntil", js: "graceUntil", typ: u(undefined, 0) },
         { json: "memberId", js: "memberId", typ: "" },
         { json: "options", js: "options", typ: m("any") },
+        { json: "presence", js: "presence", typ: r("Presence") },
         { json: "profile", js: "profile", typ: r("Profile") },
         { json: "ready", js: "ready", typ: true },
         { json: "role", js: "role", typ: r("Role") },
@@ -1121,6 +1125,10 @@ const typeMap: any = {
     ],
     "PlatformHostChangedType": [
         "hostChanged",
+    ],
+    "Presence": [
+        "grace",
+        "online",
     ],
     "PlatformMemberJoinType": [
         "memberJoin",

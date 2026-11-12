@@ -28,7 +28,6 @@
         "cap": "20"
       },
       "memberSlots": 8,
-      "options": {},
       "profile": {
         "nick": "房主老周",
         "displayColor": "#f59e0b"
@@ -269,8 +268,9 @@
             "nick": "房主老周",
             "displayColor": "#f59e0b"
           },
-          "connected": true,
-          "options": {}
+          "options": {},
+          "presence": "online",
+          "gameConnected": false
         },
         {
           "memberId": "m2",
@@ -281,8 +281,9 @@
             "nick": "小林",
             "displayColor": "#6366f1"
           },
-          "connected": true,
-          "options": {}
+          "options": {},
+          "presence": "online",
+          "gameConnected": false
         }
       ],
       "hostMemberId": "m1",
@@ -408,8 +409,9 @@
             "nick": "房主老周",
             "displayColor": "#f59e0b"
           },
-          "connected": true,
-          "options": {}
+          "options": {},
+          "presence": "online",
+          "gameConnected": false
         },
         {
           "memberId": "m2",
@@ -420,8 +422,9 @@
             "nick": "小林",
             "displayColor": "#6366f1"
           },
-          "connected": true,
-          "options": {}
+          "options": {},
+          "presence": "online",
+          "gameConnected": false
         }
       ],
       "revision": 5,
@@ -446,8 +449,9 @@
           "nick": "小林",
           "displayColor": "#6366f1"
         },
-        "connected": true,
-        "options": {}
+        "options": {},
+        "presence": "online",
+        "gameConnected": false
       },
       "revision": 6,
       "authorityEpoch": 1

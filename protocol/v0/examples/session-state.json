@@ -1,1 +1,47 @@
-{"type":"sessionState","sessionId":"sess-893F","code":"893F","name":"周末一局","gameId":"color-duel","version":"0.3.0","config":{"cap":"20"},"rulesHash":"0000000000000000000000000000000000000000000000000000000000000000","memberSlots":8,"spectatorLimit":8,"members":[{"memberId":"m1","slot":1,"role":"player","ready":true,"profile":{"nick":"房主老周","displayColor":"#f59e0b"},"connected":true,"options":{}},{"memberId":"m2","slot":2,"role":"player","ready":false,"profile":{"nick":"小林","displayColor":"#6366f1"},"connected":true,"options":{}}],"hostMemberId":"m1","state":"open","gameProcess":"stopped","authorityEpoch":0,"revision":4}
+{
+  "type": "sessionState",
+  "sessionId": "sess-893F",
+  "code": "893F",
+  "name": "周末一局",
+  "gameId": "color-duel",
+  "version": "0.3.0",
+  "config": {
+    "cap": "20"
+  },
+  "rulesHash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "memberSlots": 8,
+  "spectatorLimit": 8,
+  "members": [
+    {
+      "memberId": "m1",
+      "slot": 1,
+      "role": "player",
+      "ready": true,
+      "profile": {
+        "nick": "房主老周",
+        "displayColor": "#f59e0b"
+      },
+      "options": {},
+      "presence": "online",
+      "gameConnected": false
+    },
+    {
+      "memberId": "m2",
+      "slot": 2,
+      "role": "player",
+      "ready": false,
+      "profile": {
+        "nick": "小林",
+        "displayColor": "#6366f1"
+      },
+      "options": {},
+      "presence": "online",
+      "gameConnected": false
+    }
+  ],
+  "hostMemberId": "m1",
+  "state": "open",
+  "gameProcess": "stopped",
+  "authorityEpoch": 0,
+  "revision": 4
+}

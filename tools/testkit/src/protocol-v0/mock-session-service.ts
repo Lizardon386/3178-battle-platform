@@ -16,7 +16,9 @@ type MemberRecord = {
   role: 'player' | 'ai' | 'spectator';
   ready: boolean;
   profile: { nick: string; avatar?: string; displayColor?: string };
-  connected: boolean;
+  presence: 'online' | 'grace';
+  graceUntil?: number;
+  gameConnected: boolean;
   options: Record<string, unknown>;
   ticketHash: string;
   gameTicketHash?: string;
@@ -54,6 +56,7 @@ type SessionRecord = {
   password?: string;
   members: MemberRecord[];
   hostMemberId: string;
+  lastHostMemberId?: string;
   state: 'open' | 'closing' | 'closed';
   gameProcess: 'stopped' | 'starting' | 'running' | 'failed' | 'exited';
   authorityEpoch: number;
@@ -80,6 +83,9 @@ export class MockSessionService {
   current: SessionRecord | null = null;
   authority: AuthorityEndpoint | null = null;
   authorityStarts = 0;
+  /** 测试可替换时钟；宽限到期由 expireGrace() 显式推进。 */
+  now: () => number = () => Date.now();
+  graceMs = 30 * 60 * 1000;
   private authorityFactory: (() => AuthorityEndpoint) | null = null;
   private readonly games = new Map<string, GameManifest>();
   private readonly handoffs = new Map<string, { memberId: string; expiresAt: number; used: boolean }>();
@@ -112,12 +118,13 @@ export class MockSessionService {
     this.transport.disconnect(client);
     if (client.channel === 'game') {
       const member = this.current?.members.find((item) => item.gameConnectionId === client.id);
-      if (member) member.gameConnectionId = undefined;
+      if (member) { member.gameConnectionId = undefined; member.gameConnected = false; }
       return;
     }
     const member = this.memberFor(client);
     if (!member || member.connectionId !== client.id) return;
-    member.connected = false;
+    member.presence = 'grace';
+    member.graceUntil = this.now() + this.graceMs;
     member.connectionId = undefined;
     this.sendAuthority({ type: 'memberLeave', memberId: member.memberId, reason: 'disconnected', authorityEpoch: this.current!.authorityEpoch, revision: this.current!.revision });
     this.bump();
@@ -233,7 +240,7 @@ export class MockSessionService {
     const options = normalizeFields(manifest.sessionConfig.seatOptions ?? [], {}, 'player');
     if (!options.ok) { this.error(client, 'CONFIG', options.error); return; }
     const ticket = newSecret('ticket');
-    const member: MemberRecord = { memberId: 'm1', slot: 1, role: 'player', ready: false, profile: message.profile, connected: true, options: options.value, ticketHash: hashSecret(ticket), connectionId: client.id };
+    const member: MemberRecord = { memberId: 'm1', slot: 1, role: 'player', ready: false, profile: message.profile, presence: 'online', gameConnected: false, options: options.value, ticketHash: hashSecret(ticket), connectionId: client.id };
     this.current = {
       id: 'sess-893F', code: '893F', name: message.roomName, gameId: message.gameId, version: message.version, manifest,
       config: config.value, rulesHash: rulesHashOf(config.value), memberSlots: message.memberSlots,
@@ -266,7 +273,7 @@ export class MockSessionService {
     const memberId = `m${session.nextMember}`;
     session.nextMember += 1;
     const ticket = newSecret('ticket');
-    const member: MemberRecord = { memberId, ...(slot === undefined ? {} : { slot }), role, ready: false, profile: message.profile, connected: true, options: options.value, ticketHash: hashSecret(ticket), connectionId: client.id };
+    const member: MemberRecord = { memberId, ...(slot === undefined ? {} : { slot }), role, ready: false, profile: message.profile, presence: 'online', gameConnected: false, options: options.value, ticketHash: hashSecret(ticket), connectionId: client.id };
     session.members.push(member);
     client.memberId = memberId; client.ticket = ticket;
     this.send(client, { type: 'seatGranted', memberId, ticket, sessionCode: session.code, sessionId: session.id, profile: message.profile });
@@ -280,7 +287,7 @@ export class MockSessionService {
     const member = session.members.find((item) => item.ticketHash === hashSecret(message.ticket));
     if (!member) { this.error(client, 'SEATLOST', '票据无效或座位已失效'); return; }
     client.memberId = member.memberId; client.ticket = message.ticket; client.channel = 'session';
-    member.connected = true; member.connectionId = client.id;
+    member.presence = 'online'; member.graceUntil = undefined; member.connectionId = client.id;
     if (message.profile) member.profile = message.profile;
     this.send(client, { type: 'seatGranted', memberId: member.memberId, ticket: message.ticket, sessionCode: session.code, sessionId: session.id, profile: member.profile });
     this.sendAuthority({ type: 'memberResume', memberId: member.memberId, profile: member.profile, authorityEpoch: session.authorityEpoch, revision: session.revision });
@@ -322,9 +329,18 @@ export class MockSessionService {
   private startGame(client: MockClient): void {
     const session = this.current; if (!this.requireHost(client) || !session) return;
     if (session.gameProcess !== 'stopped') { this.error(client, 'PHASE', '游戏进程已经开始'); return; }
+    const players = session.members.filter((member) => member.role === 'player' || member.role === 'ai');
+    const minPlayers = session.manifest.platformRequirements.minPlayers;
+    if (players.length < minPlayers) {
+      this.error(client, 'NOTREADY', `至少需要 ${minPlayers} 名玩家（真人 + 电脑）`); return;
+    }
     const humans = session.members.filter((member) => member.role === 'player');
-    if (!humans.length || humans.some((member) => !member.connected || !member.ready)) {
-      this.error(client, 'NOTREADY', '至少需要一名真人，且所有已连接真人已准备'); return;
+    if (!humans.length) { this.error(client, 'NOTREADY', '至少需要一名真人'); return; }
+    if (humans.some((member) => member.presence !== 'online')) {
+      this.error(client, 'NOTREADY', '有真人断线，先等宽限结束或请出'); return;
+    }
+    if (humans.some((member) => member.memberId !== session.hostMemberId && !member.ready)) {
+      this.error(client, 'NOTREADY', '还有真人未准备'); return;
     }
     this.launchAuthority(session);
   }
@@ -381,6 +397,7 @@ export class MockSessionService {
     const gameTicket = newSecret('game-ticket');
     member.gameTicketHash = hashSecret(gameTicket);
     member.gameConnectionId = client.id;
+    member.gameConnected = true;
     client.channel = 'game'; client.memberId = member.memberId; client.gameTicket = gameTicket;
     this.send(client, { type: 'gameGranted', gameTicket, sessionId: session.id, memberId: member.memberId, authorityEpoch: session.authorityEpoch });
   }
@@ -424,6 +441,7 @@ export class MockSessionService {
     const session = this.current; if (!this.requireHost(client) || !session) return;
     const target = session.members.find((item) => item.memberId === message.targetMemberId && item.role === 'player');
     if (!target) { this.error(client, 'NOSEAT', '接任者必须是真人玩家'); return; }
+    session.lastHostMemberId = session.hostMemberId;
     session.hostMemberId = target.memberId;
     this.sendAuthority({ type: 'hostChanged', hostMemberId: target.memberId, authorityEpoch: session.authorityEpoch, revision: session.revision });
     this.bump();
@@ -431,7 +449,15 @@ export class MockSessionService {
 
   private closeSession(client: MockClient): void {
     const session = this.current; if (!this.requireHost(client) || !session) return;
-    this.sendAuthority({ type: 'closeSession', reason: 'host closed', authorityEpoch: session.authorityEpoch });
+    this.shutdownSession(session, 'host closed');
+  }
+
+  private shutdownSession(session: SessionRecord, reason: string): void {
+    if (session.state === 'closed') return;
+    session.state = 'closing';
+    this.bump();
+    this.sendAuthority({ type: 'closeSession', reason, authorityEpoch: session.authorityEpoch });
+    this.broadcastAll({ type: 'notice', code: 'ROOM_CLOSED', text: '会话已关闭' });
     session.state = 'closed';
     if (session.gameProcess !== 'stopped') session.gameProcess = 'exited';
     this.revokeGameConnections();
@@ -469,7 +495,11 @@ export class MockSessionService {
   private requireHost(client: MockClient): boolean {
     const member = this.requireMember(client);
     if (!member) return false;
-    if (member.memberId !== this.current?.hostMemberId) { this.error(client, 'NOTHOST', '只有房主可以执行'); return false; }
+    if (member.memberId !== this.current?.hostMemberId) {
+      const former = member.memberId === this.current?.lastHostMemberId;
+      this.error(client, former ? 'HOSTONLY' : 'NOTHOST', former ? '房主权限已移交，你不再是房主' : '只有房主可以执行');
+      return false;
+    }
     return true;
   }
 
@@ -484,7 +514,9 @@ export class MockSessionService {
       role: member.role,
       ready: member.ready,
       profile: member.profile,
-      connected: member.connected,
+      presence: member.presence,
+      ...(member.graceUntil === undefined ? {} : { graceUntil: member.graceUntil }),
+      gameConnected: member.gameConnected,
       options: member.options,
     };
   }
@@ -495,6 +527,7 @@ export class MockSessionService {
     if (client) this.transport.disconnect(client);
     member.gameConnectionId = undefined;
     member.gameTicketHash = undefined;
+    member.gameConnected = false;
   }
 
   private revokeGameConnections(): void {
@@ -544,6 +577,37 @@ export class MockSessionService {
 
   private broadcastGame(message: AnyMessage): void {
     for (const client of this.clients.filter((client) => client.connected && client.channel === 'game')) this.send(client, message);
+  }
+
+  private broadcastAll(message: AnyMessage): void {
+    for (const client of this.clients.filter((client) => client.connected)) this.send(client, message);
+  }
+
+  /** 推进宽限时钟；真实服务由定时器调用，mock 由测试显式调用。 */
+  expireGrace(): number {
+    const session = this.current;
+    if (!session || session.state !== 'open') return 0;
+    const now = this.now();
+    const expired = session.members.filter((member) =>
+      member.presence === 'grace' && member.graceUntil !== undefined && member.graceUntil <= now);
+    for (const member of expired) {
+      if (member.memberId === session.hostMemberId) {
+        const successor = this.chooseHostSuccessor(session, member.memberId);
+        if (!successor) { this.shutdownSession(session, 'host grace expired'); return expired.length; }
+        session.lastHostMemberId = member.memberId;
+        session.hostMemberId = successor.memberId;
+        this.sendAuthority({ type: 'hostChanged', hostMemberId: successor.memberId, authorityEpoch: session.authorityEpoch, revision: session.revision });
+      }
+      this.removeMember(member, 'expired');
+      this.disconnectMemberClients(member);
+    }
+    return expired.length;
+  }
+
+  private chooseHostSuccessor(session: SessionRecord, excludeId: string): MemberRecord | undefined {
+    const online = session.members.filter((member) => member.memberId !== excludeId && member.presence === 'online' && member.role === 'player');
+    const local = online.find((member) => this.clients.find((client) => client.id === member.connectionId && client.connected)?.local === true);
+    return local ?? online[0];
   }
 
   private sendToMemberGame(memberId: string, message: AnyMessage): void {

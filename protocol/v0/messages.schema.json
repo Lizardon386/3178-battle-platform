@@ -53,14 +53,16 @@
     "JsonObject": {"type":"object"},
     "Payload": {},
     "Member": {
-      "type":"object","required":["memberId","role","ready","profile","connected","options"],"additionalProperties":false,
+      "type":"object","required":["memberId","role","ready","profile","presence","gameConnected","options"],"additionalProperties":false,
       "properties": {
         "memberId":{"$ref":"#/$defs/MemberId"},
         "slot":{"$ref":"#/$defs/Slot"},
         "role":{"$ref":"#/$defs/MemberRole"},
         "ready":{"type":"boolean"},
         "profile":{"$ref":"#/$defs/Profile"},
-        "connected":{"type":"boolean"},
+        "presence":{"enum":["online","grace"]},
+        "graceUntil":{"$ref":"#/$defs/EpochMs"},
+        "gameConnected":{"type":"boolean"},
         "options":{"$ref":"#/$defs/JsonObject"}
       }
     },
@@ -85,8 +87,8 @@
       "properties":{"type":{"const":"hello"},"protocolVersion":{"$ref":"#/$defs/ProtocolVersion"},"capabilities":{"$ref":"#/$defs/Capabilities"},"clientKind":{"$ref":"#/$defs/ClientKind"}}
     },
     "ClientSessionCreate": {
-      "type":"object","required":["type","gameId","version","config","memberSlots","options","profile","roomName"],"additionalProperties":false,
-      "properties":{"type":{"const":"sessionCreate"},"gameId":{"$ref":"#/$defs/GameId"},"version":{"$ref":"#/$defs/Version"},"config":{"$ref":"#/$defs/JsonObject"},"memberSlots":{"type":"integer","minimum":2,"maximum":8},"spectatorLimit":{"type":"integer","minimum":0,"maximum":8},"options":{"$ref":"#/$defs/JsonObject"},"profile":{"$ref":"#/$defs/Profile"},"roomName":{"$ref":"#/$defs/RoomName"},"password":{"type":"string","maxLength":128}}
+      "type":"object","required":["type","gameId","version","config","memberSlots","profile","roomName"],"additionalProperties":false,
+      "properties":{"type":{"const":"sessionCreate"},"gameId":{"$ref":"#/$defs/GameId"},"version":{"$ref":"#/$defs/Version"},"config":{"$ref":"#/$defs/JsonObject"},"memberSlots":{"type":"integer","minimum":2,"maximum":8},"spectatorLimit":{"type":"integer","minimum":0,"maximum":8},"profile":{"$ref":"#/$defs/Profile"},"roomName":{"$ref":"#/$defs/RoomName"},"password":{"type":"string","maxLength":128}}
     },
     "ClientSessionJoin": {
       "type":"object","required":["type","code","gameId","version","rulesHash","credentials","profile"],"additionalProperties":false,

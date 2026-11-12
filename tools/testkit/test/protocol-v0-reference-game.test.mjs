@@ -26,7 +26,7 @@ function setup({ localHost = true } = {}) {
 function createSession(platform, host) {
   platform.receive(host, {
     type: 'sessionCreate', gameId: 'color-duel', version: '0.3.0', config: { cap: '20' },
-    memberSlots: 8, spectatorLimit: 4, options: {}, profile: { nick: '房主老周', displayColor: '#f59e0b' }, roomName: '周末一局',
+    memberSlots: 8, spectatorLimit: 4, profile: { nick: '房主老周', displayColor: '#f59e0b' }, roomName: '周末一局',
   });
 }
 
@@ -39,7 +39,6 @@ function createAndJoin(platform, host, guest) {
 }
 
 function readyAndStart(platform, host, guest) {
-  platform.receive(host, { type: 'setReady', ready: true });
   platform.receive(guest, { type: 'setReady', ready: true });
   platform.receive(host, { type: 'startGame' });
 }
@@ -60,10 +59,6 @@ test('参考链路：准备闸通过前无权威，通过后只启动一次并�
   createAndJoin(platform, host, guest);
   platform.receive(host, { type: 'startGame' });
   assert.equal(errors(host, 'NOTREADY').length, 1);
-  assert.equal(platform.authorityStarts, 0);
-  platform.receive(host, { type: 'setReady', ready: true });
-  platform.receive(host, { type: 'startGame' });
-  assert.equal(errors(host, 'NOTREADY').length, 2);
   assert.equal(platform.authorityStarts, 0);
   platform.receive(guest, { type: 'setReady', ready: true });
   platform.receive(host, { type: 'startGame' });
@@ -210,9 +205,55 @@ test('参考链路：房主离开被拒，关会话撤销游戏凭证', () => {
   assert.equal(errors(host, 'HOSTONLY').length, 1);
   platform.receive(host, { type: 'closeSession' });
   assert.equal(platform.current.state, 'closed');
+  assert.equal(last(host, 'notice').code, 'ROOM_CLOSED');
+  assert.equal(last(gameClient, 'notice').code, 'ROOM_CLOSED');
   const again = platform.connect();
   platform.receive(again, { type: 'gameAuth', gameTicket: oldTicket });
   assert.equal(errors(again, 'HANDOFF').length, 1);
+});
+
+test('参考链路：最低人数与断线真人阻塞开始', () => {
+  const { platform, host, guest } = setup();
+  createSession(platform, host);
+  platform.receive(host, { type: 'startGame' });
+  assert.equal(errors(host, 'NOTREADY').length, 1, 'minPlayers=2 must block a lone host');
+  platform.receive(guest, {
+    type: 'sessionJoin', code: '893F', gameId: 'color-duel', version: '0.3.0', rulesHash: platform.current.rulesHash,
+    credentials: {}, role: 'player', profile: { nick: '小林' },
+  });
+  platform.receive(guest, { type: 'setReady', ready: true });
+  platform.disconnect(guest);
+  platform.receive(host, { type: 'startGame' });
+  assert.equal(errors(host, 'NOTREADY').length, 2, 'a human in grace must block start');
+  assert.equal(platform.authorityStarts, 0);
+});
+
+test('参考链路：远程房主宽限到期后移交在线真人', () => {
+  const { platform, host, guest } = setup();
+  createAndJoin(platform, host, guest);
+  platform.disconnect(host);
+  assert.equal(platform.current.members.find((member) => member.memberId === 'm1').presence, 'grace');
+  platform.now = () => Date.now() + 31 * 60 * 1000;
+  assert.equal(platform.expireGrace(), 1);
+  assert.equal(platform.current.members.some((member) => member.memberId === 'm1'), false);
+  assert.equal(platform.current.hostMemberId, 'm2');
+});
+
+test('参考链路：前房主报 HOSTONLY，其他非房主报 NOTHOST，观战无 slot', () => {
+  const { platform, host, guest } = setup();
+  createAndJoin(platform, host, guest);
+  const spectator = platform.connect();
+  platform.receive(spectator, {
+    type: 'sessionJoin', code: '893F', gameId: 'color-duel', version: '0.3.0', rulesHash: platform.current.rulesHash,
+    credentials: {}, role: 'spectator', profile: { nick: '观战' },
+  });
+  const spectatorMember = platform.current.members.find((member) => member.memberId === 'm3');
+  assert.equal(spectatorMember.slot, undefined);
+  platform.receive(host, { type: 'transferHost', targetMemberId: 'm2' });
+  platform.receive(host, { type: 'setConfig', config: { cap: '30' } });
+  assert.equal(errors(host, 'HOSTONLY').length, 1);
+  platform.receive(spectator, { type: 'setConfig', config: { cap: '30' } });
+  assert.equal(errors(spectator, 'NOTHOST').length, 1);
 });
 
 test('参考链路：额外字段与未知客户端消息都被 BADMSG 拒绝', () => {

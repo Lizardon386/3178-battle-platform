@@ -541,7 +541,6 @@ class ClientSessionCreate:
     config: dict[str, Any]
     game_id: str
     member_slots: int
-    options: dict[str, Any]
     profile: Profile
     room_name: str
     type: ClientSessionCreateType
@@ -555,21 +554,19 @@ class ClientSessionCreate:
         config = from_dict(lambda x: x, obj.get("config"))
         game_id = from_str(obj.get("gameId"))
         member_slots = from_int(obj.get("memberSlots"))
-        options = from_dict(lambda x: x, obj.get("options"))
         profile = Profile.from_dict(obj.get("profile"))
         room_name = from_str(obj.get("roomName"))
         type = ClientSessionCreateType(obj.get("type"))
         version = from_str(obj.get("version"))
         password = from_union([from_str, from_none], obj.get("password"))
         spectator_limit = from_union([from_int, from_none], obj.get("spectatorLimit"))
-        return ClientSessionCreate(config, game_id, member_slots, options, profile, room_name, type, version, password, spectator_limit)
+        return ClientSessionCreate(config, game_id, member_slots, profile, room_name, type, version, password, spectator_limit)
 
     def to_dict(self) -> dict:
         result: dict = {}
         result["config"] = from_dict(lambda x: x, self.config)
         result["gameId"] = from_str(self.game_id)
         result["memberSlots"] = from_int(self.member_slots)
-        result["options"] = from_dict(lambda x: x, self.options)
         result["profile"] = to_class(Profile, self.profile)
         result["roomName"] = from_str(self.room_name)
         result["type"] = to_enum(ClientSessionCreateType, self.type)
@@ -889,36 +886,48 @@ class PlatformHostChanged:
         return result
 
 
+class Presence(Enum):
+    GRACE = "grace"
+    ONLINE = "online"
+
+
 @dataclass
 class Member:
-    connected: bool
+    game_connected: bool
     member_id: str
     options: dict[str, Any]
+    presence: Presence
     profile: Profile
     ready: bool
     role: Role
+    grace_until: int | None = None
     slot: int | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'Member':
         assert isinstance(obj, dict)
-        connected = from_bool(obj.get("connected"))
+        game_connected = from_bool(obj.get("gameConnected"))
         member_id = from_str(obj.get("memberId"))
         options = from_dict(lambda x: x, obj.get("options"))
+        presence = Presence(obj.get("presence"))
         profile = Profile.from_dict(obj.get("profile"))
         ready = from_bool(obj.get("ready"))
         role = Role(obj.get("role"))
+        grace_until = from_union([from_int, from_none], obj.get("graceUntil"))
         slot = from_union([from_int, from_none], obj.get("slot"))
-        return Member(connected, member_id, options, profile, ready, role, slot)
+        return Member(game_connected, member_id, options, presence, profile, ready, role, grace_until, slot)
 
     def to_dict(self) -> dict:
         result: dict = {}
-        result["connected"] = from_bool(self.connected)
+        result["gameConnected"] = from_bool(self.game_connected)
         result["memberId"] = from_str(self.member_id)
         result["options"] = from_dict(lambda x: x, self.options)
+        result["presence"] = to_enum(Presence, self.presence)
         result["profile"] = to_class(Profile, self.profile)
         result["ready"] = from_bool(self.ready)
         result["role"] = to_enum(Role, self.role)
+        if self.grace_until is not None:
+            result["graceUntil"] = from_union([from_int, from_none], self.grace_until)
         if self.slot is not None:
             result["slot"] = from_union([from_int, from_none], self.slot)
         return result
