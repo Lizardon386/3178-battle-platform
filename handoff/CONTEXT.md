@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-11-12　模式：四档（README / DESIGN / INTEGRATION_GUIDE / CONTEXT）+ `docs/research` 调研目录　项目目录：D:\agent_workspace\3178-battle-platform　代码锚点以 `handoff/PROMPT.md` 与 git HEAD 为准（分支 `s1-protocol`）　当前接盘：ZCode（真实房间页已落地；按设计顺序进入契约补齐与骨干）
+> 最近更新：2026-11-12　模式：四档（README / DESIGN / INTEGRATION_GUIDE / CONTEXT）+ `docs/research` 调研目录　项目目录：D:\agent_workspace\3178-battle-platform　代码锚点以 `handoff/PROMPT.md` 与 git HEAD 为准（分支 `master`）　当前接盘：ZCode（真实房间页已落地；按设计顺序进入契约补齐与骨干）
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
