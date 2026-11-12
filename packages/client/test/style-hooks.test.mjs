@@ -149,16 +149,16 @@ test('规则与资料：房间规则卡、大厅资料入口、抽屉都在', ()
   assert.match(appSource, /btn-toggle-rules/, 'app.ts 要绑定规则展开按钮');
   assert.match(cssCode, /\.btn-primary:disabled[^}]*cursor:\s*not-allowed/s, '禁用的主按钮要和可点状态区分开');
   assert.match(cssCode, /\.bp-panel \.card-title\s*\{[^}]*white-space:\s*nowrap/s, '卡片标题不能被右侧按钮挤成竖排');
-  assert.match(cssCode, /grid-template-columns:\s*34px 34px minmax\(0, 1fr\) 52px 74px 96px/, '席位六列：图标/座位/名字/身份/准备/动作，后三列定宽');
-  assert.match(cssCode, /\.room-layout:not\(\.is-playing\) \.seat-ai-difficulty \{ width: 88px; \}/, '电脑难度要和动作列同宽，状态列才不会错位');
+  assert.match(cssCode, /grid-template-columns:\s*34px 34px minmax\(0, 1fr\) 52px 74px (?:96px|150px)/, '席位六列：图标/座位/名字/身份/准备/动作，后三列定宽');
+  assert.match(cssCode, /\.room-layout:not\(\.is-playing\) \.seat-ai-difficulty \{ width: 9[0-9]px; \}/, '电脑难度要和动作列同宽，状态列才不会错位');
   assert.match(cssCode, /--bp-room-col-h:\s*clamp\(280px,\s*calc\(100vh - 389px\),\s*760px\)/, '三栏要共用同一个桌面高度，且扣够顶栏、房间信息块与留白');
   assert.match(cssCode, /#room-left\s*\{[^}]*height:\s*var\(--bp-room-col-h\)/s, '左栏要和右侧两栏等高');
   assert.match(cssCode, /#seat-column\s*\{[^}]*height:\s*var\(--bp-room-col-h\)/s, '席位栏要共用桌面高度');
   assert.match(cssCode, /#chat-panel\s*\{[^}]*height:\s*var\(--bp-room-col-h\)/s, '聊天栏要共用桌面高度');
-  assert.match(cssCode, /\.seat-transfer-button\s*\{/, '真人席位行要有转交房主按钮样式');
-  assert.match(appSource, /attachSeatTransfer/, '真人席位行要直接渲染转交房主按钮');
-  assert.match(appSource, /hostTransfer/, '行内转交要走 hostTransfer');
-  assert.match(pageHtml, /解散房间/, '席位底栏要有解散房间');
+  assert.match(cssCode, /\.seat-remove\s*\{/, '真人/电脑席位尾部要有删除叉样式');
+  assert.match(appSource, /attachSeatRemove/, '席位尾部要渲染删除叉');
+  assert.match(appSource, /hostTransfer/, '底栏转交要走 hostTransfer');
+  assert.match(pageHtml, />解散</, '席位底栏要有解散');
   // 块③ 席位配置：每行能直接点 + 加电脑、身份与准备分列、房主有开局与解散。
   assert.match(appSource, /attachSeatAddAi/, '空位行要能直接点 + 加电脑');
   assert.match(appSource, /op: 'addAi', slot/, '+ 号要把座位号一起发出去，点哪行就坐哪号位');

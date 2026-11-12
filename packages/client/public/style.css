@@ -162,8 +162,8 @@ body {
    我上一轮连输入框一起放大了，那是理解错，输入框已退回原样（只剩原来那条宽度）。
    标签抬到 26px＝品牌"3178 对战平台"30px 小两号，加粗，颜色用亮紫 #818cf8（顶栏 #111118 上实测 6.30:1）。
    white-space 只是防挤压保险：真 900/700px 视口下标签本来就单行，"会竖排成两行"是在零视口页上量的假象。 */
-.nick-field .form-label { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: 0.08em; color: var(--bp-accent-hi); white-space: nowrap; }
-.nick-field .form-control { width: 220px; }
+.nick-field .form-label { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: 0.06em; color: var(--bp-accent-hi); white-space: nowrap; }
+.nick-field .form-control { width: 240px; font-size: 22px; font-weight: 600; color: #fff; }
 
 /* ---------- 卡片：纯色 + 1px 描边，无阴影 ---------- */
 .bp-panel {
@@ -739,13 +739,29 @@ option:disabled {
    身份与准备各占一列（而不是挤成一格），"是谁"和"准备好没"才不用读同一串字去猜。 */
 .room-layout:not(.is-playing) .seat {
   display: grid;
-  grid-template-columns: 34px 34px minmax(0, 1fr) 52px 74px 96px;
+  grid-template-columns: 34px 34px minmax(0, 1fr) 52px 74px 150px;
   gap: 10px;
   padding: 0 14px;
 }
-.room-layout:not(.is-playing) .seat-ai-difficulty { width: 88px; }
+.seat-row-actions { display: flex; align-items: center; justify-self: end; gap: 8px; }
+.seat-remove {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 18px;
+  color: var(--bp-dim-hi);
+  background: transparent;
+  border: 1px solid var(--bp-line);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.seat-remove:hover { color: var(--bp-bad); border-color: var(--bp-bad); background: rgba(239, 68, 68, 0.14); }
+.seat-remove:focus-visible { outline: 2px solid var(--bp-bad); outline-offset: 2px; }
+.room-layout:not(.is-playing) .seat-ai-difficulty { width: 92px; }
 .room-layout:not(.is-playing) .seat-state { text-align: right; white-space: nowrap; }
-.room-layout:not(.is-playing) .seat-transfer-button,
 .room-layout:not(.is-playing) .seat-ai-difficulty { justify-self: end; }
 
 /* 左轨优先级：身份（房主）> 状态（已准备）> 角色默认。靠特异度，不靠书写顺序。 */
@@ -1190,3 +1206,37 @@ option:disabled {
 /* 横幅里的状态行固定占一行高度：提示出现/消失时横幅不再长高，三栏高度才不会跳。 */
 .room-banner .connection-bar { min-height: 17px; }
 .room-banner .connection-bar:empty { display: block; }
+
+/* ---------- 请出真人确认弹层 ---------- */
+.bp-dialog {
+  width: min(440px, calc(100vw - 32px));
+  padding: 0;
+  color: var(--bp-text);
+  background: var(--bp-panel);
+  border: 1px solid var(--bp-accent);
+  border-radius: 8px;
+}
+.bp-dialog::backdrop { background: rgba(5, 5, 10, 0.82); }
+.bp-dialog-title { margin: 0; padding: 20px 24px 12px; font: 500 22px/1.25 var(--bp-font-display); letter-spacing: 0.06em; }
+.bp-dialog-text { margin: 0; padding: 0 24px; font-size: 16px; line-height: 1.7; }
+.bp-dialog-text strong { color: #fff; }
+.bp-dialog-note { margin: 10px 0 0; padding: 0 24px; font-size: 14px; line-height: 1.6; color: var(--bp-dim-hi); }
+.bp-dialog-actions { display: flex; justify-content: flex-end; gap: 12px; padding: 20px 24px 24px; }
+.bp-dialog-actions .btn { min-height: 44px; }
+
+/* ---------- 手机档：只留有人的席位，动作按钮保持 44px ---------- */
+@media (max-width: 767.98px) {
+  .seat-empty { display: none; }
+  .room-layout:not(.is-playing) .seat {
+    grid-template-columns: 40px 40px minmax(0, 1fr) 52px;
+    gap: 8px;
+    padding: 0 10px;
+  }
+  .room-layout:not(.is-playing) .seat-role,
+  .room-layout:not(.is-playing) .seat-state { display: none; }
+  .seat-remove, .seat-add-ai { width: 44px; height: 44px; }
+  .seat-actions .btn { height: 44px; }
+  .seat-actions .btn-primary { height: 44px; }
+  .seat-actions .form-select, .seat-actions .bp-listbox-trigger { height: 44px; min-height: 44px; }
+}
+

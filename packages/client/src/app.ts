@@ -63,6 +63,7 @@ export class PlatformApp {
   private referenceOpen = false;
   private referenceTrigger: HTMLElement | null = null;
   private referenceSeq = 0;
+  private pendingRemoveSeatId: string | null = null;
   private readonly referenceCache = new Map<string, ReferenceLoad>();
   private ruleConfigSignature = '';
   /** 房主在 lobby 里是否展开了规则表单；默认收起，把首屏让给房号与邀请链接。 */
@@ -412,6 +413,12 @@ export class PlatformApp {
       if (select?.value) this.command({ type: 'hostKick', seatId: select.value });
     });
     on('btn-add-ai', 'click', () => this.command({ type: 'hostSeat', op: 'addAi' }));
+    on('seat-remove-cancel', 'click', () => this.closeRemoveDialog());
+    on('seat-remove-confirm', 'click', () => {
+      const seatId = this.pendingRemoveSeatId;
+      this.closeRemoveDialog();
+      if (seatId) this.command({ type: 'hostKick', seatId });
+    });
     on('btn-copy-invite', 'click', () => this.copyInvite());
     on('btn-reconnect', 'click', () => {
       // 猴测报"点了没反应"：它确实重连了，但界面一点反馈都没有，玩家以为按钮坏了
@@ -817,24 +824,59 @@ export class PlatformApp {
     row.append(select);
   }
 
-  private attachSeatTransfer(row: HTMLElement, seat: SeatView): void {
-    if (!isHost(this.view) || this.view.phase !== 'lobby' || seat.role !== 'player') return;
+  /** 席位尾部的叉：电脑直接请出，真人先确认；房主自己不能删。 */
+  private attachSeatRemove(row: HTMLElement, seat: SeatView): void {
+    if (!isHost(this.view) || this.view.phase !== 'lobby' || seat.role === 'host') return;
     const button = this.doc.createElement('button');
     button.type = 'button';
-    button.className = 'btn btn-sm btn-outline-secondary seat-transfer-button';
-    button.textContent = '转交房主';
-    button.title = `把房主转交给 ${seat.name}`;
-    button.setAttribute('aria-label', `把房主转交给 ${seat.name}`);
+    button.className = 'seat-remove';
+    button.setAttribute('aria-label', `请出 ${seat.name}`);
+    button.title = seat.role === 'ai' ? `删除 ${seat.name}` : `请出 ${seat.name}（需确认）`;
+    const icon = this.doc.createElement('i');
+    icon.className = 'ti ti-x';
+    icon.setAttribute('aria-hidden', 'true');
+    button.append(icon);
     button.addEventListener('click', () => {
-      this.command({ type: 'hostTransfer', seatId: seat.seatId });
+      if (seat.role === 'ai') {
+        this.command({ type: 'hostKick', seatId: seat.seatId });
+        return;
+      }
+      this.openRemoveDialog(seat);
     });
-    row.append(button);
+    const difficulty = row.querySelector('.seat-ai-difficulty');
+    if (difficulty) {
+      const wrap = this.doc.createElement('span');
+      wrap.className = 'seat-row-actions';
+      difficulty.replaceWith(wrap);
+      wrap.append(difficulty, button);
+    } else {
+      row.append(button);
+    }
+  }
+
+  private openRemoveDialog(seat: SeatView): void {
+    const dialog = el<HTMLDialogElement>(this.doc, 'seat-remove-dialog');
+    if (!dialog || typeof dialog.showModal !== 'function') {
+      // 老浏览器没有 dialog 时不静默执行危险动作，退回明确的确认。
+      if (this.doc.defaultView?.confirm(`确认请出 ${seat.name} 吗？`)) this.command({ type: 'hostKick', seatId: seat.seatId });
+      return;
+    }
+    this.pendingRemoveSeatId = seat.seatId;
+    const name = el(this.doc, 'seat-remove-name');
+    if (name) name.textContent = seat.name;
+    dialog.showModal();
+    el<HTMLButtonElement>(this.doc, 'seat-remove-cancel')?.focus();
+  }
+
+  private closeRemoveDialog(): void {
+    const dialog = el<HTMLDialogElement>(this.doc, 'seat-remove-dialog');
+    this.pendingRemoveSeatId = null;
+    if (dialog?.open) dialog.close();
   }
 
   /**
-   * 空位行上的 +：就在这一个位子加电脑。
-   * 原来只有「加一个电脑位」一个按钮、加完坐哪号位由服务端挑，房主想凑某个位置只能反复点；
-   * 现在点哪一行的 +，电脑就坐哪一行，槽位随命令一起发出去。
+   * 空位行前面的 +：点哪一行，电脑就坐哪一行。
+   * 原来只有底栏一个「加电脑」按钮、加完坐哪号位由服务端挑，房主想凑某个位置只能反复点。
    */
   private attachSeatAddAi(row: HTMLElement, slot: number): void {
     if (!isHost(this.view) || this.view.phase !== 'lobby') return;
@@ -851,7 +893,8 @@ export class PlatformApp {
     icon.setAttribute('aria-hidden', 'true');
     button.append(icon);
     button.addEventListener('click', () => this.command({ type: 'hostSeat', op: 'addAi', slot }));
-    row.append(button);
+    // 放在最前面，替换掉空位那枚装饰图标；尾部不再重复加号。
+    row.querySelector('.seat-icon')?.replaceWith(button);
   }
 
   private currentReferenceManifest(): GameManifest | null {
@@ -1213,7 +1256,7 @@ export class PlatformApp {
       const row = pushRow(classes.join(' '), seat.slot, seat.name, this.seatRoleText(seat), this.seatReadyText(seat), seatLabel(seat), icon);
       this.attachSeatColor(row, seat);
       this.attachAiDifficulty(row, seat);
-      this.attachSeatTransfer(row, seat);
+      this.attachSeatRemove(row, seat);
     }
     const invite = el(this.doc, 'invite-url') as HTMLInputElement | null;
     if (invite) {

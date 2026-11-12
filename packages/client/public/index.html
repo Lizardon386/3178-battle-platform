@@ -226,21 +226,21 @@
                     <div id="seat-grid" class="seat-grid list-group list-group-flush"></div>
                     <div id="host-panel" class="seat-actions hidden">
                       <div id="seat-actions-config" class="seat-actions-row">
-                        <button id="btn-add-ai" class="btn btn-sm btn-outline-secondary"><i class="ti ti-robot me-2" aria-hidden="true"></i>加一个电脑位</button>
+                        <button id="btn-add-ai" class="btn btn-sm btn-outline-secondary"><i class="ti ti-robot me-2" aria-hidden="true"></i>加电脑</button>
                         <div id="host-transfer-control" class="seat-action-inline">
                           <label class="visually-hidden" for="transfer-target">移交房主</label>
                           <select id="transfer-target" class="form-select" aria-label="移交房主给"></select>
-                          <button id="btn-transfer" class="btn btn-sm btn-outline-secondary">移交</button>
+                          <button id="btn-transfer" class="btn btn-sm btn-outline-secondary">转交房主</button>
                         </div>
                         <div class="seat-action-inline host-kick-row">
                           <label class="visually-hidden" for="kick-target">请出座位</label>
                           <select id="kick-target" class="form-select" aria-label="请出座位"></select>
-                          <button id="btn-kick" class="btn btn-sm btn-outline-danger">请出</button>
+                          <button id="btn-kick" class="btn btn-sm btn-outline-danger">请出房间</button>
                         </div>
                       </div>
                       <div class="seat-actions-row seat-actions-main">
-                        <button id="btn-close" class="btn btn-ghost-danger" title="关闭房间，所有人回到大厅；进程在你这里，你一关窗这桌就散了"><i class="ti ti-power me-2" aria-hidden="true"></i>解散房间</button>
-                        <button id="btn-start" class="btn btn-primary">开始对局</button>
+                        <button id="btn-close" class="btn btn-ghost-danger" title="关闭房间，所有人回到大厅；进程在你这里，你一关窗这桌就散了"><i class="ti ti-power me-2" aria-hidden="true"></i>解散</button>
+                        <button id="btn-start" class="btn btn-primary">开始游戏</button>
                       </div>
                     </div>
                   </div>
@@ -281,6 +281,16 @@
         </div>
       </div>
     </div>
+
+    <dialog id="seat-remove-dialog" class="bp-dialog" aria-labelledby="seat-remove-title">
+      <h3 id="seat-remove-title" class="bp-dialog-title">请出真人玩家</h3>
+      <p class="bp-dialog-text">确认将 <strong id="seat-remove-name"></strong> 请出房间吗？该席位会恢复为空位，对方可重新加入。</p>
+      <p class="bp-dialog-note">电脑位可直接删除，真人玩家需要这次确认。</p>
+      <div class="bp-dialog-actions">
+        <button id="seat-remove-cancel" class="btn" type="button">取消</button>
+        <button id="seat-remove-confirm" class="btn btn-outline-danger" type="button">确认请出</button>
+      </div>
+    </dialog>
 
     <aside id="reference-panel" class="reference-panel" aria-label="规则与资料" aria-hidden="true">
       <div class="reference-head">
