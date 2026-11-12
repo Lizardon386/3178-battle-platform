@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-11-12　模式：四档（README / DESIGN / INTEGRATION_GUIDE / CONTEXT）+ `docs/research` 调研目录　项目目录：D:\agent_workspace\3178-battle-platform　代码锚点 `1fb3e44`（分支 `s1-protocol`；远端 `466fc4d`，本提交待推送）　当前接盘：ZCode（全局基线已验证并本地提交）
+> 最近更新：2026-11-12　模式：四档（README / DESIGN / INTEGRATION_GUIDE / CONTEXT）+ `docs/research` 调研目录　项目目录：D:\agent_workspace\3178-battle-platform　代码锚点以 `handoff/PROMPT.md` 与 git HEAD 为准（分支 `s1-protocol`）　当前接盘：ZCode（全局基线已验证并本地提交）
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
@@ -93,7 +93,7 @@ npx tsc -b && node --test --test-timeout=20000 tools/testkit/test/s1-protocol.te
 
 ## 9. 交接记录
 
-- 2026-11-11 ZCode：**六维评审、设计检查点与 S1 契约与 mock 完成**：接盘四条基线全绿；评审发现 ready/start 归属、身份色与游戏选项、网页游戏同源安全三处边界矛盾，以及 S1 mock/真实链路、S4 35° 与实际 29.6° 等口径问题。按用户决定修正两份设计文档与预览页：ready/start 归平台、开始后拉起权威，profile 传游戏，网页游戏独立 origin + 受限 gameTicket；UI 调整昵称双突出、8 色最小 35.1°、AI 中性灰、默认色占用、44px 触控、底栏对齐、320 溢出、焦点闭环、席位前加后叉与真人确认、模板转义。实跑无头 Edge / CDP、HSV / WCAG、`node --check`、静态约束检查全过；设计检查点 `e961af1`；S1 新增 41 条方向 golden、manifest、TS / Python 生成互解、内存 mock 与最小参考游戏；未改旧运行时，真机与辅助技术未验；次日完成全局目标架构总纲与文档权威收口；复跑 253/253、seam、tsc、smoke、生成物与浏览器交互全绿，本地提交 `1fb3e44`，因网络连接重置暂未推送，远端仍为 `466fc4d`。
+- 2026-11-11 ZCode：**六维评审、设计检查点与 S1 契约与 mock 完成**：接盘四条基线全绿；评审发现 ready/start 归属、身份色与游戏选项、网页游戏同源安全三处边界矛盾，以及 S1 mock/真实链路、S4 35° 与实际 29.6° 等口径问题。按用户决定修正两份设计文档与预览页：ready/start 归平台、开始后拉起权威，profile 传游戏，网页游戏独立 origin + 受限 gameTicket；UI 调整昵称双突出、8 色最小 35.1°、AI 中性灰、默认色占用、44px 触控、底栏对齐、320 溢出、焦点闭环、席位前加后叉与真人确认、模板转义。实跑无头 Edge / CDP、HSV / WCAG、`node --check`、静态约束检查全过；设计检查点 `e961af1`；S1 新增 41 条方向 golden、manifest、TS / Python 生成互解、内存 mock 与最小参考游戏；未改旧运行时，真机与辅助技术未验；次日完成全局目标架构总纲与文档权威收口；复跑 253/253、seam、tsc、smoke、生成物与浏览器交互全绿，本地提交 `1fb3e44`；后续推送已成功，远端状态以 PROMPT 实测锚点为准。
 - 2026-11-11 WorkBuddy：**设计评审与逐屏收口**：接盘时四条基线验证实跑全绿；随后按前端美学框架完整评估候选 v0，并按用户「开始」+ 六轮逐屏反馈把结论全部落地到 `docs/research/平台UI预览.html`（色彩三通道、对比度、七态告警带、字阶令牌、全站实线、8 色去重、共享令牌锁定、聊天格式统一与箭头联动），同步收进 `新版平台与SDK设计方案.md` §2.6 第 1–8 条 / §2.7 落点表 / S4 / §5 验收。**未新建独立评审文档、未改代码、未动正式文档**。验证：静态 76/76、DOM 桩 90/90、`node --check` 通过，对比度全达标；脚本为 `%TEMP%` 临时桩不入库。候选 v0 仍未批准，D8 未拍板；真机 / 辅助技术未验证。压卡判定：96 行、4 条记录、10 类坑均在限内，**无需压卡**。
 
 <!-- multi-agent-task-handoff: scope=handoff -->
