@@ -1,0 +1,36 @@
+name: ci
+
+# 日常门禁：每次推送和 PR 都跑全量测试与接缝闸门。
+# 两个平台都跑：行尾、路径、信号这类问题可能只在其中一个平台出现。
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      # 协议互解测试要调 python，不依赖 runner 镜像自带的版本
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: npm test
+      - name: Seam gate
+        shell: bash
+        run: bash tools/checks/check-seam.sh
