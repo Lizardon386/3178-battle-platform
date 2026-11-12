@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-11-11　模式：四档（README / DESIGN / INTEGRATION_GUIDE / CONTEXT）+ `docs/research` 调研目录　项目目录：D:\agent_workspace\3178-battle-platform　代码锚点 `6b23ec5`（本会话未改实现代码；当前有 `docs/research/` 未提交修正）　当前接盘：ZCode（评审与修正已落地，未提交）
+> 最近更新：2026-11-12　模式：四档（README / DESIGN / INTEGRATION_GUIDE / CONTEXT）+ `docs/research` 调研目录　项目目录：D:\agent_workspace\3178-battle-platform　代码锚点 `6b23ec5`（本会话未改实现代码；当前有 `docs/research/` 未提交修正）　当前接盘：ZCode（评审与修正已落地，未提交）
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
@@ -16,7 +16,7 @@
 | [新版平台与SDK设计方案.md](../docs/research/新版平台与SDK设计方案.md) | 评审 / 决策 | 新版方向主交付（候选 v0，未批准）：平台、SDK、协议目录、S0–S6、附录 A/B |
 | [架构评审与决策输入包.md](../docs/research/架构评审与决策输入包.md) | 评审 | 质量属性排序、选型对照、量级估算、D1–D7 权衡表 |
 | [平台UI预览.html](../docs/research/平台UI预览.html) | 设计 / 评审 | 可运行界面预览，自包含、演示数据、不连服务；离线字体在 `docs/research/fonts/` |
-| [语言中立协议 v0 设计](../docs/research/语言中立协议v0设计.md) | S1 / 接入 | 协议语义；机器文件在 `protocol/v0/`（消息目录、JSON Schema、错误码、能力清单与示例），不接旧运行时 |
+| [语言中立协议 v0 设计](../docs/research/语言中立协议v0设计.md) | S1 / 接入 | 协议语义与架构图；机器文件在 `protocol/v0/`，TS / Python 生成、mock 与参考游戏已验，不接旧运行时 |
 | [猴测报告.md](../dogfood-output/猴测报告.md) | 测试 / 维护 | 猴测报告 |
 
 ## 2. 目标与完成定义
@@ -27,7 +27,7 @@
 
 ## 3. 现在在哪
 
-- **2026-11-11 ZCode 六维评审与补充修正（未提交）**：对两份设计文档与预览页做架构 / 协议 / UI / 可访问性 / 验证可信度 / 文档一致性评审，实算 HSV 与 WCAG，并用无头 Edge 真渲染 1256 / 800 / 320。用户补充拍板：① ready 与 startGame 归平台，开始后才拉起 Game Authority；② 平台身份色与游戏阵营分开，nick / avatar / displayColor 作为只读 profile 传游戏，阵营仍走 opaque options；③ 网页游戏采用版本化静态包 + 独立 origin + 一次性 handoffCode 换受限 gameTicket，管理票据不给游戏；④ 昵称标签与输入值都突出。三份 `docs/research/` 产物已同步修正；未改实现代码与正式文档。随后新增 `protocol/v0/` 与 9 条契约测试，40 条消息含方向 / 通道 / 权限；完整回归 242/242、seam、tsc、smoke 全绿，旧运行时未接入；协议语义文档随后移至 `docs/research/语言中立协议v0设计.md`（该迁移未提交）。
+- **2026-11-11 ZCode 六维评审与补充修正（未提交）**：对两份设计文档与预览页做架构 / 协议 / UI / 可访问性 / 验证可信度 / 文档一致性评审，实算 HSV 与 WCAG，并用无头 Edge 真渲染 1256 / 800 / 320。用户补充拍板：① ready 与 startGame 归平台，开始后才拉起 Game Authority；② 平台身份色与游戏阵营分开，nick / avatar / displayColor 作为只读 profile 传游戏，阵营仍走 opaque options；③ 网页游戏采用版本化静态包 + 独立 origin + 一次性 handoffCode 换受限 gameTicket，管理票据不给游戏；④ 昵称标签与输入值都突出。三份 `docs/research/` 产物已同步修正；未改实现代码与正式文档。随后 S1 完成 mock 口径：41 条方向 golden、manifest、TS / Python quicktype 生成与互解、内存 mock 和最小参考游戏全链路；补 hostSeatId / hostChanged、结构化离席原因、Authority 自有恢复约定。设计语义在 `docs/research/语言中立协议v0设计.md`，机器文件在 `protocol/v0/`，旧运行时未接入。
 - **代码基线未动，接盘时四条基线验证实跑全绿**：`npm test` 233/233、`npm run seam` 零命中、`npx tsc -b`、`smoke-sdk.mjs` 全部通过（ZCode 接盘时复跑，非沿用旧结论）。
 - **方向变更 C1–C8**：双形态（桌面 exe 房主端 / 网页与原生客人 / 手机只做客人且网页优先 / 游戏形态自定）；运行时解耦（游戏独立进程，平台不挂载游戏 UI）；平台只持联机共识（连接、会话、票据、定序路由、发现、落盘），游戏全责玩法与全部 UI；权威从平台进程挪到房主机上的独立 Game Authority；平台 UI 只微调；房间级模块（规则配置 / 座位选项 / 资料 / 平台聊天）保留、对局级（game-host / 倒计时 / 结算 / 占位）删除；语言中立协议 + 各语言薄 SDK，`.bpmap` 从下发可执行模块改为清单与资源描述。
 - **决策状态**：D1 平台持会话元数据=是；D2 权威放独立游戏进程=是；D3 color-duel 与 233 例=**推倒重来、不做兼容适配器**（改用「最小参考游戏」作 S2 验收基准，S2 回滚只能靠旧 Engine 分支 + 特性开关）；D4 形态分配=按推荐；D5 装技能、D6 并入 DESIGN 目录表=已定待执行；**D8 已拍板：三端统一设计与交互契约，网页 / 手机共用 Web 实现，桌面 exe 原生控件，不共用代码**；D7 平台 UI 微调已完成逐屏评审与修正（见下）。评审输入包第 8 节剩余前提（规模、语言优先级、wss 路线、预算、合规）不阻塞 S1，阻塞 S5。
@@ -38,7 +38,7 @@
 
 ## 4. 下一步
 
-1. **S1 首轮契约已完成，继续多语言与 mock**：`protocol/v0/` 已含 40 条消息目录、JSON Schema、错误码、能力清单、8 个示例，9 条新测试随 npm test 发现；下一步两种语言生成类型并互解消息，再做最小参考游戏 + mock。评审包 §8 前提不阻塞 S1，阻塞 S5。
+1. **S2 拆真实 Session Service**：S1 的 schema、双语言互解、mock 与参考游戏已完成；下一步真实 WS / 回环 IPC / 独立 Authority 进程，复用同一 golden 与契约断言。评审包 §8 前提不阻塞 S2 主链路，wss / 规模 / 合规仍阻塞 S5。
 2. **真机与辅助技术验证**：本轮已补无头 Edge 真渲染与交互实测，但**未做真机触控 / 字体实际渲染 / 辅助技术 / 持久化验证**。S4 前必须补真机；当前 CDP 与静态校验脚本在 `%TEMP%\bp-review\`，若要长期维护应沉淀进 `tools/checks/`。
 3. **把边界同步给「评估和设计游戏」会话**：它按 600×360 与 `.game-host` 准备样张，新方向下前提已失效。无会话列表、IM 通道被宿主策略拦、Agent 邮箱未开通；可行通路是共享文件（游戏仓库的 `.workbuddy/memory/` 与 `handoff/`），或 TeamCreate + 命名 teammate（那是新 agent，不是那个会话，不能冒充）。
 4. **S1 起再动工**：先出字段级协议 spec + 错误码 + 能力清单 + 最小参考游戏；S1 只对 spec 生成的 mock Session Service 验准备 / 开始 / 动作 / 重连，S2 才验真实全链路。S5 前再决定要不要换架构类角色 / 技能（`architecture-design` + `electron-assistant` 只读查到、未装；apk / Android 无技能覆盖）。跨端仍待验证：语言中立线协议、Android 当房主的后台与 NAT、独立 origin 与 gameTicket 的真实浏览器行为。刻意不做：目录服务器 / 账号 / 好友 / 段位 / 匹配 / 反作弊仲裁 / 自动写防火墙规则。
@@ -71,11 +71,11 @@
 ## 7. 验证命令
 
 ```bash
-npm test                         # 242 例（含 S1 契约 9 例）
+npm test                         # 253 例（含 S1 契约 / 互解 / 参考链路）
 npm run seam                     # 接缝闸门
 npx tsc -b                       # 类型检查
 node tools/checks/smoke-sdk.mjs  # 外部消费者 smoke
-node --test --test-timeout=20000 tools/testkit/test/s1-protocol.test.mjs  # S1 契约 9 例
+npx tsc -b && node --test --test-timeout=20000 tools/testkit/test/s1-protocol.test.mjs && node tools/testkit/scripts/gen-v0-types.mjs --check  # S1 契约与生成物
 ```
 
 提交前跑 `npm test` + `npm run seam`；提交后直接 push 并核对远端 HEAD，禁止 force push。便携包 `dist-portable/` 不入库。**ZCode 接盘时四条全部实跑通过**（233/233、seam 零命中、tsc、smoke-sdk），未改任何实现代码。本轮预览页验证升级为无头 Edge 真渲染 + CDP 交互：1256 / 800 / 320 设备档、真实 320 视口、360@2x / 390@3x / 320@2x 手机模拟、房主 / 客人底栏、横杠与叉槽位、产品可点目标、窄档聊天抽屉发送 / 摘要 / 遮罩 / 焦点闭环、颜色占用与释放、弹层 Tab / Escape、昵称转义均实测通过；HSV 最小色相差 35.1°，对比度按正文 / 大号文字分别实算。脚本在 `%TEMP%\bp-review\`，**不入库、换机需重建**，若要长期维护应沉淀进 `tools/checks/`。真机触控 / 字体实际渲染 / 辅助技术 / 持久化未验证。
@@ -93,7 +93,7 @@ node --test --test-timeout=20000 tools/testkit/test/s1-protocol.test.mjs  # S1 �
 
 ## 9. 交接记录
 
-- 2026-11-11 ZCode：**六维评审、设计检查点与 S1 首轮契约**：接盘四条基线全绿；评审发现 ready/start 归属、身份色与游戏选项、网页游戏同源安全三处边界矛盾，以及 S1 mock/真实链路、S4 35° 与实际 29.6° 等口径问题。按用户决定修正两份设计文档与预览页：ready/start 归平台、开始后拉起权威，profile 传游戏，网页游戏独立 origin + 受限 gameTicket；UI 调整昵称双突出、8 色最小 35.1°、AI 中性灰、默认色占用、44px 触控、底栏对齐、320 溢出、焦点闭环、席位前加后叉与真人确认、模板转义。实跑无头 Edge / CDP、HSV / WCAG、`node --check`、静态约束检查全过；设计检查点 `e961af1`；S1 新增 `protocol/v0/`、40 条消息与 9 条契约测试，完整回归 242/242、seam、tsc、smoke 全绿；未改旧运行时，真机与辅助技术未验。
+- 2026-11-11 ZCode：**六维评审、设计检查点与 S1 契约与 mock 完成**：接盘四条基线全绿；评审发现 ready/start 归属、身份色与游戏选项、网页游戏同源安全三处边界矛盾，以及 S1 mock/真实链路、S4 35° 与实际 29.6° 等口径问题。按用户决定修正两份设计文档与预览页：ready/start 归平台、开始后拉起权威，profile 传游戏，网页游戏独立 origin + 受限 gameTicket；UI 调整昵称双突出、8 色最小 35.1°、AI 中性灰、默认色占用、44px 触控、底栏对齐、320 溢出、焦点闭环、席位前加后叉与真人确认、模板转义。实跑无头 Edge / CDP、HSV / WCAG、`node --check`、静态约束检查全过；设计检查点 `e961af1`；S1 新增 41 条方向 golden、manifest、TS / Python 生成互解、内存 mock 与最小参考游戏；未改旧运行时，真机与辅助技术未验。
 - 2026-11-11 WorkBuddy：**设计评审与逐屏收口**：接盘时四条基线验证实跑全绿；随后按前端美学框架完整评估候选 v0，并按用户「开始」+ 六轮逐屏反馈把结论全部落地到 `docs/research/平台UI预览.html`（色彩三通道、对比度、七态告警带、字阶令牌、全站实线、8 色去重、共享令牌锁定、聊天格式统一与箭头联动），同步收进 `新版平台与SDK设计方案.md` §2.6 第 1–8 条 / §2.7 落点表 / S4 / §5 验收。**未新建独立评审文档、未改代码、未动正式文档**。验证：静态 76/76、DOM 桩 90/90、`node --check` 通过，对比度全达标；脚本为 `%TEMP%` 临时桩不入库。候选 v0 仍未批准，D8 未拍板；真机 / 辅助技术未验证。压卡判定：96 行、4 条记录、10 类坑均在限内，**无需压卡**。
 - 2026-11-11 WorkBuddy：**评估与设计会话收工**：全会话只读评估 + 设计，未改代码。产出 `docs/research/` 三份文件（新版平台与 SDK 设计方案 v0、架构评审与决策输入包、平台 UI 预览 HTML + 6 个 OFL 字体），删除两份过时过程文档；D1/D2/D3/D4 按用户拍板、D7 逐屏迭代到 v4、D5/D6 待执行、D8 未拍板；预览页 38/38 DOM 桩自测通过；旧状态流水与最旧 6 条交接记录沉降到 [COMPACT_BACKUP.md](COMPACT_BACKUP.md)。
 

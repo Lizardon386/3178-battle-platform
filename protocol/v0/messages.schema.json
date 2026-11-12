@@ -3,25 +3,25 @@
   "$id": "https://github.com/Lizardon386/3178-battle-platform/protocol/v0/messages.schema.json",
   "title": "3178 language-neutral session protocol v0",
   "anyOf": [
-    {"$ref":"#$defs/ClientHello"},{"$ref":"#$defs/ClientSessionCreate"},{"$ref":"#$defs/ClientSessionJoin"},
-    {"$ref":"#$defs/ClientResume"},{"$ref":"#$defs/ClientSetReady"},{"$ref":"#$defs/ClientStartGame"},
-    {"$ref":"#$defs/ClientSetConfig"},{"$ref":"#$defs/ClientSetSeatOptions"},{"$ref":"#$defs/ClientLeave"},
-    {"$ref":"#$defs/ClientTransferHost"},{"$ref":"#$defs/ClientKick"},{"$ref":"#$defs/ClientCloseSession"},
-    {"$ref":"#$defs/ClientGame"},{"$ref":"#$defs/ClientChat"},{"$ref":"#$defs/ClientGameHandoff"},
-    {"$ref":"#$defs/ClientGameAuth"},{"$ref":"#$defs/ClientPing"},{"$ref":"#$defs/ServerWelcome"},
-    {"$ref":"#$defs/ServerSeatGranted"},{"$ref":"#$defs/ServerSessionState"},{"$ref":"#$defs/ServerGame"},
-    {"$ref":"#$defs/ServerChat"},{"$ref":"#$defs/ServerGameHandoff"},{"$ref":"#$defs/ServerGameGranted"},
-    {"$ref":"#$defs/ServerNotice"},{"$ref":"#$defs/ServerError"},{"$ref":"#$defs/ServerPong"},
-    {"$ref":"#$defs/PlatformStart"},{"$ref":"#$defs/PlatformMemberJoin"},{"$ref":"#$defs/PlatformMemberLeave"},
-    {"$ref":"#$defs/PlatformMemberResume"},{"$ref":"#$defs/PlatformMemberUpdate"},{"$ref":"#$defs/PlatformDeliver"},
-    {"$ref":"#$defs/PlatformCloseSession"},{"$ref":"#$defs/PlatformPing"},{"$ref":"#$defs/AuthorityReady"},
-    {"$ref":"#$defs/AuthorityDeliver"},{"$ref":"#$defs/AuthorityRoundClosed"},{"$ref":"#$defs/AuthorityError"},
-    {"$ref":"#$defs/AuthorityPong"}
+    {"$ref":"#/$defs/ClientHello"},{"$ref":"#/$defs/ClientSessionCreate"},{"$ref":"#/$defs/ClientSessionJoin"},
+    {"$ref":"#/$defs/ClientResume"},{"$ref":"#/$defs/ClientSetReady"},{"$ref":"#/$defs/ClientStartGame"},
+    {"$ref":"#/$defs/ClientSetConfig"},{"$ref":"#/$defs/ClientSetSeatOptions"},{"$ref":"#/$defs/ClientLeave"},
+    {"$ref":"#/$defs/ClientTransferHost"},{"$ref":"#/$defs/ClientKick"},{"$ref":"#/$defs/ClientCloseSession"},
+    {"$ref":"#/$defs/ClientGame"},{"$ref":"#/$defs/ClientChat"},{"$ref":"#/$defs/ClientGameHandoff"},
+    {"$ref":"#/$defs/ClientGameAuth"},{"$ref":"#/$defs/ClientPing"},{"$ref":"#/$defs/ServerWelcome"},
+    {"$ref":"#/$defs/ServerSeatGranted"},{"$ref":"#/$defs/ServerSessionState"},{"$ref":"#/$defs/ServerGame"},
+    {"$ref":"#/$defs/ServerChat"},{"$ref":"#/$defs/ServerGameHandoff"},{"$ref":"#/$defs/ServerGameGranted"},
+    {"$ref":"#/$defs/ServerNotice"},{"$ref":"#/$defs/ServerError"},{"$ref":"#/$defs/ServerPong"},
+    {"$ref":"#/$defs/PlatformStart"},{"$ref":"#/$defs/PlatformMemberJoin"},{"$ref":"#/$defs/PlatformMemberLeave"},
+    {"$ref":"#/$defs/PlatformMemberResume"},{"$ref":"#/$defs/PlatformMemberUpdate"},{"$ref":"#/$defs/PlatformHostChanged"},{"$ref":"#/$defs/PlatformDeliver"},
+    {"$ref":"#/$defs/PlatformCloseSession"},{"$ref":"#/$defs/PlatformPing"},{"$ref":"#/$defs/AuthorityReady"},
+    {"$ref":"#/$defs/AuthorityDeliver"},{"$ref":"#/$defs/AuthorityRoundClosed"},{"$ref":"#/$defs/AuthorityError"},
+    {"$ref":"#/$defs/AuthorityPong"}
   ],
   "$defs": {
     "ProtocolVersion": {"type":"integer","minimum":0,"maximum":0},
     "Capability": {"type":"string","minLength":1,"maxLength":64},
-    "Capabilities": {"type":"array","items":{"$ref":"#$defs/Capability"},"uniqueItems":true},
+    "Capabilities": {"type":"array","items":{"$ref":"#/$defs/Capability"},"uniqueItems":true},
     "ClientKind": {"enum":["native","web","mobile"]},
     "SeatId": {"type":"integer","minimum":1,"maximum":8},
     "SessionCode": {"type":"string","pattern":"^[A-Z0-9]{4,8}$"},
@@ -39,7 +39,7 @@
       "properties": {
         "nick":{"type":"string","minLength":1,"maxLength":32},
         "avatar":{"type":"string","minLength":1,"maxLength":512},
-        "displayColor":{"$ref":"#$defs/DisplayColor"}
+        "displayColor":{"$ref":"#/$defs/DisplayColor"}
       }
     },
     "JsonObject": {"type":"object"},
@@ -48,93 +48,95 @@
     "Member": {
       "type":"object","required":["seatId","kind","ready","profile","connected","options"],"additionalProperties":false,
       "properties": {
-        "seatId":{"$ref":"#$defs/SeatId"},
-        "kind":{"$ref":"#$defs/MemberKind"},
+        "seatId":{"$ref":"#/$defs/SeatId"},
+        "kind":{"$ref":"#/$defs/MemberKind"},
         "ready":{"type":"boolean"},
-        "profile":{"$ref":"#$defs/Profile"},
+        "profile":{"$ref":"#/$defs/Profile"},
         "connected":{"type":"boolean"},
-        "options":{"$ref":"#$defs/JsonObject"}
+        "options":{"$ref":"#/$defs/JsonObject"}
       }
     },
-    "Members": {"type":"array","items":{"$ref":"#$defs/Member"},"maxItems":8},
+    "Members": {"type":"array","items":{"$ref":"#/$defs/Member"},"maxItems":8},
     "SessionState": {"enum":["open","closed"]},
     "GameProcess": {"enum":["stopped","starting","running","failed","exited"]},
+    "MemberLeaveReason": {"enum":["disconnected","left","kicked"]},
     "Revision": {"type":"integer","minimum":0},
     "Nonce": {"type":"string","minLength":1,"maxLength":64},
     "Text": {"type":"string","minLength":1,"maxLength":1000},
     "Reason": {"type":"string","minLength":1,"maxLength":256},
     "Url": {"type":"string","minLength":1,"maxLength":2048},
     "EpochMs": {"type":"integer","minimum":0},
-    "Target": {"anyOf":[{"$ref":"#$defs/SeatId"},{"const":"all"}]},
+    "Target": {"anyOf":[{"$ref":"#/$defs/SeatId"},{"const":"all"}]},
     "DeliverItem": {
       "type":"object","required":["to","payload"],"additionalProperties":false,
-      "properties":{"to":{"$ref":"#$defs/Target"},"payload":{"$ref":"#$defs/Payload"}}
+      "properties":{"to":{"$ref":"#/$defs/Target"},"payload":{"$ref":"#/$defs/Payload"}}
     },
 
     "ClientHello": {
       "type":"object","required":["type","protocolVersion","capabilities","clientKind"],"additionalProperties":false,
-      "properties":{"type":{"const":"hello"},"protocolVersion":{"$ref":"#$defs/ProtocolVersion"},"capabilities":{"$ref":"#$defs/Capabilities"},"clientKind":{"$ref":"#$defs/ClientKind"}}
+      "properties":{"type":{"const":"hello"},"protocolVersion":{"$ref":"#/$defs/ProtocolVersion"},"capabilities":{"$ref":"#/$defs/Capabilities"},"clientKind":{"$ref":"#/$defs/ClientKind"}}
     },
     "ClientSessionCreate": {
       "type":"object","required":["type","gameId","version","config","memberSlots","options","profile","roomName"],"additionalProperties":false,
-      "properties":{"type":{"const":"sessionCreate"},"gameId":{"$ref":"#$defs/GameId"},"version":{"$ref":"#$defs/Version"},"config":{"$ref":"#$defs/JsonObject"},"memberSlots":{"type":"integer","minimum":2,"maximum":8},"options":{"$ref":"#$defs/JsonObject"},"profile":{"$ref":"#$defs/Profile"},"roomName":{"$ref":"#$defs/RoomName"},"password":{"type":"string","maxLength":128}}
+      "properties":{"type":{"const":"sessionCreate"},"gameId":{"$ref":"#/$defs/GameId"},"version":{"$ref":"#/$defs/Version"},"config":{"$ref":"#/$defs/JsonObject"},"memberSlots":{"type":"integer","minimum":2,"maximum":8},"options":{"$ref":"#/$defs/JsonObject"},"profile":{"$ref":"#/$defs/Profile"},"roomName":{"$ref":"#/$defs/RoomName"},"password":{"type":"string","maxLength":128}}
     },
     "ClientSessionJoin": {
       "type":"object","required":["type","code","gameId","version","rulesHash","credentials","profile"],"additionalProperties":false,
-      "properties":{"type":{"const":"sessionJoin"},"code":{"$ref":"#$defs/SessionCode"},"gameId":{"$ref":"#$defs/GameId"},"version":{"$ref":"#$defs/Version"},"rulesHash":{"$ref":"#$defs/RulesHash"},"credentials":{"$ref":"#$defs/JsonObject"},"profile":{"$ref":"#$defs/Profile"}}
+      "properties":{"type":{"const":"sessionJoin"},"code":{"$ref":"#/$defs/SessionCode"},"gameId":{"$ref":"#/$defs/GameId"},"version":{"$ref":"#/$defs/Version"},"rulesHash":{"$ref":"#/$defs/RulesHash"},"credentials":{"$ref":"#/$defs/JsonObject"},"profile":{"$ref":"#/$defs/Profile"}}
     },
     "ClientResume": {
       "type":"object","required":["type","code","ticket"],"additionalProperties":false,
-      "properties":{"type":{"const":"resume"},"code":{"$ref":"#$defs/SessionCode"},"ticket":{"$ref":"#$defs/Ticket"},"profile":{"$ref":"#$defs/Profile"}}
+      "properties":{"type":{"const":"resume"},"code":{"$ref":"#/$defs/SessionCode"},"ticket":{"$ref":"#/$defs/Ticket"},"profile":{"$ref":"#/$defs/Profile"}}
     },
     "ClientSetReady": {
       "type":"object","required":["type","ready"],"additionalProperties":false,
       "properties":{"type":{"const":"setReady"},"ready":{"type":"boolean"}}
     },
     "ClientStartGame": {"type":"object","required":["type"],"additionalProperties":false,"properties":{"type":{"const":"startGame"}}},
-    "ClientSetConfig": {"type":"object","required":["type","config"],"additionalProperties":false,"properties":{"type":{"const":"setConfig"},"config":{"$ref":"#$defs/JsonObject"}}},
-    "ClientSetSeatOptions": {"type":"object","required":["type","seatId","options"],"additionalProperties":false,"properties":{"type":{"const":"setSeatOptions"},"seatId":{"$ref":"#$defs/SeatId"},"options":{"$ref":"#$defs/JsonObject"}}},
+    "ClientSetConfig": {"type":"object","required":["type","config"],"additionalProperties":false,"properties":{"type":{"const":"setConfig"},"config":{"$ref":"#/$defs/JsonObject"}}},
+    "ClientSetSeatOptions": {"type":"object","required":["type","seatId","options"],"additionalProperties":false,"properties":{"type":{"const":"setSeatOptions"},"seatId":{"$ref":"#/$defs/SeatId"},"options":{"$ref":"#/$defs/JsonObject"}}},
     "ClientLeave": {"type":"object","required":["type"],"additionalProperties":false,"properties":{"type":{"const":"leave"}}},
-    "ClientTransferHost": {"type":"object","required":["type","targetSeat"],"additionalProperties":false,"properties":{"type":{"const":"transferHost"},"targetSeat":{"$ref":"#$defs/SeatId"}}},
-    "ClientKick": {"type":"object","required":["type","targetSeat"],"additionalProperties":false,"properties":{"type":{"const":"kick"},"targetSeat":{"$ref":"#$defs/SeatId"}}},
+    "ClientTransferHost": {"type":"object","required":["type","targetSeat"],"additionalProperties":false,"properties":{"type":{"const":"transferHost"},"targetSeat":{"$ref":"#/$defs/SeatId"}}},
+    "ClientKick": {"type":"object","required":["type","targetSeat"],"additionalProperties":false,"properties":{"type":{"const":"kick"},"targetSeat":{"$ref":"#/$defs/SeatId"}}},
     "ClientCloseSession": {"type":"object","required":["type"],"additionalProperties":false,"properties":{"type":{"const":"closeSession"}}},
-    "ClientGame": {"type":"object","required":["type","payload"],"additionalProperties":false,"properties":{"type":{"const":"game"},"payload":{"$ref":"#$defs/Payload"}}},
-    "ClientChat": {"type":"object","required":["type","text"],"additionalProperties":false,"properties":{"type":{"const":"chat"},"text":{"$ref":"#$defs/Text"}}},
+    "ClientGame": {"type":"object","required":["type","payload"],"additionalProperties":false,"properties":{"type":{"const":"game"},"payload":{"$ref":"#/$defs/Payload"}}},
+    "ClientChat": {"type":"object","required":["type","text"],"additionalProperties":false,"properties":{"type":{"const":"chat"},"text":{"$ref":"#/$defs/Text"}}},
     "ClientGameHandoff": {"type":"object","required":["type"],"additionalProperties":false,"properties":{"type":{"const":"gameHandoff"}}},
     "ClientGameAuth": {
       "type":"object","required":["type"],"additionalProperties":false,
-      "properties":{"type":{"const":"gameAuth"},"handoffCode":{"$ref":"#$defs/HandoffCode"},"gameTicket":{"$ref":"#$defs/GameTicket"}},
+      "properties":{"type":{"const":"gameAuth"},"handoffCode":{"$ref":"#/$defs/HandoffCode"},"gameTicket":{"$ref":"#/$defs/GameTicket"}},
       "anyOf":[{"required":["handoffCode"]},{"required":["gameTicket"]}]
     },
-    "ClientPing": {"type":"object","required":["type","nonce"],"additionalProperties":false,"properties":{"type":{"const":"ping"},"nonce":{"$ref":"#$defs/Nonce"}}},
+    "ClientPing": {"type":"object","required":["type","nonce"],"additionalProperties":false,"properties":{"type":{"const":"ping"},"nonce":{"$ref":"#/$defs/Nonce"}}},
 
-    "ServerWelcome": {"type":"object","required":["type","protocolVersion","supported","serverVersion"],"additionalProperties":false,"properties":{"type":{"const":"welcome"},"protocolVersion":{"$ref":"#$defs/ProtocolVersion"},"supported":{"$ref":"#$defs/Capabilities"},"serverVersion":{"$ref":"#$defs/Version"}}},
-    "ServerSeatGranted": {"type":"object","required":["type","seatId","ticket","sessionCode","profile"],"additionalProperties":false,"properties":{"type":{"const":"seatGranted"},"seatId":{"$ref":"#$defs/SeatId"},"ticket":{"$ref":"#$defs/Ticket"},"sessionCode":{"$ref":"#$defs/SessionCode"},"profile":{"$ref":"#$defs/Profile"}}},
+    "ServerWelcome": {"type":"object","required":["type","protocolVersion","supported","serverVersion"],"additionalProperties":false,"properties":{"type":{"const":"welcome"},"protocolVersion":{"$ref":"#/$defs/ProtocolVersion"},"supported":{"$ref":"#/$defs/Capabilities"},"serverVersion":{"$ref":"#/$defs/Version"}}},
+    "ServerSeatGranted": {"type":"object","required":["type","seatId","ticket","sessionCode","profile"],"additionalProperties":false,"properties":{"type":{"const":"seatGranted"},"seatId":{"$ref":"#/$defs/SeatId"},"ticket":{"$ref":"#/$defs/Ticket"},"sessionCode":{"$ref":"#/$defs/SessionCode"},"profile":{"$ref":"#/$defs/Profile"}}},
     "ServerSessionState": {
       "type":"object","required":["type","sessionId","code","members","hostSeatId","state","gameProcess","revision"],"additionalProperties":false,
-      "properties":{"type":{"const":"sessionState"},"sessionId":{"$ref":"#$defs/SessionId"},"code":{"$ref":"#$defs/SessionCode"},"members":{"$ref":"#$defs/Members"},"hostSeatId":{"$ref":"#$defs/SeatId"},"state":{"$ref":"#$defs/SessionState"},"gameProcess":{"$ref":"#$defs/GameProcess"},"revision":{"$ref":"#$defs/Revision"}}
+      "properties":{"type":{"const":"sessionState"},"sessionId":{"$ref":"#/$defs/SessionId"},"code":{"$ref":"#/$defs/SessionCode"},"members":{"$ref":"#/$defs/Members"},"hostSeatId":{"$ref":"#/$defs/SeatId"},"state":{"$ref":"#/$defs/SessionState"},"gameProcess":{"$ref":"#/$defs/GameProcess"},"revision":{"$ref":"#/$defs/Revision"}}
     },
-    "ServerGame": {"type":"object","required":["type","payload"],"additionalProperties":false,"properties":{"type":{"const":"game"},"fromSeat":{"$ref":"#$defs/SeatId"},"payload":{"$ref":"#$defs/Payload"}}},
-    "ServerChat": {"type":"object","required":["type","fromSeat","profile","text","sentAt"],"additionalProperties":false,"properties":{"type":{"const":"chat"},"fromSeat":{"$ref":"#$defs/SeatId"},"profile":{"$ref":"#$defs/Profile"},"text":{"$ref":"#$defs/Text"},"sentAt":{"$ref":"#$defs/EpochMs"}}},
-    "ServerGameHandoff": {"type":"object","required":["type","url","handoffCode","expiresAt"],"additionalProperties":false,"properties":{"type":{"const":"gameHandoff"},"url":{"$ref":"#$defs/Url"},"handoffCode":{"$ref":"#$defs/HandoffCode"},"expiresAt":{"$ref":"#$defs/EpochMs"}}},
-    "ServerGameGranted": {"type":"object","required":["type","gameTicket","sessionId","seatId"],"additionalProperties":false,"properties":{"type":{"const":"gameGranted"},"gameTicket":{"$ref":"#$defs/GameTicket"},"sessionId":{"$ref":"#$defs/SessionId"},"seatId":{"$ref":"#$defs/SeatId"}}},
-    "ServerNotice": {"type":"object","required":["type","code","text"],"additionalProperties":false,"properties":{"type":{"const":"notice"},"code":{"type":"string","minLength":1,"maxLength":64},"text":{"$ref":"#$defs/Text"}}},
-    "ServerError": {"type":"object","required":["type","code","text"],"additionalProperties":false,"properties":{"type":{"const":"error"},"code":{"type":"string","minLength":1,"maxLength":64},"text":{"$ref":"#$defs/Text"},"details":{"$ref":"#$defs/JsonObject"}}},
-    "ServerPong": {"type":"object","required":["type","nonce"],"additionalProperties":false,"properties":{"type":{"const":"pong"},"nonce":{"$ref":"#$defs/Nonce"}}},
+    "ServerGame": {"type":"object","required":["type","payload"],"additionalProperties":false,"properties":{"type":{"const":"game"},"fromSeat":{"$ref":"#/$defs/SeatId"},"payload":{"$ref":"#/$defs/Payload"}}},
+    "ServerChat": {"type":"object","required":["type","fromSeat","profile","text","sentAt"],"additionalProperties":false,"properties":{"type":{"const":"chat"},"fromSeat":{"$ref":"#/$defs/SeatId"},"profile":{"$ref":"#/$defs/Profile"},"text":{"$ref":"#/$defs/Text"},"sentAt":{"$ref":"#/$defs/EpochMs"}}},
+    "ServerGameHandoff": {"type":"object","required":["type","url","handoffCode","expiresAt"],"additionalProperties":false,"properties":{"type":{"const":"gameHandoff"},"url":{"$ref":"#/$defs/Url"},"handoffCode":{"$ref":"#/$defs/HandoffCode"},"expiresAt":{"$ref":"#/$defs/EpochMs"}}},
+    "ServerGameGranted": {"type":"object","required":["type","gameTicket","sessionId","seatId"],"additionalProperties":false,"properties":{"type":{"const":"gameGranted"},"gameTicket":{"$ref":"#/$defs/GameTicket"},"sessionId":{"$ref":"#/$defs/SessionId"},"seatId":{"$ref":"#/$defs/SeatId"}}},
+    "ServerNotice": {"type":"object","required":["type","code","text"],"additionalProperties":false,"properties":{"type":{"const":"notice"},"code":{"type":"string","minLength":1,"maxLength":64},"text":{"$ref":"#/$defs/Text"}}},
+    "ServerError": {"type":"object","required":["type","code","text"],"additionalProperties":false,"properties":{"type":{"const":"error"},"code":{"type":"string","minLength":1,"maxLength":64},"text":{"$ref":"#/$defs/Text"},"details":{"$ref":"#/$defs/JsonObject"}}},
+    "ServerPong": {"type":"object","required":["type","nonce"],"additionalProperties":false,"properties":{"type":{"const":"pong"},"nonce":{"$ref":"#/$defs/Nonce"}}},
 
-    "PlatformStart": {"type":"object","required":["type","gameId","version","sessionCode","sessionConfig","members","revision"],"additionalProperties":false,"properties":{"type":{"const":"start"},"gameId":{"$ref":"#$defs/GameId"},"version":{"$ref":"#$defs/Version"},"sessionCode":{"$ref":"#$defs/SessionCode"},"sessionConfig":{"$ref":"#$defs/JsonObject"},"members":{"$ref":"#$defs/Members"},"revision":{"$ref":"#$defs/Revision"}}},
-    "PlatformMemberJoin": {"type":"object","required":["type","member","revision"],"additionalProperties":false,"properties":{"type":{"const":"memberJoin"},"member":{"$ref":"#$defs/Member"},"revision":{"$ref":"#$defs/Revision"}}},
-    "PlatformMemberLeave": {"type":"object","required":["type","seatId","revision"],"additionalProperties":false,"properties":{"type":{"const":"memberLeave"},"seatId":{"$ref":"#$defs/SeatId"},"revision":{"$ref":"#$defs/Revision"},"reason":{"$ref":"#$defs/Reason"}}},
-    "PlatformMemberResume": {"type":"object","required":["type","seatId","profile","revision"],"additionalProperties":false,"properties":{"type":{"const":"memberResume"},"seatId":{"$ref":"#$defs/SeatId"},"profile":{"$ref":"#$defs/Profile"},"revision":{"$ref":"#$defs/Revision"}}},
-    "PlatformMemberUpdate": {"type":"object","required":["type","seatId","ready","profile","options","revision"],"additionalProperties":false,"properties":{"type":{"const":"memberUpdate"},"seatId":{"$ref":"#$defs/SeatId"},"ready":{"type":"boolean"},"profile":{"$ref":"#$defs/Profile"},"options":{"$ref":"#$defs/JsonObject"},"revision":{"$ref":"#$defs/Revision"}}},
-    "PlatformDeliver": {"type":"object","required":["type","fromSeat","payload","revision"],"additionalProperties":false,"properties":{"type":{"const":"deliver"},"fromSeat":{"$ref":"#$defs/SeatId"},"payload":{"$ref":"#$defs/Payload"},"revision":{"$ref":"#$defs/Revision"}}},
-    "PlatformCloseSession": {"type":"object","required":["type","reason"],"additionalProperties":false,"properties":{"type":{"const":"closeSession"},"reason":{"$ref":"#$defs/Reason"}}},
-    "PlatformPing": {"type":"object","required":["type","nonce"],"additionalProperties":false,"properties":{"type":{"const":"ping"},"nonce":{"$ref":"#$defs/Nonce"}}},
+    "PlatformStart": {"type":"object","required":["type","gameId","version","sessionCode","sessionConfig","members","hostSeatId","revision"],"additionalProperties":false,"properties":{"type":{"const":"start"},"gameId":{"$ref":"#/$defs/GameId"},"version":{"$ref":"#/$defs/Version"},"sessionCode":{"$ref":"#/$defs/SessionCode"},"sessionConfig":{"$ref":"#/$defs/JsonObject"},"members":{"$ref":"#/$defs/Members"},"hostSeatId":{"$ref":"#/$defs/SeatId"},"revision":{"$ref":"#/$defs/Revision"}}},
+    "PlatformMemberJoin": {"type":"object","required":["type","member","revision"],"additionalProperties":false,"properties":{"type":{"const":"memberJoin"},"member":{"$ref":"#/$defs/Member"},"revision":{"$ref":"#/$defs/Revision"}}},
+    "PlatformMemberLeave": {"type":"object","required":["type","seatId","reason","revision"],"additionalProperties":false,"properties":{"type":{"const":"memberLeave"},"seatId":{"$ref":"#/$defs/SeatId"},"reason":{"$ref":"#/$defs/MemberLeaveReason"},"revision":{"$ref":"#/$defs/Revision"}}},
+    "PlatformMemberResume": {"type":"object","required":["type","seatId","profile","revision"],"additionalProperties":false,"properties":{"type":{"const":"memberResume"},"seatId":{"$ref":"#/$defs/SeatId"},"profile":{"$ref":"#/$defs/Profile"},"revision":{"$ref":"#/$defs/Revision"}}},
+    "PlatformMemberUpdate": {"type":"object","required":["type","seatId","ready","profile","options","revision"],"additionalProperties":false,"properties":{"type":{"const":"memberUpdate"},"seatId":{"$ref":"#/$defs/SeatId"},"ready":{"type":"boolean"},"profile":{"$ref":"#/$defs/Profile"},"options":{"$ref":"#/$defs/JsonObject"},"revision":{"$ref":"#/$defs/Revision"}}},
+    "PlatformHostChanged": {"type":"object","required":["type","hostSeatId","revision"],"additionalProperties":false,"properties":{"type":{"const":"hostChanged"},"hostSeatId":{"$ref":"#/$defs/SeatId"},"revision":{"$ref":"#/$defs/Revision"}}},
+    "PlatformDeliver": {"type":"object","required":["type","fromSeat","payload","revision"],"additionalProperties":false,"properties":{"type":{"const":"deliver"},"fromSeat":{"$ref":"#/$defs/SeatId"},"payload":{"$ref":"#/$defs/Payload"},"revision":{"$ref":"#/$defs/Revision"}}},
+    "PlatformCloseSession": {"type":"object","required":["type","reason"],"additionalProperties":false,"properties":{"type":{"const":"closeSession"},"reason":{"$ref":"#/$defs/Reason"}}},
+    "PlatformPing": {"type":"object","required":["type","nonce"],"additionalProperties":false,"properties":{"type":{"const":"ping"},"nonce":{"$ref":"#/$defs/Nonce"}}},
 
     "AuthorityReady": {"type":"object","required":["type","processStatus"],"additionalProperties":false,"properties":{"type":{"const":"authorityReady"},"processStatus":{"const":"running"}}},
-    "AuthorityDeliver": {"type":"object","required":["type","items"],"additionalProperties":false,"properties":{"type":{"const":"deliver"},"items":{"type":"array","items":{"$ref":"#$defs/DeliverItem"},"minItems":1}}},
-    "AuthorityRoundClosed": {"type":"object","required":["type","payload"],"additionalProperties":false,"properties":{"type":{"const":"roundClosed"},"payload":{"$ref":"#$defs/Payload"}}},
-    "AuthorityError": {"type":"object","required":["type","code","text","fatal"],"additionalProperties":false,"properties":{"type":{"const":"authorityError"},"code":{"type":"string","minLength":1,"maxLength":64},"text":{"$ref":"#$defs/Text"},"fatal":{"type":"boolean"}}},
-    "AuthorityPong": {"type":"object","required":["type","nonce"],"additionalProperties":false,"properties":{"type":{"const":"pong"},"nonce":{"$ref":"#$defs/Nonce"}}}
+    "AuthorityDeliver": {"type":"object","required":["type","items"],"additionalProperties":false,"properties":{"type":{"const":"deliver"},"items":{"type":"array","items":{"$ref":"#/$defs/DeliverItem"},"minItems":1}}},
+    "AuthorityRoundClosed": {"type":"object","required":["type","payload"],"additionalProperties":false,"properties":{"type":{"const":"roundClosed"},"payload":{"$ref":"#/$defs/Payload"}}},
+    "AuthorityError": {"type":"object","required":["type","code","text","fatal"],"additionalProperties":false,"properties":{"type":{"const":"authorityError"},"code":{"type":"string","minLength":1,"maxLength":64},"text":{"$ref":"#/$defs/Text"},"fatal":{"type":"boolean"}}},
+    "AuthorityPong": {"type":"object","required":["type","nonce"],"additionalProperties":false,"properties":{"type":{"const":"pong"},"nonce":{"$ref":"#/$defs/Nonce"}}}
   }
 }

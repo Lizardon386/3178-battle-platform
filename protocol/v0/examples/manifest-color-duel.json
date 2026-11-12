@@ -1,0 +1,20 @@
+{
+  "id":"color-duel",
+  "version":"0.3.0",
+  "platformRequirements":{"protocolVersion":0,"minPlayers":2,"maxPlayers":8,"allowSpectate":true,"soloFill":true},
+  "entryPoints":{"authority":"authority/index.js","web":"web/index.html"},
+  "sessionConfig":{
+    "fields":[
+      {"key":"stack","type":"boolean","label":"罚牌接龙","default":true},
+      {"key":"contest","type":"boolean","label":"罚牌质疑","default":true,"dependsOn":"stack"},
+      {"key":"extend","type":"boolean","label":"功能牌拓展","default":true},
+      {"key":"merciless","type":"boolean","label":"绝情","default":true},
+      {"key":"cap","type":"enum","label":"手牌上限","default":"20","options":[{"value":"20","label":"20 张"},{"value":"30","label":"30 张"},{"value":"40","label":"40 张"}],"dependsOn":"merciless"},
+      {"key":"no-turn-timer","type":"boolean","label":"关闭出牌倒计时","default":false}
+    ],
+    "seatOptions":[
+      {"key":"difficulty","type":"enum","label":"电脑强度","default":"easy","roles":["ai"],"options":[{"value":"easy","label":"简单"},{"value":"normal","label":"中等"},{"value":"cold","label":"冷酷"}]}
+    ]
+  },
+  "reference":{"entry":"reference.json"}
+}

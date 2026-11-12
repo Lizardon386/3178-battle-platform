@@ -33,9 +33,10 @@
 
     {"type":"start","from":"platform","to":"authority","schema":"PlatformStart","channel":"ipc","auth":"platform","summary":"进程启动后的配置与成员全量快照"},
     {"type":"memberJoin","from":"platform","to":"authority","schema":"PlatformMemberJoin","channel":"ipc","auth":"platform","summary":"成员加入及 profile / options"},
-    {"type":"memberLeave","from":"platform","to":"authority","schema":"PlatformMemberLeave","channel":"ipc","auth":"platform","summary":"成员离开或掉线"},
+    {"type":"memberLeave","from":"platform","to":"authority","schema":"PlatformMemberLeave","channel":"ipc","auth":"platform","summary":"成员掉线 / 主动离开 / 被踢，reason 为结构化枚举"},
     {"type":"memberResume","from":"platform","to":"authority","schema":"PlatformMemberResume","channel":"ipc","auth":"platform","summary":"成员凭票恢复"},
     {"type":"memberUpdate","from":"platform","to":"authority","schema":"PlatformMemberUpdate","channel":"ipc","auth":"platform","summary":"ready / profile / options 全量更新"},
+    {"type":"hostChanged","from":"platform","to":"authority","schema":"PlatformHostChanged","channel":"ipc","auth":"platform","summary":"房主权限变更，供房主专属玩法规则使用"},
     {"type":"deliver","from":"platform","to":"authority","schema":"PlatformDeliver","channel":"ipc","auth":"platform","summary":"转发客户端 opaque 游戏消息"},
     {"type":"closeSession","from":"platform","to":"authority","schema":"PlatformCloseSession","channel":"ipc","auth":"platform","summary":"通知权威回收会话"},
     {"type":"ping","from":"platform","to":"authority","schema":"PlatformPing","channel":"ipc","auth":"platform","summary":"本地 IPC 心跳"},
