@@ -256,6 +256,80 @@ test('参考链路：前房主报 HOSTONLY，其他非房主报 NOTHOST，观战
   assert.equal(errors(spectator, 'NOTHOST').length, 1);
 });
 
+test('参考链路：房主加删电脑、移动槽位，AI 计入最低人数', () => {
+  const { platform, host } = setup();
+  createSession(platform, host);
+  platform.receive(host, { type: 'addAi', slot: 3 });
+  const ai = platform.current.members.find((member) => member.role === 'ai');
+  assert.equal(ai.slot, 3);
+  assert.equal(ai.options.difficulty, 'easy');
+  platform.receive(host, { type: 'moveSlot', memberId: ai.memberId, slot: 4 });
+  assert.equal(platform.current.members.find((member) => member.memberId === ai.memberId).slot, 4);
+  platform.receive(host, { type: 'removeAi', memberId: ai.memberId });
+  assert.equal(platform.current.members.some((member) => member.memberId === ai.memberId), false);
+  platform.receive(host, { type: 'addAi', slot: 2 });
+  platform.receive(host, { type: 'startGame' });
+  assert.equal(platform.authorityStarts, 1, 'host + AI must satisfy minPlayers without host ready');
+});
+
+test('参考链路：profile 修改与身份色一色一席', () => {
+  const { platform, host, guest } = setup();
+  createAndJoin(platform, host, guest);
+  platform.receive(guest, { type: 'setProfile', profile: { nick: '小林 2', displayColor: '#6366f1' } });
+  assert.equal(platform.current.members.find((member) => member.memberId === 'm2').profile.nick, '小林 2');
+  platform.receive(guest, { type: 'setProfile', profile: { nick: '小林 2', displayColor: '#f59e0b' } });
+  assert.equal(errors(guest, 'COLOR').length, 1);
+});
+
+test('参考链路：聊天 messageId 去重、revision、系统消息与历史补发', () => {
+  const { platform, host, guest } = setup();
+  createAndJoin(platform, host, guest);
+  platform.receive(guest, { type: 'chat', messageId: 'c1', text: 'hi' });
+  const chat = last(host, 'chat');
+  assert.equal(chat.messageId, 'c1');
+  assert.equal(chat.kind, 'member');
+  assert.equal(chat.chatRevision, 2);
+  platform.receive(guest, { type: 'chat', messageId: 'c1', text: 'duplicate' });
+  assert.equal(host.inbox.filter((message) => message.type === 'chat' && message.messageId === 'c1').length, 1);
+
+  const later = platform.connect();
+  platform.receive(later, {
+    type: 'sessionJoin', code: '893F', gameId: 'color-duel', version: '0.3.0', rulesHash: platform.current.rulesHash,
+    credentials: {}, role: 'spectator', profile: { nick: '观战', displayColor: '#10b981' },
+  });
+  assert.ok(last(later, 'chatHistory').messages.some((message) => message.messageId === 'c1'));
+
+  platform.disconnect(guest);
+  const reconnected = platform.connect();
+  platform.receive(reconnected, { type: 'resume', sessionId: platform.current.id, ticket: guest.ticket });
+  assert.ok(last(reconnected, 'chatHistory').messages.some((message) => message.messageId === 'c1'));
+});
+
+test('参考链路：listGames 仅本机控制面返回已注册清单', () => {
+  const { platform, host } = setup();
+  platform.receive(host, { type: 'listGames' });
+  const list = last(host, 'gameList');
+  assert.equal(list.games.length, 1);
+  assert.equal(list.games[0].id, 'color-duel');
+  const remote = platform.connect();
+  platform.receive(remote, { type: 'listGames' });
+  assert.equal(errors(remote, 'FORBIDDEN').length, 1);
+});
+
+test('参考链路：开始后加入按清单 lateJoin 降级为观战', () => {
+  const { platform, host, guest } = setup();
+  createAndJoin(platform, host, guest);
+  readyAndStart(platform, host, guest);
+  const late = platform.connect();
+  platform.receive(late, {
+    type: 'sessionJoin', code: '893F', gameId: 'color-duel', version: '0.3.0', rulesHash: platform.current.rulesHash,
+    credentials: {}, role: 'player', profile: { nick: '迟到', displayColor: '#10b981' },
+  });
+  const lateMember = platform.current.members.find((member) => member.profile.nick === '迟到');
+  assert.equal(lateMember.role, 'spectator');
+  assert.equal(lateMember.slot, undefined);
+});
+
 test('参考链路：额外字段与未知客户端消息都被 BADMSG 拒绝', () => {
   const { platform, host } = setup();
   platform.receive(host, { type: 'hello', protocolVersion: 0, capabilities: [], clientKind: 'web', gameId: 'old' });

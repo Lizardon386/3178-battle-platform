@@ -171,7 +171,8 @@
     "type": "chat",
     "value": {
       "type": "chat",
-      "text": "准备好了"
+      "text": "准备好了",
+      "messageId": "chat-1"
     }
   },
   {
@@ -315,13 +316,16 @@
     "type": "chat",
     "value": {
       "type": "chat",
+      "kind": "member",
+      "messageId": "chat-1",
+      "chatRevision": 1,
+      "fromMemberId": "m2",
       "profile": {
         "nick": "小林",
         "displayColor": "#6366f1"
       },
       "text": "准备好了",
-      "sentAt": 1794870000000,
-      "fromMemberId": "m2"
+      "sentAt": 1794870000000
     }
   },
   {
@@ -734,6 +738,105 @@
       "type": "sync",
       "memberId": "m2",
       "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "client-platform-addAi",
+    "from": "client",
+    "to": "platform",
+    "type": "addAi",
+    "value": {
+      "type": "addAi",
+      "slot": 3
+    }
+  },
+  {
+    "name": "client-platform-removeAi",
+    "from": "client",
+    "to": "platform",
+    "type": "removeAi",
+    "value": {
+      "type": "removeAi",
+      "memberId": "m3"
+    }
+  },
+  {
+    "name": "client-platform-moveSlot",
+    "from": "client",
+    "to": "platform",
+    "type": "moveSlot",
+    "value": {
+      "type": "moveSlot",
+      "memberId": "m2",
+      "slot": 4
+    }
+  },
+  {
+    "name": "client-platform-setProfile",
+    "from": "client",
+    "to": "platform",
+    "type": "setProfile",
+    "value": {
+      "type": "setProfile",
+      "profile": {
+        "nick": "小林",
+        "displayColor": "#6366f1"
+      }
+    }
+  },
+  {
+    "name": "client-platform-listGames",
+    "from": "client",
+    "to": "platform",
+    "type": "listGames",
+    "value": {
+      "type": "listGames"
+    }
+  },
+  {
+    "name": "platform-client-chatHistory",
+    "from": "platform",
+    "to": "client",
+    "type": "chatHistory",
+    "value": {
+      "type": "chatHistory",
+      "chatRevision": 1,
+      "messages": [
+        {
+          "type": "chat",
+          "kind": "member",
+          "messageId": "chat-1",
+          "chatRevision": 1,
+          "fromMemberId": "m2",
+          "profile": {
+            "nick": "小林",
+            "displayColor": "#6366f1"
+          },
+          "text": "准备好了",
+          "sentAt": 1794870000000
+        }
+      ]
+    }
+  },
+  {
+    "name": "platform-client-gameList",
+    "from": "platform",
+    "to": "client",
+    "type": "gameList",
+    "value": {
+      "type": "gameList",
+      "games": [
+        {
+          "id": "color-duel",
+          "name": "变色对决",
+          "version": "0.3.0",
+          "manifest": {
+            "id": "color-duel",
+            "name": "变色对决",
+            "version": "0.3.0"
+          }
+        }
+      ]
     }
   }
 ]

@@ -14,6 +14,7 @@ export interface ProtocolTypes {
     AuthorityPong?:        AuthorityPong;
     AuthorityReady?:       AuthorityReady;
     AuthorityRoundClosed?: AuthorityRoundClosed;
+    ClientAddAI?:          ClientAddAI;
     ClientChat?:           ClientChat;
     ClientCloseSession?:   ClientCloseSession;
     ClientGame?:           ClientGame;
@@ -22,13 +23,17 @@ export interface ProtocolTypes {
     ClientHello?:          ClientHello;
     ClientKick?:           ClientKick;
     ClientLeave?:          ClientLeave;
+    ClientListGames?:      ClientListGames;
+    ClientMoveSlot?:       ClientMoveSlot;
     ClientPing?:           ClientPing;
     ClientRecoverGame?:    ClientRecoverGame;
+    ClientRemoveAI?:       ClientRemoveAI;
     ClientResume?:         ClientResume;
     ClientSessionCreate?:  ClientSessionCreate;
     ClientSessionJoin?:    ClientSessionJoin;
     ClientSessionProbe?:   ClientSessionProbe;
     ClientSetConfig?:      ClientSetConfig;
+    ClientSetProfile?:     ClientSetProfile;
     ClientSetReady?:       ClientSetReady;
     ClientSetSeatOptions?: ClientSetSeatOptions;
     ClientStartGame?:      ClientStartGame;
@@ -45,10 +50,12 @@ export interface ProtocolTypes {
     PlatformStart?:        PlatformStart;
     PlatformSync?:         PlatformSync;
     ServerChat?:           ServerChat;
+    ServerChatHistory?:    ServerChatHistory;
     ServerError?:          ServerError;
     ServerGame?:           ServerGame;
     ServerGameGranted?:    ServerGameGranted;
     ServerGameHandoff?:    ServerGameHandoff;
+    ServerGameList?:       ServerGameList;
     ServerNotice?:         ServerNotice;
     ServerPong?:           ServerPong;
     ServerSeatGranted?:    ServerSeatGranted;
@@ -60,11 +67,11 @@ export interface ProtocolTypes {
 export interface AuthorityDeliver {
     authorityEpoch: number;
     gameSequence:   number;
-    items:          [TypesSchema, ...TypesSchema[]];
+    items:          [ItemElement, ...ItemElement[]];
     type:           AuthorityDeliverType;
 }
 
-export interface TypesSchema {
+export interface ItemElement {
     payload:       unknown;
     to:            string;
     viewRevision?: number;
@@ -107,9 +114,18 @@ export interface AuthorityRoundClosed {
 
 export type AuthorityRoundClosedType = "roundClosed";
 
+export interface ClientAddAI {
+    requestId?: string;
+    slot?:      number;
+    type:       ClientAddAIType;
+}
+
+export type ClientAddAIType = "addAi";
+
 export interface ClientChat {
-    text: string;
-    type: ClientChatType;
+    messageId: string;
+    text:      string;
+    type:      ClientChatType;
 }
 
 export type ClientChatType = "chat";
@@ -169,6 +185,21 @@ export interface ClientLeave {
 
 export type ClientLeaveType = "leave";
 
+export interface ClientListGames {
+    type: ClientListGamesType;
+}
+
+export type ClientListGamesType = "listGames";
+
+export interface ClientMoveSlot {
+    memberId:   string;
+    requestId?: string;
+    slot:       number;
+    type:       ClientMoveSlotType;
+}
+
+export type ClientMoveSlotType = "moveSlot";
+
 export interface ClientPing {
     nonce: string;
     type:  ClientPingType;
@@ -182,6 +213,14 @@ export interface ClientRecoverGame {
 }
 
 export type ClientRecoverGameType = "recoverGame";
+
+export interface ClientRemoveAI {
+    memberId:   string;
+    requestId?: string;
+    type:       ClientRemoveAIType;
+}
+
+export type ClientRemoveAIType = "removeAi";
 
 export interface ClientResume {
     code?:     string;
@@ -242,6 +281,14 @@ export interface ClientSetConfig {
 }
 
 export type ClientSetConfigType = "setConfig";
+
+export interface ClientSetProfile {
+    profile:    Profile;
+    requestId?: string;
+    type:       ClientSetProfileType;
+}
+
+export type ClientSetProfileType = "setProfile";
 
 export interface ClientSetReady {
     ready:      boolean;
@@ -389,12 +436,25 @@ export interface PlatformSync {
 }
 
 export interface ServerChat {
-    fromMemberId: string;
-    profile:      Profile;
-    sentAt:       number;
-    text:         string;
-    type:         ClientChatType;
+    chatRevision:  number;
+    fromMemberId?: string;
+    kind:          Kind;
+    messageId:     string;
+    profile?:      Profile;
+    sentAt:        number;
+    text:          string;
+    type:          ClientChatType;
 }
+
+export type Kind = "member" | "system";
+
+export interface ServerChatHistory {
+    chatRevision: number;
+    messages:     ServerChat[];
+    type:         ServerChatHistoryType;
+}
+
+export type ServerChatHistoryType = "chatHistory";
 
 export interface ServerError {
     code:       string;
@@ -431,6 +491,20 @@ export interface ServerGameHandoff {
     type:        ClientGameHandoffType;
     url:         string;
 }
+
+export interface ServerGameList {
+    games: GameElement[];
+    type:  ServerGameListType;
+}
+
+export interface GameElement {
+    id:       string;
+    manifest: { [key: string]: unknown };
+    name:     string;
+    version:  string;
+}
+
+export type ServerGameListType = "gameList";
 
 export interface ServerNotice {
     code: string;
@@ -681,6 +755,7 @@ const typeMap: any = {
         { json: "AuthorityPong", js: "AuthorityPong", typ: u(undefined, r("AuthorityPong")) },
         { json: "AuthorityReady", js: "AuthorityReady", typ: u(undefined, r("AuthorityReady")) },
         { json: "AuthorityRoundClosed", js: "AuthorityRoundClosed", typ: u(undefined, r("AuthorityRoundClosed")) },
+        { json: "ClientAddAI", js: "ClientAddAI", typ: u(undefined, r("ClientAddAI")) },
         { json: "ClientChat", js: "ClientChat", typ: u(undefined, r("ClientChat")) },
         { json: "ClientCloseSession", js: "ClientCloseSession", typ: u(undefined, r("ClientCloseSession")) },
         { json: "ClientGame", js: "ClientGame", typ: u(undefined, r("ClientGame")) },
@@ -689,13 +764,17 @@ const typeMap: any = {
         { json: "ClientHello", js: "ClientHello", typ: u(undefined, r("ClientHello")) },
         { json: "ClientKick", js: "ClientKick", typ: u(undefined, r("ClientKick")) },
         { json: "ClientLeave", js: "ClientLeave", typ: u(undefined, r("ClientLeave")) },
+        { json: "ClientListGames", js: "ClientListGames", typ: u(undefined, r("ClientListGames")) },
+        { json: "ClientMoveSlot", js: "ClientMoveSlot", typ: u(undefined, r("ClientMoveSlot")) },
         { json: "ClientPing", js: "ClientPing", typ: u(undefined, r("ClientPing")) },
         { json: "ClientRecoverGame", js: "ClientRecoverGame", typ: u(undefined, r("ClientRecoverGame")) },
+        { json: "ClientRemoveAI", js: "ClientRemoveAI", typ: u(undefined, r("ClientRemoveAI")) },
         { json: "ClientResume", js: "ClientResume", typ: u(undefined, r("ClientResume")) },
         { json: "ClientSessionCreate", js: "ClientSessionCreate", typ: u(undefined, r("ClientSessionCreate")) },
         { json: "ClientSessionJoin", js: "ClientSessionJoin", typ: u(undefined, r("ClientSessionJoin")) },
         { json: "ClientSessionProbe", js: "ClientSessionProbe", typ: u(undefined, r("ClientSessionProbe")) },
         { json: "ClientSetConfig", js: "ClientSetConfig", typ: u(undefined, r("ClientSetConfig")) },
+        { json: "ClientSetProfile", js: "ClientSetProfile", typ: u(undefined, r("ClientSetProfile")) },
         { json: "ClientSetReady", js: "ClientSetReady", typ: u(undefined, r("ClientSetReady")) },
         { json: "ClientSetSeatOptions", js: "ClientSetSeatOptions", typ: u(undefined, r("ClientSetSeatOptions")) },
         { json: "ClientStartGame", js: "ClientStartGame", typ: u(undefined, r("ClientStartGame")) },
@@ -712,10 +791,12 @@ const typeMap: any = {
         { json: "PlatformStart", js: "PlatformStart", typ: u(undefined, r("PlatformStart")) },
         { json: "PlatformSync", js: "PlatformSync", typ: u(undefined, r("PlatformSync")) },
         { json: "ServerChat", js: "ServerChat", typ: u(undefined, r("ServerChat")) },
+        { json: "ServerChatHistory", js: "ServerChatHistory", typ: u(undefined, r("ServerChatHistory")) },
         { json: "ServerError", js: "ServerError", typ: u(undefined, r("ServerError")) },
         { json: "ServerGame", js: "ServerGame", typ: u(undefined, r("ServerGame")) },
         { json: "ServerGameGranted", js: "ServerGameGranted", typ: u(undefined, r("ServerGameGranted")) },
         { json: "ServerGameHandoff", js: "ServerGameHandoff", typ: u(undefined, r("ServerGameHandoff")) },
+        { json: "ServerGameList", js: "ServerGameList", typ: u(undefined, r("ServerGameList")) },
         { json: "ServerNotice", js: "ServerNotice", typ: u(undefined, r("ServerNotice")) },
         { json: "ServerPong", js: "ServerPong", typ: u(undefined, r("ServerPong")) },
         { json: "ServerSeatGranted", js: "ServerSeatGranted", typ: u(undefined, r("ServerSeatGranted")) },
@@ -726,10 +807,10 @@ const typeMap: any = {
     "AuthorityDeliver": o([
         { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
         { json: "gameSequence", js: "gameSequence", typ: 0 },
-        { json: "items", js: "items", typ: a(r("TypesSchema")) },
+        { json: "items", js: "items", typ: a(r("ItemElement")) },
         { json: "type", js: "type", typ: r("AuthorityDeliverType") },
     ], false),
-    "TypesSchema": o([
+    "ItemElement": o([
         { json: "payload", js: "payload", typ: "any" },
         { json: "to", js: "to", typ: "" },
         { json: "viewRevision", js: "viewRevision", typ: u(undefined, 0) },
@@ -755,7 +836,13 @@ const typeMap: any = {
         { json: "payload", js: "payload", typ: "any" },
         { json: "type", js: "type", typ: r("AuthorityRoundClosedType") },
     ], false),
+    "ClientAddAI": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "slot", js: "slot", typ: u(undefined, 0) },
+        { json: "type", js: "type", typ: r("ClientAddAIType") },
+    ], false),
     "ClientChat": o([
+        { json: "messageId", js: "messageId", typ: "" },
         { json: "text", js: "text", typ: "" },
         { json: "type", js: "type", typ: r("ClientChatType") },
     ], false),
@@ -791,6 +878,15 @@ const typeMap: any = {
         { json: "requestId", js: "requestId", typ: u(undefined, "") },
         { json: "type", js: "type", typ: r("ClientLeaveType") },
     ], false),
+    "ClientListGames": o([
+        { json: "type", js: "type", typ: r("ClientListGamesType") },
+    ], false),
+    "ClientMoveSlot": o([
+        { json: "memberId", js: "memberId", typ: "" },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "slot", js: "slot", typ: 0 },
+        { json: "type", js: "type", typ: r("ClientMoveSlotType") },
+    ], false),
     "ClientPing": o([
         { json: "nonce", js: "nonce", typ: "" },
         { json: "type", js: "type", typ: r("ClientPingType") },
@@ -798,6 +894,11 @@ const typeMap: any = {
     "ClientRecoverGame": o([
         { json: "requestId", js: "requestId", typ: u(undefined, "") },
         { json: "type", js: "type", typ: r("ClientRecoverGameType") },
+    ], false),
+    "ClientRemoveAI": o([
+        { json: "memberId", js: "memberId", typ: "" },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientRemoveAIType") },
     ], false),
     "ClientResume": o([
         { json: "code", js: "code", typ: u(undefined, "") },
@@ -840,6 +941,11 @@ const typeMap: any = {
         { json: "config", js: "config", typ: m("any") },
         { json: "requestId", js: "requestId", typ: u(undefined, "") },
         { json: "type", js: "type", typ: r("ClientSetConfigType") },
+    ], false),
+    "ClientSetProfile": o([
+        { json: "profile", js: "profile", typ: r("Profile") },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientSetProfileType") },
     ], false),
     "ClientSetReady": o([
         { json: "ready", js: "ready", typ: true },
@@ -945,11 +1051,19 @@ const typeMap: any = {
         { json: "type", js: "type", typ: r("ClientSyncType") },
     ], false),
     "ServerChat": o([
-        { json: "fromMemberId", js: "fromMemberId", typ: "" },
-        { json: "profile", js: "profile", typ: r("Profile") },
+        { json: "chatRevision", js: "chatRevision", typ: 0 },
+        { json: "fromMemberId", js: "fromMemberId", typ: u(undefined, "") },
+        { json: "kind", js: "kind", typ: r("Kind") },
+        { json: "messageId", js: "messageId", typ: "" },
+        { json: "profile", js: "profile", typ: u(undefined, r("Profile")) },
         { json: "sentAt", js: "sentAt", typ: 0 },
         { json: "text", js: "text", typ: "" },
         { json: "type", js: "type", typ: r("ClientChatType") },
+    ], false),
+    "ServerChatHistory": o([
+        { json: "chatRevision", js: "chatRevision", typ: 0 },
+        { json: "messages", js: "messages", typ: a(r("ServerChat")) },
+        { json: "type", js: "type", typ: r("ServerChatHistoryType") },
     ], false),
     "ServerError": o([
         { json: "code", js: "code", typ: "" },
@@ -978,6 +1092,16 @@ const typeMap: any = {
         { json: "handoffCode", js: "handoffCode", typ: "" },
         { json: "type", js: "type", typ: r("ClientGameHandoffType") },
         { json: "url", js: "url", typ: "" },
+    ], false),
+    "ServerGameList": o([
+        { json: "games", js: "games", typ: a(r("GameElement")) },
+        { json: "type", js: "type", typ: r("ServerGameListType") },
+    ], false),
+    "GameElement": o([
+        { json: "id", js: "id", typ: "" },
+        { json: "manifest", js: "manifest", typ: m("any") },
+        { json: "name", js: "name", typ: "" },
+        { json: "version", js: "version", typ: "" },
     ], false),
     "ServerNotice": o([
         { json: "code", js: "code", typ: "" },
@@ -1053,6 +1177,9 @@ const typeMap: any = {
     "AuthorityRoundClosedType": [
         "roundClosed",
     ],
+    "ClientAddAIType": [
+        "addAi",
+    ],
     "ClientChatType": [
         "chat",
     ],
@@ -1082,11 +1209,20 @@ const typeMap: any = {
     "ClientLeaveType": [
         "leave",
     ],
+    "ClientListGamesType": [
+        "listGames",
+    ],
+    "ClientMoveSlotType": [
+        "moveSlot",
+    ],
     "ClientPingType": [
         "ping",
     ],
     "ClientRecoverGameType": [
         "recoverGame",
+    ],
+    "ClientRemoveAIType": [
+        "removeAi",
     ],
     "ClientResumeType": [
         "resume",
@@ -1107,6 +1243,9 @@ const typeMap: any = {
     ],
     "ClientSetConfigType": [
         "setConfig",
+    ],
+    "ClientSetProfileType": [
+        "setProfile",
     ],
     "ClientSetReadyType": [
         "setReady",
@@ -1151,11 +1290,21 @@ const typeMap: any = {
     "PlatformStartType": [
         "start",
     ],
+    "Kind": [
+        "member",
+        "system",
+    ],
+    "ServerChatHistoryType": [
+        "chatHistory",
+    ],
     "ServerErrorType": [
         "error",
     ],
     "ServerGameGrantedType": [
         "gameGranted",
+    ],
+    "ServerGameListType": [
+        "gameList",
     ],
     "ServerNoticeType": [
         "notice",
@@ -1191,9 +1340,9 @@ const typeMap: any = {
     ],
 };
 
-export type ClientToPlatformMessage = ClientHello | ClientSessionCreate | ClientSessionJoin | ClientSessionProbe | ClientResume | ClientSetReady | ClientStartGame | ClientRecoverGame | ClientSetConfig | ClientSetSeatOptions | ClientLeave | ClientTransferHost | ClientKick | ClientCloseSession | ClientGame | ClientSync | ClientChat | ClientGameHandoff | ClientGameAuth | ClientPing;
+export type ClientToPlatformMessage = ClientHello | ClientSessionCreate | ClientSessionJoin | ClientSessionProbe | ClientResume | ClientSetReady | ClientStartGame | ClientRecoverGame | ClientSetConfig | ClientSetSeatOptions | ClientAddAI | ClientRemoveAI | ClientMoveSlot | ClientSetProfile | ClientLeave | ClientTransferHost | ClientKick | ClientCloseSession | ClientListGames | ClientGame | ClientSync | ClientChat | ClientGameHandoff | ClientGameAuth | ClientPing;
 
-export type PlatformToClientMessage = ServerWelcome | ServerSeatGranted | ServerSessionState | ServerSessionPreview | ServerGame | ServerChat | ServerGameHandoff | ServerGameGranted | ServerNotice | ServerError | ServerPong;
+export type PlatformToClientMessage = ServerWelcome | ServerSeatGranted | ServerSessionState | ServerSessionPreview | ServerGame | ServerChat | ServerChatHistory | ServerGameList | ServerGameHandoff | ServerGameGranted | ServerNotice | ServerError | ServerPong;
 
 export type PlatformToAuthorityMessage = PlatformStart | PlatformMemberJoin | PlatformMemberLeave | PlatformMemberResume | PlatformMemberUpdate | PlatformHostChanged | PlatformDeliver | PlatformSync | PlatformCloseSession | PlatformPing;
 

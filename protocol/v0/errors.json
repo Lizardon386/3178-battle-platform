@@ -12,6 +12,7 @@
     {"code":"NOTHOST","retryable":false,"summary":"只有房主能做这件事"},
     {"code":"HOSTONLY","retryable":false,"summary":"房主权限已移交，你不再是房主"},
     {"code":"PASSWORD","retryable":false,"summary":"会话密码错误或缺失"},
+    {"code":"COLOR","retryable":false,"summary":"身份色已被其他成员占用"},
     {"code":"PHASE","retryable":false,"summary":"当前进程或会话状态不允许该动作"},
     {"code":"RATE","retryable":true,"summary":"触发平台限流"},
     {"code":"SEATLOST","retryable":true,"summary":"座位已失效，可重新加入"},

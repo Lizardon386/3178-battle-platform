@@ -5,12 +5,14 @@
   "anyOf": [
     {"$ref":"#/$defs/ClientHello"},{"$ref":"#/$defs/ClientSessionCreate"},{"$ref":"#/$defs/ClientSessionJoin"},{"$ref":"#/$defs/ClientSessionProbe"},
     {"$ref":"#/$defs/ClientResume"},{"$ref":"#/$defs/ClientSetReady"},{"$ref":"#/$defs/ClientStartGame"},{"$ref":"#/$defs/ClientRecoverGame"},
-    {"$ref":"#/$defs/ClientSetConfig"},{"$ref":"#/$defs/ClientSetSeatOptions"},{"$ref":"#/$defs/ClientLeave"},
-    {"$ref":"#/$defs/ClientTransferHost"},{"$ref":"#/$defs/ClientKick"},{"$ref":"#/$defs/ClientCloseSession"},
+    {"$ref":"#/$defs/ClientSetConfig"},{"$ref":"#/$defs/ClientSetSeatOptions"},{"$ref":"#/$defs/ClientAddAI"},{"$ref":"#/$defs/ClientRemoveAI"},
+    {"$ref":"#/$defs/ClientMoveSlot"},{"$ref":"#/$defs/ClientSetProfile"},{"$ref":"#/$defs/ClientLeave"},
+    {"$ref":"#/$defs/ClientTransferHost"},{"$ref":"#/$defs/ClientKick"},{"$ref":"#/$defs/ClientCloseSession"},{"$ref":"#/$defs/ClientListGames"},
     {"$ref":"#/$defs/ClientGame"},{"$ref":"#/$defs/ClientSync"},{"$ref":"#/$defs/ClientChat"},{"$ref":"#/$defs/ClientGameHandoff"},
     {"$ref":"#/$defs/ClientGameAuth"},{"$ref":"#/$defs/ClientPing"},
     {"$ref":"#/$defs/ServerWelcome"},{"$ref":"#/$defs/ServerSeatGranted"},{"$ref":"#/$defs/ServerSessionState"},{"$ref":"#/$defs/ServerSessionPreview"},
-    {"$ref":"#/$defs/ServerGame"},{"$ref":"#/$defs/ServerChat"},{"$ref":"#/$defs/ServerGameHandoff"},{"$ref":"#/$defs/ServerGameGranted"},
+    {"$ref":"#/$defs/ServerGame"},{"$ref":"#/$defs/ServerChat"},{"$ref":"#/$defs/ServerChatHistory"},{"$ref":"#/$defs/ServerGameList"},
+    {"$ref":"#/$defs/ServerGameHandoff"},{"$ref":"#/$defs/ServerGameGranted"},
     {"$ref":"#/$defs/ServerNotice"},{"$ref":"#/$defs/ServerError"},{"$ref":"#/$defs/ServerPong"},
     {"$ref":"#/$defs/PlatformStart"},{"$ref":"#/$defs/PlatformMemberJoin"},{"$ref":"#/$defs/PlatformMemberLeave"},
     {"$ref":"#/$defs/PlatformMemberResume"},{"$ref":"#/$defs/PlatformMemberUpdate"},{"$ref":"#/$defs/PlatformHostChanged"},
@@ -52,6 +54,11 @@
     },
     "JsonObject": {"type":"object"},
     "Payload": {},
+    "GameEntry": {
+      "type":"object","required":["id","name","version","manifest"],"additionalProperties":false,
+      "properties":{"id":{"$ref":"#/$defs/GameId"},"name":{"type":"string","minLength":1,"maxLength":64},"version":{"$ref":"#/$defs/Version"},"manifest":{"$ref":"#/$defs/JsonObject"}}
+    },
+    "GameEntries": {"type":"array","items":{"$ref":"#/$defs/GameEntry"}},
     "Member": {
       "type":"object","required":["memberId","role","ready","profile","presence","gameConnected","options"],"additionalProperties":false,
       "properties": {
@@ -122,6 +129,22 @@
       "type":"object","required":["type","memberId","options"],"additionalProperties":false,
       "properties":{"type":{"const":"setSeatOptions"},"memberId":{"$ref":"#/$defs/MemberId"},"options":{"$ref":"#/$defs/JsonObject"},"requestId":{"$ref":"#/$defs/RequestId"}}
     },
+    "ClientAddAI": {
+      "type":"object","required":["type"],"additionalProperties":false,
+      "properties":{"type":{"const":"addAi"},"slot":{"$ref":"#/$defs/Slot"},"requestId":{"$ref":"#/$defs/RequestId"}}
+    },
+    "ClientRemoveAI": {
+      "type":"object","required":["type","memberId"],"additionalProperties":false,
+      "properties":{"type":{"const":"removeAi"},"memberId":{"$ref":"#/$defs/MemberId"},"requestId":{"$ref":"#/$defs/RequestId"}}
+    },
+    "ClientMoveSlot": {
+      "type":"object","required":["type","memberId","slot"],"additionalProperties":false,
+      "properties":{"type":{"const":"moveSlot"},"memberId":{"$ref":"#/$defs/MemberId"},"slot":{"$ref":"#/$defs/Slot"},"requestId":{"$ref":"#/$defs/RequestId"}}
+    },
+    "ClientSetProfile": {
+      "type":"object","required":["type","profile"],"additionalProperties":false,
+      "properties":{"type":{"const":"setProfile"},"profile":{"$ref":"#/$defs/Profile"},"requestId":{"$ref":"#/$defs/RequestId"}}
+    },
     "ClientLeave": {
       "type":"object","required":["type"],"additionalProperties":false,
       "properties":{"type":{"const":"leave"},"requestId":{"$ref":"#/$defs/RequestId"}}
@@ -138,6 +161,10 @@
       "type":"object","required":["type"],"additionalProperties":false,
       "properties":{"type":{"const":"closeSession"},"requestId":{"$ref":"#/$defs/RequestId"}}
     },
+    "ClientListGames": {
+      "type":"object","required":["type"],"additionalProperties":false,
+      "properties":{"type":{"const":"listGames"}}
+    },
     "ClientGame": {
       "type":"object","required":["type","actionId","payload"],"additionalProperties":false,
       "properties":{"type":{"const":"game"},"actionId":{"$ref":"#/$defs/ActionId"},"payload":{"$ref":"#/$defs/Payload"}}
@@ -147,8 +174,8 @@
       "properties":{"type":{"const":"sync"}}
     },
     "ClientChat": {
-      "type":"object","required":["type","text"],"additionalProperties":false,
-      "properties":{"type":{"const":"chat"},"text":{"$ref":"#/$defs/Text"}}
+      "type":"object","required":["type","messageId","text"],"additionalProperties":false,
+      "properties":{"type":{"const":"chat"},"messageId":{"$ref":"#/$defs/RequestId"},"text":{"$ref":"#/$defs/Text"}}
     },
     "ClientGameHandoff": {
       "type":"object","required":["type"],"additionalProperties":false,
@@ -185,8 +212,16 @@
       "properties":{"type":{"const":"game"},"fromMemberId":{"$ref":"#/$defs/MemberId"},"authorityEpoch":{"$ref":"#/$defs/AuthorityEpoch"},"gameSequence":{"$ref":"#/$defs/GameSequence"},"viewRevision":{"$ref":"#/$defs/ViewRevision"},"payload":{"$ref":"#/$defs/Payload"}}
     },
     "ServerChat": {
-      "type":"object","required":["type","fromMemberId","profile","text","sentAt"],"additionalProperties":false,
-      "properties":{"type":{"const":"chat"},"fromMemberId":{"$ref":"#/$defs/MemberId"},"profile":{"$ref":"#/$defs/Profile"},"text":{"$ref":"#/$defs/Text"},"sentAt":{"$ref":"#/$defs/EpochMs"}}
+      "type":"object","required":["type","kind","messageId","chatRevision","text","sentAt"],"additionalProperties":false,
+      "properties":{"type":{"const":"chat"},"kind":{"enum":["member","system"]},"messageId":{"$ref":"#/$defs/RequestId"},"chatRevision":{"type":"integer","minimum":0},"fromMemberId":{"$ref":"#/$defs/MemberId"},"profile":{"$ref":"#/$defs/Profile"},"text":{"$ref":"#/$defs/Text"},"sentAt":{"$ref":"#/$defs/EpochMs"}}
+    },
+    "ServerChatHistory": {
+      "type":"object","required":["type","chatRevision","messages"],"additionalProperties":false,
+      "properties":{"type":{"const":"chatHistory"},"chatRevision":{"type":"integer","minimum":0},"messages":{"type":"array","items":{"$ref":"#/$defs/ServerChat"},"maxItems":200}}
+    },
+    "ServerGameList": {
+      "type":"object","required":["type","games"],"additionalProperties":false,
+      "properties":{"type":{"const":"gameList"},"games":{"$ref":"#/$defs/GameEntries"}}
     },
     "ServerGameHandoff": {
       "type":"object","required":["type","url","handoffCode","expiresAt"],"additionalProperties":false,

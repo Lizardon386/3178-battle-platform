@@ -64,6 +64,9 @@ type SessionRecord = {
   nextMember: number;
   lastGameSequence: number;
   seenActions: Set<string>;
+  chatRevision: number;
+  chatSeq: number;
+  chatMessages: AnyMessage[];
 };
 export interface AuthorityEndpoint {
   receive(message: PlatformToAuthorityMessage): void;
@@ -158,6 +161,11 @@ export class MockSessionService {
       case 'setReady': this.setReady(client, message); break;
       case 'setConfig': this.setConfig(client, message); break;
       case 'setSeatOptions': this.setSeatOptions(client, message); break;
+      case 'addAi': this.addAi(client, message); break;
+      case 'removeAi': this.removeAi(client, message); break;
+      case 'moveSlot': this.moveSlot(client, message); break;
+      case 'setProfile': this.setProfile(client, message); break;
+      case 'listGames': this.listGames(client); break;
       case 'startGame': this.startGame(client); break;
       case 'recoverGame': this.recoverGame(client); break;
       case 'gameHandoff': this.gameHandoff(client); break;
@@ -247,6 +255,7 @@ export class MockSessionService {
       spectatorLimit: message.spectatorLimit ?? 8, password: message.password, members: [member],
       hostMemberId: 'm1', state: 'open', gameProcess: 'stopped', authorityEpoch: 0, revision: 0,
       nextMember: 2, lastGameSequence: 0, seenActions: new Set(),
+      chatRevision: 0, chatSeq: 0, chatMessages: [],
     };
     client.memberId = 'm1'; client.ticket = ticket;
     this.send(client, { type: 'seatGranted', memberId: 'm1', ticket, sessionCode: '893F', sessionId: 'sess-893F', profile: message.profile });
@@ -259,7 +268,16 @@ export class MockSessionService {
     if (message.gameId !== session.gameId || message.version !== session.version) { this.error(client, 'VERSION', '游戏版本不符'); return; }
     if (message.rulesHash !== session.rulesHash) { this.error(client, 'RULES', '玩法参数摘要不符'); return; }
     if (session.password && message.credentials.password !== session.password) { this.error(client, 'PASSWORD', '密码错误'); return; }
-    const role = (message.role ?? 'player') as MemberRecord['role'];
+    const color = message.profile.displayColor as string | undefined;
+    if (color && session.members.some((member) => member.profile.displayColor === color)) {
+      this.error(client, 'COLOR', '身份色已被其他成员占用'); return;
+    }
+    let role = (message.role ?? 'player') as MemberRecord['role'];
+    if (session.gameProcess !== 'stopped') {
+      const policy = session.manifest.lateJoin ?? 'spectator';
+      if (policy === 'deny') { this.error(client, 'PHASE', '会话已开始，不允许加入'); return; }
+      role = policy === 'player' ? 'player' : 'spectator';
+    }
     if (role === 'spectator') {
       const spectators = session.members.filter((member) => member.role === 'spectator').length;
       if (spectators >= session.spectatorLimit) { this.error(client, 'FULL', '观战席已满'); return; }
@@ -277,6 +295,8 @@ export class MockSessionService {
     session.members.push(member);
     client.memberId = memberId; client.ticket = ticket;
     this.send(client, { type: 'seatGranted', memberId, ticket, sessionCode: session.code, sessionId: session.id, profile: message.profile });
+    this.sendChatHistory(client, session);
+    this.systemChat(session, `${message.profile.nick} 加入了会话`);
     this.sendAuthority({ type: 'memberJoin', member: this.publicMember(member), authorityEpoch: session.authorityEpoch, revision: session.revision });
     this.bump();
   }
@@ -290,6 +310,7 @@ export class MockSessionService {
     member.presence = 'online'; member.graceUntil = undefined; member.connectionId = client.id;
     if (message.profile) member.profile = message.profile;
     this.send(client, { type: 'seatGranted', memberId: member.memberId, ticket: message.ticket, sessionCode: session.code, sessionId: session.id, profile: member.profile });
+    this.sendChatHistory(client, session);
     this.sendAuthority({ type: 'memberResume', memberId: member.memberId, profile: member.profile, authorityEpoch: session.authorityEpoch, revision: session.revision });
     this.bump();
   }
@@ -326,6 +347,75 @@ export class MockSessionService {
     this.bump();
   }
 
+  private addAi(client: MockClient, message: AnyMessage): void {
+    const session = this.current; if (!this.requireHost(client) || !session) return;
+    if (session.gameProcess !== 'stopped') { this.error(client, 'PHASE', '开始后不能添加电脑'); return; }
+    const used = new Set(session.members.map((member) => member.slot).filter((slot): slot is number => slot !== undefined));
+    let slot = message.slot as number | undefined;
+    if (slot === undefined) {
+      slot = undefined;
+      for (let candidate = 1; candidate <= session.memberSlots; candidate += 1) {
+        if (!used.has(candidate)) { slot = candidate; break; }
+      }
+    }
+    if (slot === undefined || slot < 1 || slot > session.memberSlots || used.has(slot)) {
+      this.error(client, 'FULL', '没有可用槽位'); return;
+    }
+    const options = normalizeFields(session.manifest.sessionConfig.seatOptions ?? [], {}, 'ai');
+    if (!options.ok) { this.error(client, 'CONFIG', options.error); return; }
+    const memberId = `m${session.nextMember}`;
+    session.nextMember += 1;
+    const member: MemberRecord = {
+      memberId, slot, role: 'ai', ready: false, profile: { nick: `电脑 ${slot}` },
+      presence: 'online', gameConnected: false, options: options.value,
+      ticketHash: hashSecret(newSecret('ticket')),
+    };
+    session.members.push(member);
+    this.systemChat(session, `${member.profile.nick} 加入了会话`);
+    this.bump();
+  }
+
+  private removeAi(client: MockClient, message: AnyMessage): void {
+    const session = this.current; if (!this.requireHost(client) || !session) return;
+    if (session.gameProcess !== 'stopped') { this.error(client, 'PHASE', '开始后不能移除电脑'); return; }
+    const member = session.members.find((item) => item.memberId === message.memberId);
+    if (!member || member.role !== 'ai') { this.error(client, 'NOSEAT', '目标不是电脑'); return; }
+    this.removeMember(member, 'left');
+  }
+
+  private moveSlot(client: MockClient, message: AnyMessage): void {
+    const session = this.current; if (!this.requireHost(client) || !session) return;
+    if (session.gameProcess !== 'stopped') { this.error(client, 'PHASE', '开始后不能移动槽位'); return; }
+    const member = session.members.find((item) => item.memberId === message.memberId);
+    if (!member || member.role === 'spectator') { this.error(client, 'NOSEAT', '目标成员没有槽位'); return; }
+    const slot = message.slot as number;
+    if (slot < 1 || slot > session.memberSlots) { this.error(client, 'FULL', '槽位越界'); return; }
+    if (session.members.some((item) => item.memberId !== member.memberId && item.slot === slot)) {
+      this.error(client, 'FULL', '槽位已被占用'); return;
+    }
+    member.slot = slot;
+    this.bump();
+  }
+
+  private setProfile(client: MockClient, message: AnyMessage): void {
+    const session = this.current;
+    const member = this.requireMember(client); if (!member || !session) return;
+    const color = message.profile.displayColor as string | undefined;
+    if (color && session.members.some((item) => item.memberId !== member.memberId && item.profile.displayColor === color)) {
+      this.error(client, 'COLOR', '身份色已被其他成员占用'); return;
+    }
+    member.profile = message.profile;
+    if (session.gameProcess === 'running') {
+      this.sendAuthority({ type: 'memberUpdate', memberId: member.memberId, ready: member.ready, profile: member.profile, options: member.options, authorityEpoch: session.authorityEpoch, revision: session.revision });
+    }
+    this.bump();
+  }
+
+  private listGames(client: MockClient): void {
+    const games = [...this.games.values()].map((manifest) => ({ id: manifest.id, name: manifest.name, version: manifest.version, manifest }));
+    this.send(client, { type: 'gameList', games });
+  }
+
   private startGame(client: MockClient): void {
     const session = this.current; if (!this.requireHost(client) || !session) return;
     if (session.gameProcess !== 'stopped') { this.error(client, 'PHASE', '游戏进程已经开始'); return; }
@@ -357,6 +447,7 @@ export class MockSessionService {
     if (!this.authorityFactory) { this.error(this.clients.find((client) => client.memberId === session.hostMemberId) ?? this.clients[0]!, 'GAMEFAILED', '没有可用的权威启动器'); return; }
     session.authorityEpoch += 1;
     this.revokeGameConnections();
+    this.systemChat(session, session.authorityEpoch === 1 ? '游戏已开始' : '游戏已恢复');
     session.gameProcess = 'starting';
     this.authorityStarts += 1;
     this.authority = this.authorityFactory();
@@ -419,7 +510,13 @@ export class MockSessionService {
 
   private chat(client: MockClient, message: AnyMessage): void {
     const member = this.requireMember(client); if (!member) return;
-    this.broadcastSession({ type: 'chat', fromMemberId: member.memberId, profile: member.profile, text: message.text, sentAt: Date.now() });
+    const session = this.current!;
+    if (session.chatMessages.some((item) =>
+      item.kind === 'member' && item.fromMemberId === member.memberId && item.messageId === message.messageId)) return;
+    this.appendChat(session, {
+      type: 'chat', kind: 'member', messageId: message.messageId, chatRevision: session.chatRevision + 1,
+      fromMemberId: member.memberId, profile: member.profile, text: message.text, sentAt: this.now(),
+    });
   }
 
   private leave(client: MockClient, reason: 'left' | 'kicked'): void {
@@ -443,6 +540,7 @@ export class MockSessionService {
     if (!target) { this.error(client, 'NOSEAT', '接任者必须是真人玩家'); return; }
     session.lastHostMemberId = session.hostMemberId;
     session.hostMemberId = target.memberId;
+    this.systemChat(session, `${target.profile.nick} 成为房主`);
     this.sendAuthority({ type: 'hostChanged', hostMemberId: target.memberId, authorityEpoch: session.authorityEpoch, revision: session.revision });
     this.bump();
   }
@@ -455,6 +553,7 @@ export class MockSessionService {
   private shutdownSession(session: SessionRecord, reason: string): void {
     if (session.state === 'closed') return;
     session.state = 'closing';
+    this.systemChat(session, '会话已关闭');
     this.bump();
     this.sendAuthority({ type: 'closeSession', reason, authorityEpoch: session.authorityEpoch });
     this.broadcastAll({ type: 'notice', code: 'ROOM_CLOSED', text: '会话已关闭' });
@@ -466,6 +565,10 @@ export class MockSessionService {
 
   private removeMember(member: MemberRecord, reason: 'left' | 'kicked' | 'expired'): void {
     const session = this.current!;
+    const text = reason === 'kicked' ? `${member.profile.nick} 被请出会话`
+      : reason === 'expired' ? `${member.profile.nick} 的宽限已到期`
+        : `${member.profile.nick} 离开了会话`;
+    this.systemChat(session, text);
     this.sendAuthority({ type: 'memberLeave', memberId: member.memberId, reason, authorityEpoch: session.authorityEpoch, revision: session.revision });
     this.revokeGameConnection(member);
     session.members = session.members.filter((item) => item.memberId !== member.memberId);
@@ -581,6 +684,25 @@ export class MockSessionService {
 
   private broadcastAll(message: AnyMessage): void {
     for (const client of this.clients.filter((client) => client.connected)) this.send(client, message);
+  }
+
+  private sendChatHistory(client: MockClient, session: SessionRecord): void {
+    this.send(client, { type: 'chatHistory', chatRevision: session.chatRevision, messages: session.chatMessages });
+  }
+
+  private systemChat(session: SessionRecord, text: string): void {
+    session.chatSeq += 1;
+    this.appendChat(session, {
+      type: 'chat', kind: 'system', messageId: `sys-${session.chatSeq}`, chatRevision: session.chatRevision + 1,
+      text, sentAt: this.now(),
+    });
+  }
+
+  private appendChat(session: SessionRecord, message: AnyMessage): void {
+    session.chatRevision = message.chatRevision as number;
+    session.chatMessages.push(message);
+    if (session.chatMessages.length > 200) session.chatMessages.shift();
+    this.broadcastSession(message);
   }
 
   /** 推进宽限时钟；真实服务由定时器调用，mock 由测试显式调用。 */
