@@ -25,7 +25,7 @@ test('协议 v0 生成物与 schema/catalog 无漂移', () => {
   assert.match(result.stdout, /生成物一致/);
 });
 
-test('TS → Python → TS：41 条 golden 经生成转换类逐条互解', (t) => {
+test(`TS → Python → TS：${golden.length} 条 golden 经生成转换类逐条互解`, (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-v0-interop-'));
   t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
   const input = path.join(temp, 'from-ts.json');
@@ -34,7 +34,7 @@ test('TS → Python → TS：41 条 golden 经生成转换类逐条互解', (t) 
   const script = path.join(repoRoot, 'tools/testkit/fixtures/protocol-v0/roundtrip.py');
   const result = spawnSync('python', ['-I', '-X', 'utf8', script, input, output], { cwd: repoRoot, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(result.stdout, /41 messages/);
+  assert.match(result.stdout, new RegExp(`${golden.length} messages`));
   const returned = JSON.parse(fs.readFileSync(output, 'utf8'));
   assert.equal(returned.length, golden.length);
   const byName = new Map(enriched.map((entry) => [entry.name, entry]));

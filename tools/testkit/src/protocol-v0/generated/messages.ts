@@ -23,13 +23,16 @@ export interface ProtocolTypes {
     ClientKick?:           ClientKick;
     ClientLeave?:          ClientLeave;
     ClientPing?:           ClientPing;
+    ClientRecoverGame?:    ClientRecoverGame;
     ClientResume?:         ClientResume;
     ClientSessionCreate?:  ClientSessionCreate;
     ClientSessionJoin?:    ClientSessionJoin;
+    ClientSessionProbe?:   ClientSessionProbe;
     ClientSetConfig?:      ClientSetConfig;
     ClientSetReady?:       ClientSetReady;
     ClientSetSeatOptions?: ClientSetSeatOptions;
     ClientStartGame?:      ClientStartGame;
+    ClientSync?:           ClientSync;
     ClientTransferHost?:   ClientTransferHost;
     PlatformCloseSession?: PlatformCloseSession;
     PlatformDeliver?:      PlatformDeliver;
@@ -40,6 +43,7 @@ export interface ProtocolTypes {
     PlatformMemberUpdate?: PlatformMemberUpdate;
     PlatformPing?:         PlatformPing;
     PlatformStart?:        PlatformStart;
+    PlatformSync?:         PlatformSync;
     ServerChat?:           ServerChat;
     ServerError?:          ServerError;
     ServerGame?:           ServerGame;
@@ -48,29 +52,32 @@ export interface ProtocolTypes {
     ServerNotice?:         ServerNotice;
     ServerPong?:           ServerPong;
     ServerSeatGranted?:    ServerSeatGranted;
+    ServerSessionPreview?: ServerSessionPreview;
     ServerSessionState?:   ServerSessionState;
     ServerWelcome?:        ServerWelcome;
 }
 
 export interface AuthorityDeliver {
-    items: [ItemElement, ...ItemElement[]];
-    type:  AuthorityDeliverType;
+    authorityEpoch: number;
+    gameSequence:   number;
+    items:          [TypesSchema, ...TypesSchema[]];
+    type:           AuthorityDeliverType;
 }
 
-export interface ItemElement {
-    payload: unknown;
-    to:      ToEnum | number;
+export interface TypesSchema {
+    payload:       unknown;
+    to:            string;
+    viewRevision?: number;
 }
-
-export type ToEnum = "all";
 
 export type AuthorityDeliverType = "deliver";
 
 export interface AuthorityError {
-    code:  string;
-    fatal: boolean;
-    text:  string;
-    type:  AuthorityErrorType;
+    authorityEpoch: number;
+    code:           string;
+    fatal:          boolean;
+    text:           string;
+    type:           AuthorityErrorType;
 }
 
 export type AuthorityErrorType = "authorityError";
@@ -83,8 +90,9 @@ export interface AuthorityPong {
 export type AuthorityPongType = "pong";
 
 export interface AuthorityReady {
-    processStatus: ProcessStatus;
-    type:          AuthorityReadyType;
+    authorityEpoch: number;
+    processStatus:  ProcessStatus;
+    type:           AuthorityReadyType;
 }
 
 export type ProcessStatus = "running";
@@ -92,8 +100,9 @@ export type ProcessStatus = "running";
 export type AuthorityReadyType = "authorityReady";
 
 export interface AuthorityRoundClosed {
-    payload: unknown;
-    type:    AuthorityRoundClosedType;
+    authorityEpoch: number;
+    payload:        unknown;
+    type:           AuthorityRoundClosedType;
 }
 
 export type AuthorityRoundClosedType = "roundClosed";
@@ -106,14 +115,16 @@ export interface ClientChat {
 export type ClientChatType = "chat";
 
 export interface ClientCloseSession {
-    type: ClientCloseSessionType;
+    requestId?: string;
+    type:       ClientCloseSessionType;
 }
 
 export type ClientCloseSessionType = "closeSession";
 
 export interface ClientGame {
-    payload: unknown;
-    type:    ClientGameType;
+    actionId: string;
+    payload:  unknown;
+    type:     ClientGameType;
 }
 
 export type ClientGameType = "game";
@@ -144,14 +155,16 @@ export type ClientKind = "native" | "web" | "mobile";
 export type ClientHelloType = "hello";
 
 export interface ClientKick {
-    targetSeat: number;
-    type:       ClientKickType;
+    requestId?:     string;
+    targetMemberId: string;
+    type:           ClientKickType;
 }
 
 export type ClientKickType = "kick";
 
 export interface ClientLeave {
-    type: ClientLeaveType;
+    requestId?: string;
+    type:       ClientLeaveType;
 }
 
 export type ClientLeaveType = "leave";
@@ -163,11 +176,19 @@ export interface ClientPing {
 
 export type ClientPingType = "ping";
 
+export interface ClientRecoverGame {
+    requestId?: string;
+    type:       ClientRecoverGameType;
+}
+
+export type ClientRecoverGameType = "recoverGame";
+
 export interface ClientResume {
-    code:     string;
-    profile?: Profile;
-    ticket:   string;
-    type:     ClientResumeType;
+    code?:     string;
+    profile?:  Profile;
+    sessionId: string;
+    ticket:    string;
+    type:      ClientResumeType;
 }
 
 export interface Profile {
@@ -179,15 +200,16 @@ export interface Profile {
 export type ClientResumeType = "resume";
 
 export interface ClientSessionCreate {
-    config:      { [key: string]: unknown };
-    gameId:      string;
-    memberSlots: number;
-    options:     { [key: string]: unknown };
-    password?:   string;
-    profile:     Profile;
-    roomName:    string;
-    type:        ClientSessionCreateType;
-    version:     string;
+    config:          { [key: string]: unknown };
+    gameId:          string;
+    memberSlots:     number;
+    options:         { [key: string]: unknown };
+    password?:       string;
+    profile:         Profile;
+    roomName:        string;
+    spectatorLimit?: number;
+    type:            ClientSessionCreateType;
+    version:         string;
 }
 
 export type ClientSessionCreateType = "sessionCreate";
@@ -197,114 +219,142 @@ export interface ClientSessionJoin {
     credentials: { [key: string]: unknown };
     gameId:      string;
     profile:     Profile;
+    role?:       Role;
     rulesHash:   string;
     type:        ClientSessionJoinType;
     version:     string;
 }
 
+export type Role = "player" | "ai" | "spectator";
+
 export type ClientSessionJoinType = "sessionJoin";
 
+export interface ClientSessionProbe {
+    code: string;
+    type: ClientSessionProbeType;
+}
+
+export type ClientSessionProbeType = "sessionProbe";
+
 export interface ClientSetConfig {
-    config: { [key: string]: unknown };
-    type:   ClientSetConfigType;
+    config:     { [key: string]: unknown };
+    requestId?: string;
+    type:       ClientSetConfigType;
 }
 
 export type ClientSetConfigType = "setConfig";
 
 export interface ClientSetReady {
-    ready: boolean;
-    type:  ClientSetReadyType;
+    ready:      boolean;
+    requestId?: string;
+    type:       ClientSetReadyType;
 }
 
 export type ClientSetReadyType = "setReady";
 
 export interface ClientSetSeatOptions {
-    options: { [key: string]: unknown };
-    seatId:  number;
-    type:    ClientSetSeatOptionsType;
+    memberId:   string;
+    options:    { [key: string]: unknown };
+    requestId?: string;
+    type:       ClientSetSeatOptionsType;
 }
 
 export type ClientSetSeatOptionsType = "setSeatOptions";
 
 export interface ClientStartGame {
-    type: ClientStartGameType;
+    requestId?: string;
+    type:       ClientStartGameType;
 }
 
 export type ClientStartGameType = "startGame";
 
+export interface ClientSync {
+    type: ClientSyncType;
+}
+
+export type ClientSyncType = "sync";
+
 export interface ClientTransferHost {
-    targetSeat: number;
-    type:       ClientTransferHostType;
+    requestId?:     string;
+    targetMemberId: string;
+    type:           ClientTransferHostType;
 }
 
 export type ClientTransferHostType = "transferHost";
 
 export interface PlatformCloseSession {
-    reason: string;
-    type:   ClientCloseSessionType;
+    authorityEpoch: number;
+    reason:         string;
+    type:           ClientCloseSessionType;
 }
 
 export interface PlatformDeliver {
-    fromSeat: number;
-    payload:  unknown;
-    revision: number;
-    type:     AuthorityDeliverType;
+    actionId:       string;
+    authorityEpoch: number;
+    fromMemberId:   string;
+    payload:        unknown;
+    revision:       number;
+    type:           AuthorityDeliverType;
 }
 
 export interface PlatformHostChanged {
-    hostSeatId: number;
-    revision:   number;
-    type:       PlatformHostChangedType;
+    authorityEpoch: number;
+    hostMemberId:   string;
+    revision:       number;
+    type:           PlatformHostChangedType;
 }
 
 export type PlatformHostChangedType = "hostChanged";
 
 export interface PlatformMemberJoin {
-    member:   Member;
-    revision: number;
-    type:     PlatformMemberJoinType;
+    authorityEpoch: number;
+    member:         Member;
+    revision:       number;
+    type:           PlatformMemberJoinType;
 }
 
 export interface Member {
     connected: boolean;
-    kind:      Kind;
+    memberId:  string;
     options:   { [key: string]: unknown };
     profile:   Profile;
     ready:     boolean;
-    seatId:    number;
+    role:      Role;
+    slot?:     number;
 }
-
-export type Kind = "player" | "ai" | "spectator";
 
 export type PlatformMemberJoinType = "memberJoin";
 
 export interface PlatformMemberLeave {
-    reason:   Reason;
-    revision: number;
-    seatId:   number;
-    type:     PlatformMemberLeaveType;
+    authorityEpoch: number;
+    memberId:       string;
+    reason:         Reason;
+    revision:       number;
+    type:           PlatformMemberLeaveType;
 }
 
-export type Reason = "disconnected" | "left" | "kicked";
+export type Reason = "disconnected" | "left" | "kicked" | "expired";
 
 export type PlatformMemberLeaveType = "memberLeave";
 
 export interface PlatformMemberResume {
-    profile:  Profile;
-    revision: number;
-    seatId:   number;
-    type:     PlatformMemberResumeType;
+    authorityEpoch: number;
+    memberId:       string;
+    profile:        Profile;
+    revision:       number;
+    type:           PlatformMemberResumeType;
 }
 
 export type PlatformMemberResumeType = "memberResume";
 
 export interface PlatformMemberUpdate {
-    options:  { [key: string]: unknown };
-    profile:  Profile;
-    ready:    boolean;
-    revision: number;
-    seatId:   number;
-    type:     PlatformMemberUpdateType;
+    authorityEpoch: number;
+    memberId:       string;
+    options:        { [key: string]: unknown };
+    profile:        Profile;
+    ready:          boolean;
+    revision:       number;
+    type:           PlatformMemberUpdateType;
 }
 
 export type PlatformMemberUpdateType = "memberUpdate";
@@ -315,46 +365,59 @@ export interface PlatformPing {
 }
 
 export interface PlatformStart {
-    gameId:        string;
-    hostSeatId:    number;
-    members:       Member[];
-    revision:      number;
-    sessionCode:   string;
-    sessionConfig: { [key: string]: unknown };
-    type:          PlatformStartType;
-    version:       string;
+    authorityEpoch: number;
+    gameId:         string;
+    hostMemberId:   string;
+    members:        Member[];
+    revision:       number;
+    sessionCode:    string;
+    sessionConfig:  { [key: string]: unknown };
+    sessionId:      string;
+    type:           PlatformStartType;
+    version:        string;
 }
 
 export type PlatformStartType = "start";
 
+export interface PlatformSync {
+    authorityEpoch: number;
+    memberId:       string;
+    type:           ClientSyncType;
+}
+
 export interface ServerChat {
-    fromSeat: number;
-    profile:  Profile;
-    sentAt:   number;
-    text:     string;
-    type:     ClientChatType;
+    fromMemberId: string;
+    profile:      Profile;
+    sentAt:       number;
+    text:         string;
+    type:         ClientChatType;
 }
 
 export interface ServerError {
-    code:     string;
-    details?: { [key: string]: unknown };
-    text:     string;
-    type:     ServerErrorType;
+    code:       string;
+    details?:   { [key: string]: unknown };
+    requestId?: string;
+    text:       string;
+    type:       ServerErrorType;
 }
 
 export type ServerErrorType = "error";
 
 export interface ServerGame {
-    fromSeat?: number;
-    payload:   unknown;
-    type:      ClientGameType;
+    authorityEpoch: number;
+    fromMemberId?:  string;
+    gameSequence:   number;
+    payload:        unknown;
+    type:           ClientGameType;
+    viewRevision?:  number;
 }
 
 export interface ServerGameGranted {
-    gameTicket: string;
-    seatId:     number;
-    sessionId:  string;
-    type:       ServerGameGrantedType;
+    authorityEpoch: number;
+    gameTicket:     string;
+    memberId:       string;
+    sessionId:      string;
+    type:           ServerGameGrantedType;
 }
 
 export type ServerGameGrantedType = "gameGranted";
@@ -380,29 +443,58 @@ export interface ServerPong {
 }
 
 export interface ServerSeatGranted {
+    memberId:    string;
     profile:     Profile;
-    seatId:      number;
     sessionCode: string;
+    sessionId:   string;
     ticket:      string;
     type:        ServerSeatGrantedType;
 }
 
 export type ServerSeatGrantedType = "seatGranted";
 
+export interface ServerSessionPreview {
+    code:                 string;
+    config:               { [key: string]: unknown };
+    gameId:               string;
+    lateJoin:             LateJoin;
+    manifest:             { [key: string]: unknown };
+    manifestHash:         string;
+    memberSlots:          number;
+    name:                 string;
+    requiredCapabilities: string[];
+    rulesHash:            string;
+    spectatorLimit:       number;
+    type:                 ServerSessionPreviewType;
+    version:              string;
+}
+
+export type LateJoin = "spectator" | "player" | "deny";
+
+export type ServerSessionPreviewType = "sessionPreview";
+
 export interface ServerSessionState {
-    code:        string;
-    gameProcess: GameProcess;
-    hostSeatId:  number;
-    members:     Member[];
-    revision:    number;
-    sessionId:   string;
-    state:       State;
-    type:        ServerSessionStateType;
+    authorityEpoch: number;
+    code:           string;
+    config:         { [key: string]: unknown };
+    gameId:         string;
+    gameProcess:    GameProcess;
+    hostMemberId:   string;
+    members:        Member[];
+    memberSlots:    number;
+    name:           string;
+    revision:       number;
+    rulesHash:      string;
+    sessionId:      string;
+    spectatorLimit: number;
+    state:          State;
+    type:           ServerSessionStateType;
+    version:        string;
 }
 
 export type GameProcess = "stopped" | "starting" | "running" | "failed" | "exited";
 
-export type State = "open" | "closed";
+export type State = "open" | "closing" | "closed";
 
 export type ServerSessionStateType = "sessionState";
 
@@ -595,13 +687,16 @@ const typeMap: any = {
         { json: "ClientKick", js: "ClientKick", typ: u(undefined, r("ClientKick")) },
         { json: "ClientLeave", js: "ClientLeave", typ: u(undefined, r("ClientLeave")) },
         { json: "ClientPing", js: "ClientPing", typ: u(undefined, r("ClientPing")) },
+        { json: "ClientRecoverGame", js: "ClientRecoverGame", typ: u(undefined, r("ClientRecoverGame")) },
         { json: "ClientResume", js: "ClientResume", typ: u(undefined, r("ClientResume")) },
         { json: "ClientSessionCreate", js: "ClientSessionCreate", typ: u(undefined, r("ClientSessionCreate")) },
         { json: "ClientSessionJoin", js: "ClientSessionJoin", typ: u(undefined, r("ClientSessionJoin")) },
+        { json: "ClientSessionProbe", js: "ClientSessionProbe", typ: u(undefined, r("ClientSessionProbe")) },
         { json: "ClientSetConfig", js: "ClientSetConfig", typ: u(undefined, r("ClientSetConfig")) },
         { json: "ClientSetReady", js: "ClientSetReady", typ: u(undefined, r("ClientSetReady")) },
         { json: "ClientSetSeatOptions", js: "ClientSetSeatOptions", typ: u(undefined, r("ClientSetSeatOptions")) },
         { json: "ClientStartGame", js: "ClientStartGame", typ: u(undefined, r("ClientStartGame")) },
+        { json: "ClientSync", js: "ClientSync", typ: u(undefined, r("ClientSync")) },
         { json: "ClientTransferHost", js: "ClientTransferHost", typ: u(undefined, r("ClientTransferHost")) },
         { json: "PlatformCloseSession", js: "PlatformCloseSession", typ: u(undefined, r("PlatformCloseSession")) },
         { json: "PlatformDeliver", js: "PlatformDeliver", typ: u(undefined, r("PlatformDeliver")) },
@@ -612,6 +707,7 @@ const typeMap: any = {
         { json: "PlatformMemberUpdate", js: "PlatformMemberUpdate", typ: u(undefined, r("PlatformMemberUpdate")) },
         { json: "PlatformPing", js: "PlatformPing", typ: u(undefined, r("PlatformPing")) },
         { json: "PlatformStart", js: "PlatformStart", typ: u(undefined, r("PlatformStart")) },
+        { json: "PlatformSync", js: "PlatformSync", typ: u(undefined, r("PlatformSync")) },
         { json: "ServerChat", js: "ServerChat", typ: u(undefined, r("ServerChat")) },
         { json: "ServerError", js: "ServerError", typ: u(undefined, r("ServerError")) },
         { json: "ServerGame", js: "ServerGame", typ: u(undefined, r("ServerGame")) },
@@ -620,18 +716,23 @@ const typeMap: any = {
         { json: "ServerNotice", js: "ServerNotice", typ: u(undefined, r("ServerNotice")) },
         { json: "ServerPong", js: "ServerPong", typ: u(undefined, r("ServerPong")) },
         { json: "ServerSeatGranted", js: "ServerSeatGranted", typ: u(undefined, r("ServerSeatGranted")) },
+        { json: "ServerSessionPreview", js: "ServerSessionPreview", typ: u(undefined, r("ServerSessionPreview")) },
         { json: "ServerSessionState", js: "ServerSessionState", typ: u(undefined, r("ServerSessionState")) },
         { json: "ServerWelcome", js: "ServerWelcome", typ: u(undefined, r("ServerWelcome")) },
     ], false),
     "AuthorityDeliver": o([
-        { json: "items", js: "items", typ: a(r("ItemElement")) },
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
+        { json: "gameSequence", js: "gameSequence", typ: 0 },
+        { json: "items", js: "items", typ: a(r("TypesSchema")) },
         { json: "type", js: "type", typ: r("AuthorityDeliverType") },
     ], false),
-    "ItemElement": o([
+    "TypesSchema": o([
         { json: "payload", js: "payload", typ: "any" },
-        { json: "to", js: "to", typ: u(r("ToEnum"), 0) },
+        { json: "to", js: "to", typ: "" },
+        { json: "viewRevision", js: "viewRevision", typ: u(undefined, 0) },
     ], false),
     "AuthorityError": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
         { json: "code", js: "code", typ: "" },
         { json: "fatal", js: "fatal", typ: true },
         { json: "text", js: "text", typ: "" },
@@ -642,10 +743,12 @@ const typeMap: any = {
         { json: "type", js: "type", typ: r("AuthorityPongType") },
     ], false),
     "AuthorityReady": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
         { json: "processStatus", js: "processStatus", typ: r("ProcessStatus") },
         { json: "type", js: "type", typ: r("AuthorityReadyType") },
     ], false),
     "AuthorityRoundClosed": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
         { json: "payload", js: "payload", typ: "any" },
         { json: "type", js: "type", typ: r("AuthorityRoundClosedType") },
     ], false),
@@ -654,9 +757,11 @@ const typeMap: any = {
         { json: "type", js: "type", typ: r("ClientChatType") },
     ], false),
     "ClientCloseSession": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
         { json: "type", js: "type", typ: r("ClientCloseSessionType") },
     ], false),
     "ClientGame": o([
+        { json: "actionId", js: "actionId", typ: "" },
         { json: "payload", js: "payload", typ: "any" },
         { json: "type", js: "type", typ: r("ClientGameType") },
     ], false),
@@ -675,19 +780,26 @@ const typeMap: any = {
         { json: "type", js: "type", typ: r("ClientHelloType") },
     ], false),
     "ClientKick": o([
-        { json: "targetSeat", js: "targetSeat", typ: 0 },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "targetMemberId", js: "targetMemberId", typ: "" },
         { json: "type", js: "type", typ: r("ClientKickType") },
     ], false),
     "ClientLeave": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
         { json: "type", js: "type", typ: r("ClientLeaveType") },
     ], false),
     "ClientPing": o([
         { json: "nonce", js: "nonce", typ: "" },
         { json: "type", js: "type", typ: r("ClientPingType") },
     ], false),
+    "ClientRecoverGame": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientRecoverGameType") },
+    ], false),
     "ClientResume": o([
-        { json: "code", js: "code", typ: "" },
+        { json: "code", js: "code", typ: u(undefined, "") },
         { json: "profile", js: "profile", typ: u(undefined, r("Profile")) },
+        { json: "sessionId", js: "sessionId", typ: "" },
         { json: "ticket", js: "ticket", typ: "" },
         { json: "type", js: "type", typ: r("ClientResumeType") },
     ], false),
@@ -704,6 +816,7 @@ const typeMap: any = {
         { json: "password", js: "password", typ: u(undefined, "") },
         { json: "profile", js: "profile", typ: r("Profile") },
         { json: "roomName", js: "roomName", typ: "" },
+        { json: "spectatorLimit", js: "spectatorLimit", typ: u(undefined, 0) },
         { json: "type", js: "type", typ: r("ClientSessionCreateType") },
         { json: "version", js: "version", typ: "" },
     ], false),
@@ -712,76 +825,98 @@ const typeMap: any = {
         { json: "credentials", js: "credentials", typ: m("any") },
         { json: "gameId", js: "gameId", typ: "" },
         { json: "profile", js: "profile", typ: r("Profile") },
+        { json: "role", js: "role", typ: u(undefined, r("Role")) },
         { json: "rulesHash", js: "rulesHash", typ: "" },
         { json: "type", js: "type", typ: r("ClientSessionJoinType") },
         { json: "version", js: "version", typ: "" },
     ], false),
+    "ClientSessionProbe": o([
+        { json: "code", js: "code", typ: "" },
+        { json: "type", js: "type", typ: r("ClientSessionProbeType") },
+    ], false),
     "ClientSetConfig": o([
         { json: "config", js: "config", typ: m("any") },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
         { json: "type", js: "type", typ: r("ClientSetConfigType") },
     ], false),
     "ClientSetReady": o([
         { json: "ready", js: "ready", typ: true },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
         { json: "type", js: "type", typ: r("ClientSetReadyType") },
     ], false),
     "ClientSetSeatOptions": o([
+        { json: "memberId", js: "memberId", typ: "" },
         { json: "options", js: "options", typ: m("any") },
-        { json: "seatId", js: "seatId", typ: 0 },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
         { json: "type", js: "type", typ: r("ClientSetSeatOptionsType") },
     ], false),
     "ClientStartGame": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
         { json: "type", js: "type", typ: r("ClientStartGameType") },
     ], false),
+    "ClientSync": o([
+        { json: "type", js: "type", typ: r("ClientSyncType") },
+    ], false),
     "ClientTransferHost": o([
-        { json: "targetSeat", js: "targetSeat", typ: 0 },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "targetMemberId", js: "targetMemberId", typ: "" },
         { json: "type", js: "type", typ: r("ClientTransferHostType") },
     ], false),
     "PlatformCloseSession": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
         { json: "reason", js: "reason", typ: "" },
         { json: "type", js: "type", typ: r("ClientCloseSessionType") },
     ], false),
     "PlatformDeliver": o([
-        { json: "fromSeat", js: "fromSeat", typ: 0 },
+        { json: "actionId", js: "actionId", typ: "" },
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
+        { json: "fromMemberId", js: "fromMemberId", typ: "" },
         { json: "payload", js: "payload", typ: "any" },
         { json: "revision", js: "revision", typ: 0 },
         { json: "type", js: "type", typ: r("AuthorityDeliverType") },
     ], false),
     "PlatformHostChanged": o([
-        { json: "hostSeatId", js: "hostSeatId", typ: 0 },
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
+        { json: "hostMemberId", js: "hostMemberId", typ: "" },
         { json: "revision", js: "revision", typ: 0 },
         { json: "type", js: "type", typ: r("PlatformHostChangedType") },
     ], false),
     "PlatformMemberJoin": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
         { json: "member", js: "member", typ: r("Member") },
         { json: "revision", js: "revision", typ: 0 },
         { json: "type", js: "type", typ: r("PlatformMemberJoinType") },
     ], false),
     "Member": o([
         { json: "connected", js: "connected", typ: true },
-        { json: "kind", js: "kind", typ: r("Kind") },
+        { json: "memberId", js: "memberId", typ: "" },
         { json: "options", js: "options", typ: m("any") },
         { json: "profile", js: "profile", typ: r("Profile") },
         { json: "ready", js: "ready", typ: true },
-        { json: "seatId", js: "seatId", typ: 0 },
+        { json: "role", js: "role", typ: r("Role") },
+        { json: "slot", js: "slot", typ: u(undefined, 0) },
     ], false),
     "PlatformMemberLeave": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
+        { json: "memberId", js: "memberId", typ: "" },
         { json: "reason", js: "reason", typ: r("Reason") },
         { json: "revision", js: "revision", typ: 0 },
-        { json: "seatId", js: "seatId", typ: 0 },
         { json: "type", js: "type", typ: r("PlatformMemberLeaveType") },
     ], false),
     "PlatformMemberResume": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
+        { json: "memberId", js: "memberId", typ: "" },
         { json: "profile", js: "profile", typ: r("Profile") },
         { json: "revision", js: "revision", typ: 0 },
-        { json: "seatId", js: "seatId", typ: 0 },
         { json: "type", js: "type", typ: r("PlatformMemberResumeType") },
     ], false),
     "PlatformMemberUpdate": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
+        { json: "memberId", js: "memberId", typ: "" },
         { json: "options", js: "options", typ: m("any") },
         { json: "profile", js: "profile", typ: r("Profile") },
         { json: "ready", js: "ready", typ: true },
         { json: "revision", js: "revision", typ: 0 },
-        { json: "seatId", js: "seatId", typ: 0 },
         { json: "type", js: "type", typ: r("PlatformMemberUpdateType") },
     ], false),
     "PlatformPing": o([
@@ -789,17 +924,24 @@ const typeMap: any = {
         { json: "type", js: "type", typ: r("ClientPingType") },
     ], false),
     "PlatformStart": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
         { json: "gameId", js: "gameId", typ: "" },
-        { json: "hostSeatId", js: "hostSeatId", typ: 0 },
+        { json: "hostMemberId", js: "hostMemberId", typ: "" },
         { json: "members", js: "members", typ: a(r("Member")) },
         { json: "revision", js: "revision", typ: 0 },
         { json: "sessionCode", js: "sessionCode", typ: "" },
         { json: "sessionConfig", js: "sessionConfig", typ: m("any") },
+        { json: "sessionId", js: "sessionId", typ: "" },
         { json: "type", js: "type", typ: r("PlatformStartType") },
         { json: "version", js: "version", typ: "" },
     ], false),
+    "PlatformSync": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
+        { json: "memberId", js: "memberId", typ: "" },
+        { json: "type", js: "type", typ: r("ClientSyncType") },
+    ], false),
     "ServerChat": o([
-        { json: "fromSeat", js: "fromSeat", typ: 0 },
+        { json: "fromMemberId", js: "fromMemberId", typ: "" },
         { json: "profile", js: "profile", typ: r("Profile") },
         { json: "sentAt", js: "sentAt", typ: 0 },
         { json: "text", js: "text", typ: "" },
@@ -808,17 +950,22 @@ const typeMap: any = {
     "ServerError": o([
         { json: "code", js: "code", typ: "" },
         { json: "details", js: "details", typ: u(undefined, m("any")) },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
         { json: "text", js: "text", typ: "" },
         { json: "type", js: "type", typ: r("ServerErrorType") },
     ], false),
     "ServerGame": o([
-        { json: "fromSeat", js: "fromSeat", typ: u(undefined, 0) },
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
+        { json: "fromMemberId", js: "fromMemberId", typ: u(undefined, "") },
+        { json: "gameSequence", js: "gameSequence", typ: 0 },
         { json: "payload", js: "payload", typ: "any" },
         { json: "type", js: "type", typ: r("ClientGameType") },
+        { json: "viewRevision", js: "viewRevision", typ: u(undefined, 0) },
     ], false),
     "ServerGameGranted": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
         { json: "gameTicket", js: "gameTicket", typ: "" },
-        { json: "seatId", js: "seatId", typ: 0 },
+        { json: "memberId", js: "memberId", typ: "" },
         { json: "sessionId", js: "sessionId", typ: "" },
         { json: "type", js: "type", typ: r("ServerGameGrantedType") },
     ], false),
@@ -838,21 +985,45 @@ const typeMap: any = {
         { json: "type", js: "type", typ: r("AuthorityPongType") },
     ], false),
     "ServerSeatGranted": o([
+        { json: "memberId", js: "memberId", typ: "" },
         { json: "profile", js: "profile", typ: r("Profile") },
-        { json: "seatId", js: "seatId", typ: 0 },
         { json: "sessionCode", js: "sessionCode", typ: "" },
+        { json: "sessionId", js: "sessionId", typ: "" },
         { json: "ticket", js: "ticket", typ: "" },
         { json: "type", js: "type", typ: r("ServerSeatGrantedType") },
     ], false),
-    "ServerSessionState": o([
+    "ServerSessionPreview": o([
         { json: "code", js: "code", typ: "" },
+        { json: "config", js: "config", typ: m("any") },
+        { json: "gameId", js: "gameId", typ: "" },
+        { json: "lateJoin", js: "lateJoin", typ: r("LateJoin") },
+        { json: "manifest", js: "manifest", typ: m("any") },
+        { json: "manifestHash", js: "manifestHash", typ: "" },
+        { json: "memberSlots", js: "memberSlots", typ: 0 },
+        { json: "name", js: "name", typ: "" },
+        { json: "requiredCapabilities", js: "requiredCapabilities", typ: a("") },
+        { json: "rulesHash", js: "rulesHash", typ: "" },
+        { json: "spectatorLimit", js: "spectatorLimit", typ: 0 },
+        { json: "type", js: "type", typ: r("ServerSessionPreviewType") },
+        { json: "version", js: "version", typ: "" },
+    ], false),
+    "ServerSessionState": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
+        { json: "code", js: "code", typ: "" },
+        { json: "config", js: "config", typ: m("any") },
+        { json: "gameId", js: "gameId", typ: "" },
         { json: "gameProcess", js: "gameProcess", typ: r("GameProcess") },
-        { json: "hostSeatId", js: "hostSeatId", typ: 0 },
+        { json: "hostMemberId", js: "hostMemberId", typ: "" },
         { json: "members", js: "members", typ: a(r("Member")) },
+        { json: "memberSlots", js: "memberSlots", typ: 0 },
+        { json: "name", js: "name", typ: "" },
         { json: "revision", js: "revision", typ: 0 },
+        { json: "rulesHash", js: "rulesHash", typ: "" },
         { json: "sessionId", js: "sessionId", typ: "" },
+        { json: "spectatorLimit", js: "spectatorLimit", typ: 0 },
         { json: "state", js: "state", typ: r("State") },
         { json: "type", js: "type", typ: r("ServerSessionStateType") },
+        { json: "version", js: "version", typ: "" },
     ], false),
     "ServerWelcome": o([
         { json: "protocolVersion", js: "protocolVersion", typ: 0 },
@@ -860,9 +1031,6 @@ const typeMap: any = {
         { json: "supported", js: "supported", typ: a("") },
         { json: "type", js: "type", typ: r("ServerWelcomeType") },
     ], false),
-    "ToEnum": [
-        "all",
-    ],
     "AuthorityDeliverType": [
         "deliver",
     ],
@@ -913,14 +1081,25 @@ const typeMap: any = {
     "ClientPingType": [
         "ping",
     ],
+    "ClientRecoverGameType": [
+        "recoverGame",
+    ],
     "ClientResumeType": [
         "resume",
     ],
     "ClientSessionCreateType": [
         "sessionCreate",
     ],
+    "Role": [
+        "ai",
+        "player",
+        "spectator",
+    ],
     "ClientSessionJoinType": [
         "sessionJoin",
+    ],
+    "ClientSessionProbeType": [
+        "sessionProbe",
     ],
     "ClientSetConfigType": [
         "setConfig",
@@ -934,22 +1113,21 @@ const typeMap: any = {
     "ClientStartGameType": [
         "startGame",
     ],
+    "ClientSyncType": [
+        "sync",
+    ],
     "ClientTransferHostType": [
         "transferHost",
     ],
     "PlatformHostChangedType": [
         "hostChanged",
     ],
-    "Kind": [
-        "ai",
-        "player",
-        "spectator",
-    ],
     "PlatformMemberJoinType": [
         "memberJoin",
     ],
     "Reason": [
         "disconnected",
+        "expired",
         "kicked",
         "left",
     ],
@@ -977,6 +1155,14 @@ const typeMap: any = {
     "ServerSeatGrantedType": [
         "seatGranted",
     ],
+    "LateJoin": [
+        "deny",
+        "player",
+        "spectator",
+    ],
+    "ServerSessionPreviewType": [
+        "sessionPreview",
+    ],
     "GameProcess": [
         "exited",
         "failed",
@@ -986,6 +1172,7 @@ const typeMap: any = {
     ],
     "State": [
         "closed",
+        "closing",
         "open",
     ],
     "ServerSessionStateType": [
@@ -996,11 +1183,11 @@ const typeMap: any = {
     ],
 };
 
-export type ClientToPlatformMessage = ClientHello | ClientSessionCreate | ClientSessionJoin | ClientResume | ClientSetReady | ClientStartGame | ClientSetConfig | ClientSetSeatOptions | ClientLeave | ClientTransferHost | ClientKick | ClientCloseSession | ClientGame | ClientChat | ClientGameHandoff | ClientGameAuth | ClientPing;
+export type ClientToPlatformMessage = ClientHello | ClientSessionCreate | ClientSessionJoin | ClientSessionProbe | ClientResume | ClientSetReady | ClientStartGame | ClientRecoverGame | ClientSetConfig | ClientSetSeatOptions | ClientLeave | ClientTransferHost | ClientKick | ClientCloseSession | ClientGame | ClientSync | ClientChat | ClientGameHandoff | ClientGameAuth | ClientPing;
 
-export type PlatformToClientMessage = ServerWelcome | ServerSeatGranted | ServerSessionState | ServerGame | ServerChat | ServerGameHandoff | ServerGameGranted | ServerNotice | ServerError | ServerPong;
+export type PlatformToClientMessage = ServerWelcome | ServerSeatGranted | ServerSessionState | ServerSessionPreview | ServerGame | ServerChat | ServerGameHandoff | ServerGameGranted | ServerNotice | ServerError | ServerPong;
 
-export type PlatformToAuthorityMessage = PlatformStart | PlatformMemberJoin | PlatformMemberLeave | PlatformMemberResume | PlatformMemberUpdate | PlatformHostChanged | PlatformDeliver | PlatformCloseSession | PlatformPing;
+export type PlatformToAuthorityMessage = PlatformStart | PlatformMemberJoin | PlatformMemberLeave | PlatformMemberResume | PlatformMemberUpdate | PlatformHostChanged | PlatformDeliver | PlatformSync | PlatformCloseSession | PlatformPing;
 
 export type AuthorityToPlatformMessage = AuthorityReady | AuthorityDeliver | AuthorityRoundClosed | AuthorityError | AuthorityPong;
 

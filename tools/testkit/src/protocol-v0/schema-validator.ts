@@ -11,6 +11,7 @@ export type SchemaRule = {
   properties?: Record<string, SchemaRule>;
   additionalProperties?: boolean | SchemaRule;
   anyOf?: SchemaRule[];
+  oneOf?: SchemaRule[];
   items?: SchemaRule;
   minItems?: number;
   maxItems?: number;
@@ -43,7 +44,7 @@ export function validateJson(value: unknown, rule: SchemaRule, root: SchemaRule,
     return validateJson(value, target, root, at);
   }
   const errors: string[] = [];
-  const known = new Set(['$schema','$id','title','$defs','$ref','const','enum','type','required','properties','additionalProperties','anyOf','items','minItems','maxItems','uniqueItems','minLength','maxLength','pattern','minimum','maximum']);
+  const known = new Set(['$schema','$id','title','$defs','$ref','const','enum','type','required','properties','additionalProperties','anyOf','oneOf','items','minItems','maxItems','uniqueItems','minLength','maxLength','pattern','minimum','maximum']);
   for (const key of Object.keys(rule)) if (!known.has(key)) errors.push(`${at}: unsupported schema keyword ${key}`);
   if (rule.const !== undefined && value !== rule.const) errors.push(`${at}: expected const ${String(rule.const)}`);
   if (rule.enum && !rule.enum.includes(value)) errors.push(`${at}: expected enum ${rule.enum.join('|')}`);
@@ -57,6 +58,10 @@ export function validateJson(value: unknown, rule: SchemaRule, root: SchemaRule,
   if (rule.anyOf) {
     const matched = rule.anyOf.some((branch) => validateJson(value, branch, root, at).length === 0);
     if (!matched) errors.push(`${at}: no anyOf branch matched`);
+  }
+  if (rule.oneOf) {
+    const matched = rule.oneOf.filter((branch) => validateJson(value, branch, root, at).length === 0).length;
+    if (matched !== 1) errors.push(`${at}: expected exactly one oneOf branch`);
   }
   if (typeof value === 'string') {
     const length = Array.from(value).length;

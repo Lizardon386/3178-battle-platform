@@ -1,15 +1,25 @@
 # 由 protocol/v0/messages.schema.json + catalog.json 生成；请勿手改。
-from enum import Enum
 from dataclasses import dataclass
-from typing import Any, TypeVar, Type, Callable, cast
+from typing import Any, TypeVar, Callable, Type, cast
+from enum import Enum
 
 
 T = TypeVar("T")
 EnumT = TypeVar("EnumT", bound=Enum)
 
 
+def from_str(x: Any) -> str:
+    assert isinstance(x, str)
+    return x
+
+
 def from_int(x: Any) -> int:
     assert isinstance(x, int) and not isinstance(x, bool)
+    return x
+
+
+def from_none(x: Any) -> Any:
+    assert x is None
     return x
 
 
@@ -22,11 +32,6 @@ def from_union(fs, x):
     assert False
 
 
-def to_enum(c: Type[EnumT], x: Any) -> EnumT:
-    assert isinstance(x, c)
-    return x.value
-
-
 def from_list(f: Callable[[Any], T], x: Any) -> list[T]:
     assert isinstance(x, list)
     return [f(y) for y in x]
@@ -37,18 +42,13 @@ def to_class(c: Type[T], x: Any) -> dict:
     return cast(Any, x).to_dict()
 
 
-def from_str(x: Any) -> str:
-    assert isinstance(x, str)
-    return x
+def to_enum(c: Type[EnumT], x: Any) -> EnumT:
+    assert isinstance(x, c)
+    return x.value
 
 
 def from_bool(x: Any) -> bool:
     assert isinstance(x, bool)
-    return x
-
-
-def from_none(x: Any) -> Any:
-    assert x is None
     return x
 
 
@@ -57,26 +57,26 @@ def from_dict(f: Callable[[Any], T], x: Any) -> dict[str, T]:
     return { k: f(v) for (k, v) in x.items() }
 
 
-class ToEnum(Enum):
-    ALL = "all"
-
-
 @dataclass
-class ItemElement:
-    to: int | ToEnum
+class TypesSchema:
+    to: str
     payload: Any = None
+    view_revision: int | None = None
 
     @staticmethod
-    def from_dict(obj: Any) -> 'ItemElement':
+    def from_dict(obj: Any) -> 'TypesSchema':
         assert isinstance(obj, dict)
-        to = from_union([from_int, ToEnum], obj.get("to"))
+        to = from_str(obj.get("to"))
         payload = obj.get("payload")
-        return ItemElement(to, payload)
+        view_revision = from_union([from_int, from_none], obj.get("viewRevision"))
+        return TypesSchema(to, payload, view_revision)
 
     def to_dict(self) -> dict:
         result: dict = {}
-        result["to"] = from_union([from_int, lambda x: to_enum(ToEnum, x)], self.to)
+        result["to"] = from_str(self.to)
         result["payload"] = self.payload
+        if self.view_revision is not None:
+            result["viewRevision"] = from_union([from_int, from_none], self.view_revision)
         return result
 
 
@@ -86,19 +86,25 @@ class AuthorityDeliverType(Enum):
 
 @dataclass
 class AuthorityDeliver:
-    items: list[ItemElement]
+    authority_epoch: int
+    game_sequence: int
+    items: list[TypesSchema]
     type: AuthorityDeliverType
 
     @staticmethod
     def from_dict(obj: Any) -> 'AuthorityDeliver':
         assert isinstance(obj, dict)
-        items = from_list(ItemElement.from_dict, obj.get("items"))
+        authority_epoch = from_int(obj.get("authorityEpoch"))
+        game_sequence = from_int(obj.get("gameSequence"))
+        items = from_list(TypesSchema.from_dict, obj.get("items"))
         type = AuthorityDeliverType(obj.get("type"))
-        return AuthorityDeliver(items, type)
+        return AuthorityDeliver(authority_epoch, game_sequence, items, type)
 
     def to_dict(self) -> dict:
         result: dict = {}
-        result["items"] = from_list(lambda x: to_class(ItemElement, x), self.items)
+        result["authorityEpoch"] = from_int(self.authority_epoch)
+        result["gameSequence"] = from_int(self.game_sequence)
+        result["items"] = from_list(lambda x: to_class(TypesSchema, x), self.items)
         result["type"] = to_enum(AuthorityDeliverType, self.type)
         return result
 
@@ -109,6 +115,7 @@ class AuthorityErrorType(Enum):
 
 @dataclass
 class AuthorityError:
+    authority_epoch: int
     code: str
     fatal: bool
     text: str
@@ -117,14 +124,16 @@ class AuthorityError:
     @staticmethod
     def from_dict(obj: Any) -> 'AuthorityError':
         assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
         code = from_str(obj.get("code"))
         fatal = from_bool(obj.get("fatal"))
         text = from_str(obj.get("text"))
         type = AuthorityErrorType(obj.get("type"))
-        return AuthorityError(code, fatal, text, type)
+        return AuthorityError(authority_epoch, code, fatal, text, type)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
         result["code"] = from_str(self.code)
         result["fatal"] = from_bool(self.fatal)
         result["text"] = from_str(self.text)
@@ -165,18 +174,21 @@ class AuthorityReadyType(Enum):
 
 @dataclass
 class AuthorityReady:
+    authority_epoch: int
     process_status: ProcessStatus
     type: AuthorityReadyType
 
     @staticmethod
     def from_dict(obj: Any) -> 'AuthorityReady':
         assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
         process_status = ProcessStatus(obj.get("processStatus"))
         type = AuthorityReadyType(obj.get("type"))
-        return AuthorityReady(process_status, type)
+        return AuthorityReady(authority_epoch, process_status, type)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
         result["processStatus"] = to_enum(ProcessStatus, self.process_status)
         result["type"] = to_enum(AuthorityReadyType, self.type)
         return result
@@ -188,18 +200,21 @@ class AuthorityRoundClosedType(Enum):
 
 @dataclass
 class AuthorityRoundClosed:
+    authority_epoch: int
     type: AuthorityRoundClosedType
     payload: Any = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'AuthorityRoundClosed':
         assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
         type = AuthorityRoundClosedType(obj.get("type"))
         payload = obj.get("payload")
-        return AuthorityRoundClosed(type, payload)
+        return AuthorityRoundClosed(authority_epoch, type, payload)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
         result["type"] = to_enum(AuthorityRoundClosedType, self.type)
         result["payload"] = self.payload
         return result
@@ -235,16 +250,20 @@ class ClientCloseSessionType(Enum):
 @dataclass
 class ClientCloseSession:
     type: ClientCloseSessionType
+    request_id: str | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ClientCloseSession':
         assert isinstance(obj, dict)
         type = ClientCloseSessionType(obj.get("type"))
-        return ClientCloseSession(type)
+        request_id = from_union([from_str, from_none], obj.get("requestId"))
+        return ClientCloseSession(type, request_id)
 
     def to_dict(self) -> dict:
         result: dict = {}
         result["type"] = to_enum(ClientCloseSessionType, self.type)
+        if self.request_id is not None:
+            result["requestId"] = from_union([from_str, from_none], self.request_id)
         return result
 
 
@@ -254,18 +273,21 @@ class ClientGameType(Enum):
 
 @dataclass
 class ClientGame:
+    action_id: str
     type: ClientGameType
     payload: Any = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ClientGame':
         assert isinstance(obj, dict)
+        action_id = from_str(obj.get("actionId"))
         type = ClientGameType(obj.get("type"))
         payload = obj.get("payload")
-        return ClientGame(type, payload)
+        return ClientGame(action_id, type, payload)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["actionId"] = from_str(self.action_id)
         result["type"] = to_enum(ClientGameType, self.type)
         result["payload"] = self.payload
         return result
@@ -360,20 +382,24 @@ class ClientKickType(Enum):
 
 @dataclass
 class ClientKick:
-    target_seat: int
+    target_member_id: str
     type: ClientKickType
+    request_id: str | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ClientKick':
         assert isinstance(obj, dict)
-        target_seat = from_int(obj.get("targetSeat"))
+        target_member_id = from_str(obj.get("targetMemberId"))
         type = ClientKickType(obj.get("type"))
-        return ClientKick(target_seat, type)
+        request_id = from_union([from_str, from_none], obj.get("requestId"))
+        return ClientKick(target_member_id, type, request_id)
 
     def to_dict(self) -> dict:
         result: dict = {}
-        result["targetSeat"] = from_int(self.target_seat)
+        result["targetMemberId"] = from_str(self.target_member_id)
         result["type"] = to_enum(ClientKickType, self.type)
+        if self.request_id is not None:
+            result["requestId"] = from_union([from_str, from_none], self.request_id)
         return result
 
 
@@ -384,16 +410,20 @@ class ClientLeaveType(Enum):
 @dataclass
 class ClientLeave:
     type: ClientLeaveType
+    request_id: str | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ClientLeave':
         assert isinstance(obj, dict)
         type = ClientLeaveType(obj.get("type"))
-        return ClientLeave(type)
+        request_id = from_union([from_str, from_none], obj.get("requestId"))
+        return ClientLeave(type, request_id)
 
     def to_dict(self) -> dict:
         result: dict = {}
         result["type"] = to_enum(ClientLeaveType, self.type)
+        if self.request_id is not None:
+            result["requestId"] = from_union([from_str, from_none], self.request_id)
         return result
 
 
@@ -417,6 +447,30 @@ class ClientPing:
         result: dict = {}
         result["nonce"] = from_str(self.nonce)
         result["type"] = to_enum(ClientPingType, self.type)
+        return result
+
+
+class ClientRecoverGameType(Enum):
+    RECOVER_GAME = "recoverGame"
+
+
+@dataclass
+class ClientRecoverGame:
+    type: ClientRecoverGameType
+    request_id: str | None = None
+
+    @staticmethod
+    def from_dict(obj: Any) -> 'ClientRecoverGame':
+        assert isinstance(obj, dict)
+        type = ClientRecoverGameType(obj.get("type"))
+        request_id = from_union([from_str, from_none], obj.get("requestId"))
+        return ClientRecoverGame(type, request_id)
+
+    def to_dict(self) -> dict:
+        result: dict = {}
+        result["type"] = to_enum(ClientRecoverGameType, self.type)
+        if self.request_id is not None:
+            result["requestId"] = from_union([from_str, from_none], self.request_id)
         return result
 
 
@@ -450,25 +504,29 @@ class ClientResumeType(Enum):
 
 @dataclass
 class ClientResume:
-    code: str
+    session_id: str
     ticket: str
     type: ClientResumeType
+    code: str | None = None
     profile: Profile | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ClientResume':
         assert isinstance(obj, dict)
-        code = from_str(obj.get("code"))
+        session_id = from_str(obj.get("sessionId"))
         ticket = from_str(obj.get("ticket"))
         type = ClientResumeType(obj.get("type"))
+        code = from_union([from_str, from_none], obj.get("code"))
         profile = from_union([Profile.from_dict, from_none], obj.get("profile"))
-        return ClientResume(code, ticket, type, profile)
+        return ClientResume(session_id, ticket, type, code, profile)
 
     def to_dict(self) -> dict:
         result: dict = {}
-        result["code"] = from_str(self.code)
+        result["sessionId"] = from_str(self.session_id)
         result["ticket"] = from_str(self.ticket)
         result["type"] = to_enum(ClientResumeType, self.type)
+        if self.code is not None:
+            result["code"] = from_union([from_str, from_none], self.code)
         if self.profile is not None:
             result["profile"] = from_union([lambda x: to_class(Profile, x), from_none], self.profile)
         return result
@@ -489,6 +547,7 @@ class ClientSessionCreate:
     type: ClientSessionCreateType
     version: str
     password: str | None = None
+    spectator_limit: int | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ClientSessionCreate':
@@ -502,7 +561,8 @@ class ClientSessionCreate:
         type = ClientSessionCreateType(obj.get("type"))
         version = from_str(obj.get("version"))
         password = from_union([from_str, from_none], obj.get("password"))
-        return ClientSessionCreate(config, game_id, member_slots, options, profile, room_name, type, version, password)
+        spectator_limit = from_union([from_int, from_none], obj.get("spectatorLimit"))
+        return ClientSessionCreate(config, game_id, member_slots, options, profile, room_name, type, version, password, spectator_limit)
 
     def to_dict(self) -> dict:
         result: dict = {}
@@ -516,7 +576,15 @@ class ClientSessionCreate:
         result["version"] = from_str(self.version)
         if self.password is not None:
             result["password"] = from_union([from_str, from_none], self.password)
+        if self.spectator_limit is not None:
+            result["spectatorLimit"] = from_union([from_int, from_none], self.spectator_limit)
         return result
+
+
+class Role(Enum):
+    AI = "ai"
+    PLAYER = "player"
+    SPECTATOR = "spectator"
 
 
 class ClientSessionJoinType(Enum):
@@ -532,6 +600,7 @@ class ClientSessionJoin:
     rules_hash: str
     type: ClientSessionJoinType
     version: str
+    role: Role | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ClientSessionJoin':
@@ -543,7 +612,8 @@ class ClientSessionJoin:
         rules_hash = from_str(obj.get("rulesHash"))
         type = ClientSessionJoinType(obj.get("type"))
         version = from_str(obj.get("version"))
-        return ClientSessionJoin(code, credentials, game_id, profile, rules_hash, type, version)
+        role = from_union([Role, from_none], obj.get("role"))
+        return ClientSessionJoin(code, credentials, game_id, profile, rules_hash, type, version, role)
 
     def to_dict(self) -> dict:
         result: dict = {}
@@ -554,6 +624,31 @@ class ClientSessionJoin:
         result["rulesHash"] = from_str(self.rules_hash)
         result["type"] = to_enum(ClientSessionJoinType, self.type)
         result["version"] = from_str(self.version)
+        if self.role is not None:
+            result["role"] = from_union([lambda x: to_enum(Role, x), from_none], self.role)
+        return result
+
+
+class ClientSessionProbeType(Enum):
+    SESSION_PROBE = "sessionProbe"
+
+
+@dataclass
+class ClientSessionProbe:
+    code: str
+    type: ClientSessionProbeType
+
+    @staticmethod
+    def from_dict(obj: Any) -> 'ClientSessionProbe':
+        assert isinstance(obj, dict)
+        code = from_str(obj.get("code"))
+        type = ClientSessionProbeType(obj.get("type"))
+        return ClientSessionProbe(code, type)
+
+    def to_dict(self) -> dict:
+        result: dict = {}
+        result["code"] = from_str(self.code)
+        result["type"] = to_enum(ClientSessionProbeType, self.type)
         return result
 
 
@@ -565,18 +660,22 @@ class ClientSetConfigType(Enum):
 class ClientSetConfig:
     config: dict[str, Any]
     type: ClientSetConfigType
+    request_id: str | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ClientSetConfig':
         assert isinstance(obj, dict)
         config = from_dict(lambda x: x, obj.get("config"))
         type = ClientSetConfigType(obj.get("type"))
-        return ClientSetConfig(config, type)
+        request_id = from_union([from_str, from_none], obj.get("requestId"))
+        return ClientSetConfig(config, type, request_id)
 
     def to_dict(self) -> dict:
         result: dict = {}
         result["config"] = from_dict(lambda x: x, self.config)
         result["type"] = to_enum(ClientSetConfigType, self.type)
+        if self.request_id is not None:
+            result["requestId"] = from_union([from_str, from_none], self.request_id)
         return result
 
 
@@ -588,18 +687,22 @@ class ClientSetReadyType(Enum):
 class ClientSetReady:
     ready: bool
     type: ClientSetReadyType
+    request_id: str | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ClientSetReady':
         assert isinstance(obj, dict)
         ready = from_bool(obj.get("ready"))
         type = ClientSetReadyType(obj.get("type"))
-        return ClientSetReady(ready, type)
+        request_id = from_union([from_str, from_none], obj.get("requestId"))
+        return ClientSetReady(ready, type, request_id)
 
     def to_dict(self) -> dict:
         result: dict = {}
         result["ready"] = from_bool(self.ready)
         result["type"] = to_enum(ClientSetReadyType, self.type)
+        if self.request_id is not None:
+            result["requestId"] = from_union([from_str, from_none], self.request_id)
         return result
 
 
@@ -609,23 +712,27 @@ class ClientSetSeatOptionsType(Enum):
 
 @dataclass
 class ClientSetSeatOptions:
+    member_id: str
     options: dict[str, Any]
-    seat_id: int
     type: ClientSetSeatOptionsType
+    request_id: str | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ClientSetSeatOptions':
         assert isinstance(obj, dict)
+        member_id = from_str(obj.get("memberId"))
         options = from_dict(lambda x: x, obj.get("options"))
-        seat_id = from_int(obj.get("seatId"))
         type = ClientSetSeatOptionsType(obj.get("type"))
-        return ClientSetSeatOptions(options, seat_id, type)
+        request_id = from_union([from_str, from_none], obj.get("requestId"))
+        return ClientSetSeatOptions(member_id, options, type, request_id)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["memberId"] = from_str(self.member_id)
         result["options"] = from_dict(lambda x: x, self.options)
-        result["seatId"] = from_int(self.seat_id)
         result["type"] = to_enum(ClientSetSeatOptionsType, self.type)
+        if self.request_id is not None:
+            result["requestId"] = from_union([from_str, from_none], self.request_id)
         return result
 
 
@@ -636,16 +743,40 @@ class ClientStartGameType(Enum):
 @dataclass
 class ClientStartGame:
     type: ClientStartGameType
+    request_id: str | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ClientStartGame':
         assert isinstance(obj, dict)
         type = ClientStartGameType(obj.get("type"))
-        return ClientStartGame(type)
+        request_id = from_union([from_str, from_none], obj.get("requestId"))
+        return ClientStartGame(type, request_id)
 
     def to_dict(self) -> dict:
         result: dict = {}
         result["type"] = to_enum(ClientStartGameType, self.type)
+        if self.request_id is not None:
+            result["requestId"] = from_union([from_str, from_none], self.request_id)
+        return result
+
+
+class ClientSyncType(Enum):
+    SYNC = "sync"
+
+
+@dataclass
+class ClientSync:
+    type: ClientSyncType
+
+    @staticmethod
+    def from_dict(obj: Any) -> 'ClientSync':
+        assert isinstance(obj, dict)
+        type = ClientSyncType(obj.get("type"))
+        return ClientSync(type)
+
+    def to_dict(self) -> dict:
+        result: dict = {}
+        result["type"] = to_enum(ClientSyncType, self.type)
         return result
 
 
@@ -655,37 +786,44 @@ class ClientTransferHostType(Enum):
 
 @dataclass
 class ClientTransferHost:
-    target_seat: int
+    target_member_id: str
     type: ClientTransferHostType
+    request_id: str | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ClientTransferHost':
         assert isinstance(obj, dict)
-        target_seat = from_int(obj.get("targetSeat"))
+        target_member_id = from_str(obj.get("targetMemberId"))
         type = ClientTransferHostType(obj.get("type"))
-        return ClientTransferHost(target_seat, type)
+        request_id = from_union([from_str, from_none], obj.get("requestId"))
+        return ClientTransferHost(target_member_id, type, request_id)
 
     def to_dict(self) -> dict:
         result: dict = {}
-        result["targetSeat"] = from_int(self.target_seat)
+        result["targetMemberId"] = from_str(self.target_member_id)
         result["type"] = to_enum(ClientTransferHostType, self.type)
+        if self.request_id is not None:
+            result["requestId"] = from_union([from_str, from_none], self.request_id)
         return result
 
 
 @dataclass
 class PlatformCloseSession:
+    authority_epoch: int
     reason: str
     type: ClientCloseSessionType
 
     @staticmethod
     def from_dict(obj: Any) -> 'PlatformCloseSession':
         assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
         reason = from_str(obj.get("reason"))
         type = ClientCloseSessionType(obj.get("type"))
-        return PlatformCloseSession(reason, type)
+        return PlatformCloseSession(authority_epoch, reason, type)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
         result["reason"] = from_str(self.reason)
         result["type"] = to_enum(ClientCloseSessionType, self.type)
         return result
@@ -693,7 +831,9 @@ class PlatformCloseSession:
 
 @dataclass
 class PlatformDeliver:
-    from_seat: int
+    action_id: str
+    authority_epoch: int
+    from_member_id: str
     revision: int
     type: AuthorityDeliverType
     payload: Any = None
@@ -701,15 +841,19 @@ class PlatformDeliver:
     @staticmethod
     def from_dict(obj: Any) -> 'PlatformDeliver':
         assert isinstance(obj, dict)
-        from_seat = from_int(obj.get("fromSeat"))
+        action_id = from_str(obj.get("actionId"))
+        authority_epoch = from_int(obj.get("authorityEpoch"))
+        from_member_id = from_str(obj.get("fromMemberId"))
         revision = from_int(obj.get("revision"))
         type = AuthorityDeliverType(obj.get("type"))
         payload = obj.get("payload")
-        return PlatformDeliver(from_seat, revision, type, payload)
+        return PlatformDeliver(action_id, authority_epoch, from_member_id, revision, type, payload)
 
     def to_dict(self) -> dict:
         result: dict = {}
-        result["fromSeat"] = from_int(self.from_seat)
+        result["actionId"] = from_str(self.action_id)
+        result["authorityEpoch"] = from_int(self.authority_epoch)
+        result["fromMemberId"] = from_str(self.from_member_id)
         result["revision"] = from_int(self.revision)
         result["type"] = to_enum(AuthorityDeliverType, self.type)
         result["payload"] = self.payload
@@ -722,60 +866,61 @@ class PlatformHostChangedType(Enum):
 
 @dataclass
 class PlatformHostChanged:
-    host_seat_id: int
+    authority_epoch: int
+    host_member_id: str
     revision: int
     type: PlatformHostChangedType
 
     @staticmethod
     def from_dict(obj: Any) -> 'PlatformHostChanged':
         assert isinstance(obj, dict)
-        host_seat_id = from_int(obj.get("hostSeatId"))
+        authority_epoch = from_int(obj.get("authorityEpoch"))
+        host_member_id = from_str(obj.get("hostMemberId"))
         revision = from_int(obj.get("revision"))
         type = PlatformHostChangedType(obj.get("type"))
-        return PlatformHostChanged(host_seat_id, revision, type)
+        return PlatformHostChanged(authority_epoch, host_member_id, revision, type)
 
     def to_dict(self) -> dict:
         result: dict = {}
-        result["hostSeatId"] = from_int(self.host_seat_id)
+        result["authorityEpoch"] = from_int(self.authority_epoch)
+        result["hostMemberId"] = from_str(self.host_member_id)
         result["revision"] = from_int(self.revision)
         result["type"] = to_enum(PlatformHostChangedType, self.type)
         return result
 
 
-class Kind(Enum):
-    AI = "ai"
-    PLAYER = "player"
-    SPECTATOR = "spectator"
-
-
 @dataclass
 class Member:
     connected: bool
-    kind: Kind
+    member_id: str
     options: dict[str, Any]
     profile: Profile
     ready: bool
-    seat_id: int
+    role: Role
+    slot: int | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'Member':
         assert isinstance(obj, dict)
         connected = from_bool(obj.get("connected"))
-        kind = Kind(obj.get("kind"))
+        member_id = from_str(obj.get("memberId"))
         options = from_dict(lambda x: x, obj.get("options"))
         profile = Profile.from_dict(obj.get("profile"))
         ready = from_bool(obj.get("ready"))
-        seat_id = from_int(obj.get("seatId"))
-        return Member(connected, kind, options, profile, ready, seat_id)
+        role = Role(obj.get("role"))
+        slot = from_union([from_int, from_none], obj.get("slot"))
+        return Member(connected, member_id, options, profile, ready, role, slot)
 
     def to_dict(self) -> dict:
         result: dict = {}
         result["connected"] = from_bool(self.connected)
-        result["kind"] = to_enum(Kind, self.kind)
+        result["memberId"] = from_str(self.member_id)
         result["options"] = from_dict(lambda x: x, self.options)
         result["profile"] = to_class(Profile, self.profile)
         result["ready"] = from_bool(self.ready)
-        result["seatId"] = from_int(self.seat_id)
+        result["role"] = to_enum(Role, self.role)
+        if self.slot is not None:
+            result["slot"] = from_union([from_int, from_none], self.slot)
         return result
 
 
@@ -785,6 +930,7 @@ class PlatformMemberJoinType(Enum):
 
 @dataclass
 class PlatformMemberJoin:
+    authority_epoch: int
     member: Member
     revision: int
     type: PlatformMemberJoinType
@@ -792,13 +938,15 @@ class PlatformMemberJoin:
     @staticmethod
     def from_dict(obj: Any) -> 'PlatformMemberJoin':
         assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
         member = Member.from_dict(obj.get("member"))
         revision = from_int(obj.get("revision"))
         type = PlatformMemberJoinType(obj.get("type"))
-        return PlatformMemberJoin(member, revision, type)
+        return PlatformMemberJoin(authority_epoch, member, revision, type)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
         result["member"] = to_class(Member, self.member)
         result["revision"] = from_int(self.revision)
         result["type"] = to_enum(PlatformMemberJoinType, self.type)
@@ -807,6 +955,7 @@ class PlatformMemberJoin:
 
 class Reason(Enum):
     DISCONNECTED = "disconnected"
+    EXPIRED = "expired"
     KICKED = "kicked"
     LEFT = "left"
 
@@ -817,25 +966,28 @@ class PlatformMemberLeaveType(Enum):
 
 @dataclass
 class PlatformMemberLeave:
+    authority_epoch: int
+    member_id: str
     reason: Reason
     revision: int
-    seat_id: int
     type: PlatformMemberLeaveType
 
     @staticmethod
     def from_dict(obj: Any) -> 'PlatformMemberLeave':
         assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
+        member_id = from_str(obj.get("memberId"))
         reason = Reason(obj.get("reason"))
         revision = from_int(obj.get("revision"))
-        seat_id = from_int(obj.get("seatId"))
         type = PlatformMemberLeaveType(obj.get("type"))
-        return PlatformMemberLeave(reason, revision, seat_id, type)
+        return PlatformMemberLeave(authority_epoch, member_id, reason, revision, type)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
+        result["memberId"] = from_str(self.member_id)
         result["reason"] = to_enum(Reason, self.reason)
         result["revision"] = from_int(self.revision)
-        result["seatId"] = from_int(self.seat_id)
         result["type"] = to_enum(PlatformMemberLeaveType, self.type)
         return result
 
@@ -846,25 +998,28 @@ class PlatformMemberResumeType(Enum):
 
 @dataclass
 class PlatformMemberResume:
+    authority_epoch: int
+    member_id: str
     profile: Profile
     revision: int
-    seat_id: int
     type: PlatformMemberResumeType
 
     @staticmethod
     def from_dict(obj: Any) -> 'PlatformMemberResume':
         assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
+        member_id = from_str(obj.get("memberId"))
         profile = Profile.from_dict(obj.get("profile"))
         revision = from_int(obj.get("revision"))
-        seat_id = from_int(obj.get("seatId"))
         type = PlatformMemberResumeType(obj.get("type"))
-        return PlatformMemberResume(profile, revision, seat_id, type)
+        return PlatformMemberResume(authority_epoch, member_id, profile, revision, type)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
+        result["memberId"] = from_str(self.member_id)
         result["profile"] = to_class(Profile, self.profile)
         result["revision"] = from_int(self.revision)
-        result["seatId"] = from_int(self.seat_id)
         result["type"] = to_enum(PlatformMemberResumeType, self.type)
         return result
 
@@ -875,31 +1030,34 @@ class PlatformMemberUpdateType(Enum):
 
 @dataclass
 class PlatformMemberUpdate:
+    authority_epoch: int
+    member_id: str
     options: dict[str, Any]
     profile: Profile
     ready: bool
     revision: int
-    seat_id: int
     type: PlatformMemberUpdateType
 
     @staticmethod
     def from_dict(obj: Any) -> 'PlatformMemberUpdate':
         assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
+        member_id = from_str(obj.get("memberId"))
         options = from_dict(lambda x: x, obj.get("options"))
         profile = Profile.from_dict(obj.get("profile"))
         ready = from_bool(obj.get("ready"))
         revision = from_int(obj.get("revision"))
-        seat_id = from_int(obj.get("seatId"))
         type = PlatformMemberUpdateType(obj.get("type"))
-        return PlatformMemberUpdate(options, profile, ready, revision, seat_id, type)
+        return PlatformMemberUpdate(authority_epoch, member_id, options, profile, ready, revision, type)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
+        result["memberId"] = from_str(self.member_id)
         result["options"] = from_dict(lambda x: x, self.options)
         result["profile"] = to_class(Profile, self.profile)
         result["ready"] = from_bool(self.ready)
         result["revision"] = from_int(self.revision)
-        result["seatId"] = from_int(self.seat_id)
         result["type"] = to_enum(PlatformMemberUpdateType, self.type)
         return result
 
@@ -929,44 +1087,72 @@ class PlatformStartType(Enum):
 
 @dataclass
 class PlatformStart:
+    authority_epoch: int
     game_id: str
-    host_seat_id: int
+    host_member_id: str
     members: list[Member]
     revision: int
     session_code: str
     session_config: dict[str, Any]
+    session_id: str
     type: PlatformStartType
     version: str
 
     @staticmethod
     def from_dict(obj: Any) -> 'PlatformStart':
         assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
         game_id = from_str(obj.get("gameId"))
-        host_seat_id = from_int(obj.get("hostSeatId"))
+        host_member_id = from_str(obj.get("hostMemberId"))
         members = from_list(Member.from_dict, obj.get("members"))
         revision = from_int(obj.get("revision"))
         session_code = from_str(obj.get("sessionCode"))
         session_config = from_dict(lambda x: x, obj.get("sessionConfig"))
+        session_id = from_str(obj.get("sessionId"))
         type = PlatformStartType(obj.get("type"))
         version = from_str(obj.get("version"))
-        return PlatformStart(game_id, host_seat_id, members, revision, session_code, session_config, type, version)
+        return PlatformStart(authority_epoch, game_id, host_member_id, members, revision, session_code, session_config, session_id, type, version)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
         result["gameId"] = from_str(self.game_id)
-        result["hostSeatId"] = from_int(self.host_seat_id)
+        result["hostMemberId"] = from_str(self.host_member_id)
         result["members"] = from_list(lambda x: to_class(Member, x), self.members)
         result["revision"] = from_int(self.revision)
         result["sessionCode"] = from_str(self.session_code)
         result["sessionConfig"] = from_dict(lambda x: x, self.session_config)
+        result["sessionId"] = from_str(self.session_id)
         result["type"] = to_enum(PlatformStartType, self.type)
         result["version"] = from_str(self.version)
         return result
 
 
 @dataclass
+class PlatformSync:
+    authority_epoch: int
+    member_id: str
+    type: ClientSyncType
+
+    @staticmethod
+    def from_dict(obj: Any) -> 'PlatformSync':
+        assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
+        member_id = from_str(obj.get("memberId"))
+        type = ClientSyncType(obj.get("type"))
+        return PlatformSync(authority_epoch, member_id, type)
+
+    def to_dict(self) -> dict:
+        result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
+        result["memberId"] = from_str(self.member_id)
+        result["type"] = to_enum(ClientSyncType, self.type)
+        return result
+
+
+@dataclass
 class ServerChat:
-    from_seat: int
+    from_member_id: str
     profile: Profile
     sent_at: int
     text: str
@@ -975,16 +1161,16 @@ class ServerChat:
     @staticmethod
     def from_dict(obj: Any) -> 'ServerChat':
         assert isinstance(obj, dict)
-        from_seat = from_int(obj.get("fromSeat"))
+        from_member_id = from_str(obj.get("fromMemberId"))
         profile = Profile.from_dict(obj.get("profile"))
         sent_at = from_int(obj.get("sentAt"))
         text = from_str(obj.get("text"))
         type = ClientChatType(obj.get("type"))
-        return ServerChat(from_seat, profile, sent_at, text, type)
+        return ServerChat(from_member_id, profile, sent_at, text, type)
 
     def to_dict(self) -> dict:
         result: dict = {}
-        result["fromSeat"] = from_int(self.from_seat)
+        result["fromMemberId"] = from_str(self.from_member_id)
         result["profile"] = to_class(Profile, self.profile)
         result["sentAt"] = from_int(self.sent_at)
         result["text"] = from_str(self.text)
@@ -1002,6 +1188,7 @@ class ServerError:
     text: str
     type: ServerErrorType
     details: dict[str, Any] | None = None
+    request_id: str | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ServerError':
@@ -1010,7 +1197,8 @@ class ServerError:
         text = from_str(obj.get("text"))
         type = ServerErrorType(obj.get("type"))
         details = from_union([lambda x: from_dict(lambda x: x, x), from_none], obj.get("details"))
-        return ServerError(code, text, type, details)
+        request_id = from_union([from_str, from_none], obj.get("requestId"))
+        return ServerError(code, text, type, details, request_id)
 
     def to_dict(self) -> dict:
         result: dict = {}
@@ -1019,29 +1207,41 @@ class ServerError:
         result["type"] = to_enum(ServerErrorType, self.type)
         if self.details is not None:
             result["details"] = from_union([lambda x: from_dict(lambda x: x, x), from_none], self.details)
+        if self.request_id is not None:
+            result["requestId"] = from_union([from_str, from_none], self.request_id)
         return result
 
 
 @dataclass
 class ServerGame:
+    authority_epoch: int
+    game_sequence: int
     type: ClientGameType
-    from_seat: int | None = None
+    from_member_id: str | None = None
     payload: Any = None
+    view_revision: int | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'ServerGame':
         assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
+        game_sequence = from_int(obj.get("gameSequence"))
         type = ClientGameType(obj.get("type"))
-        from_seat = from_union([from_int, from_none], obj.get("fromSeat"))
+        from_member_id = from_union([from_str, from_none], obj.get("fromMemberId"))
         payload = obj.get("payload")
-        return ServerGame(type, from_seat, payload)
+        view_revision = from_union([from_int, from_none], obj.get("viewRevision"))
+        return ServerGame(authority_epoch, game_sequence, type, from_member_id, payload, view_revision)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
+        result["gameSequence"] = from_int(self.game_sequence)
         result["type"] = to_enum(ClientGameType, self.type)
-        if self.from_seat is not None:
-            result["fromSeat"] = from_union([from_int, from_none], self.from_seat)
+        if self.from_member_id is not None:
+            result["fromMemberId"] = from_union([from_str, from_none], self.from_member_id)
         result["payload"] = self.payload
+        if self.view_revision is not None:
+            result["viewRevision"] = from_union([from_int, from_none], self.view_revision)
         return result
 
 
@@ -1051,24 +1251,27 @@ class ServerGameGrantedType(Enum):
 
 @dataclass
 class ServerGameGranted:
+    authority_epoch: int
     game_ticket: str
-    seat_id: int
+    member_id: str
     session_id: str
     type: ServerGameGrantedType
 
     @staticmethod
     def from_dict(obj: Any) -> 'ServerGameGranted':
         assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
         game_ticket = from_str(obj.get("gameTicket"))
-        seat_id = from_int(obj.get("seatId"))
+        member_id = from_str(obj.get("memberId"))
         session_id = from_str(obj.get("sessionId"))
         type = ServerGameGrantedType(obj.get("type"))
-        return ServerGameGranted(game_ticket, seat_id, session_id, type)
+        return ServerGameGranted(authority_epoch, game_ticket, member_id, session_id, type)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
         result["gameTicket"] = from_str(self.game_ticket)
-        result["seatId"] = from_int(self.seat_id)
+        result["memberId"] = from_str(self.member_id)
         result["sessionId"] = from_str(self.session_id)
         result["type"] = to_enum(ServerGameGrantedType, self.type)
         return result
@@ -1150,29 +1353,94 @@ class ServerSeatGrantedType(Enum):
 
 @dataclass
 class ServerSeatGranted:
+    member_id: str
     profile: Profile
-    seat_id: int
     session_code: str
+    session_id: str
     ticket: str
     type: ServerSeatGrantedType
 
     @staticmethod
     def from_dict(obj: Any) -> 'ServerSeatGranted':
         assert isinstance(obj, dict)
+        member_id = from_str(obj.get("memberId"))
         profile = Profile.from_dict(obj.get("profile"))
-        seat_id = from_int(obj.get("seatId"))
         session_code = from_str(obj.get("sessionCode"))
+        session_id = from_str(obj.get("sessionId"))
         ticket = from_str(obj.get("ticket"))
         type = ServerSeatGrantedType(obj.get("type"))
-        return ServerSeatGranted(profile, seat_id, session_code, ticket, type)
+        return ServerSeatGranted(member_id, profile, session_code, session_id, ticket, type)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["memberId"] = from_str(self.member_id)
         result["profile"] = to_class(Profile, self.profile)
-        result["seatId"] = from_int(self.seat_id)
         result["sessionCode"] = from_str(self.session_code)
+        result["sessionId"] = from_str(self.session_id)
         result["ticket"] = from_str(self.ticket)
         result["type"] = to_enum(ServerSeatGrantedType, self.type)
+        return result
+
+
+class LateJoin(Enum):
+    DENY = "deny"
+    PLAYER = "player"
+    SPECTATOR = "spectator"
+
+
+class ServerSessionPreviewType(Enum):
+    SESSION_PREVIEW = "sessionPreview"
+
+
+@dataclass
+class ServerSessionPreview:
+    code: str
+    config: dict[str, Any]
+    game_id: str
+    late_join: LateJoin
+    manifest: dict[str, Any]
+    manifest_hash: str
+    member_slots: int
+    name: str
+    required_capabilities: list[str]
+    rules_hash: str
+    spectator_limit: int
+    type: ServerSessionPreviewType
+    version: str
+
+    @staticmethod
+    def from_dict(obj: Any) -> 'ServerSessionPreview':
+        assert isinstance(obj, dict)
+        code = from_str(obj.get("code"))
+        config = from_dict(lambda x: x, obj.get("config"))
+        game_id = from_str(obj.get("gameId"))
+        late_join = LateJoin(obj.get("lateJoin"))
+        manifest = from_dict(lambda x: x, obj.get("manifest"))
+        manifest_hash = from_str(obj.get("manifestHash"))
+        member_slots = from_int(obj.get("memberSlots"))
+        name = from_str(obj.get("name"))
+        required_capabilities = from_list(from_str, obj.get("requiredCapabilities"))
+        rules_hash = from_str(obj.get("rulesHash"))
+        spectator_limit = from_int(obj.get("spectatorLimit"))
+        type = ServerSessionPreviewType(obj.get("type"))
+        version = from_str(obj.get("version"))
+        return ServerSessionPreview(code, config, game_id, late_join, manifest, manifest_hash, member_slots, name, required_capabilities, rules_hash, spectator_limit, type, version)
+
+    def to_dict(self) -> dict:
+        result: dict = {}
+        result["code"] = from_str(self.code)
+        result["config"] = from_dict(lambda x: x, self.config)
+        result["gameId"] = from_str(self.game_id)
+        result["lateJoin"] = to_enum(LateJoin, self.late_join)
+        result["manifest"] = from_dict(lambda x: x, self.manifest)
+        result["manifestHash"] = from_str(self.manifest_hash)
+        result["memberSlots"] = from_int(self.member_slots)
+        result["name"] = from_str(self.name)
+        result["requiredCapabilities"] = from_list(from_str, self.required_capabilities)
+        result["rulesHash"] = from_str(self.rules_hash)
+        result["spectatorLimit"] = from_int(self.spectator_limit)
+        result["type"] = to_enum(ServerSessionPreviewType, self.type)
+        result["version"] = from_str(self.version)
         return result
 
 
@@ -1186,6 +1454,7 @@ class GameProcess(Enum):
 
 class State(Enum):
     CLOSED = "closed"
+    CLOSING = "closing"
     OPEN = "open"
 
 
@@ -1195,38 +1464,62 @@ class ServerSessionStateType(Enum):
 
 @dataclass
 class ServerSessionState:
+    authority_epoch: int
     code: str
+    config: dict[str, Any]
+    game_id: str
     game_process: GameProcess
-    host_seat_id: int
+    host_member_id: str
     members: list[Member]
+    member_slots: int
+    name: str
     revision: int
+    rules_hash: str
     session_id: str
+    spectator_limit: int
     state: State
     type: ServerSessionStateType
+    version: str
 
     @staticmethod
     def from_dict(obj: Any) -> 'ServerSessionState':
         assert isinstance(obj, dict)
+        authority_epoch = from_int(obj.get("authorityEpoch"))
         code = from_str(obj.get("code"))
+        config = from_dict(lambda x: x, obj.get("config"))
+        game_id = from_str(obj.get("gameId"))
         game_process = GameProcess(obj.get("gameProcess"))
-        host_seat_id = from_int(obj.get("hostSeatId"))
+        host_member_id = from_str(obj.get("hostMemberId"))
         members = from_list(Member.from_dict, obj.get("members"))
+        member_slots = from_int(obj.get("memberSlots"))
+        name = from_str(obj.get("name"))
         revision = from_int(obj.get("revision"))
+        rules_hash = from_str(obj.get("rulesHash"))
         session_id = from_str(obj.get("sessionId"))
+        spectator_limit = from_int(obj.get("spectatorLimit"))
         state = State(obj.get("state"))
         type = ServerSessionStateType(obj.get("type"))
-        return ServerSessionState(code, game_process, host_seat_id, members, revision, session_id, state, type)
+        version = from_str(obj.get("version"))
+        return ServerSessionState(authority_epoch, code, config, game_id, game_process, host_member_id, members, member_slots, name, revision, rules_hash, session_id, spectator_limit, state, type, version)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["authorityEpoch"] = from_int(self.authority_epoch)
         result["code"] = from_str(self.code)
+        result["config"] = from_dict(lambda x: x, self.config)
+        result["gameId"] = from_str(self.game_id)
         result["gameProcess"] = to_enum(GameProcess, self.game_process)
-        result["hostSeatId"] = from_int(self.host_seat_id)
+        result["hostMemberId"] = from_str(self.host_member_id)
         result["members"] = from_list(lambda x: to_class(Member, x), self.members)
+        result["memberSlots"] = from_int(self.member_slots)
+        result["name"] = from_str(self.name)
         result["revision"] = from_int(self.revision)
+        result["rulesHash"] = from_str(self.rules_hash)
         result["sessionId"] = from_str(self.session_id)
+        result["spectatorLimit"] = from_int(self.spectator_limit)
         result["state"] = to_enum(State, self.state)
         result["type"] = to_enum(ServerSessionStateType, self.type)
+        result["version"] = from_str(self.version)
         return result
 
 
@@ -1275,13 +1568,16 @@ class ProtocolTypes:
     client_kick: ClientKick | None = None
     client_leave: ClientLeave | None = None
     client_ping: ClientPing | None = None
+    client_recover_game: ClientRecoverGame | None = None
     client_resume: ClientResume | None = None
     client_session_create: ClientSessionCreate | None = None
     client_session_join: ClientSessionJoin | None = None
+    client_session_probe: ClientSessionProbe | None = None
     client_set_config: ClientSetConfig | None = None
     client_set_ready: ClientSetReady | None = None
     client_set_seat_options: ClientSetSeatOptions | None = None
     client_start_game: ClientStartGame | None = None
+    client_sync: ClientSync | None = None
     client_transfer_host: ClientTransferHost | None = None
     platform_close_session: PlatformCloseSession | None = None
     platform_deliver: PlatformDeliver | None = None
@@ -1292,6 +1588,7 @@ class ProtocolTypes:
     platform_member_update: PlatformMemberUpdate | None = None
     platform_ping: PlatformPing | None = None
     platform_start: PlatformStart | None = None
+    platform_sync: PlatformSync | None = None
     server_chat: ServerChat | None = None
     server_error: ServerError | None = None
     server_game: ServerGame | None = None
@@ -1300,6 +1597,7 @@ class ProtocolTypes:
     server_notice: ServerNotice | None = None
     server_pong: ServerPong | None = None
     server_seat_granted: ServerSeatGranted | None = None
+    server_session_preview: ServerSessionPreview | None = None
     server_session_state: ServerSessionState | None = None
     server_welcome: ServerWelcome | None = None
 
@@ -1320,13 +1618,16 @@ class ProtocolTypes:
         client_kick = from_union([ClientKick.from_dict, from_none], obj.get("ClientKick"))
         client_leave = from_union([ClientLeave.from_dict, from_none], obj.get("ClientLeave"))
         client_ping = from_union([ClientPing.from_dict, from_none], obj.get("ClientPing"))
+        client_recover_game = from_union([ClientRecoverGame.from_dict, from_none], obj.get("ClientRecoverGame"))
         client_resume = from_union([ClientResume.from_dict, from_none], obj.get("ClientResume"))
         client_session_create = from_union([ClientSessionCreate.from_dict, from_none], obj.get("ClientSessionCreate"))
         client_session_join = from_union([ClientSessionJoin.from_dict, from_none], obj.get("ClientSessionJoin"))
+        client_session_probe = from_union([ClientSessionProbe.from_dict, from_none], obj.get("ClientSessionProbe"))
         client_set_config = from_union([ClientSetConfig.from_dict, from_none], obj.get("ClientSetConfig"))
         client_set_ready = from_union([ClientSetReady.from_dict, from_none], obj.get("ClientSetReady"))
         client_set_seat_options = from_union([ClientSetSeatOptions.from_dict, from_none], obj.get("ClientSetSeatOptions"))
         client_start_game = from_union([ClientStartGame.from_dict, from_none], obj.get("ClientStartGame"))
+        client_sync = from_union([ClientSync.from_dict, from_none], obj.get("ClientSync"))
         client_transfer_host = from_union([ClientTransferHost.from_dict, from_none], obj.get("ClientTransferHost"))
         platform_close_session = from_union([PlatformCloseSession.from_dict, from_none], obj.get("PlatformCloseSession"))
         platform_deliver = from_union([PlatformDeliver.from_dict, from_none], obj.get("PlatformDeliver"))
@@ -1337,6 +1638,7 @@ class ProtocolTypes:
         platform_member_update = from_union([PlatformMemberUpdate.from_dict, from_none], obj.get("PlatformMemberUpdate"))
         platform_ping = from_union([PlatformPing.from_dict, from_none], obj.get("PlatformPing"))
         platform_start = from_union([PlatformStart.from_dict, from_none], obj.get("PlatformStart"))
+        platform_sync = from_union([PlatformSync.from_dict, from_none], obj.get("PlatformSync"))
         server_chat = from_union([ServerChat.from_dict, from_none], obj.get("ServerChat"))
         server_error = from_union([ServerError.from_dict, from_none], obj.get("ServerError"))
         server_game = from_union([ServerGame.from_dict, from_none], obj.get("ServerGame"))
@@ -1345,9 +1647,10 @@ class ProtocolTypes:
         server_notice = from_union([ServerNotice.from_dict, from_none], obj.get("ServerNotice"))
         server_pong = from_union([ServerPong.from_dict, from_none], obj.get("ServerPong"))
         server_seat_granted = from_union([ServerSeatGranted.from_dict, from_none], obj.get("ServerSeatGranted"))
+        server_session_preview = from_union([ServerSessionPreview.from_dict, from_none], obj.get("ServerSessionPreview"))
         server_session_state = from_union([ServerSessionState.from_dict, from_none], obj.get("ServerSessionState"))
         server_welcome = from_union([ServerWelcome.from_dict, from_none], obj.get("ServerWelcome"))
-        return ProtocolTypes(authority_deliver, authority_error, authority_pong, authority_ready, authority_round_closed, client_chat, client_close_session, client_game, client_game_auth, client_game_handoff, client_hello, client_kick, client_leave, client_ping, client_resume, client_session_create, client_session_join, client_set_config, client_set_ready, client_set_seat_options, client_start_game, client_transfer_host, platform_close_session, platform_deliver, platform_host_changed, platform_member_join, platform_member_leave, platform_member_resume, platform_member_update, platform_ping, platform_start, server_chat, server_error, server_game, server_game_granted, server_game_handoff, server_notice, server_pong, server_seat_granted, server_session_state, server_welcome)
+        return ProtocolTypes(authority_deliver, authority_error, authority_pong, authority_ready, authority_round_closed, client_chat, client_close_session, client_game, client_game_auth, client_game_handoff, client_hello, client_kick, client_leave, client_ping, client_recover_game, client_resume, client_session_create, client_session_join, client_session_probe, client_set_config, client_set_ready, client_set_seat_options, client_start_game, client_sync, client_transfer_host, platform_close_session, platform_deliver, platform_host_changed, platform_member_join, platform_member_leave, platform_member_resume, platform_member_update, platform_ping, platform_start, platform_sync, server_chat, server_error, server_game, server_game_granted, server_game_handoff, server_notice, server_pong, server_seat_granted, server_session_preview, server_session_state, server_welcome)
 
     def to_dict(self) -> dict:
         result: dict = {}
@@ -1379,12 +1682,16 @@ class ProtocolTypes:
             result["ClientLeave"] = from_union([lambda x: to_class(ClientLeave, x), from_none], self.client_leave)
         if self.client_ping is not None:
             result["ClientPing"] = from_union([lambda x: to_class(ClientPing, x), from_none], self.client_ping)
+        if self.client_recover_game is not None:
+            result["ClientRecoverGame"] = from_union([lambda x: to_class(ClientRecoverGame, x), from_none], self.client_recover_game)
         if self.client_resume is not None:
             result["ClientResume"] = from_union([lambda x: to_class(ClientResume, x), from_none], self.client_resume)
         if self.client_session_create is not None:
             result["ClientSessionCreate"] = from_union([lambda x: to_class(ClientSessionCreate, x), from_none], self.client_session_create)
         if self.client_session_join is not None:
             result["ClientSessionJoin"] = from_union([lambda x: to_class(ClientSessionJoin, x), from_none], self.client_session_join)
+        if self.client_session_probe is not None:
+            result["ClientSessionProbe"] = from_union([lambda x: to_class(ClientSessionProbe, x), from_none], self.client_session_probe)
         if self.client_set_config is not None:
             result["ClientSetConfig"] = from_union([lambda x: to_class(ClientSetConfig, x), from_none], self.client_set_config)
         if self.client_set_ready is not None:
@@ -1393,6 +1700,8 @@ class ProtocolTypes:
             result["ClientSetSeatOptions"] = from_union([lambda x: to_class(ClientSetSeatOptions, x), from_none], self.client_set_seat_options)
         if self.client_start_game is not None:
             result["ClientStartGame"] = from_union([lambda x: to_class(ClientStartGame, x), from_none], self.client_start_game)
+        if self.client_sync is not None:
+            result["ClientSync"] = from_union([lambda x: to_class(ClientSync, x), from_none], self.client_sync)
         if self.client_transfer_host is not None:
             result["ClientTransferHost"] = from_union([lambda x: to_class(ClientTransferHost, x), from_none], self.client_transfer_host)
         if self.platform_close_session is not None:
@@ -1413,6 +1722,8 @@ class ProtocolTypes:
             result["PlatformPing"] = from_union([lambda x: to_class(PlatformPing, x), from_none], self.platform_ping)
         if self.platform_start is not None:
             result["PlatformStart"] = from_union([lambda x: to_class(PlatformStart, x), from_none], self.platform_start)
+        if self.platform_sync is not None:
+            result["PlatformSync"] = from_union([lambda x: to_class(PlatformSync, x), from_none], self.platform_sync)
         if self.server_chat is not None:
             result["ServerChat"] = from_union([lambda x: to_class(ServerChat, x), from_none], self.server_chat)
         if self.server_error is not None:
@@ -1429,6 +1740,8 @@ class ProtocolTypes:
             result["ServerPong"] = from_union([lambda x: to_class(ServerPong, x), from_none], self.server_pong)
         if self.server_seat_granted is not None:
             result["ServerSeatGranted"] = from_union([lambda x: to_class(ServerSeatGranted, x), from_none], self.server_seat_granted)
+        if self.server_session_preview is not None:
+            result["ServerSessionPreview"] = from_union([lambda x: to_class(ServerSessionPreview, x), from_none], self.server_session_preview)
         if self.server_session_state is not None:
             result["ServerSessionState"] = from_union([lambda x: to_class(ServerSessionState, x), from_none], self.server_session_state)
         if self.server_welcome is not None:
@@ -1443,11 +1756,11 @@ def protocol_types_from_dict(s: Any) -> ProtocolTypes:
 def protocol_types_to_dict(x: ProtocolTypes) -> Any:
     return to_class(ProtocolTypes, x)
 
-ClientToPlatformMessage = ClientHello | ClientSessionCreate | ClientSessionJoin | ClientResume | ClientSetReady | ClientStartGame | ClientSetConfig | ClientSetSeatOptions | ClientLeave | ClientTransferHost | ClientKick | ClientCloseSession | ClientGame | ClientChat | ClientGameHandoff | ClientGameAuth | ClientPing
+ClientToPlatformMessage = ClientHello | ClientSessionCreate | ClientSessionJoin | ClientSessionProbe | ClientResume | ClientSetReady | ClientStartGame | ClientRecoverGame | ClientSetConfig | ClientSetSeatOptions | ClientLeave | ClientTransferHost | ClientKick | ClientCloseSession | ClientGame | ClientSync | ClientChat | ClientGameHandoff | ClientGameAuth | ClientPing
 
-PlatformToClientMessage = ServerWelcome | ServerSeatGranted | ServerSessionState | ServerGame | ServerChat | ServerGameHandoff | ServerGameGranted | ServerNotice | ServerError | ServerPong
+PlatformToClientMessage = ServerWelcome | ServerSeatGranted | ServerSessionState | ServerSessionPreview | ServerGame | ServerChat | ServerGameHandoff | ServerGameGranted | ServerNotice | ServerError | ServerPong
 
-PlatformToAuthorityMessage = PlatformStart | PlatformMemberJoin | PlatformMemberLeave | PlatformMemberResume | PlatformMemberUpdate | PlatformHostChanged | PlatformDeliver | PlatformCloseSession | PlatformPing
+PlatformToAuthorityMessage = PlatformStart | PlatformMemberJoin | PlatformMemberLeave | PlatformMemberResume | PlatformMemberUpdate | PlatformHostChanged | PlatformDeliver | PlatformSync | PlatformCloseSession | PlatformPing
 
 AuthorityToPlatformMessage = AuthorityReady | AuthorityDeliver | AuthorityRoundClosed | AuthorityError | AuthorityPong
 

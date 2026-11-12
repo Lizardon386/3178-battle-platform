@@ -66,13 +66,14 @@ test('S1 权威投递：空 items 拒绝，座位与 all 可混合', () => {
 test('S1 游戏交接：handoffCode / gameTicket 至少一个，管理 ticket 不可混入', () => {
   assertValid(read('examples/game-auth.json'));
   assertValid({ type: 'gameAuth', gameTicket: 'game-ticket-123456' });
-  assertInvalid({ type: 'gameAuth' }, 'anyOf', 'ClientGameAuth');
+  assertInvalid({ type: 'gameAuth' }, 'oneOf', 'ClientGameAuth');
+  assertInvalid({ type: 'gameAuth', handoffCode: 'handoff-1234567890', gameTicket: 'game-ticket-123456' }, 'oneOf', 'ClientGameAuth');
   assertInvalid({ type: 'gameAuth', ticket: 'ticket-1234567890' }, 'extra field', 'ClientGameAuth');
 });
 
-test('S1 游戏通道只开放 gameAuth / game / ping，管理动作留在会话通道', () => {
+test('S1 游戏通道只开放 gameAuth / game / sync，管理动作留在会话通道', () => {
   const gameTypes = catalog.messages.filter((message) => message.channel === 'game' && message.from === 'client').map((message) => message.type).sort();
-  assert.deepEqual(gameTypes, ['game', 'gameAuth', 'ping']);
+  assert.deepEqual(gameTypes, ['game', 'gameAuth', 'sync']);
   for (const type of ['setReady', 'startGame', 'setConfig', 'kick', 'transferHost', 'closeSession']) {
     assert.equal(catalog.messages.find((message) => message.type === type && message.from === 'client').channel, 'session');
   }
@@ -101,7 +102,7 @@ function assertDefinition(value, definition) {
   assert.deepEqual(validateJson(value, { $ref: `#/$defs/${definition}` }, schema), []);
 }
 
-test('S1 golden：41 个方向条目逐个有代表帧并通过具体 schema', () => {
+test('S1 golden：每个方向条目逐个有代表帧并通过具体 schema', () => {
   const golden = read('golden/messages.json');
   assert.equal(golden.length, catalog.messages.length);
   const byKey = new Map(golden.map((entry) => [`${entry.from}->${entry.to}:${entry.type}`, entry]));
@@ -119,8 +120,8 @@ test('S1 方向：两个 deliver 不能互换，hostChanged 与离席原因入�
   const authorityDeliver = read('golden/messages.json').find((entry) => entry.name === 'authority-platform-deliver').value;
   assertInvalid(platformDeliver, 'missing', 'AuthorityDeliver');
   assertInvalid(authorityDeliver, 'missing', 'PlatformDeliver');
-  assertDefinition({ type: 'hostChanged', hostSeatId: 2, revision: 10 }, 'PlatformHostChanged');
-  assertInvalid({ type: 'memberLeave', seatId: 2, reason: '网络不好', revision: 7 }, undefined, 'PlatformMemberLeave');
+  assertDefinition({ type: 'hostChanged', hostMemberId: 'm2', authorityEpoch: 1, revision: 10 }, 'PlatformHostChanged');
+  assertInvalid({ type: 'memberLeave', memberId: 'm2', reason: '网络不好', authorityEpoch: 1, revision: 7 }, undefined, 'PlatformMemberLeave');
 });
 
 test('S1 manifest：color-duel 清单通过，路径穿越与未知字段拒绝', () => {

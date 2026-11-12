@@ -1,8 +1,11 @@
 {
   "protocolVersion": 0,
   "items": [
-    {"id":"toSeat","required":false,"summary":"权威可按 seatId 定向投递"},
+    {"id":"toSeat","required":false,"summary":"权威可按 memberId 定向投递"},
     {"id":"resume","required":true,"summary":"平台票据重连与掉线宽限"},
+    {"id":"game.sync","required":true,"summary":"重连后由权威补当前完整私密视图"},
+    {"id":"session.probe","required":true,"summary":"加入前探测房间、配置与清单能力"},
+    {"id":"recover","required":false,"summary":"权威失败后以新 epoch 重启"},
     {"id":"discovery.lan","required":false,"summary":"UDP 组播发现局域网会话"},
     {"id":"tunnel","required":false,"summary":"由平台管理隧道子进程"},
     {"id":"wss","required":false,"summary":"网页客人通过 TLS WebSocket 接入"},
