@@ -229,4 +229,6 @@
 
 - 2026-11-09 Claude Code：**收工复核**：`--check` / `--fix` 通过；`handoff/PROMPT.md` 的跨任务规则路径修正为工作区根 `PROJECT_RULES.md`；技能命令面问题已交接 V4；项目无代码改动，`feaedda` 已推送。
 
+- 2026-11-11 WorkBuddy：**评估与设计会话收工**：全会话只读评估 + 设计，未改代码。产出 `docs/research/` 三份文件（新版平台与 SDK 设计方案 v0、架构评审与决策输入包、平台 UI 预览 HTML + 6 个 OFL 字体），删除两份过时过程文档；D1/D2/D3/D4 按用户拍板、D7 逐屏迭代到 v4、D5/D6 待执行、D8 未拍板；预览页 38/38 DOM 桩自测通过；旧状态流水与最旧 6 条交接记录沉降到 [COMPACT_BACKUP.md](COMPACT_BACKUP.md)。
+
 <!-- multi-agent-task-handoff: scope=handoff -->

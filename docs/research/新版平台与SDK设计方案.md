@@ -1,8 +1,9 @@
 # 新版平台与 SDK 设计方案（候选 v0）
 
-> **候选方案，核心决策 15:12 拍板、边界 15:20 修正**。D1/D2/D3/D4/D5/D6 按结论执行，D7 参考稿 v2（房间级保留 / 对局级删除）待用户反馈。S1–S6 尚未实现、未验证，本文不是已完成的实现依据。
+> **候选方案，核心决策已拍板**。D7 当前 UI 参考稿已确认，D8 已定。协议、双语言互解与内存 mock 已有对应层验证；真实 WS / 进程 / 恢复 / 三端实现尚未完成，本文不是已完成的实现依据。
 > 本文属调研 / 设计类文档，放在 `docs/research/`。自包含：D1–D7 决策状态、证据边界与旧契约实证依据收在附录 A / B；过时的过程文档已删除，不再单独保留。
 > 配套架构评审与拍板输入见 `docs/research/架构评审与决策输入包.md`（分层与边界、选型四列权衡、量级估算、七维风险、S0–S6 验收与回滚）。
+> 补记 3：2026-11-12 全局设计收口到 [`全局目标架构.md`](全局目标架构.md)。进程代际、双连接身份、probe、成员模型、恢复、包、SDK、测试与迁移以该文档为总纲；本文保留决策历史与 UI 设计细节。
 > 日期：2026-11-10　写者：本会话
 > 补记：2026-11-11 完成界面审美与设计评审收口，结论落在 §2.6 末「界面评审收口」与 §2.7 后「状态矩阵落点」。本轮只改 `docs/research/平台UI预览.html` 与本文，未改实现代码，候选 v0 仍未批准。
 > 补记 2：2026-11-11 用户补充拍板：成员准备与「开始游戏」归平台，开始后才拉起游戏进程；平台身份资料可传游戏，但身份色不等于阵营色；网页游戏按「独立 origin 静态包 + 受限 gameTicket」设计。预览页同步修正色板、默认色占用、触控目标、弹层焦点与窄屏溢出。候选 v0 仍未批准；D8 已拍板：三端共用设计与交互契约，网页 / 手机共用 Web 实现，桌面 exe 用原生控件。
@@ -14,7 +15,7 @@
 | `[事实]` | 现有代码或文档里核实过的 |
 | `[建议]` | 本会话的设计判断；标记的是属性，不代表决策状态（决策状态见附录 B.1） |
 | `[假设]` | 推断，无真机验证 |
-| `[待拍板]` | 正文中尚未定的细节；D1–D6 已于 15:12 拍板，仅 D7 参考稿待反馈 |
+| `[待拍板]` | 正文中尚未定的细节；D1–D8 已有结论，其余全局语义见《全局目标架构》 |
 
 **一句话定位**：平台是「联机会话服务」，不是应用宿主；SDK 是「语言中立的联机契约」，不是游戏运行时框架。
 
@@ -283,51 +284,11 @@ flowchart LR
 
 ### 3.3 协议消息目录 `[建议]`
 
-**连接与会话（客户端 ↔ Session Service）**
+**字段不在本文复制维护。** 当前有效字段、方向、通道与权限以 [`protocol/v0/catalog.json`](../../protocol/v0/catalog.json) 和 [`messages.schema.json`](../../protocol/v0/messages.schema.json) 为唯一字据；语义、状态机与时序见 [`语言中立协议v0设计.md`](语言中立协议v0设计.md)，全局成员模型、probe、双通道与恢复收口见 [`全局目标架构.md`](全局目标架构.md)。
 
-| 方向 | 消息 | 关键字段 | 说明 |
-|---|---|---|---|
-| C→P | `hello` | `protocolVersion`, `capabilities[]`, `clientKind` (native/web/mobile) | 只协商平台协议与能力；不带大厅里选中的游戏 id / version |
-| P→C | `welcome` | `sessionId`, `supported[]`, `serverVersion` | 声明平台支持项 |
-| C→P | `sessionCreate` | `gameId`, `version`, `rulesHash`, `memberSlots`, `options` | 房主建房；`options` 平台不解释 |
-| P→C | `seatGranted` | `seatId`, `ticket`, `sessionCode`, `profile` | 票据只在此下发；profile 含 nick / avatar? / displayColor? |
-| C→P | `sessionJoin` | `code`, `gameId`, `version`, `rulesHash`, `credentials` | 按目标房间声明版本与房规；不是通用 hello 的大厅预选值 |
-| C→P | `resume` | `code`, `ticket` | 只凭票坐回原位，不重新声明大厅游戏版本 |
-| C→P | `setReady` | `ready: boolean` | 成员通用准备标记；平台广播，不解释玩法 |
-| C→P | `startGame` | — | 仅房主；所有真人 ready 才通过，通过后平台才拉起 Game Authority |
-| P→C | `sessionState` | `code`, `members[]{seatId,ready,profile,options}`, `hostSeatId`, `state` (open/closed), `gameProcess`, `revision` | 成员表、准备、进程状态与身份资料 |
-| C→P | `gameHandoff` | — | 请求打开网页游戏；平台返回独立 origin URL 与一次性 handoffCode |
-| P→C | `gameHandoff` | `url`, `handoffCode`, `expiresAt` | handoffCode 只放 URL fragment，不写日志 |
-| C→P | `gameAuth` | `handoffCode` 或 `gameTicket` | 换取 / 使用受限游戏凭证 |
-| P→C | `gameGranted` | `gameTicket`, `sessionId`, `seatId` | 只允许游戏消息与游戏侧重连，不含管理权限 |
-| C→P | `leave` | — | 主动离席 |
-| P→C | `notice` / `error` | `code`, `text` | **仅平台级**提示 |
+当前机器契约含 41 条方向消息、全方向 golden、错误码、能力清单和 manifest。`deliver` 的权威出站是 `items[]{to,payload}`；`start` 带 `hostSeatId`，房主变更用 `hostChanged`，离席原因是 `disconnected | left | kicked`。后续 memberId/slot、epoch、sync 等全局修订仍回写同一份 schema，不在本文另开字段表。
 
-**游戏消息（透传，平台不解释）**
-
-| 方向 | 消息 | 关键字段 | 说明 |
-|---|---|---|---|
-| C→P | `game` | `payload` (opaque) | 客人发给权威；不提供客户端直达其他座位的 `to` 字段 |
-| P→A | `deliver` | `fromSeat`, `payload` | 平台转给 Game Authority |
-| A→P | `deliver` | `targets: seatId[] \| 'all'`, `payloadByTarget` | 权威算完，指定收件人；`payloadByTarget` 以 seatId 为键，S1 用 JSON Schema 固定 |
-| P→C | `game` | `fromSeat`, `payload` | 按 targets 投递 |
-
-**房主权限（平台裁决）**
-
-| 方向 | 消息 | 说明 |
-|---|---|---|
-| C→P | `transferHost` / `kick` / `closeSession` | 平台校验 `hostSeatId`，越权回 `NOTHOST` |
-| P→C | `sessionState` (revision+1) | 广播结果 |
-
-**平台 ↔ Game Authority（本地 IPC）**
-
-| 方向 | 消息 | 说明 |
-|---|---|---|
-| P→A | `start` | gameId / version / sessionCode / sessionConfig / members+profile / revision | 开始闸通过后拉起进程并交给它初始快照 |
-| P→A | `memberJoin` / `memberLeave` / `memberResume` | seatId / profile / options / revision | 成员变化，权威据此给新人补状态；profile 只读透传 |
-| A→P | `authorityReady` / `roundClosed` | processStatus / opaque game metadata | 平台只更新进程状态或转发，不解释对局语义 |
-
-**错误码**：沿用 `PlatformCode` / `NoticeCode` 里属于会话的部分（`NOROOM` / `NOSEAT` / `NOTHOST` / `BADMSG` / `VERSION` / `RULES` / `FULL`），新增开始闸与进程启动类平台错误（如 `NOTREADY` / `GAMEFAILED`，字段在 S1 固定）。玩法错误码全部移除，游戏自己定义。
+**错误码**以 [`protocol/v0/errors.json`](../../protocol/v0/errors.json) 为准。玩法错误码由游戏自定义并经 `deliver` 投递，平台不注册、不翻译。
 
 ### 3.4 能力协商 `[建议]`
 
@@ -485,7 +446,7 @@ P1 画布尺寸契约、P2 主题令牌与座位色下发、P4 倒计时归属�
 | D4 | 是否采纳 §2.1 形态分配？ | 采纳 | 已定 |
 | D5 | 是否安装 `architecture-design` + `electron-assistant`？ | 装；apk 无技能覆盖 | 已定，待执行 |
 | D6 | 是否把本方案并入 `DESIGN.md` 文档目录表？ | 拍板后并 | 已定，待执行 |
-| D7 | 是否采纳平台 UI 微调范围与 `open` 相位形态？ | **15:20 边界修正：房间级四块保留、对局级删除**；参考稿 v2 已出（§2.6），待用户看后拍板 | 待反馈 |
+| D7 | 是否采纳平台 UI 微调范围与 `open` 相位形态？ | 房间级四块保留、对局级删除；当前逐屏预览与窄屏交互已确认，S4 按实现验收 | 已定（2026-11-12） |
 | D8 | 客户端与网页是否共用一套 Web UI？ | 统一三端设计与交互契约；网页 / 手机共用 Web 实现，桌面 exe 原生控件，不共用代码 | 已定（2026-11-11） |
 
 ### B.1.1 补充拍板（2026-11-11）
