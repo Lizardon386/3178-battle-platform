@@ -254,6 +254,8 @@ test('参考链路：前房主报 HOSTONLY，其他非房主报 NOTHOST，观战
   assert.equal(errors(host, 'HOSTONLY').length, 1);
   platform.receive(spectator, { type: 'setConfig', config: { cap: '30' } });
   assert.equal(errors(spectator, 'NOTHOST').length, 1);
+  platform.receive(guest, { type: 'kick', targetMemberId: 'm1' });
+  assert.equal(platform.current.members.some((member) => member.memberId === 'm1'), false);
 });
 
 test('参考链路：房主加删电脑、移动槽位，AI 计入最低人数', () => {
@@ -263,6 +265,8 @@ test('参考链路：房主加删电脑、移动槽位，AI 计入最低人数',
   const ai = platform.current.members.find((member) => member.role === 'ai');
   assert.equal(ai.slot, 3);
   assert.equal(ai.options.difficulty, 'easy');
+  platform.receive(host, { type: 'setSeatOptions', memberId: ai.memberId, options: { difficulty: 'normal' } });
+  assert.equal(platform.current.members.find((member) => member.memberId === ai.memberId).options.difficulty, 'normal');
   platform.receive(host, { type: 'moveSlot', memberId: ai.memberId, slot: 4 });
   assert.equal(platform.current.members.find((member) => member.memberId === ai.memberId).slot, 4);
   platform.receive(host, { type: 'removeAi', memberId: ai.memberId });

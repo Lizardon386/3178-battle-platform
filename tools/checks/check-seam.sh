@@ -12,6 +12,7 @@ SCAN_DIRS=(
   "$ROOT"/tools/testkit/src/contract-harness
   "$ROOT"/tools/testkit/src/fake-context
   "$ROOT"/tools/testkit/src/test-games
+  "$ROOT"/tools/testkit/src/protocol-v0
 )
 
 fail=0
@@ -30,7 +31,13 @@ if grep -rnE "from ['\"][^'\"]*games/" "${SCAN_DIRS[@]}" 2>/dev/null | grep -v '
   fail=1
 fi
 
+# 新协议契约必须独立于旧 core-abi，不能把旧 ABI 类型偷偷带回来
+if grep -rnE "from ['\"][^'\"]*core-abi" "$ROOT/tools/testkit/src/protocol-v0" 2>/dev/null | grep -v '\.map:'; then
+  echo "[缝] ^ 协议 v0 契约目录 import 了 core-abi（契约必须语言中立，不依赖旧 ABI）"
+  fail=1
+fi
+
 if [ "$fail" -eq 0 ]; then
-  echo "seam OK: 平台包与玩法零耦合（已扫 ${#WORDS[@]} 个词 + games/ 引用；testkit 只含测试夹具）"
+  echo "seam OK: 平台包与玩法零耦合（已扫 ${#WORDS[@]} 个词 + games/ 引用 + core-abi 契约边界；testkit 只含测试夹具）"
 fi
 exit "$fail"

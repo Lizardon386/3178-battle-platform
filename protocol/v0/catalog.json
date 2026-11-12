@@ -1,6 +1,6 @@
 {
   "protocolVersion": 0,
-  "status": "s1-draft-no-runtime",
+  "status": "aligned-no-runtime",
   "messages": [
     {"type":"hello","from":"client","to":"platform","schema":"ClientHello","channel":"any","auth":"none","summary":"平台协议与能力协商，不带大厅预选游戏版本"},
     {"type":"sessionCreate","from":"client","to":"platform","schema":"ClientSessionCreate","channel":"session","auth":"none","scope":"local","summary":"仅本机房主控制面创建会话并分配 memberId/slot"},
