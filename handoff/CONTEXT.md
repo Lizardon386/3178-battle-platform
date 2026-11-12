@@ -65,7 +65,7 @@
 - **单入口与启动器**：`.bat` 用 `start "标题" node …` + `exit /b 0`，UTF-8 无 BOM + CRLF + 第 2 行 `chcp 65001`，中文只在 chcp 之后；生成走 `tools/packaging/gen-bat.mjs`，由 `bat-entries.test.mjs` 钉住；加入/重连的 hello 不带大厅选中的游戏版本，只有建房才声明；纯进房不写 `data/` / `run-<port>.json`。
 - **UI 验证与高度链**：精确量多档桌面尺寸用无头 Edge + CDP `Emulation.setDeviceMetricsOverride`；旧三栏 319px 高度链（`--bp-room-col-h` / 1256×708）在两栏等宽布局下已失效，真实 UI 实施时要重新量 1256 / 1440 / 320 三档；自绘下拉 `.bp-listbox-trigger` 自带 `min-height:40px`，只写 `height` 会被顶回去。
 - **规则表单与房主面板**：`ruleConfig` 字段 key 必须小写，游戏自己的 `normalizeConfig` 负责映射；资料入口先过 `isValidGameReferenceEntry`，图片路径只走 `/games` 同源路由，文本一律 `textContent`；房主面板每个动作按钮渲染时判断「此刻合法吗」，不合法置灰并写原因（`aiFillBlocker` 是范例），别把服务端错误码当提示。
-- **多会话与跨仓边界**：只 stage 自己的文件，禁止 `git add -A` / `git stash`；SDK 包与平台/客户端分属不同会话，抢写会打断 `tsc -b` 和测试；color-duel 的坑在它自己的 CONTEXT，不要在本仓库重复维护。
+- **多会话与跨仓边界**：只 stage 自己的文件，禁止 `git add -A` / `git stash`；不自行切分支，保持 `master` 单分支；SDK 包与平台/客户端分属不同会话，抢写会打断 `tsc -b` 和测试；color-duel 的坑在它自己的 CONTEXT，不要在本仓库重复维护。
 - **预览页与新坑（合并）**：Chrome 对文本 input 鼠标点击也匹配 `:focus-visible`；`readonly` 聚焦常驻会让 `:has(input:focus)` 区域联动不退，故区域联动必须排除 `[readonly]`（旧修复别改回去）；元素复用 class 会把窄档 grid 套错；动态重绘后事件要委托、焦点不能还给游离节点。**CSS 变量优先级**：内联 `style="--bp-seat:…"` 会压掉 `.seat.is-ready` 状态色，故身份 / 标记 / 状态拆三条通道，状态用文字 + 勾图标表达。**`readonly` ≠ `disabled`**：前者仍要点选复制，静态观感可弱化但 hover/focus 动效必须与普通输入框一致；`input[readonly]:not(:focus)` 用 `:not` 避免覆盖 `input:focus` 抬底。**跨轮状态链**：席位色、聊天箭头、占位色、告警带都是同一份 `state` 派生，改色 / 请出 / 恢复默认必须全链路重算，任一处漏联动就会显示旧数据。DOM 桩验逻辑与状态，验不了视觉「挤不挤」、字体加载、真机触控与辅助技术；色板 / 列表重排后按索引定位的断言会失效，要按 `data-color` / `data-role` 等稳定标识定位。
 
 ## 7. 验证命令
@@ -93,7 +93,7 @@ npx tsc -b && node --test --test-timeout=20000 tools/testkit/test/s1-protocol.te
 
 ## 9. 交接记录
 
-- 2026-11-12 ZCode：**真实客户端房间页落地 + 交付形态纠偏**：把已确认的房间交互落到 `packages/client`（空位前置加号、占用席位尾部删除叉、真人确认 `<dialog>`、按钮文案、昵称 22px 同档、窄屏只显示占用席位与 44px 动作），提交 `b48d4a7`；`npm test` 253/253、seam、tsc 通过。曾尝试“exe 启动服务再开浏览器”的临时启动器，用户指出设计里的桌面端是原生控件且三端实现应排在骨干之后，启动器已删除；下一步按设计顺序补齐 `protocol/v0` 并实现真实 Session Service / Supervisor。真实浏览器端到端尚未验收。
+- 2026-11-12 ZCode：**真实客户端房间页落地 + 交付形态纠偏**：把已确认的房间交互落到 `packages/client`（空位前置加号、占用席位尾部删除叉、真人确认 `<dialog>`、按钮文案、昵称 22px 同档、窄屏只显示占用席位与 44px 动作），提交 `b48d4a7`；`npm test` 253/253、seam、tsc 通过。曾尝试“exe 启动服务再开浏览器”的临时启动器，用户指出设计里的桌面端是原生控件且三端实现应排在骨干之后，启动器已删除；下一步按设计顺序补齐 `protocol/v0` 并实现真实 Session Service / Supervisor。真实浏览器端到端尚未验收。此前擅自创建的 `s1-protocol` 已快进合并回 `master` 并删除本地 / 远端分支，后续保持单分支。
 - 2026-11-11 ZCode：**六维评审、设计检查点与 S1 契约与 mock 完成**：接盘四条基线全绿；评审发现 ready/start 归属、身份色与游戏选项、网页游戏同源安全三处边界矛盾，以及 S1 mock/真实链路、S4 35° 与实际 29.6° 等口径问题。按用户决定修正两份设计文档与预览页：ready/start 归平台、开始后拉起权威，profile 传游戏，网页游戏独立 origin + 受限 gameTicket；UI 调整昵称双突出、8 色最小 35.1°、AI 中性灰、默认色占用、44px 触控、底栏对齐、320 溢出、焦点闭环、席位前加后叉与真人确认、模板转义。实跑无头 Edge / CDP、HSV / WCAG、`node --check`、静态约束检查全过；设计检查点 `e961af1`；S1 新增 41 条方向 golden、manifest、TS / Python 生成互解、内存 mock 与最小参考游戏；未改旧运行时，真机与辅助技术未验；次日完成全局目标架构总纲与文档权威收口；复跑 253/253、seam、tsc、smoke、生成物与浏览器交互全绿，本地提交 `1fb3e44`；后续推送已成功，远端状态以 PROMPT 实测锚点为准。
 - 2026-11-11 WorkBuddy：**设计评审与逐屏收口**：接盘时四条基线验证实跑全绿；随后按前端美学框架完整评估候选 v0，并按用户「开始」+ 六轮逐屏反馈把结论全部落地到 `docs/research/平台UI预览.html`（色彩三通道、对比度、七态告警带、字阶令牌、全站实线、8 色去重、共享令牌锁定、聊天格式统一与箭头联动），同步收进 `新版平台与SDK设计方案.md` §2.6 第 1–8 条 / §2.7 落点表 / S4 / §5 验收。**未新建独立评审文档、未改代码、未动正式文档**。验证：静态 76/76、DOM 桩 90/90、`node --check` 通过，对比度全达标；脚本为 `%TEMP%` 临时桩不入库。候选 v0 仍未批准，D8 未拍板；真机 / 辅助技术未验证。压卡判定：96 行、4 条记录、10 类坑均在限内，**无需压卡**。
 
