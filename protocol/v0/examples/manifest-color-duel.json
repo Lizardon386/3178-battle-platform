@@ -1,6 +1,9 @@
 {
   "id":"color-duel",
+  "name":"变色对决",
   "version":"0.3.0",
+  "requiredCapabilities":["toSeat"],
+  "lateJoin":"spectator",
   "platformRequirements":{"protocolVersion":0,"minPlayers":2,"maxPlayers":8,"allowSpectate":true,"soloFill":true},
   "entryPoints":{"authority":"authority/index.js","web":"web/index.html"},
   "sessionConfig":{

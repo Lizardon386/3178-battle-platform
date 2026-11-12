@@ -1,1 +1,1 @@
-{"type":"sessionCreate","gameId":"color-duel","version":"0.3.0","config":{"handLimit":7},"memberSlots":8,"options":{},"profile":{"nick":"房主老周","displayColor":"#f59e0b"},"roomName":"周末一局"}
+{"type":"sessionCreate","gameId":"color-duel","version":"0.3.0","config":{"cap":"20"},"memberSlots":8,"options":{},"profile":{"nick":"房主老周","displayColor":"#f59e0b"},"roomName":"周末一局"}

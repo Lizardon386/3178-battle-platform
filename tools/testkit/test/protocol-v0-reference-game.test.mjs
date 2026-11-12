@@ -1,10 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { MockSessionService } from '../dist/protocol-v0/mock-session-service.js';
 import { ReferenceGame } from '../dist/protocol-v0/reference-game.js';
 
+const manifest = JSON.parse(fs.readFileSync(
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../protocol/v0/examples/manifest-color-duel.json'),
+  'utf8',
+));
+
 function setup() {
   const platform = new MockSessionService();
+  platform.registerGame(manifest);
   const game = new ReferenceGame(platform);
   platform.useAuthority(() => game);
   const host = platform.connect();
@@ -16,7 +25,7 @@ function setup() {
 
 function createAndJoin(platform, host, guest) {
   platform.receive(host, {
-    type: 'sessionCreate', gameId: 'color-duel', version: '0.3.0', config: { handLimit: 7 },
+    type: 'sessionCreate', gameId: 'color-duel', version: '0.3.0', config: { cap: '20' },
     memberSlots: 8, options: {}, profile: { nick: '房主老周', displayColor: '#f59e0b' }, roomName: '周末一局',
   });
   platform.receive(guest, {
@@ -108,7 +117,7 @@ test('参考链路：配置变更重置真人准备，房主移交有 hostChange
   const before = platform.current.rulesHash;
   platform.receive(host, { type: 'setReady', ready: true });
   platform.receive(guest, { type: 'setReady', ready: true });
-  platform.receive(host, { type: 'setConfig', config: { handLimit: 8 } });
+  platform.receive(host, { type: 'setConfig', config: { cap: '30' } });
   assert.notEqual(platform.current.rulesHash, before);
   assert.equal(platform.current.members.every((member) => !member.ready), true);
   platform.receive(host, { type: 'startGame' });

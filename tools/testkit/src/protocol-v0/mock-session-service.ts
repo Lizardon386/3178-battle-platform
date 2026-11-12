@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { canonicalJson } from '../../../../packages/core-abi/dist/hash.js';
+import { rulesHashOf } from './canonical-json.js';
+import { FIELD_LIMITS, normalizeFields, validateFieldSpecs, type FieldSpec } from './normalize-config.js';
 import { validateJson, type SchemaRule } from './schema-validator.js';
 import type { AuthorityToPlatformMessage, Member, PlatformToAuthorityMessage, ProtocolMessage } from './generated/messages.js';
 import { MockTransport, type MockClient } from './mock-transport.js';
@@ -10,11 +11,29 @@ import { MockTransport, type MockClient } from './mock-transport.js';
 type AnyMessage = Record<string, any>;
 type CatalogEntry = { type: string; from: string; to: string; schema: string; channel: string };
 type MemberRecord = Member & { ticketHash: string; gameTicketHash?: string; connectionId?: string };
+export type GameManifest = {
+  id: string;
+  name: string;
+  version: string;
+  requiredCapabilities?: string[];
+  lateJoin?: 'spectator' | 'player' | 'deny';
+  platformRequirements: {
+    protocolVersion: number;
+    minPlayers: number;
+    maxPlayers: number;
+    allowSpectate?: boolean;
+    soloFill?: boolean;
+  };
+  entryPoints: { authority: string; web?: string };
+  sessionConfig: { fields: FieldSpec[]; seatOptions?: FieldSpec[] };
+  reference: { entry: string };
+};
 type SessionRecord = {
   id: string;
   code: string;
   gameId: string;
   version: string;
+  manifest: GameManifest;
   config: Record<string, unknown>;
   rulesHash: string;
   memberSlots: number;
@@ -31,6 +50,7 @@ export interface AuthorityEndpoint {
 
 const specDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../protocol/v0');
 const messageSchema = JSON.parse(fs.readFileSync(path.join(specDir, 'messages.schema.json'), 'utf8')) as SchemaRule;
+const manifestSchema = JSON.parse(fs.readFileSync(path.join(specDir, 'manifest.schema.json'), 'utf8')) as SchemaRule;
 const catalog = JSON.parse(fs.readFileSync(path.join(specDir, 'catalog.json'), 'utf8')) as { messages: CatalogEntry[] };
 const hashSecret = (value: string) => createHash('sha256').update(value, 'utf8').digest('hex');
 const newSecret = (prefix: string) => `${prefix}-${randomBytes(12).toString('hex')}`;
@@ -43,10 +63,24 @@ export class MockSessionService {
   authority: AuthorityEndpoint | null = null;
   authorityStarts = 0;
   private authorityFactory: (() => AuthorityEndpoint) | null = null;
+  private readonly games = new Map<string, GameManifest>();
   private readonly handoffs = new Map<string, { seatId: number; expiresAt: number; used: boolean }>();
 
   useAuthority(factory: () => AuthorityEndpoint): void {
     this.authorityFactory = factory;
+  }
+
+  /** 注册清单；config / seatOptions 的声明在这里先做语义校验。 */
+  registerGame(input: unknown): GameManifest {
+    const manifest = input as GameManifest;
+    const errors = validateJson(manifest, manifestSchema, manifestSchema);
+    if (errors.length) throw new Error(`manifest 不合法: ${errors[0]}`);
+    const configError = validateFieldSpecs(manifest.sessionConfig?.fields, FIELD_LIMITS.fields, 'sessionConfig.fields');
+    if (configError) throw new Error(`manifest 不合法: ${configError}`);
+    const seatError = validateFieldSpecs(manifest.sessionConfig.seatOptions ?? [], FIELD_LIMITS.seatOptions, 'sessionConfig.seatOptions');
+    if (seatError) throw new Error(`manifest 不合法: ${seatError}`);
+    this.games.set(`${manifest.id}@${manifest.version}`, manifest);
+    return manifest;
   }
 
   connect(): MockClient {
@@ -127,11 +161,17 @@ export class MockSessionService {
 
   private createSession(client: MockClient, message: AnyMessage): void {
     if (this.current?.state === 'open') { this.error(client, 'PHASE', '已有进行中的会话'); return; }
+    const manifest = this.games.get(`${message.gameId}@${message.version}`);
+    if (!manifest) { this.error(client, 'UNKNOWN_GAME', '游戏或版本未注册'); return; }
+    const config = normalizeFields(manifest.sessionConfig.fields, message.config);
+    if (!config.ok) { this.error(client, 'CONFIG', config.error); return; }
+    const options = normalizeFields(manifest.sessionConfig.seatOptions ?? [], {}, 'player');
+    if (!options.ok) { this.error(client, 'CONFIG', options.error); return; }
     const ticket = newSecret('ticket');
-    const member: MemberRecord = { seatId: 1, kind: 'player', ready: false, profile: message.profile, connected: true, options: {}, ticketHash: hashSecret(ticket), connectionId: client.id };
+    const member: MemberRecord = { seatId: 1, kind: 'player', ready: false, profile: message.profile, connected: true, options: options.value, ticketHash: hashSecret(ticket), connectionId: client.id };
     this.current = {
-      id: 'sess-893F', code: '893F', gameId: message.gameId, version: message.version,
-      config: message.config, rulesHash: this.rulesHash(message.config), memberSlots: message.memberSlots,
+      id: 'sess-893F', code: '893F', gameId: message.gameId, version: message.version, manifest,
+      config: config.value, rulesHash: rulesHashOf(config.value), memberSlots: message.memberSlots,
       password: message.password, members: [member], hostSeatId: 1, state: 'open', gameProcess: 'stopped', revision: 0,
     };
     client.seatId = 1; client.ticket = ticket;
@@ -146,9 +186,11 @@ export class MockSessionService {
     if (message.rulesHash !== session.rulesHash) { this.error(client, 'RULES', '玩法参数摘要不符'); return; }
     if (session.password && message.credentials.password !== session.password) { this.error(client, 'PASSWORD', '密码错误'); return; }
     if (session.members.length >= session.memberSlots) { this.error(client, 'FULL', '席位已满'); return; }
+    const options = normalizeFields(session.manifest.sessionConfig.seatOptions ?? [], {}, 'player');
+    if (!options.ok) { this.error(client, 'CONFIG', options.error); return; }
     const seatId = session.members.reduce((max, member) => Math.max(max, member.seatId), 0) + 1;
     const ticket = newSecret('ticket');
-    const member: MemberRecord = { seatId, kind: 'player', ready: false, profile: message.profile, connected: true, options: {}, ticketHash: hashSecret(ticket), connectionId: client.id };
+    const member: MemberRecord = { seatId, kind: 'player', ready: false, profile: message.profile, connected: true, options: options.value, ticketHash: hashSecret(ticket), connectionId: client.id };
     session.members.push(member);
     client.seatId = seatId; client.ticket = ticket;
     this.send(client, { type: 'seatGranted', seatId, ticket, sessionCode: session.code, profile: message.profile });
@@ -180,8 +222,10 @@ export class MockSessionService {
   private setConfig(client: MockClient, message: AnyMessage): void {
     const session = this.current; if (!this.requireHost(client) || !session) return;
     if (session.gameProcess !== 'stopped') { this.error(client, 'PHASE', '开始后不能修改玩法参数'); return; }
-    session.config = message.config;
-    session.rulesHash = this.rulesHash(session.config);
+    const config = normalizeFields(session.manifest.sessionConfig.fields, message.config);
+    if (!config.ok) { this.error(client, 'CONFIG', config.error); return; }
+    session.config = config.value;
+    session.rulesHash = rulesHashOf(session.config);
     for (const member of session.members) if (member.kind === 'player') member.ready = false;
     this.bump();
   }
@@ -191,7 +235,9 @@ export class MockSessionService {
     if (session.gameProcess !== 'stopped') { this.error(client, 'PHASE', '开始后不能修改座位选项'); return; }
     const member = session.members.find((member) => member.seatId === message.seatId);
     if (!member) { this.error(client, 'NOSEAT', '目标席位不存在'); return; }
-    member.options = message.options;
+    const options = normalizeFields(session.manifest.sessionConfig.seatOptions ?? [], message.options, member.kind);
+    if (!options.ok) { this.error(client, 'CONFIG', options.error); return; }
+    member.options = options.value;
     this.bump();
   }
 
@@ -314,10 +360,6 @@ export class MockSessionService {
 
   private publicMember(member: MemberRecord): Member {
     return { seatId: member.seatId, kind: member.kind, ready: member.ready, profile: member.profile, connected: member.connected, options: member.options };
-  }
-
-  private rulesHash(config: unknown): string {
-    return createHash('sha256').update(canonicalJson(config), 'utf8').digest('hex');
   }
 
   private bump(): void {

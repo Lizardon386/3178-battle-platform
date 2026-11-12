@@ -82,7 +82,7 @@ test('S1 错误码与能力清单唯一，新增平台边界码齐全', () => {
   const errors = read('errors.json');
   const codes = errors.platformErrors.map((item) => item.code);
   assert.equal(new Set(codes).size, codes.length);
-  for (const code of ['NOTREADY', 'GAMEFAILED', 'HANDOFF', 'FORBIDDEN']) assert.ok(codes.includes(code));
+  for (const code of ['NOTREADY', 'GAMEFAILED', 'HANDOFF', 'FORBIDDEN', 'CONFIG', 'UNKNOWN_GAME']) assert.ok(codes.includes(code));
   const capabilities = read('capabilities.json').items.map((item) => item.id);
   assert.equal(new Set(capabilities).size, capabilities.length);
   for (const id of ['game.handoff', 'ready', 'start', 'resume']) assert.ok(capabilities.includes(id));
@@ -127,6 +127,9 @@ test('S1 manifest：color-duel 清单通过，路径穿越与未知字段拒绝'
   const manifestSchema = read('manifest.schema.json');
   const manifest = read('examples/manifest-color-duel.json');
   assert.deepEqual(validateJson(manifest, manifestSchema, manifestSchema), []);
+  assert.equal(manifest.name, '变色对决');
+  assert.deepEqual(manifest.requiredCapabilities, ['toSeat']);
+  assert.equal(manifest.lateJoin, 'spectator');
   assert.ok(manifest.sessionConfig.fields.length >= 6);
   assert.deepEqual(manifest.sessionConfig.seatOptions.map((field) => field.key), ['difficulty']);
   assert.deepEqual(validateJson({ ...manifest, oldAbi: 'GameModule' }, manifestSchema, manifestSchema).some((error) => error.includes('extra field')), true);

@@ -1,0 +1,133 @@
+{
+  "vectors": [
+    {
+      "name": "object-key-order",
+      "input": {
+        "b": 2,
+        "a": 1
+      },
+      "canonical": "{\"a\":1,\"b\":2}",
+      "sha256": "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777"
+    },
+    {
+      "name": "nested",
+      "input": {
+        "z": [
+          3,
+          {
+            "b": true,
+            "a": null
+          }
+        ],
+        "a": "x"
+      },
+      "canonical": "{\"a\":\"x\",\"z\":[3,{\"a\":null,\"b\":true}]}",
+      "sha256": "b9e4db22e811ab3b92364a0aa53caf6b108f5f0dcee91e69d518d3668d91f106"
+    },
+    {
+      "name": "utf8-key-order",
+      "input": {
+        "": 1,
+        "𐀀": 2
+      },
+      "canonical": "{\"\":1,\"𐀀\":2}",
+      "sha256": "8706b5798a29d65739b3d1bbb1d009f87d005c71c8130c5353c4990c15ddfec8"
+    },
+    {
+      "name": "numbers",
+      "input": {
+        "n": 1,
+        "m": 1000,
+        "z": 0,
+        "max": 9007199254740991
+      },
+      "canonical": "{\"m\":1000,\"max\":9007199254740991,\"n\":1,\"z\":0}",
+      "sha256": "b37aef70c33deb8af9035b548e923b2af646455570b217e7f9c6351671f36e44"
+    },
+    {
+      "name": "escapes",
+      "input": {
+        "s": "a\"b\\c\n\t\u0001中"
+      },
+      "canonical": "{\"s\":\"a\\\"b\\\\c\\n\\t\\u0001中\"}",
+      "sha256": "1ceb5155bf0b2bddb8557c3f1dcdd516ce185ba8115ba2fb5f3b3ab5fd401677"
+    },
+    {
+      "name": "array-order",
+      "input": [
+        3,
+        1,
+        2
+      ],
+      "canonical": "[3,1,2]",
+      "sha256": "51bda7ab4e44726cde71fcb6e4b515357059bb6b6dd5146d1fc50f73f11678c6"
+    },
+    {
+      "name": "empty-object",
+      "input": {},
+      "canonical": "{}",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "name": "empty-array",
+      "input": [],
+      "canonical": "[]",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "name": "primitives",
+      "input": [
+        true,
+        false,
+        null,
+        "x",
+        0
+      ],
+      "canonical": "[true,false,null,\"x\",0]",
+      "sha256": "d20bf3193f31ed18d23659cfc99c3694fd5e0c40702b7378a1ac72da15f718a7"
+    },
+    {
+      "name": "unicode",
+      "input": {
+        "中": "文",
+        "a": "é"
+      },
+      "canonical": "{\"a\":\"é\",\"中\":\"文\"}",
+      "sha256": "e783f09124d0f0712103795bcab7a7a80a1c13c5e2f4d29ba3626f2e9f66d723"
+    },
+    {
+      "name": "deep",
+      "input": {
+        "b": {
+          "d": 4,
+          "c": [
+            {
+              "f": 6,
+              "e": 5
+            }
+          ]
+        },
+        "a": 1
+      },
+      "canonical": "{\"a\":1,\"b\":{\"c\":[{\"e\":5,\"f\":6}],\"d\":4}}",
+      "sha256": "c40b8f64310d331307d81e51682c0571338344f679c4f1c4f34a0d53677e3f63"
+    }
+  ],
+  "invalid": [
+    {
+      "name": "fraction",
+      "input": 1.5,
+      "errorContains": "safe integer"
+    },
+    {
+      "name": "too-large",
+      "input": 9007199254740992,
+      "errorContains": "safe integer"
+    },
+    {
+      "name": "lone-surrogate",
+      "input": "\ud800",
+      "errorContains": "lone surrogate"
+    }
+  ]
+}

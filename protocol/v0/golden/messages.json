@@ -1,11 +1,11 @@
 [
   {"name":"client-platform-hello","from":"client","to":"platform","type":"hello","value":{"type":"hello","protocolVersion":0,"capabilities":["resume","ready","start"],"clientKind":"web"}},
-  {"name":"client-platform-sessionCreate","from":"client","to":"platform","type":"sessionCreate","value":{"type":"sessionCreate","gameId":"color-duel","version":"0.3.0","config":{"handLimit":7},"memberSlots":8,"options":{},"profile":{"nick":"房主老周","displayColor":"#f59e0b"},"roomName":"周末一局"}},
+  {"name":"client-platform-sessionCreate","from":"client","to":"platform","type":"sessionCreate","value":{"type":"sessionCreate","gameId":"color-duel","version":"0.3.0","config":{"cap":"20"},"memberSlots":8,"options":{},"profile":{"nick":"房主老周","displayColor":"#f59e0b"},"roomName":"周末一局"}},
   {"name":"client-platform-sessionJoin","from":"client","to":"platform","type":"sessionJoin","value":{"type":"sessionJoin","code":"893F","gameId":"color-duel","version":"0.3.0","rulesHash":"0000000000000000000000000000000000000000000000000000000000000000","credentials":{"password":"room"},"profile":{"nick":"小林","displayColor":"#6366f1"}}},
   {"name":"client-platform-resume","from":"client","to":"platform","type":"resume","value":{"type":"resume","code":"893F","ticket":"ticket-1234567890"}},
   {"name":"client-platform-setReady","from":"client","to":"platform","type":"setReady","value":{"type":"setReady","ready":true}},
   {"name":"client-platform-startGame","from":"client","to":"platform","type":"startGame","value":{"type":"startGame"}},
-  {"name":"client-platform-setConfig","from":"client","to":"platform","type":"setConfig","value":{"type":"setConfig","config":{"handLimit":8}}},
+  {"name":"client-platform-setConfig","from":"client","to":"platform","type":"setConfig","value":{"type":"setConfig","config":{"cap":"30"}}},
   {"name":"client-platform-setSeatOptions","from":"client","to":"platform","type":"setSeatOptions","value":{"type":"setSeatOptions","seatId":3,"options":{"difficulty":"easy"}}},
   {"name":"client-platform-leave","from":"client","to":"platform","type":"leave","value":{"type":"leave"}},
   {"name":"client-platform-transferHost","from":"client","to":"platform","type":"transferHost","value":{"type":"transferHost","targetSeat":2}},
@@ -28,7 +28,7 @@
   {"name":"platform-client-error","from":"platform","to":"client","type":"error","value":{"type":"error","code":"NOTREADY","text":"还有真人未准备","details":{"seatIds":[2]}}},
   {"name":"platform-client-pong","from":"platform","to":"client","type":"pong","value":{"type":"pong","nonce":"c-1"}},
 
-  {"name":"platform-authority-start","from":"platform","to":"authority","type":"start","value":{"type":"start","gameId":"color-duel","version":"0.3.0","sessionCode":"893F","sessionConfig":{"handLimit":7},"members":[{"seatId":1,"kind":"player","ready":true,"profile":{"nick":"房主老周","displayColor":"#f59e0b"},"connected":true,"options":{}},{"seatId":2,"kind":"player","ready":true,"profile":{"nick":"小林","displayColor":"#6366f1"},"connected":true,"options":{}}],"hostSeatId":1,"revision":5}},
+  {"name":"platform-authority-start","from":"platform","to":"authority","type":"start","value":{"type":"start","gameId":"color-duel","version":"0.3.0","sessionCode":"893F","sessionConfig":{"cap":"20"},"members":[{"seatId":1,"kind":"player","ready":true,"profile":{"nick":"房主老周","displayColor":"#f59e0b"},"connected":true,"options":{}},{"seatId":2,"kind":"player","ready":true,"profile":{"nick":"小林","displayColor":"#6366f1"},"connected":true,"options":{}}],"hostSeatId":1,"revision":5}},
   {"name":"platform-authority-memberJoin","from":"platform","to":"authority","type":"memberJoin","value":{"type":"memberJoin","member":{"seatId":2,"kind":"player","ready":false,"profile":{"nick":"小林","displayColor":"#6366f1"},"connected":true,"options":{}},"revision":6}},
   {"name":"platform-authority-memberLeave","from":"platform","to":"authority","type":"memberLeave","value":{"type":"memberLeave","seatId":2,"reason":"disconnected","revision":7}},
   {"name":"platform-authority-memberResume","from":"platform","to":"authority","type":"memberResume","value":{"type":"memberResume","seatId":2,"profile":{"nick":"小林","displayColor":"#6366f1"},"revision":8}},

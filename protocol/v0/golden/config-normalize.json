@@ -1,0 +1,25 @@
+{
+  "fields": [
+    {"key":"stack","type":"boolean","label":"罚牌接龙","default":true},
+    {"key":"cap","type":"enum","label":"手牌上限","default":"20","options":[{"value":"20","label":"20 张"},{"value":"30","label":"30 张"}]},
+    {"key":"max-players","type":"integer","label":"人数上限","default":4,"min":2,"max":8}
+  ],
+  "seatFields": [
+    {"key":"difficulty","type":"enum","label":"电脑强度","default":"easy","roles":["ai"],"options":[{"value":"easy","label":"简单"},{"value":"normal","label":"中等"}]}
+  ],
+  "vectors": [
+    {"name":"defaults","raw":{},"expected":{"stack":true,"cap":"20","max-players":4}},
+    {"name":"override","raw":{"stack":false,"cap":"30","max-players":8},"expected":{"stack":false,"cap":"30","max-players":8}},
+    {"name":"unknown-key","raw":{"handLimit":7},"errorContains":"未声明的键"},
+    {"name":"wrong-type","raw":{"stack":"yes"},"errorContains":"布尔值"},
+    {"name":"enum-out","raw":{"cap":"99"},"errorContains":"选项"},
+    {"name":"integer-low","raw":{"max-players":1},"errorContains":"不能小于"},
+    {"name":"integer-high","raw":{"max-players":9},"errorContains":"不能大于"},
+    {"name":"fraction","raw":{"max-players":4.5},"errorContains":"安全整数"}
+  ],
+  "seatVectors": [
+    {"name":"ai-defaults","role":"ai","raw":{},"expected":{"difficulty":"easy"}},
+    {"name":"player-skips-ai","role":"player","raw":{},"expected":{}},
+    {"name":"player-rejects-ai-key","role":"player","raw":{"difficulty":"easy"},"errorContains":"不适用"}
+  ]
+}
