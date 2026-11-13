@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-11-13　模式：四档（README / DESIGN / INTEGRATION_GUIDE / CONTEXT）+ `docs/research` 调研目录　项目目录：D:\agent_workspace\3178-battle-platform　代码锚点以 `handoff/PROMPT.md` 与 git HEAD 为准（分支 `master`）　当前接盘：待接（上一写者 Claude Code；A0–A5 契约修订已收工，完整实施计划待评审）
+> 最近更新：2026-11-13　模式：四档（README / DESIGN / INTEGRATION_GUIDE / CONTEXT）+ `docs/research` 调研目录　项目目录：D:\agent_workspace\3178-battle-platform　代码锚点以 `handoff/PROMPT.md` 与 git HEAD 为准（分支 `master`）　当前接盘：待接（上一写者 Qoder；计划评审 + android.jar SDK 形态已收口，等实施指令）
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
@@ -36,9 +36,8 @@
 
 ## 4. 下一步
 
-1. **评审完整实施计划**：读 `C:\Users\TS\.claude\plans\bright-swinging-wren.md`。重点 §2.1 高内聚低耦合边界、§3 游标/事务/恢复、§7.0 旧 SDK 继承映射、§12 故障注入矩阵。计划不在仓库内，换机交接需先把该文件复制到可访问位置。
-2. **拍板两个待定**：game-kit 是否作为可选独立包保留；`authority-host` 作为 `game-sdk/authority` 的发布内容还是单独离线资产。
-3. **评审通过后按 WP0–WP9 实施**：先 WP0（方案回写 + 依赖闸门）与 WP1（契约、纯内核、存储），不跳步。真实运行时、原生 exe、SDK 外部消费者均未实施。
+1. **待定项已全部关闭，等实施指令**：game-kit = 可选独立包 `@lizardon386/game-kit`；SDK 形态 = **android.jar 模型**（2026-11-13 用户确认）：游戏侧单一 compile-only stub（派生自框架公开 API + protocol/v0 schema），框架内置实现、运行时 host/supervisor 注入；authority-host = 平台 runner（取代早先 bundled），pack-format/protocol-types 不对游戏发布，bp-game 独立构建工具。计划已全文重写为该模型（573 行），无未拍板项。
+2. **按 WP0–WP9 实施**：先 WP0（方案回写 + 依赖闸门）与 WP1（契约、纯内核、存储），不跳步。真实运行时、原生 exe、SDK 外部消费者均未实施。计划评审与 9 项回写详情见 §9 Qoder 记录。
 
 
 ## 5. MEMORY 提炼
@@ -54,6 +53,7 @@
 - **用户给的是「观察 + 诉求」，不一定是最优解**（用户明确要求「不一定按我说的做，要给出专业的判断」）：先判断背后的真实问题，再选代价更小的方案；照做时补被抹掉的语义，不照做时说清理由与等效替代，并把判断依据写进文档。**写进文档的量化结论（色相差、对比度、数量）必须实算**，估值不写成结论。
 - 跨会话无直连能力，「评估和设计游戏」会话的结论只能从共享文件读；宿主用户级 memory 为空块，项目级日志在项目内 `.workbuddy/memory/`（不入库）。
 - **架构一次设计完整，不接受边做边补**；计划/待定项确认不等于开工，只有明确实施指令才动仓库；新增功能优先落在单一模块和对应测试，不跨层修补。
+- **SDK = android.jar 模型（2026-11-13 拍板，覆盖旧四包）**：游戏侧只装单一 compile-only stub `@lizardon386/game-sdk`（派生自框架公开 API + protocol/v0 schema，esbuild `--external`，产物不含 SDK），运行时由 host/supervisor 注入真实实现；core-abi / pack-format / protocol-types 是框架内部、不对游戏发布也不被 stub 依赖；authority-host = 平台 runner（非 bundled）；bp-game 独立构建工具、game-kit 可选独立包。**仓库现存四包是旧实现，别按它反推新设计**；旧四包 0.4.x 弃用、WP9 color-duel 迁移后停维护。
 
 ## 6. 关键约束与易踩的坑
 
@@ -93,8 +93,8 @@ npx tsc -b && node --test --test-timeout=20000 tools/testkit/test/s1-protocol.te
 
 ## 9. 交接记录
 
+- 2026-11-13 Qoder：**接盘复验 + 计划评审 9 项回写 + 全文重写为 android.jar 模型**：接盘四条基线全绿（`npm test` 272/272、seam、tsc、gen-check），HEAD `debb73d`、工作树净。逐条核对仓库后把「冻结前必须补的 9 个问题」全部回写进计划（本机 `C:\Users\TS\.claude\plans\bright-swinging-wren.md`，不在仓库内）：tick 时间驱动语义、跨语言 canonical 硬闸、动作/tick 串行、operations.jsonl 配额、Effect 六种映射（kick 删除）、更正 stableDigest 实为 UTF-8+FNV-1a、packages/protocol 处置、core-abi 弃用口径、WPF 视觉保真。随后与用户经 HAL→.so→android.jar 类比收敛，**把计划全文重写为 android.jar compile-only stub 模型**（§2 完成定义/分层、§7.0 包职责与依赖图与 `runAuthority` stub、§12 WP5、§13 决策），authority-host 改判平台 runner（取代 bundled）、pack-format 收为框架内部、旧四包 0.4.x 全弃用；计划 543→573 行。**未改任何实现代码**；本会话仅改 CONTEXT 与计划文件，收工提交 handoff 两档。真实运行时、原生 exe、SDK 外部消费者均未实施。
 - 2026-11-13 Claude Code：**A0–A5 契约修订收工 + 完整实施计划落盘**：`protocol/v0` 已按总纲补齐（memberId/slot/role、authorityEpoch、sync、probe、严格双通道、canonical/配置 golden、加删电脑/聊天历史）；`npm test` 272/272、seam、生成物一致，CI ubuntu/windows 通过，HEAD `103398f` 已推送。完整架构与实施计划在 `C:\Users\TS\.claude\plans\bright-swinging-wren.md`（高内聚低耦合边界、旧 SDK 继承映射、WAL/游标/恢复、原生 exe/SDK/游戏验收）。真实运行时、原生 exe、SDK 外部消费者尚未实施。
 - 2026-11-12 ZCode：**真实客户端房间页落地 + 交付形态纠偏**：把已确认的房间交互落到 `packages/client`（空位前置加号、占用席位尾部删除叉、真人确认 `<dialog>`、按钮文案、昵称 22px 同档、窄屏只显示占用席位与 44px 动作），提交 `b48d4a7`；`npm test` 253/253、seam、tsc 通过。曾尝试“exe 启动服务再开浏览器”的临时启动器，用户指出设计里的桌面端是原生控件且三端实现应排在骨干之后，启动器已删除；下一步按设计顺序补齐 `protocol/v0` 并实现真实 Session Service / Supervisor。真实浏览器端到端尚未验收。此前擅自创建的 `s1-protocol` 已快进合并回 `master` 并删除本地 / 远端分支，后续保持单分支。
-- 2026-11-11 ZCode：**六维评审、设计检查点与 S1 契约与 mock 完成**：接盘四条基线全绿；评审发现 ready/start 归属、身份色与游戏选项、网页游戏同源安全三处边界矛盾，以及 S1 mock/真实链路、S4 35° 与实际 29.6° 等口径问题。按用户决定修正两份设计文档与预览页：ready/start 归平台、开始后拉起权威，profile 传游戏，网页游戏独立 origin + 受限 gameTicket；UI 调整昵称双突出、8 色最小 35.1°、AI 中性灰、默认色占用、44px 触控、底栏对齐、320 溢出、焦点闭环、席位前加后叉与真人确认、模板转义。实跑无头 Edge / CDP、HSV / WCAG、`node --check`、静态约束检查全过；设计检查点 `e961af1`；S1 新增 41 条方向 golden、manifest、TS / Python 生成互解、内存 mock 与最小参考游戏；未改旧运行时，真机与辅助技术未验；次日完成全局目标架构总纲与文档权威收口；复跑 253/253、seam、tsc、smoke、生成物与浏览器交互全绿，本地提交 `1fb3e44`；后续推送已成功，远端状态以 PROMPT 实测锚点为准。
 
 <!-- multi-agent-task-handoff: scope=handoff -->
