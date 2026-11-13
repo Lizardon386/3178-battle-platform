@@ -140,7 +140,6 @@ node packages/hostd/dist/cli.js stop --port 3178
 - **宿主制天然不防房主**：权威进程在房主机上，“按视角裁剪”只防透视；移交只移权限、不迁进程。
 - **从房主拉游戏模块 = 在浏览器里执行房主给的代码**。客户端现在默认把它放进 `sandbox=allow-scripts` 的 iframe，不给 `allow-same-origin`，沙箱里读不到本机存储和票据。哈希只保证字节没被改，不保证代码无害；沙箱降低风险，玩法本身仍由房主提供。
 
-本项目从同工作区的 `uno-online` 剥离连接层重写而来，那边代码一行没动；玩法改动归那边，连接/身份/分发改动归这里。
 
 
 <!-- multi-agent-task-handoff: scope=root -->

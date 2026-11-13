@@ -519,7 +519,6 @@ node tools/checks/monkey.mjs --seed 707 --users 8 --steps 300 --restarts 3   # �
 - **从房主拉游戏模块 = 在浏览器里执行房主给的代码**。客户端现在默认在 `sandbox=allow-scripts` 的 iframe 中执行游戏入口，不给 `allow-same-origin`；沙箱内拿不到本机存储、票据和宿主 DOM。哈希只保证字节没被改，不保证代码无害，沙箱降低风险但不改变“玩法由房主提供”这一事实。
 - **禁止**：写 Windows 防火墙入站规则、建议关闭 Smart App Control、`force push`。
 - **混合内容方向性**：`http://127.0.0.1` 页面可连 `ws://` 与 `wss://`；`https://` 页面连 `ws://` 会被浏览器拦。
-- 与 [uno-online](../../uno-online/CONTEXT.md) 是同一份玩法的两种演进：玩法改动归那边，连接/身份/分发改动归这里；不要两边同时动同一份逻辑。
 - 浏览器底线（Chrome/Edge 111+）与使用者视角的限制由 [README.md](../README.md) 的「限制与注意事项」持有，本档不重述。
 
 ## 10. 工程约束
