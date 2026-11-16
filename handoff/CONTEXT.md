@@ -28,7 +28,7 @@
 
 ## 3. 现在在哪
 
-- **2026-11-13 完整实施计划落盘**：`C:\Users\TS\.claude\plans\bright-swinging-wren.md`（本机路径，不在仓库内）。含 A0–A5 契约修订结果、高内聚低耦合模块边界、旧 SDK 继承映射、游标/WAL/checkpoint 恢复模型、原生 exe/SDK/参考游戏验收与故障注入矩阵。**真实运行时、原生 exe、SDK 外部消费者尚未实施。**
+- **2026-11-13 完整实施计划落盘**：`../plan/bright-swinging-wren.md`（已迁入 plan/）。含 A0–A5 契约修订结果、高内聚低耦合模块边界、旧 SDK 继承映射、游标/WAL/checkpoint 恢复模型、原生 exe/SDK/参考游戏验收与故障注入矩阵。**真实运行时、原生 exe、SDK 外部消费者尚未实施。**
 - **2026-11-12 真实客户端房间页落地（`b48d4a7`）**：`packages/client` 不再是预览页，真实房间页已改：空位前置加号按位加电脑、占用席位尾部叉删除（电脑直删、真人弹原生 `<dialog>` 确认）、按钮文案改为「加电脑 / 请出房间 / 转交房主 / 解散 / 开始游戏」、昵称标签与输入值同档 22px、窄屏只显示占用席位且动作 44px。`npm test` **253/253**、seam、tsc 通过；真实浏览器端到端（建房 / 加删 / 确认 / 窄屏）**尚未验收**。
 - **方向变更 C1–C8**：双形态（桌面 exe 房主端 / 网页与原生客人 / 手机只做客人且网页优先 / 游戏形态自定）；运行时解耦（游戏独立进程，平台不挂载游戏 UI）；平台只持联机共识（连接、会话、票据、定序路由、发现、落盘），游戏全责玩法与全部 UI；权威从平台进程挪到房主机上的独立 Game Authority；平台 UI 只微调；房间级模块（规则配置 / 座位选项 / 资料 / 平台聊天）保留、对局级（game-host / 倒计时 / 结算 / 占位）删除；语言中立协议 + 各语言薄 SDK，`.bpmap` 从下发可执行模块改为清单与资源描述。
 - **决策状态**：D1 平台持会话元数据=是；D2 权威放独立游戏进程=是；D3 color-duel 与旧契约测试=**推倒重来、不做兼容适配器**（用最小参考游戏作真实运行时验收基准，回滚靠旧 Engine 分支 + 特性开关）；D4 形态分配按推荐；D5 仅 `architecture-design` 待执行，**不装 electron-assistant**；D6 并入 DESIGN 目录表待执行；**D7 当前 UI 参考稿已定；D8 三端统一设计契约，网页 / 手机共用 Web 实现，桌面 exe 原生控件**。
@@ -93,8 +93,7 @@ npx tsc -b && node --test --test-timeout=20000 tools/testkit/test/s1-protocol.te
 
 ## 9. 交接记录
 
+- 2026-11-16 cc-haha：`--doc` 把完整实施计划迁入 `plan/bright-swinging-wren.md`（已 gitignore）；CONTEXT/PROMPT 的旧 `~/.claude/plans` 引用改为 `../plan/`；`.gitignore` 加 `plan/`。
 - 2026-11-13 Qoder：**接盘复验 + 计划评审 9 项回写 + 全文重写为 android.jar 模型**：接盘四条基线全绿（`npm test` 272/272、seam、tsc、gen-check），HEAD `debb73d`、工作树净。逐条核对仓库后把「冻结前必须补的 9 个问题」全部回写进计划（本机 `C:\Users\TS\.claude\plans\bright-swinging-wren.md`，不在仓库内）：tick 时间驱动语义、跨语言 canonical 硬闸、动作/tick 串行、operations.jsonl 配额、Effect 六种映射（kick 删除）、更正 stableDigest 实为 UTF-8+FNV-1a、packages/protocol 处置、core-abi 弃用口径、WPF 视觉保真。随后与用户经 HAL→.so→android.jar 类比收敛，**把计划全文重写为 android.jar compile-only stub 模型**（§2 完成定义/分层、§7.0 包职责与依赖图与 `runAuthority` stub、§12 WP5、§13 决策），authority-host 改判平台 runner（取代 bundled）、pack-format 收为框架内部、旧四包 0.4.x 全弃用；计划 543→573 行。**未改任何实现代码**；本会话仅改 CONTEXT 与计划文件，收工提交 handoff 两档。真实运行时、原生 exe、SDK 外部消费者均未实施。
 - 2026-11-13 Claude Code：**A0–A5 契约修订收工 + 完整实施计划落盘**：`protocol/v0` 已按总纲补齐（memberId/slot/role、authorityEpoch、sync、probe、严格双通道、canonical/配置 golden、加删电脑/聊天历史）；`npm test` 272/272、seam、生成物一致，CI ubuntu/windows 通过，HEAD `103398f` 已推送。完整架构与实施计划在 `C:\Users\TS\.claude\plans\bright-swinging-wren.md`（高内聚低耦合边界、旧 SDK 继承映射、WAL/游标/恢复、原生 exe/SDK/游戏验收）。真实运行时、原生 exe、SDK 外部消费者尚未实施。
-- 2026-11-12 ZCode：**真实客户端房间页落地 + 交付形态纠偏**：把已确认的房间交互落到 `packages/client`（空位前置加号、占用席位尾部删除叉、真人确认 `<dialog>`、按钮文案、昵称 22px 同档、窄屏只显示占用席位与 44px 动作），提交 `b48d4a7`；`npm test` 253/253、seam、tsc 通过。曾尝试“exe 启动服务再开浏览器”的临时启动器，用户指出设计里的桌面端是原生控件且三端实现应排在骨干之后，启动器已删除；下一步按设计顺序补齐 `protocol/v0` 并实现真实 Session Service / Supervisor。真实浏览器端到端尚未验收。此前擅自创建的 `s1-protocol` 已快进合并回 `master` 并删除本地 / 远端分支，后续保持单分支。
-
 <!-- multi-agent-task-handoff: scope=handoff -->

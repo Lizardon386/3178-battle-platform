@@ -16,3 +16,6 @@ games/*.bpmap
 
 # 交接指针自动生成，本机私有
 handoff/PROMPT.md
+
+# 计划产出（默认不提交）
+plan/
