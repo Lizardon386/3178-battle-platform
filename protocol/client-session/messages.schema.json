@@ -1,0 +1,1327 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Lizardon386/3178-battle-platform/protocol/client-session/messages.schema.json",
+  "title": "3178 client-session protocol",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/ClientHello"
+    },
+    {
+      "$ref": "#/$defs/ClientSessionCreate"
+    },
+    {
+      "$ref": "#/$defs/ClientSessionJoin"
+    },
+    {
+      "$ref": "#/$defs/ClientSessionProbe"
+    },
+    {
+      "$ref": "#/$defs/ClientResume"
+    },
+    {
+      "$ref": "#/$defs/ClientSetReady"
+    },
+    {
+      "$ref": "#/$defs/ClientStartGame"
+    },
+    {
+      "$ref": "#/$defs/ClientRecoverGame"
+    },
+    {
+      "$ref": "#/$defs/ClientSetConfig"
+    },
+    {
+      "$ref": "#/$defs/ClientSetSeatOptions"
+    },
+    {
+      "$ref": "#/$defs/ClientAddAI"
+    },
+    {
+      "$ref": "#/$defs/ClientRemoveAI"
+    },
+    {
+      "$ref": "#/$defs/ClientMoveSlot"
+    },
+    {
+      "$ref": "#/$defs/ClientSetProfile"
+    },
+    {
+      "$ref": "#/$defs/ClientLeave"
+    },
+    {
+      "$ref": "#/$defs/ClientTransferHost"
+    },
+    {
+      "$ref": "#/$defs/ClientKick"
+    },
+    {
+      "$ref": "#/$defs/ClientCloseSession"
+    },
+    {
+      "$ref": "#/$defs/ClientListGames"
+    },
+    {
+      "$ref": "#/$defs/ClientGame"
+    },
+    {
+      "$ref": "#/$defs/ClientSync"
+    },
+    {
+      "$ref": "#/$defs/ClientChat"
+    },
+    {
+      "$ref": "#/$defs/ClientGameHandoff"
+    },
+    {
+      "$ref": "#/$defs/ClientGameAuth"
+    },
+    {
+      "$ref": "#/$defs/ClientPing"
+    },
+    {
+      "$ref": "#/$defs/ServerWelcome"
+    },
+    {
+      "$ref": "#/$defs/ServerSeatGranted"
+    },
+    {
+      "$ref": "#/$defs/ServerSessionState"
+    },
+    {
+      "$ref": "#/$defs/ServerSessionPreview"
+    },
+    {
+      "$ref": "#/$defs/ServerGame"
+    },
+    {
+      "$ref": "#/$defs/ServerChat"
+    },
+    {
+      "$ref": "#/$defs/ServerChatHistory"
+    },
+    {
+      "$ref": "#/$defs/ServerGameList"
+    },
+    {
+      "$ref": "#/$defs/ServerGameHandoff"
+    },
+    {
+      "$ref": "#/$defs/ServerGameGranted"
+    },
+    {
+      "$ref": "#/$defs/ServerNotice"
+    },
+    {
+      "$ref": "#/$defs/ServerError"
+    },
+    {
+      "$ref": "#/$defs/ServerPong"
+    }
+  ],
+  "$defs": {
+    "ClientHello": {
+      "type": "object",
+      "required": [
+        "type",
+        "protocolVersion",
+        "capabilities",
+        "clientKind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "hello"
+        },
+        "protocolVersion": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "capabilities": {
+          "$ref": "#/$defs/Capabilities"
+        },
+        "clientKind": {
+          "$ref": "#/$defs/ClientKind"
+        }
+      }
+    },
+    "ProtocolVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1
+    },
+    "Capabilities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Capability"
+      },
+      "uniqueItems": true
+    },
+    "Capability": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "ClientKind": {
+      "enum": [
+        "native",
+        "web",
+        "mobile"
+      ]
+    },
+    "ClientSessionCreate": {
+      "type": "object",
+      "required": [
+        "type",
+        "gameId",
+        "version",
+        "config",
+        "memberSlots",
+        "profile",
+        "roomName"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "sessionCreate"
+        },
+        "gameId": {
+          "$ref": "#/$defs/GameId"
+        },
+        "version": {
+          "$ref": "#/$defs/Version"
+        },
+        "config": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "memberSlots": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8
+        },
+        "spectatorLimit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        },
+        "roomName": {
+          "$ref": "#/$defs/RoomName"
+        },
+        "password": {
+          "type": "string",
+          "maxLength": 128
+        }
+      }
+    },
+    "GameId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "Version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "JsonObject": {
+      "type": "object"
+    },
+    "Profile": {
+      "type": "object",
+      "required": [
+        "nick"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "nick": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "avatar": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "displayColor": {
+          "$ref": "#/$defs/DisplayColor"
+        }
+      }
+    },
+    "DisplayColor": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$"
+    },
+    "RoomName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "ClientSessionJoin": {
+      "type": "object",
+      "required": [
+        "type",
+        "code",
+        "gameId",
+        "version",
+        "rulesHash",
+        "credentials",
+        "profile"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "sessionJoin"
+        },
+        "code": {
+          "$ref": "#/$defs/SessionCode"
+        },
+        "role": {
+          "$ref": "#/$defs/MemberRole"
+        },
+        "gameId": {
+          "$ref": "#/$defs/GameId"
+        },
+        "version": {
+          "$ref": "#/$defs/Version"
+        },
+        "rulesHash": {
+          "$ref": "#/$defs/RulesHash"
+        },
+        "credentials": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        }
+      }
+    },
+    "SessionCode": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]{4,8}$"
+    },
+    "MemberRole": {
+      "enum": [
+        "player",
+        "ai",
+        "spectator"
+      ]
+    },
+    "RulesHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ClientSessionProbe": {
+      "type": "object",
+      "required": [
+        "type",
+        "code"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "sessionProbe"
+        },
+        "code": {
+          "$ref": "#/$defs/SessionCode"
+        }
+      }
+    },
+    "ClientResume": {
+      "type": "object",
+      "required": [
+        "type",
+        "sessionId",
+        "ticket"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "resume"
+        },
+        "sessionId": {
+          "$ref": "#/$defs/SessionId"
+        },
+        "code": {
+          "$ref": "#/$defs/SessionCode"
+        },
+        "ticket": {
+          "$ref": "#/$defs/Ticket"
+        },
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        }
+      }
+    },
+    "SessionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "Ticket": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 256
+    },
+    "ClientSetReady": {
+      "type": "object",
+      "required": [
+        "type",
+        "ready"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "setReady"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "RequestId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "ClientStartGame": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "startGame"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "ClientRecoverGame": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "recoverGame"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "ClientSetConfig": {
+      "type": "object",
+      "required": [
+        "type",
+        "config"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "setConfig"
+        },
+        "config": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "ClientSetSeatOptions": {
+      "type": "object",
+      "required": [
+        "type",
+        "memberId",
+        "options"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "setSeatOptions"
+        },
+        "memberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "options": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "MemberId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "ClientAddAI": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "addAi"
+        },
+        "slot": {
+          "$ref": "#/$defs/Slot"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "Slot": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "ClientRemoveAI": {
+      "type": "object",
+      "required": [
+        "type",
+        "memberId"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "removeAi"
+        },
+        "memberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "ClientMoveSlot": {
+      "type": "object",
+      "required": [
+        "type",
+        "memberId",
+        "slot"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "moveSlot"
+        },
+        "memberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "slot": {
+          "$ref": "#/$defs/Slot"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "ClientSetProfile": {
+      "type": "object",
+      "required": [
+        "type",
+        "profile"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "setProfile"
+        },
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "ClientLeave": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "leave"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "ClientTransferHost": {
+      "type": "object",
+      "required": [
+        "type",
+        "targetMemberId"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "transferHost"
+        },
+        "targetMemberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "ClientKick": {
+      "type": "object",
+      "required": [
+        "type",
+        "targetMemberId"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "kick"
+        },
+        "targetMemberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "ClientCloseSession": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "closeSession"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "ClientListGames": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "listGames"
+        }
+      }
+    },
+    "ClientGame": {
+      "type": "object",
+      "required": [
+        "type",
+        "actionId",
+        "payload"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "game"
+        },
+        "actionId": {
+          "$ref": "#/$defs/ActionId"
+        },
+        "payload": {
+          "$ref": "#/$defs/Payload"
+        }
+      }
+    },
+    "ActionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "Payload": {},
+    "ClientSync": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "sync"
+        }
+      }
+    },
+    "ClientChat": {
+      "type": "object",
+      "required": [
+        "type",
+        "messageId",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "chat"
+        },
+        "messageId": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "text": {
+          "$ref": "#/$defs/Text"
+        }
+      }
+    },
+    "Text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "ClientGameHandoff": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "gameHandoff"
+        }
+      }
+    },
+    "ClientGameAuth": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "gameAuth"
+        },
+        "handoffCode": {
+          "$ref": "#/$defs/HandoffCode"
+        },
+        "gameTicket": {
+          "$ref": "#/$defs/GameTicket"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "handoffCode"
+          ]
+        },
+        {
+          "required": [
+            "gameTicket"
+          ]
+        }
+      ]
+    },
+    "HandoffCode": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 256
+    },
+    "GameTicket": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 256
+    },
+    "ClientPing": {
+      "type": "object",
+      "required": [
+        "type",
+        "nonce"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "ping"
+        },
+        "nonce": {
+          "$ref": "#/$defs/Nonce"
+        }
+      }
+    },
+    "Nonce": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "ServerWelcome": {
+      "type": "object",
+      "required": [
+        "type",
+        "protocolVersion",
+        "supported",
+        "serverVersion"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "welcome"
+        },
+        "protocolVersion": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "supported": {
+          "$ref": "#/$defs/Capabilities"
+        },
+        "serverVersion": {
+          "$ref": "#/$defs/Version"
+        }
+      }
+    },
+    "ServerSeatGranted": {
+      "type": "object",
+      "required": [
+        "type",
+        "memberId",
+        "ticket",
+        "sessionCode",
+        "sessionId",
+        "profile"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "seatGranted"
+        },
+        "memberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "ticket": {
+          "$ref": "#/$defs/Ticket"
+        },
+        "sessionCode": {
+          "$ref": "#/$defs/SessionCode"
+        },
+        "sessionId": {
+          "$ref": "#/$defs/SessionId"
+        },
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        }
+      }
+    },
+    "ServerSessionState": {
+      "type": "object",
+      "required": [
+        "type",
+        "sessionId",
+        "code",
+        "name",
+        "gameId",
+        "version",
+        "config",
+        "rulesHash",
+        "memberSlots",
+        "spectatorLimit",
+        "members",
+        "hostMemberId",
+        "state",
+        "gameProcess",
+        "authorityEpoch",
+        "revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "sessionState"
+        },
+        "sessionId": {
+          "$ref": "#/$defs/SessionId"
+        },
+        "code": {
+          "$ref": "#/$defs/SessionCode"
+        },
+        "name": {
+          "$ref": "#/$defs/RoomName"
+        },
+        "gameId": {
+          "$ref": "#/$defs/GameId"
+        },
+        "version": {
+          "$ref": "#/$defs/Version"
+        },
+        "config": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "rulesHash": {
+          "$ref": "#/$defs/RulesHash"
+        },
+        "memberSlots": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8
+        },
+        "spectatorLimit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "members": {
+          "$ref": "#/$defs/Members"
+        },
+        "hostMemberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "state": {
+          "$ref": "#/$defs/SessionState"
+        },
+        "gameProcess": {
+          "$ref": "#/$defs/GameProcess"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        }
+      }
+    },
+    "Members": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Member"
+      },
+      "maxItems": 16
+    },
+    "Member": {
+      "type": "object",
+      "required": [
+        "memberId",
+        "role",
+        "ready",
+        "profile",
+        "presence",
+        "gameConnected",
+        "options"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "memberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "slot": {
+          "$ref": "#/$defs/Slot"
+        },
+        "role": {
+          "$ref": "#/$defs/MemberRole"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        },
+        "presence": {
+          "enum": [
+            "online",
+            "grace"
+          ]
+        },
+        "graceUntil": {
+          "$ref": "#/$defs/EpochMs"
+        },
+        "gameConnected": {
+          "type": "boolean"
+        },
+        "options": {
+          "$ref": "#/$defs/JsonObject"
+        }
+      }
+    },
+    "EpochMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "SessionState": {
+      "enum": [
+        "open",
+        "closing",
+        "closed"
+      ]
+    },
+    "GameProcess": {
+      "enum": [
+        "stopped",
+        "starting",
+        "running",
+        "failed",
+        "exited"
+      ]
+    },
+    "AuthorityEpoch": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "Revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ServerSessionPreview": {
+      "type": "object",
+      "required": [
+        "type",
+        "code",
+        "name",
+        "gameId",
+        "version",
+        "config",
+        "rulesHash",
+        "memberSlots",
+        "spectatorLimit",
+        "requiredCapabilities",
+        "lateJoin",
+        "manifest",
+        "manifestHash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "sessionPreview"
+        },
+        "code": {
+          "$ref": "#/$defs/SessionCode"
+        },
+        "name": {
+          "$ref": "#/$defs/RoomName"
+        },
+        "gameId": {
+          "$ref": "#/$defs/GameId"
+        },
+        "version": {
+          "$ref": "#/$defs/Version"
+        },
+        "config": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "rulesHash": {
+          "$ref": "#/$defs/RulesHash"
+        },
+        "memberSlots": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8
+        },
+        "spectatorLimit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "requiredCapabilities": {
+          "$ref": "#/$defs/Capabilities"
+        },
+        "lateJoin": {
+          "$ref": "#/$defs/LateJoin"
+        },
+        "manifest": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "manifestHash": {
+          "$ref": "#/$defs/RulesHash"
+        }
+      }
+    },
+    "LateJoin": {
+      "enum": [
+        "spectator",
+        "player",
+        "deny"
+      ]
+    },
+    "ServerGame": {
+      "type": "object",
+      "required": [
+        "type",
+        "payload",
+        "authorityEpoch",
+        "gameSequence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "game"
+        },
+        "fromMemberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "gameSequence": {
+          "$ref": "#/$defs/GameSequence"
+        },
+        "viewRevision": {
+          "$ref": "#/$defs/ViewRevision"
+        },
+        "payload": {
+          "$ref": "#/$defs/Payload"
+        }
+      }
+    },
+    "GameSequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ViewRevision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ServerChat": {
+      "type": "object",
+      "required": [
+        "type",
+        "kind",
+        "messageId",
+        "chatRevision",
+        "text",
+        "sentAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "chat"
+        },
+        "kind": {
+          "enum": [
+            "member",
+            "system"
+          ]
+        },
+        "messageId": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "chatRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fromMemberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        },
+        "text": {
+          "$ref": "#/$defs/Text"
+        },
+        "sentAt": {
+          "$ref": "#/$defs/EpochMs"
+        }
+      }
+    },
+    "ServerChatHistory": {
+      "type": "object",
+      "required": [
+        "type",
+        "chatRevision",
+        "messages"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "chatHistory"
+        },
+        "chatRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ServerChat"
+          },
+          "maxItems": 200
+        }
+      }
+    },
+    "ServerGameList": {
+      "type": "object",
+      "required": [
+        "type",
+        "games"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "gameList"
+        },
+        "games": {
+          "$ref": "#/$defs/GameEntries"
+        }
+      }
+    },
+    "GameEntries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/GameEntry"
+      }
+    },
+    "GameEntry": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "version",
+        "manifest"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/GameId"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "version": {
+          "$ref": "#/$defs/Version"
+        },
+        "manifest": {
+          "$ref": "#/$defs/JsonObject"
+        }
+      }
+    },
+    "ServerGameHandoff": {
+      "type": "object",
+      "required": [
+        "type",
+        "url",
+        "handoffCode",
+        "expiresAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "gameHandoff"
+        },
+        "url": {
+          "$ref": "#/$defs/Url"
+        },
+        "handoffCode": {
+          "$ref": "#/$defs/HandoffCode"
+        },
+        "expiresAt": {
+          "$ref": "#/$defs/EpochMs"
+        }
+      }
+    },
+    "Url": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "ServerGameGranted": {
+      "type": "object",
+      "required": [
+        "type",
+        "gameTicket",
+        "sessionId",
+        "memberId",
+        "authorityEpoch"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "gameGranted"
+        },
+        "gameTicket": {
+          "$ref": "#/$defs/GameTicket"
+        },
+        "sessionId": {
+          "$ref": "#/$defs/SessionId"
+        },
+        "memberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        }
+      }
+    },
+    "ServerNotice": {
+      "type": "object",
+      "required": [
+        "type",
+        "code",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "notice"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "text": {
+          "$ref": "#/$defs/Text"
+        }
+      }
+    },
+    "ServerError": {
+      "type": "object",
+      "required": [
+        "type",
+        "code",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "error"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "text": {
+          "$ref": "#/$defs/Text"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "details": {
+          "$ref": "#/$defs/JsonObject"
+        }
+      }
+    },
+    "ServerPong": {
+      "type": "object",
+      "required": [
+        "type",
+        "nonce"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "pong"
+        },
+        "nonce": {
+          "$ref": "#/$defs/Nonce"
+        }
+      }
+    }
+  }
+}

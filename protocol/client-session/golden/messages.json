@@ -1,0 +1,590 @@
+[
+  {
+    "name": "client-platform-hello",
+    "from": "client",
+    "to": "platform",
+    "type": "hello",
+    "value": {
+      "type": "hello",
+      "protocolVersion": 1,
+      "capabilities": [
+        "resume",
+        "ready",
+        "start"
+      ],
+      "clientKind": "web"
+    }
+  },
+  {
+    "name": "client-platform-sessionCreate",
+    "from": "client",
+    "to": "platform",
+    "type": "sessionCreate",
+    "value": {
+      "type": "sessionCreate",
+      "gameId": "color-duel",
+      "version": "0.3.0",
+      "config": {
+        "cap": "20"
+      },
+      "memberSlots": 8,
+      "profile": {
+        "nick": "房主老周",
+        "displayColor": "#f59e0b"
+      },
+      "roomName": "周末一局",
+      "spectatorLimit": 8
+    }
+  },
+  {
+    "name": "client-platform-sessionJoin",
+    "from": "client",
+    "to": "platform",
+    "type": "sessionJoin",
+    "value": {
+      "type": "sessionJoin",
+      "code": "893F",
+      "gameId": "color-duel",
+      "version": "0.3.0",
+      "rulesHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "credentials": {
+        "password": "room"
+      },
+      "profile": {
+        "nick": "小林",
+        "displayColor": "#6366f1"
+      },
+      "role": "player"
+    }
+  },
+  {
+    "name": "client-platform-resume",
+    "from": "client",
+    "to": "platform",
+    "type": "resume",
+    "value": {
+      "type": "resume",
+      "code": "893F",
+      "ticket": "ticket-1234567890",
+      "sessionId": "sess-893F"
+    }
+  },
+  {
+    "name": "client-platform-setReady",
+    "from": "client",
+    "to": "platform",
+    "type": "setReady",
+    "value": {
+      "type": "setReady",
+      "ready": true
+    }
+  },
+  {
+    "name": "client-platform-startGame",
+    "from": "client",
+    "to": "platform",
+    "type": "startGame",
+    "value": {
+      "type": "startGame"
+    }
+  },
+  {
+    "name": "client-platform-setConfig",
+    "from": "client",
+    "to": "platform",
+    "type": "setConfig",
+    "value": {
+      "type": "setConfig",
+      "config": {
+        "cap": "30"
+      }
+    }
+  },
+  {
+    "name": "client-platform-setSeatOptions",
+    "from": "client",
+    "to": "platform",
+    "type": "setSeatOptions",
+    "value": {
+      "type": "setSeatOptions",
+      "options": {
+        "difficulty": "easy"
+      },
+      "memberId": "m3"
+    }
+  },
+  {
+    "name": "client-platform-leave",
+    "from": "client",
+    "to": "platform",
+    "type": "leave",
+    "value": {
+      "type": "leave"
+    }
+  },
+  {
+    "name": "client-platform-transferHost",
+    "from": "client",
+    "to": "platform",
+    "type": "transferHost",
+    "value": {
+      "type": "transferHost",
+      "targetMemberId": "m2"
+    }
+  },
+  {
+    "name": "client-platform-kick",
+    "from": "client",
+    "to": "platform",
+    "type": "kick",
+    "value": {
+      "type": "kick",
+      "targetMemberId": "m2"
+    }
+  },
+  {
+    "name": "client-platform-closeSession",
+    "from": "client",
+    "to": "platform",
+    "type": "closeSession",
+    "value": {
+      "type": "closeSession"
+    }
+  },
+  {
+    "name": "client-platform-game",
+    "from": "client",
+    "to": "platform",
+    "type": "game",
+    "value": {
+      "type": "game",
+      "payload": {
+        "op": "bump"
+      },
+      "actionId": "act-1"
+    }
+  },
+  {
+    "name": "client-platform-chat",
+    "from": "client",
+    "to": "platform",
+    "type": "chat",
+    "value": {
+      "type": "chat",
+      "text": "准备好了",
+      "messageId": "chat-1"
+    }
+  },
+  {
+    "name": "client-platform-gameHandoff",
+    "from": "client",
+    "to": "platform",
+    "type": "gameHandoff",
+    "value": {
+      "type": "gameHandoff"
+    }
+  },
+  {
+    "name": "client-platform-gameAuth",
+    "from": "client",
+    "to": "platform",
+    "type": "gameAuth",
+    "value": {
+      "type": "gameAuth",
+      "handoffCode": "handoff-1234567890"
+    }
+  },
+  {
+    "name": "client-platform-ping",
+    "from": "client",
+    "to": "platform",
+    "type": "ping",
+    "value": {
+      "type": "ping",
+      "nonce": "c-1"
+    }
+  },
+  {
+    "name": "platform-client-welcome",
+    "from": "platform",
+    "to": "client",
+    "type": "welcome",
+    "value": {
+      "type": "welcome",
+      "protocolVersion": 1,
+      "supported": [
+        "resume",
+        "ready",
+        "start",
+        "game.handoff",
+        "game.sync",
+        "session.probe",
+        "recover"
+      ],
+      "serverVersion": "0.1.0"
+    }
+  },
+  {
+    "name": "platform-client-seatGranted",
+    "from": "platform",
+    "to": "client",
+    "type": "seatGranted",
+    "value": {
+      "type": "seatGranted",
+      "ticket": "ticket-1234567890",
+      "sessionCode": "893F",
+      "profile": {
+        "nick": "小林",
+        "displayColor": "#6366f1"
+      },
+      "memberId": "m2",
+      "sessionId": "sess-893F"
+    }
+  },
+  {
+    "name": "platform-client-sessionState",
+    "from": "platform",
+    "to": "client",
+    "type": "sessionState",
+    "value": {
+      "type": "sessionState",
+      "sessionId": "sess-893F",
+      "code": "893F",
+      "name": "周末一局",
+      "gameId": "color-duel",
+      "version": "0.3.0",
+      "config": {
+        "cap": "20"
+      },
+      "rulesHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "memberSlots": 8,
+      "spectatorLimit": 8,
+      "members": [
+        {
+          "memberId": "m1",
+          "slot": 1,
+          "role": "player",
+          "ready": true,
+          "profile": {
+            "nick": "房主老周",
+            "displayColor": "#f59e0b"
+          },
+          "options": {},
+          "presence": "online",
+          "gameConnected": false
+        },
+        {
+          "memberId": "m2",
+          "slot": 2,
+          "role": "player",
+          "ready": true,
+          "profile": {
+            "nick": "小林",
+            "displayColor": "#6366f1"
+          },
+          "options": {},
+          "presence": "online",
+          "gameConnected": false
+        }
+      ],
+      "hostMemberId": "m1",
+      "state": "open",
+      "gameProcess": "stopped",
+      "authorityEpoch": 0,
+      "revision": 4
+    }
+  },
+  {
+    "name": "platform-client-game",
+    "from": "platform",
+    "to": "client",
+    "type": "game",
+    "value": {
+      "type": "game",
+      "fromMemberId": "m2",
+      "authorityEpoch": 1,
+      "gameSequence": 1,
+      "payload": {
+        "count": 1
+      }
+    }
+  },
+  {
+    "name": "platform-client-chat",
+    "from": "platform",
+    "to": "client",
+    "type": "chat",
+    "value": {
+      "type": "chat",
+      "kind": "member",
+      "messageId": "chat-1",
+      "chatRevision": 1,
+      "fromMemberId": "m2",
+      "profile": {
+        "nick": "小林",
+        "displayColor": "#6366f1"
+      },
+      "text": "准备好了",
+      "sentAt": 1794870000000
+    }
+  },
+  {
+    "name": "platform-client-gameHandoff",
+    "from": "platform",
+    "to": "client",
+    "type": "gameHandoff",
+    "value": {
+      "type": "gameHandoff",
+      "url": "http://192.168.1.20:3001/#c=handoff-1234567890",
+      "handoffCode": "handoff-1234567890",
+      "expiresAt": 1794870000000
+    }
+  },
+  {
+    "name": "platform-client-gameGranted",
+    "from": "platform",
+    "to": "client",
+    "type": "gameGranted",
+    "value": {
+      "type": "gameGranted",
+      "gameTicket": "game-ticket-123456",
+      "sessionId": "sess-893F",
+      "memberId": "m2",
+      "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "platform-client-notice",
+    "from": "platform",
+    "to": "client",
+    "type": "notice",
+    "value": {
+      "type": "notice",
+      "code": "REJOINED",
+      "text": "已恢复原座位"
+    }
+  },
+  {
+    "name": "platform-client-error",
+    "from": "platform",
+    "to": "client",
+    "type": "error",
+    "value": {
+      "type": "error",
+      "code": "NOTREADY",
+      "text": "还有真人未准备",
+      "details": {
+        "seatIds": [
+          2
+        ]
+      }
+    }
+  },
+  {
+    "name": "platform-client-pong",
+    "from": "platform",
+    "to": "client",
+    "type": "pong",
+    "value": {
+      "type": "pong",
+      "nonce": "c-1"
+    }
+  },
+  {
+    "name": "client-platform-sessionProbe",
+    "from": "client",
+    "to": "platform",
+    "type": "sessionProbe",
+    "value": {
+      "type": "sessionProbe",
+      "code": "893F"
+    }
+  },
+  {
+    "name": "client-platform-sync",
+    "from": "client",
+    "to": "platform",
+    "type": "sync",
+    "value": {
+      "type": "sync"
+    }
+  },
+  {
+    "name": "client-platform-recoverGame",
+    "from": "client",
+    "to": "platform",
+    "type": "recoverGame",
+    "value": {
+      "type": "recoverGame"
+    }
+  },
+  {
+    "name": "platform-client-sessionPreview",
+    "from": "platform",
+    "to": "client",
+    "type": "sessionPreview",
+    "value": {
+      "type": "sessionPreview",
+      "code": "893F",
+      "name": "周末一局",
+      "gameId": "color-duel",
+      "version": "0.3.0",
+      "config": {
+        "cap": "20"
+      },
+      "rulesHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "memberSlots": 8,
+      "spectatorLimit": 8,
+      "requiredCapabilities": [
+        "toSeat"
+      ],
+      "lateJoin": "spectator",
+      "manifest": {
+        "sessionConfig": {
+          "fields": [
+            {
+              "key": "cap",
+              "type": "enum",
+              "label": "手牌上限",
+              "default": "20",
+              "options": [
+                {
+                  "value": "20",
+                  "label": "20 张"
+                },
+                {
+                  "value": "30",
+                  "label": "30 张"
+                }
+              ]
+            }
+          ],
+          "seatOptions": [
+            {
+              "key": "difficulty",
+              "type": "enum",
+              "label": "电脑强度",
+              "default": "easy",
+              "roles": [
+                "ai"
+              ],
+              "options": [
+                {
+                  "value": "easy",
+                  "label": "简单"
+                }
+              ]
+            }
+          ]
+        },
+        "reference": {
+          "entry": "reference.json"
+        },
+        "requiredCapabilities": [
+          "toSeat"
+        ],
+        "lateJoin": "spectator"
+      },
+      "manifestHash": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  {
+    "name": "client-platform-addAi",
+    "from": "client",
+    "to": "platform",
+    "type": "addAi",
+    "value": {
+      "type": "addAi",
+      "slot": 3
+    }
+  },
+  {
+    "name": "client-platform-removeAi",
+    "from": "client",
+    "to": "platform",
+    "type": "removeAi",
+    "value": {
+      "type": "removeAi",
+      "memberId": "m3"
+    }
+  },
+  {
+    "name": "client-platform-moveSlot",
+    "from": "client",
+    "to": "platform",
+    "type": "moveSlot",
+    "value": {
+      "type": "moveSlot",
+      "memberId": "m2",
+      "slot": 4
+    }
+  },
+  {
+    "name": "client-platform-setProfile",
+    "from": "client",
+    "to": "platform",
+    "type": "setProfile",
+    "value": {
+      "type": "setProfile",
+      "profile": {
+        "nick": "小林",
+        "displayColor": "#6366f1"
+      }
+    }
+  },
+  {
+    "name": "client-platform-listGames",
+    "from": "client",
+    "to": "platform",
+    "type": "listGames",
+    "value": {
+      "type": "listGames"
+    }
+  },
+  {
+    "name": "platform-client-chatHistory",
+    "from": "platform",
+    "to": "client",
+    "type": "chatHistory",
+    "value": {
+      "type": "chatHistory",
+      "chatRevision": 1,
+      "messages": [
+        {
+          "type": "chat",
+          "kind": "member",
+          "messageId": "chat-1",
+          "chatRevision": 1,
+          "fromMemberId": "m2",
+          "profile": {
+            "nick": "小林",
+            "displayColor": "#6366f1"
+          },
+          "text": "准备好了",
+          "sentAt": 1794870000000
+        }
+      ]
+    }
+  },
+  {
+    "name": "platform-client-gameList",
+    "from": "platform",
+    "to": "client",
+    "type": "gameList",
+    "value": {
+      "type": "gameList",
+      "games": [
+        {
+          "id": "color-duel",
+          "name": "变色对决",
+          "version": "0.3.0",
+          "manifest": {
+            "id": "color-duel",
+            "name": "变色对决",
+            "version": "0.3.0"
+          }
+        }
+      ]
+    }
+  }
+]

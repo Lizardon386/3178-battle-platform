@@ -1,0 +1,141 @@
+{
+  "protocolVersion": 1,
+  "status": "draft",
+  "messages": [
+    {
+      "type": "start",
+      "from": "platform",
+      "to": "authority",
+      "schema": "PlatformStart",
+      "channel": "ipc",
+      "auth": "platform",
+      "summary": "进程启动后的会话、配置、成员与 epoch 全量快照"
+    },
+    {
+      "type": "memberJoin",
+      "from": "platform",
+      "to": "authority",
+      "schema": "PlatformMemberJoin",
+      "channel": "ipc",
+      "auth": "platform",
+      "summary": "成员加入及 profile / options"
+    },
+    {
+      "type": "memberLeave",
+      "from": "platform",
+      "to": "authority",
+      "schema": "PlatformMemberLeave",
+      "channel": "ipc",
+      "auth": "platform",
+      "summary": "成员掉线 / 主动离开 / 被踢 / 宽限到期，reason 为结构化枚举"
+    },
+    {
+      "type": "memberResume",
+      "from": "platform",
+      "to": "authority",
+      "schema": "PlatformMemberResume",
+      "channel": "ipc",
+      "auth": "platform",
+      "summary": "成员凭票恢复，不再兼做补视图"
+    },
+    {
+      "type": "memberUpdate",
+      "from": "platform",
+      "to": "authority",
+      "schema": "PlatformMemberUpdate",
+      "channel": "ipc",
+      "auth": "platform",
+      "summary": "ready / profile / options 全量更新"
+    },
+    {
+      "type": "hostChanged",
+      "from": "platform",
+      "to": "authority",
+      "schema": "PlatformHostChanged",
+      "channel": "ipc",
+      "auth": "platform",
+      "summary": "房主权限变更，供房主专属玩法规则使用"
+    },
+    {
+      "type": "deliver",
+      "from": "platform",
+      "to": "authority",
+      "schema": "PlatformDeliver",
+      "channel": "ipc",
+      "auth": "platform",
+      "summary": "转发带 actionId 的客户端 opaque 游戏消息"
+    },
+    {
+      "type": "sync",
+      "from": "platform",
+      "to": "authority",
+      "schema": "PlatformSync",
+      "channel": "ipc",
+      "auth": "platform",
+      "summary": "请求权威向该成员补当前完整私密视图"
+    },
+    {
+      "type": "closeSession",
+      "from": "platform",
+      "to": "authority",
+      "schema": "PlatformCloseSession",
+      "channel": "ipc",
+      "auth": "platform",
+      "summary": "通知权威回收会话"
+    },
+    {
+      "type": "ping",
+      "from": "platform",
+      "to": "authority",
+      "schema": "PlatformPing",
+      "channel": "ipc",
+      "auth": "platform",
+      "summary": "本地 IPC 心跳"
+    },
+    {
+      "type": "authorityReady",
+      "from": "authority",
+      "to": "platform",
+      "schema": "AuthorityReady",
+      "channel": "ipc",
+      "auth": "authority",
+      "summary": "权威初始化完成，回带 epoch，gameProcess 进入 running"
+    },
+    {
+      "type": "deliver",
+      "from": "authority",
+      "to": "platform",
+      "schema": "AuthorityDeliver",
+      "channel": "ipc",
+      "auth": "authority",
+      "summary": "按 memberId 或全员投递 opaque 结果，带 gameSequence 与 epoch"
+    },
+    {
+      "type": "roundClosed",
+      "from": "authority",
+      "to": "platform",
+      "schema": "AuthorityRoundClosed",
+      "channel": "ipc",
+      "auth": "authority",
+      "summary": "对局阶段结束通知，payload 不透明"
+    },
+    {
+      "type": "authorityError",
+      "from": "authority",
+      "to": "platform",
+      "schema": "AuthorityError",
+      "channel": "ipc",
+      "auth": "authority",
+      "summary": "权威进程或 IPC 级错误，不占用玩法错误通道"
+    },
+    {
+      "type": "pong",
+      "from": "authority",
+      "to": "platform",
+      "schema": "AuthorityPong",
+      "channel": "ipc",
+      "auth": "authority",
+      "summary": "本地 IPC 心跳响应"
+    }
+  ]
+}

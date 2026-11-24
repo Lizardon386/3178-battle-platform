@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Lizardon386/3178-battle-platform/protocol/local-control/messages.schema.json",
+  "title": "3178 local supervisor control protocol",
+  "anyOf": [
+    { "$ref": "#/$defs/ClientHello" },
+    { "$ref": "#/$defs/ServiceStart" },
+    { "$ref": "#/$defs/ServiceStop" },
+    { "$ref": "#/$defs/StartAuthority" },
+    { "$ref": "#/$defs/StopAuthority" },
+    { "$ref": "#/$defs/RecoverAuthority" },
+    { "$ref": "#/$defs/Shutdown" },
+    { "$ref": "#/$defs/Diagnose" },
+    { "$ref": "#/$defs/Ping" },
+    { "$ref": "#/$defs/SupervisorWelcome" },
+    { "$ref": "#/$defs/ServiceStatus" },
+    { "$ref": "#/$defs/AuthorityStatus" },
+    { "$ref": "#/$defs/ControlError" },
+    { "$ref": "#/$defs/Pong" }
+  ],
+  "$defs": {
+    "ProtocolVersion": { "const": 1 },
+    "ClientKind": { "enum": ["ui", "service"] },
+    "SessionId": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "Epoch": { "type": "integer", "minimum": 0 },
+    "Pid": { "type": "integer", "minimum": 0 },
+    "Port": { "type": "integer", "minimum": 0, "maximum": 65535 },
+    "Nonce": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "Text": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "Reason": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "AttemptState": { "enum": ["stopped", "starting", "readyWait", "running", "stopping", "failed", "exited"] },
+
+    "ClientHello": {
+      "type": "object",
+      "required": ["type", "version", "clientKind"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "hello" },
+        "version": { "$ref": "#/$defs/ProtocolVersion" },
+        "clientKind": { "$ref": "#/$defs/ClientKind" }
+      }
+    },
+    "ServiceStart": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": { "type": { "const": "serviceStart" } }
+    },
+    "ServiceStop": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": { "type": { "const": "serviceStop" } }
+    },
+    "StartAuthority": {
+      "type": "object",
+      "required": ["type", "sessionId", "epoch", "runtime", "entry"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "startAuthority" },
+        "sessionId": { "$ref": "#/$defs/SessionId" },
+        "epoch": { "$ref": "#/$defs/Epoch" },
+        "runtime": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "entry": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "args": { "type": "array", "items": { "type": "string", "maxLength": 256 }, "maxItems": 32 },
+        "cwd": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "env": { "type": "object", "additionalProperties": { "type": "string", "maxLength": 512 } }
+      }
+    },
+    "StopAuthority": {
+      "type": "object",
+      "required": ["type", "sessionId"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "stopAuthority" },
+        "sessionId": { "$ref": "#/$defs/SessionId" },
+        "reason": { "$ref": "#/$defs/Reason" }
+      }
+    },
+    "RecoverAuthority": {
+      "type": "object",
+      "required": ["type", "sessionId", "epoch"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "recoverAuthority" },
+        "sessionId": { "$ref": "#/$defs/SessionId" },
+        "epoch": { "$ref": "#/$defs/Epoch" }
+      }
+    },
+    "Shutdown": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": { "type": { "const": "shutdown" } }
+    },
+    "Diagnose": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": { "type": { "const": "diagnose" } }
+    },
+    "Ping": {
+      "type": "object",
+      "required": ["type", "nonce"],
+      "additionalProperties": false,
+      "properties": { "type": { "const": "ping" }, "nonce": { "$ref": "#/$defs/Nonce" } }
+    },
+    "SupervisorWelcome": {
+      "type": "object",
+      "required": ["type", "version", "serverVersion"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "welcome" },
+        "version": { "$ref": "#/$defs/ProtocolVersion" },
+        "serverVersion": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "ServiceStatus": {
+      "type": "object",
+      "required": ["type", "state"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "serviceStatus" },
+        "state": { "enum": ["stopped", "starting", "running", "failed", "exited"] },
+        "pid": { "$ref": "#/$defs/Pid" },
+        "uiPort": { "$ref": "#/$defs/Port" },
+        "lanPort": { "$ref": "#/$defs/Port" },
+        "gamePort": { "$ref": "#/$defs/Port" }
+      }
+    },
+    "AuthorityStatus": {
+      "type": "object",
+      "required": ["type", "sessionId", "state"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "authorityStatus" },
+        "sessionId": { "$ref": "#/$defs/SessionId" },
+        "state": { "$ref": "#/$defs/AttemptState" },
+        "pid": { "$ref": "#/$defs/Pid" },
+        "epoch": { "$ref": "#/$defs/Epoch" },
+        "error": { "$ref": "#/$defs/Text" }
+      }
+    },
+    "ControlError": {
+      "type": "object",
+      "required": ["type", "code", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "error" },
+        "code": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "text": { "$ref": "#/$defs/Text" }
+      }
+    },
+    "Pong": {
+      "type": "object",
+      "required": ["type", "nonce"],
+      "additionalProperties": false,
+      "properties": { "type": { "const": "pong" }, "nonce": { "$ref": "#/$defs/Nonce" } }
+    }
+  }
+}

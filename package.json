@@ -12,6 +12,7 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "seam": "bash tools/checks/check-seam.sh",
+    "boundaries": "node tools/checks/check-boundaries.mjs",
     "portable": "node tools/packaging/build-portable.mjs",
     "pack:sdk": "node tools/packaging/pack-sdk.mjs",
     "bump:sdk": "node tools/packaging/bump-sdk.mjs",

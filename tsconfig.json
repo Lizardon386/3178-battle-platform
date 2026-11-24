@@ -1,6 +1,10 @@
 {
   "files": [],
   "references": [
+    { "path": "packages/protocol-contract" },
+    { "path": "packages/session-core" },
+    { "path": "packages/session-app" },
+    { "path": "packages/session-store" },
     { "path": "packages/core-abi" },
     { "path": "packages/pack-format" },
     { "path": "packages/protocol" },

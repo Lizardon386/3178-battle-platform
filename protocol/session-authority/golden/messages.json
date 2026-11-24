@@ -1,0 +1,254 @@
+[
+  {
+    "name": "platform-authority-start",
+    "from": "platform",
+    "to": "authority",
+    "type": "start",
+    "value": {
+      "type": "start",
+      "gameId": "color-duel",
+      "version": "0.3.0",
+      "sessionCode": "893F",
+      "sessionConfig": {
+        "cap": "20"
+      },
+      "members": [
+        {
+          "memberId": "m1",
+          "slot": 1,
+          "role": "player",
+          "ready": true,
+          "profile": {
+            "nick": "房主老周",
+            "displayColor": "#f59e0b"
+          },
+          "options": {},
+          "presence": "online",
+          "gameConnected": false
+        },
+        {
+          "memberId": "m2",
+          "slot": 2,
+          "role": "player",
+          "ready": true,
+          "profile": {
+            "nick": "小林",
+            "displayColor": "#6366f1"
+          },
+          "options": {},
+          "presence": "online",
+          "gameConnected": false
+        }
+      ],
+      "revision": 5,
+      "sessionId": "sess-893F",
+      "authorityEpoch": 1,
+      "hostMemberId": "m1"
+    }
+  },
+  {
+    "name": "platform-authority-memberJoin",
+    "from": "platform",
+    "to": "authority",
+    "type": "memberJoin",
+    "value": {
+      "type": "memberJoin",
+      "member": {
+        "memberId": "m2",
+        "slot": 2,
+        "role": "player",
+        "ready": false,
+        "profile": {
+          "nick": "小林",
+          "displayColor": "#6366f1"
+        },
+        "options": {},
+        "presence": "online",
+        "gameConnected": false
+      },
+      "revision": 6,
+      "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "platform-authority-memberLeave",
+    "from": "platform",
+    "to": "authority",
+    "type": "memberLeave",
+    "value": {
+      "type": "memberLeave",
+      "reason": "disconnected",
+      "revision": 7,
+      "memberId": "m2",
+      "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "platform-authority-memberResume",
+    "from": "platform",
+    "to": "authority",
+    "type": "memberResume",
+    "value": {
+      "type": "memberResume",
+      "profile": {
+        "nick": "小林",
+        "displayColor": "#6366f1"
+      },
+      "revision": 8,
+      "memberId": "m2",
+      "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "platform-authority-memberUpdate",
+    "from": "platform",
+    "to": "authority",
+    "type": "memberUpdate",
+    "value": {
+      "type": "memberUpdate",
+      "ready": true,
+      "profile": {
+        "nick": "小林",
+        "displayColor": "#6366f1"
+      },
+      "options": {
+        "difficulty": "easy"
+      },
+      "revision": 9,
+      "memberId": "m2",
+      "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "platform-authority-hostChanged",
+    "from": "platform",
+    "to": "authority",
+    "type": "hostChanged",
+    "value": {
+      "type": "hostChanged",
+      "revision": 10,
+      "hostMemberId": "m2",
+      "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "platform-authority-deliver",
+    "from": "platform",
+    "to": "authority",
+    "type": "deliver",
+    "value": {
+      "type": "deliver",
+      "payload": {
+        "op": "bump"
+      },
+      "revision": 11,
+      "fromMemberId": "m2",
+      "actionId": "act-1",
+      "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "platform-authority-closeSession",
+    "from": "platform",
+    "to": "authority",
+    "type": "closeSession",
+    "value": {
+      "type": "closeSession",
+      "reason": "host closed",
+      "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "platform-authority-ping",
+    "from": "platform",
+    "to": "authority",
+    "type": "ping",
+    "value": {
+      "type": "ping",
+      "nonce": "ipc-1"
+    }
+  },
+  {
+    "name": "authority-platform-authorityReady",
+    "from": "authority",
+    "to": "platform",
+    "type": "authorityReady",
+    "value": {
+      "type": "authorityReady",
+      "processStatus": "running",
+      "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "authority-platform-deliver",
+    "from": "authority",
+    "to": "platform",
+    "type": "deliver",
+    "value": {
+      "type": "deliver",
+      "items": [
+        {
+          "to": "m2",
+          "payload": {
+            "private": "last-action"
+          }
+        },
+        {
+          "to": "all",
+          "payload": {
+            "count": 1
+          }
+        }
+      ],
+      "gameSequence": 1,
+      "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "authority-platform-roundClosed",
+    "from": "authority",
+    "to": "platform",
+    "type": "roundClosed",
+    "value": {
+      "type": "roundClosed",
+      "payload": {
+        "winner": 2
+      },
+      "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "authority-platform-authorityError",
+    "from": "authority",
+    "to": "platform",
+    "type": "authorityError",
+    "value": {
+      "type": "authorityError",
+      "code": "INIT",
+      "text": "初始化失败",
+      "fatal": true,
+      "authorityEpoch": 1
+    }
+  },
+  {
+    "name": "authority-platform-pong",
+    "from": "authority",
+    "to": "platform",
+    "type": "pong",
+    "value": {
+      "type": "pong",
+      "nonce": "ipc-1"
+    }
+  },
+  {
+    "name": "platform-authority-sync",
+    "from": "platform",
+    "to": "authority",
+    "type": "sync",
+    "value": {
+      "type": "sync",
+      "memberId": "m2",
+      "authorityEpoch": 1
+    }
+  }
+]

@@ -1,0 +1,638 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Lizardon386/3178-battle-platform/protocol/session-authority/messages.schema.json",
+  "title": "3178 session-authority protocol",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/PlatformStart"
+    },
+    {
+      "$ref": "#/$defs/PlatformMemberJoin"
+    },
+    {
+      "$ref": "#/$defs/PlatformMemberLeave"
+    },
+    {
+      "$ref": "#/$defs/PlatformMemberResume"
+    },
+    {
+      "$ref": "#/$defs/PlatformMemberUpdate"
+    },
+    {
+      "$ref": "#/$defs/PlatformHostChanged"
+    },
+    {
+      "$ref": "#/$defs/PlatformDeliver"
+    },
+    {
+      "$ref": "#/$defs/PlatformSync"
+    },
+    {
+      "$ref": "#/$defs/PlatformCloseSession"
+    },
+    {
+      "$ref": "#/$defs/PlatformPing"
+    },
+    {
+      "$ref": "#/$defs/AuthorityReady"
+    },
+    {
+      "$ref": "#/$defs/AuthorityDeliver"
+    },
+    {
+      "$ref": "#/$defs/AuthorityRoundClosed"
+    },
+    {
+      "$ref": "#/$defs/AuthorityError"
+    },
+    {
+      "$ref": "#/$defs/AuthorityPong"
+    }
+  ],
+  "$defs": {
+    "PlatformStart": {
+      "type": "object",
+      "required": [
+        "type",
+        "sessionId",
+        "gameId",
+        "version",
+        "sessionCode",
+        "authorityEpoch",
+        "sessionConfig",
+        "members",
+        "hostMemberId",
+        "revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "start"
+        },
+        "sessionId": {
+          "$ref": "#/$defs/SessionId"
+        },
+        "gameId": {
+          "$ref": "#/$defs/GameId"
+        },
+        "version": {
+          "$ref": "#/$defs/Version"
+        },
+        "sessionCode": {
+          "$ref": "#/$defs/SessionCode"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "sessionConfig": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "members": {
+          "$ref": "#/$defs/Members"
+        },
+        "hostMemberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        }
+      }
+    },
+    "SessionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "GameId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "Version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "SessionCode": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]{4,8}$"
+    },
+    "AuthorityEpoch": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "JsonObject": {
+      "type": "object"
+    },
+    "Members": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Member"
+      },
+      "maxItems": 16
+    },
+    "Member": {
+      "type": "object",
+      "required": [
+        "memberId",
+        "role",
+        "ready",
+        "profile",
+        "presence",
+        "gameConnected",
+        "options"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "memberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "slot": {
+          "$ref": "#/$defs/Slot"
+        },
+        "role": {
+          "$ref": "#/$defs/MemberRole"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        },
+        "presence": {
+          "enum": [
+            "online",
+            "grace"
+          ]
+        },
+        "graceUntil": {
+          "$ref": "#/$defs/EpochMs"
+        },
+        "gameConnected": {
+          "type": "boolean"
+        },
+        "options": {
+          "$ref": "#/$defs/JsonObject"
+        }
+      }
+    },
+    "MemberId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "Slot": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "MemberRole": {
+      "enum": [
+        "player",
+        "ai",
+        "spectator"
+      ]
+    },
+    "Profile": {
+      "type": "object",
+      "required": [
+        "nick"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "nick": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "avatar": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "displayColor": {
+          "$ref": "#/$defs/DisplayColor"
+        }
+      }
+    },
+    "DisplayColor": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$"
+    },
+    "EpochMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "Revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "PlatformMemberJoin": {
+      "type": "object",
+      "required": [
+        "type",
+        "member",
+        "authorityEpoch",
+        "revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "memberJoin"
+        },
+        "member": {
+          "$ref": "#/$defs/Member"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        }
+      }
+    },
+    "PlatformMemberLeave": {
+      "type": "object",
+      "required": [
+        "type",
+        "memberId",
+        "reason",
+        "authorityEpoch",
+        "revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "memberLeave"
+        },
+        "memberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "reason": {
+          "$ref": "#/$defs/MemberLeaveReason"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        }
+      }
+    },
+    "MemberLeaveReason": {
+      "enum": [
+        "disconnected",
+        "left",
+        "kicked",
+        "expired"
+      ]
+    },
+    "PlatformMemberResume": {
+      "type": "object",
+      "required": [
+        "type",
+        "memberId",
+        "profile",
+        "authorityEpoch",
+        "revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "memberResume"
+        },
+        "memberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        }
+      }
+    },
+    "PlatformMemberUpdate": {
+      "type": "object",
+      "required": [
+        "type",
+        "memberId",
+        "ready",
+        "profile",
+        "options",
+        "authorityEpoch",
+        "revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "memberUpdate"
+        },
+        "memberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        },
+        "options": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        }
+      }
+    },
+    "PlatformHostChanged": {
+      "type": "object",
+      "required": [
+        "type",
+        "hostMemberId",
+        "authorityEpoch",
+        "revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "hostChanged"
+        },
+        "hostMemberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        }
+      }
+    },
+    "PlatformDeliver": {
+      "type": "object",
+      "required": [
+        "type",
+        "fromMemberId",
+        "actionId",
+        "payload",
+        "authorityEpoch",
+        "revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "deliver"
+        },
+        "fromMemberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "actionId": {
+          "$ref": "#/$defs/ActionId"
+        },
+        "payload": {
+          "$ref": "#/$defs/Payload"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        }
+      }
+    },
+    "ActionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "Payload": {},
+    "PlatformSync": {
+      "type": "object",
+      "required": [
+        "type",
+        "memberId",
+        "authorityEpoch"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "sync"
+        },
+        "memberId": {
+          "$ref": "#/$defs/MemberId"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        }
+      }
+    },
+    "PlatformCloseSession": {
+      "type": "object",
+      "required": [
+        "type",
+        "reason",
+        "authorityEpoch"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "closeSession"
+        },
+        "reason": {
+          "$ref": "#/$defs/Reason"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        }
+      }
+    },
+    "Reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "PlatformPing": {
+      "type": "object",
+      "required": [
+        "type",
+        "nonce"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "ping"
+        },
+        "nonce": {
+          "$ref": "#/$defs/Nonce"
+        }
+      }
+    },
+    "Nonce": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "AuthorityReady": {
+      "type": "object",
+      "required": [
+        "type",
+        "authorityEpoch",
+        "processStatus"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "authorityReady"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "processStatus": {
+          "const": "running"
+        }
+      }
+    },
+    "AuthorityDeliver": {
+      "type": "object",
+      "required": [
+        "type",
+        "gameSequence",
+        "authorityEpoch",
+        "items"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "deliver"
+        },
+        "gameSequence": {
+          "$ref": "#/$defs/GameSequence"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DeliverItem"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "GameSequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "DeliverItem": {
+      "type": "object",
+      "required": [
+        "to",
+        "payload"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "to": {
+          "$ref": "#/$defs/Target"
+        },
+        "payload": {
+          "$ref": "#/$defs/Payload"
+        },
+        "viewRevision": {
+          "$ref": "#/$defs/ViewRevision"
+        }
+      }
+    },
+    "Target": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MemberId"
+        },
+        {
+          "const": "all"
+        }
+      ]
+    },
+    "ViewRevision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "AuthorityRoundClosed": {
+      "type": "object",
+      "required": [
+        "type",
+        "authorityEpoch",
+        "payload"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "roundClosed"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "payload": {
+          "$ref": "#/$defs/Payload"
+        }
+      }
+    },
+    "AuthorityError": {
+      "type": "object",
+      "required": [
+        "type",
+        "authorityEpoch",
+        "code",
+        "text",
+        "fatal"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "authorityError"
+        },
+        "authorityEpoch": {
+          "$ref": "#/$defs/AuthorityEpoch"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "text": {
+          "$ref": "#/$defs/Text"
+        },
+        "fatal": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "AuthorityPong": {
+      "type": "object",
+      "required": [
+        "type",
+        "nonce"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "pong"
+        },
+        "nonce": {
+          "$ref": "#/$defs/Nonce"
+        }
+      }
+    }
+  }
+}

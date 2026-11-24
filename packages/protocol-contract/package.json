@@ -1,0 +1,35 @@
+{
+  "name": "@bp/protocol-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client-session": {
+      "types": "./dist/generated/client-session.d.ts",
+      "default": "./dist/generated/client-session.js"
+    },
+    "./session-authority": {
+      "types": "./dist/generated/session-authority.d.ts",
+      "default": "./dist/generated/session-authority.js"
+    },
+    "./local-control": {
+      "types": "./dist/generated/local-control.d.ts",
+      "default": "./dist/generated/local-control.js"
+    },
+    "./game-package": {
+      "types": "./dist/generated/game-package.d.ts",
+      "default": "./dist/generated/game-package.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "gen": "node scripts/gen-types.mjs",
+    "check": "node scripts/gen-types.mjs --check"
+  }
+}

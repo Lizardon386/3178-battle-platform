@@ -1,0 +1,17 @@
+[
+  { "name": "client-supervisor-hello", "from": "client", "to": "supervisor", "type": "hello", "value": { "type": "hello", "version": 1, "clientKind": "ui" } },
+  { "name": "client-supervisor-serviceStart", "from": "client", "to": "supervisor", "type": "serviceStart", "value": { "type": "serviceStart" } },
+  { "name": "client-supervisor-serviceStop", "from": "client", "to": "supervisor", "type": "serviceStop", "value": { "type": "serviceStop" } },
+  { "name": "client-supervisor-startAuthority", "from": "client", "to": "supervisor", "type": "startAuthority", "value": { "type": "startAuthority", "sessionId": "sess-893F", "epoch": 1, "runtime": "node24", "entry": "authority/index.js", "args": [], "cwd": "C:/data/authority/sess-893F/1", "env": {} } },
+  { "name": "client-supervisor-stopAuthority", "from": "client", "to": "supervisor", "type": "stopAuthority", "value": { "type": "stopAuthority", "sessionId": "sess-893F", "reason": "host closed" } },
+  { "name": "client-supervisor-recoverAuthority", "from": "client", "to": "supervisor", "type": "recoverAuthority", "value": { "type": "recoverAuthority", "sessionId": "sess-893F", "epoch": 2 } },
+  { "name": "client-supervisor-shutdown", "from": "client", "to": "supervisor", "type": "shutdown", "value": { "type": "shutdown" } },
+  { "name": "client-supervisor-diagnose", "from": "client", "to": "supervisor", "type": "diagnose", "value": { "type": "diagnose" } },
+  { "name": "client-supervisor-ping", "from": "client", "to": "supervisor", "type": "ping", "value": { "type": "ping", "nonce": "c-1" } },
+
+  { "name": "supervisor-client-welcome", "from": "supervisor", "to": "client", "type": "welcome", "value": { "type": "welcome", "version": 1, "serverVersion": "0.1.0" } },
+  { "name": "supervisor-client-serviceStatus", "from": "supervisor", "to": "client", "type": "serviceStatus", "value": { "type": "serviceStatus", "state": "running", "pid": 6264, "uiPort": 3178, "lanPort": 3000, "gamePort": 3001 } },
+  { "name": "supervisor-client-authorityStatus", "from": "supervisor", "to": "client", "type": "authorityStatus", "value": { "type": "authorityStatus", "sessionId": "sess-893F", "state": "running", "pid": 6265, "epoch": 1 } },
+  { "name": "supervisor-client-error", "from": "supervisor", "to": "client", "type": "error", "value": { "type": "error", "code": "PHASE", "text": "服务尚未启动" } },
+  { "name": "supervisor-client-pong", "from": "supervisor", "to": "client", "type": "pong", "value": { "type": "pong", "nonce": "c-1" } }
+]

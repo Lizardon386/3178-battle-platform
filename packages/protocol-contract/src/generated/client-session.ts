@@ -1,0 +1,1030 @@
+// 由 protocol/client-session 生成；请勿手改。
+// To parse this data:
+//
+//   import { Convert, ProtocolTypes } from "./types";
+//
+//   const protocolTypes = Convert.toProtocolTypes(json);
+//
+// These functions will throw an error if the JSON doesn't
+// match the expected interface, even if the JSON is valid.
+
+export interface ProtocolTypes {
+    ClientAddAI?:          ClientAddAI;
+    ClientChat?:           ClientChat;
+    ClientCloseSession?:   ClientCloseSession;
+    ClientGame?:           ClientGame;
+    ClientGameAuth?:       ClientGameAuth;
+    ClientGameHandoff?:    ClientGameHandoff;
+    ClientHello?:          ClientHello;
+    ClientKick?:           ClientKick;
+    ClientLeave?:          ClientLeave;
+    ClientListGames?:      ClientListGames;
+    ClientMoveSlot?:       ClientMoveSlot;
+    ClientPing?:           ClientPing;
+    ClientRecoverGame?:    ClientRecoverGame;
+    ClientRemoveAI?:       ClientRemoveAI;
+    ClientResume?:         ClientResume;
+    ClientSessionCreate?:  ClientSessionCreate;
+    ClientSessionJoin?:    ClientSessionJoin;
+    ClientSessionProbe?:   ClientSessionProbe;
+    ClientSetConfig?:      ClientSetConfig;
+    ClientSetProfile?:     ClientSetProfile;
+    ClientSetReady?:       ClientSetReady;
+    ClientSetSeatOptions?: ClientSetSeatOptions;
+    ClientStartGame?:      ClientStartGame;
+    ClientSync?:           ClientSync;
+    ClientTransferHost?:   ClientTransferHost;
+    ServerChat?:           ServerChat;
+    ServerChatHistory?:    ServerChatHistory;
+    ServerError?:          ServerError;
+    ServerGame?:           ServerGame;
+    ServerGameGranted?:    ServerGameGranted;
+    ServerGameHandoff?:    ServerGameHandoff;
+    ServerGameList?:       ServerGameList;
+    ServerNotice?:         ServerNotice;
+    ServerPong?:           ServerPong;
+    ServerSeatGranted?:    ServerSeatGranted;
+    ServerSessionPreview?: ServerSessionPreview;
+    ServerSessionState?:   ServerSessionState;
+    ServerWelcome?:        ServerWelcome;
+}
+
+export interface ClientAddAI {
+    requestId?: string;
+    slot?:      number;
+    type:       ClientAddAIType;
+}
+
+export type ClientAddAIType = "addAi";
+
+export interface ClientChat {
+    messageId: string;
+    text:      string;
+    type:      ClientChatType;
+}
+
+export type ClientChatType = "chat";
+
+export interface ClientCloseSession {
+    requestId?: string;
+    type:       ClientCloseSessionType;
+}
+
+export type ClientCloseSessionType = "closeSession";
+
+export interface ClientGame {
+    actionId: string;
+    payload:  unknown;
+    type:     ClientGameType;
+}
+
+export type ClientGameType = "game";
+
+export interface ClientGameAuth {
+    gameTicket?:  string;
+    handoffCode?: string;
+    type:         ClientGameAuthType;
+}
+
+export type ClientGameAuthType = "gameAuth";
+
+export interface ClientGameHandoff {
+    type: ClientGameHandoffType;
+}
+
+export type ClientGameHandoffType = "gameHandoff";
+
+export interface ClientHello {
+    capabilities:    string[];
+    clientKind:      ClientKind;
+    protocolVersion: number;
+    type:            ClientHelloType;
+}
+
+export type ClientKind = "native" | "web" | "mobile";
+
+export type ClientHelloType = "hello";
+
+export interface ClientKick {
+    requestId?:     string;
+    targetMemberId: string;
+    type:           ClientKickType;
+}
+
+export type ClientKickType = "kick";
+
+export interface ClientLeave {
+    requestId?: string;
+    type:       ClientLeaveType;
+}
+
+export type ClientLeaveType = "leave";
+
+export interface ClientListGames {
+    type: ClientListGamesType;
+}
+
+export type ClientListGamesType = "listGames";
+
+export interface ClientMoveSlot {
+    memberId:   string;
+    requestId?: string;
+    slot:       number;
+    type:       ClientMoveSlotType;
+}
+
+export type ClientMoveSlotType = "moveSlot";
+
+export interface ClientPing {
+    nonce: string;
+    type:  ClientPingType;
+}
+
+export type ClientPingType = "ping";
+
+export interface ClientRecoverGame {
+    requestId?: string;
+    type:       ClientRecoverGameType;
+}
+
+export type ClientRecoverGameType = "recoverGame";
+
+export interface ClientRemoveAI {
+    memberId:   string;
+    requestId?: string;
+    type:       ClientRemoveAIType;
+}
+
+export type ClientRemoveAIType = "removeAi";
+
+export interface ClientResume {
+    code?:     string;
+    profile?:  Profile;
+    sessionId: string;
+    ticket:    string;
+    type:      ClientResumeType;
+}
+
+export interface Profile {
+    avatar?:       string;
+    displayColor?: string;
+    nick:          string;
+}
+
+export type ClientResumeType = "resume";
+
+export interface ClientSessionCreate {
+    config:          { [key: string]: unknown };
+    gameId:          string;
+    memberSlots:     number;
+    password?:       string;
+    profile:         Profile;
+    roomName:        string;
+    spectatorLimit?: number;
+    type:            ClientSessionCreateType;
+    version:         string;
+}
+
+export type ClientSessionCreateType = "sessionCreate";
+
+export interface ClientSessionJoin {
+    code:        string;
+    credentials: { [key: string]: unknown };
+    gameId:      string;
+    profile:     Profile;
+    role?:       Role;
+    rulesHash:   string;
+    type:        ClientSessionJoinType;
+    version:     string;
+}
+
+export type Role = "player" | "ai" | "spectator";
+
+export type ClientSessionJoinType = "sessionJoin";
+
+export interface ClientSessionProbe {
+    code: string;
+    type: ClientSessionProbeType;
+}
+
+export type ClientSessionProbeType = "sessionProbe";
+
+export interface ClientSetConfig {
+    config:     { [key: string]: unknown };
+    requestId?: string;
+    type:       ClientSetConfigType;
+}
+
+export type ClientSetConfigType = "setConfig";
+
+export interface ClientSetProfile {
+    profile:    Profile;
+    requestId?: string;
+    type:       ClientSetProfileType;
+}
+
+export type ClientSetProfileType = "setProfile";
+
+export interface ClientSetReady {
+    ready:      boolean;
+    requestId?: string;
+    type:       ClientSetReadyType;
+}
+
+export type ClientSetReadyType = "setReady";
+
+export interface ClientSetSeatOptions {
+    memberId:   string;
+    options:    { [key: string]: unknown };
+    requestId?: string;
+    type:       ClientSetSeatOptionsType;
+}
+
+export type ClientSetSeatOptionsType = "setSeatOptions";
+
+export interface ClientStartGame {
+    requestId?: string;
+    type:       ClientStartGameType;
+}
+
+export type ClientStartGameType = "startGame";
+
+export interface ClientSync {
+    type: ClientSyncType;
+}
+
+export type ClientSyncType = "sync";
+
+export interface ClientTransferHost {
+    requestId?:     string;
+    targetMemberId: string;
+    type:           ClientTransferHostType;
+}
+
+export type ClientTransferHostType = "transferHost";
+
+export interface ServerChat {
+    chatRevision:  number;
+    fromMemberId?: string;
+    kind:          Kind;
+    messageId:     string;
+    profile?:      Profile;
+    sentAt:        number;
+    text:          string;
+    type:          ClientChatType;
+}
+
+export type Kind = "member" | "system";
+
+export interface ServerChatHistory {
+    chatRevision: number;
+    messages:     ServerChat[];
+    type:         ServerChatHistoryType;
+}
+
+export type ServerChatHistoryType = "chatHistory";
+
+export interface ServerError {
+    code:       string;
+    details?:   { [key: string]: unknown };
+    requestId?: string;
+    text:       string;
+    type:       ServerErrorType;
+}
+
+export type ServerErrorType = "error";
+
+export interface ServerGame {
+    authorityEpoch: number;
+    fromMemberId?:  string;
+    gameSequence:   number;
+    payload:        unknown;
+    type:           ClientGameType;
+    viewRevision?:  number;
+}
+
+export interface ServerGameGranted {
+    authorityEpoch: number;
+    gameTicket:     string;
+    memberId:       string;
+    sessionId:      string;
+    type:           ServerGameGrantedType;
+}
+
+export type ServerGameGrantedType = "gameGranted";
+
+export interface ServerGameHandoff {
+    expiresAt:   number;
+    handoffCode: string;
+    type:        ClientGameHandoffType;
+    url:         string;
+}
+
+export interface ServerGameList {
+    games: GameElement[];
+    type:  ServerGameListType;
+}
+
+export interface GameElement {
+    id:       string;
+    manifest: { [key: string]: unknown };
+    name:     string;
+    version:  string;
+}
+
+export type ServerGameListType = "gameList";
+
+export interface ServerNotice {
+    code: string;
+    text: string;
+    type: ServerNoticeType;
+}
+
+export type ServerNoticeType = "notice";
+
+export interface ServerPong {
+    nonce: string;
+    type:  ServerPongType;
+}
+
+export type ServerPongType = "pong";
+
+export interface ServerSeatGranted {
+    memberId:    string;
+    profile:     Profile;
+    sessionCode: string;
+    sessionId:   string;
+    ticket:      string;
+    type:        ServerSeatGrantedType;
+}
+
+export type ServerSeatGrantedType = "seatGranted";
+
+export interface ServerSessionPreview {
+    code:                 string;
+    config:               { [key: string]: unknown };
+    gameId:               string;
+    lateJoin:             LateJoin;
+    manifest:             { [key: string]: unknown };
+    manifestHash:         string;
+    memberSlots:          number;
+    name:                 string;
+    requiredCapabilities: string[];
+    rulesHash:            string;
+    spectatorLimit:       number;
+    type:                 ServerSessionPreviewType;
+    version:              string;
+}
+
+export type LateJoin = "spectator" | "player" | "deny";
+
+export type ServerSessionPreviewType = "sessionPreview";
+
+export interface ServerSessionState {
+    authorityEpoch: number;
+    code:           string;
+    config:         { [key: string]: unknown };
+    gameId:         string;
+    gameProcess:    GameProcess;
+    hostMemberId:   string;
+    members:        MemberElement[];
+    memberSlots:    number;
+    name:           string;
+    revision:       number;
+    rulesHash:      string;
+    sessionId:      string;
+    spectatorLimit: number;
+    state:          State;
+    type:           ServerSessionStateType;
+    version:        string;
+}
+
+export type GameProcess = "stopped" | "starting" | "running" | "failed" | "exited";
+
+export interface MemberElement {
+    gameConnected: boolean;
+    graceUntil?:   number;
+    memberId:      string;
+    options:       { [key: string]: unknown };
+    presence:      Presence;
+    profile:       Profile;
+    ready:         boolean;
+    role:          Role;
+    slot?:         number;
+}
+
+export type Presence = "online" | "grace";
+
+export type State = "open" | "closing" | "closed";
+
+export type ServerSessionStateType = "sessionState";
+
+export interface ServerWelcome {
+    protocolVersion: number;
+    serverVersion:   string;
+    supported:       string[];
+    type:            ServerWelcomeType;
+}
+
+export type ServerWelcomeType = "welcome";
+
+// Converts JSON strings to/from your types
+// and asserts the results of JSON.parse at runtime
+export class Convert {
+    public static toProtocolTypes(json: string): ProtocolTypes {
+        return cast(JSON.parse(json), r("ProtocolTypes"));
+    }
+
+    public static protocolTypesToJson(value: ProtocolTypes): string {
+        return JSON.stringify(uncast(value, r("ProtocolTypes")), null, 2);
+    }
+}
+
+function invalidValue(typ: any, val: any, key: any, parent: any = ''): never {
+    const prettyTyp = prettyTypeName(typ);
+    const parentText = parent ? ` on ${parent}` : '';
+    const keyText = key ? ` for key "${key}"` : '';
+    throw Error(`Invalid value${keyText}${parentText}. Expected ${prettyTyp} but got ${JSON.stringify(val)}`);
+}
+
+function prettyTypeName(typ: any): string {
+    if (Array.isArray(typ)) {
+        if (typ.length === 2 && typ[0] === undefined) {
+            return `an optional ${prettyTypeName(typ[1])}`;
+        } else {
+            return `one of [${typ.map(a => { return prettyTypeName(a); }).join(", ")}]`;
+        }
+    } else if (typeof typ === "object" && typ.literal !== undefined) {
+        return typ.literal;
+    } else {
+        return typeof typ;
+    }
+}
+
+function jsonToJSProps(typ: any): any {
+    if (typ.jsonToJS === undefined) {
+        const map: any = {};
+        typ.props.forEach((p: any) => map[p.json] = { key: p.js, typ: p.typ });
+        typ.jsonToJS = map;
+    }
+    return typ.jsonToJS;
+}
+
+function jsToJSONProps(typ: any): any {
+    if (typ.jsToJSON === undefined) {
+        const map: any = {};
+        typ.props.forEach((p: any) => map[p.js] = { key: p.json, typ: p.typ });
+        typ.jsToJSON = map;
+    }
+    return typ.jsToJSON;
+}
+
+function transform(val: any, typ: any, getProps: any, key: any = '', parent: any = ''): any {
+    function transformPrimitive(typ: string, val: any): any {
+        if (typeof typ === typeof val) return val;
+        return invalidValue(typ, val, key, parent);
+    }
+
+    function transformUnion(typs: any[], val: any): any {
+        // val must validate against one typ in typs
+        const l = typs.length;
+        for (let i = 0; i < l; i++) {
+            const typ = typs[i];
+            try {
+                return transform(val, typ, getProps);
+            } catch (_) {}
+        }
+        return invalidValue(typs, val, key, parent);
+    }
+
+    function transformEnum(cases: string[], val: any): any {
+        if (cases.indexOf(val) !== -1) return val;
+        return invalidValue(cases.map(a => { return l(a); }), val, key, parent);
+    }
+
+    function transformArray(typ: any, val: any): any {
+        // val must be an array with no invalid elements
+        if (!Array.isArray(val)) return invalidValue(l("array"), val, key, parent);
+        return val.map(el => transform(el, typ, getProps));
+    }
+
+    function transformDate(val: any): any {
+        if (val === null) {
+            return null;
+        }
+        const d = new Date(val);
+        if (isNaN(d.valueOf())) {
+            return invalidValue(l("Date"), val, key, parent);
+        }
+        return d;
+    }
+
+    function transformObject(props: { [k: string]: any }, additional: any, val: any): any {
+        if (val === null || typeof val !== "object" || Array.isArray(val)) {
+            return invalidValue(l(ref || "object"), val, key, parent);
+        }
+        const result: any = {};
+        Object.getOwnPropertyNames(props).forEach(key => {
+            const prop = props[key];
+            const v = Object.prototype.hasOwnProperty.call(val, key) ? val[key] : undefined;
+            result[prop.key] = transform(v, prop.typ, getProps, key, ref);
+        });
+        Object.getOwnPropertyNames(val).forEach(key => {
+            if (!Object.prototype.hasOwnProperty.call(props, key)) {
+                result[key] = transform(val[key], additional, getProps, key, ref);
+            }
+        });
+        return result;
+    }
+
+    if (typ === "any") return val;
+    if (typ === null) {
+        if (val === null) return val;
+        return invalidValue(typ, val, key, parent);
+    }
+    if (typ === false) return invalidValue(typ, val, key, parent);
+    let ref: any = undefined;
+    while (typeof typ === "object" && typ.ref !== undefined) {
+        ref = typ.ref;
+        typ = typeMap[typ.ref];
+    }
+    if (Array.isArray(typ)) return transformEnum(typ, val);
+    if (typeof typ === "object") {
+        return typ.hasOwnProperty("unionMembers") ? transformUnion(typ.unionMembers, val)
+            : typ.hasOwnProperty("arrayItems")    ? transformArray(typ.arrayItems, val)
+            : typ.hasOwnProperty("props")         ? transformObject(getProps(typ), typ.additional, val)
+            : invalidValue(typ, val, key, parent);
+    }
+    // Numbers can be parsed by Date but shouldn't be.
+    if (typ === Date && typeof val !== "number") return transformDate(val);
+    return transformPrimitive(typ, val);
+}
+
+function cast<T>(val: any, typ: any): T {
+    return transform(val, typ, jsonToJSProps);
+}
+
+function uncast<T>(val: T, typ: any): any {
+    return transform(val, typ, jsToJSONProps);
+}
+
+function l(typ: any) {
+    return { literal: typ };
+}
+
+function a(typ: any) {
+    return { arrayItems: typ };
+}
+
+function u(...typs: any[]) {
+    return { unionMembers: typs };
+}
+
+function o(props: any[], additional: any) {
+    return { props, additional };
+}
+
+function m(additional: any) {
+    return { props: [], additional };
+}
+
+function r(name: string) {
+    return { ref: name };
+}
+
+const typeMap: any = {
+    "ProtocolTypes": o([
+        { json: "ClientAddAI", js: "ClientAddAI", typ: u(undefined, r("ClientAddAI")) },
+        { json: "ClientChat", js: "ClientChat", typ: u(undefined, r("ClientChat")) },
+        { json: "ClientCloseSession", js: "ClientCloseSession", typ: u(undefined, r("ClientCloseSession")) },
+        { json: "ClientGame", js: "ClientGame", typ: u(undefined, r("ClientGame")) },
+        { json: "ClientGameAuth", js: "ClientGameAuth", typ: u(undefined, r("ClientGameAuth")) },
+        { json: "ClientGameHandoff", js: "ClientGameHandoff", typ: u(undefined, r("ClientGameHandoff")) },
+        { json: "ClientHello", js: "ClientHello", typ: u(undefined, r("ClientHello")) },
+        { json: "ClientKick", js: "ClientKick", typ: u(undefined, r("ClientKick")) },
+        { json: "ClientLeave", js: "ClientLeave", typ: u(undefined, r("ClientLeave")) },
+        { json: "ClientListGames", js: "ClientListGames", typ: u(undefined, r("ClientListGames")) },
+        { json: "ClientMoveSlot", js: "ClientMoveSlot", typ: u(undefined, r("ClientMoveSlot")) },
+        { json: "ClientPing", js: "ClientPing", typ: u(undefined, r("ClientPing")) },
+        { json: "ClientRecoverGame", js: "ClientRecoverGame", typ: u(undefined, r("ClientRecoverGame")) },
+        { json: "ClientRemoveAI", js: "ClientRemoveAI", typ: u(undefined, r("ClientRemoveAI")) },
+        { json: "ClientResume", js: "ClientResume", typ: u(undefined, r("ClientResume")) },
+        { json: "ClientSessionCreate", js: "ClientSessionCreate", typ: u(undefined, r("ClientSessionCreate")) },
+        { json: "ClientSessionJoin", js: "ClientSessionJoin", typ: u(undefined, r("ClientSessionJoin")) },
+        { json: "ClientSessionProbe", js: "ClientSessionProbe", typ: u(undefined, r("ClientSessionProbe")) },
+        { json: "ClientSetConfig", js: "ClientSetConfig", typ: u(undefined, r("ClientSetConfig")) },
+        { json: "ClientSetProfile", js: "ClientSetProfile", typ: u(undefined, r("ClientSetProfile")) },
+        { json: "ClientSetReady", js: "ClientSetReady", typ: u(undefined, r("ClientSetReady")) },
+        { json: "ClientSetSeatOptions", js: "ClientSetSeatOptions", typ: u(undefined, r("ClientSetSeatOptions")) },
+        { json: "ClientStartGame", js: "ClientStartGame", typ: u(undefined, r("ClientStartGame")) },
+        { json: "ClientSync", js: "ClientSync", typ: u(undefined, r("ClientSync")) },
+        { json: "ClientTransferHost", js: "ClientTransferHost", typ: u(undefined, r("ClientTransferHost")) },
+        { json: "ServerChat", js: "ServerChat", typ: u(undefined, r("ServerChat")) },
+        { json: "ServerChatHistory", js: "ServerChatHistory", typ: u(undefined, r("ServerChatHistory")) },
+        { json: "ServerError", js: "ServerError", typ: u(undefined, r("ServerError")) },
+        { json: "ServerGame", js: "ServerGame", typ: u(undefined, r("ServerGame")) },
+        { json: "ServerGameGranted", js: "ServerGameGranted", typ: u(undefined, r("ServerGameGranted")) },
+        { json: "ServerGameHandoff", js: "ServerGameHandoff", typ: u(undefined, r("ServerGameHandoff")) },
+        { json: "ServerGameList", js: "ServerGameList", typ: u(undefined, r("ServerGameList")) },
+        { json: "ServerNotice", js: "ServerNotice", typ: u(undefined, r("ServerNotice")) },
+        { json: "ServerPong", js: "ServerPong", typ: u(undefined, r("ServerPong")) },
+        { json: "ServerSeatGranted", js: "ServerSeatGranted", typ: u(undefined, r("ServerSeatGranted")) },
+        { json: "ServerSessionPreview", js: "ServerSessionPreview", typ: u(undefined, r("ServerSessionPreview")) },
+        { json: "ServerSessionState", js: "ServerSessionState", typ: u(undefined, r("ServerSessionState")) },
+        { json: "ServerWelcome", js: "ServerWelcome", typ: u(undefined, r("ServerWelcome")) },
+    ], false),
+    "ClientAddAI": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "slot", js: "slot", typ: u(undefined, 0) },
+        { json: "type", js: "type", typ: r("ClientAddAIType") },
+    ], false),
+    "ClientChat": o([
+        { json: "messageId", js: "messageId", typ: "" },
+        { json: "text", js: "text", typ: "" },
+        { json: "type", js: "type", typ: r("ClientChatType") },
+    ], false),
+    "ClientCloseSession": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientCloseSessionType") },
+    ], false),
+    "ClientGame": o([
+        { json: "actionId", js: "actionId", typ: "" },
+        { json: "payload", js: "payload", typ: "any" },
+        { json: "type", js: "type", typ: r("ClientGameType") },
+    ], false),
+    "ClientGameAuth": o([
+        { json: "gameTicket", js: "gameTicket", typ: u(undefined, "") },
+        { json: "handoffCode", js: "handoffCode", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientGameAuthType") },
+    ], false),
+    "ClientGameHandoff": o([
+        { json: "type", js: "type", typ: r("ClientGameHandoffType") },
+    ], false),
+    "ClientHello": o([
+        { json: "capabilities", js: "capabilities", typ: a("") },
+        { json: "clientKind", js: "clientKind", typ: r("ClientKind") },
+        { json: "protocolVersion", js: "protocolVersion", typ: 0 },
+        { json: "type", js: "type", typ: r("ClientHelloType") },
+    ], false),
+    "ClientKick": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "targetMemberId", js: "targetMemberId", typ: "" },
+        { json: "type", js: "type", typ: r("ClientKickType") },
+    ], false),
+    "ClientLeave": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientLeaveType") },
+    ], false),
+    "ClientListGames": o([
+        { json: "type", js: "type", typ: r("ClientListGamesType") },
+    ], false),
+    "ClientMoveSlot": o([
+        { json: "memberId", js: "memberId", typ: "" },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "slot", js: "slot", typ: 0 },
+        { json: "type", js: "type", typ: r("ClientMoveSlotType") },
+    ], false),
+    "ClientPing": o([
+        { json: "nonce", js: "nonce", typ: "" },
+        { json: "type", js: "type", typ: r("ClientPingType") },
+    ], false),
+    "ClientRecoverGame": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientRecoverGameType") },
+    ], false),
+    "ClientRemoveAI": o([
+        { json: "memberId", js: "memberId", typ: "" },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientRemoveAIType") },
+    ], false),
+    "ClientResume": o([
+        { json: "code", js: "code", typ: u(undefined, "") },
+        { json: "profile", js: "profile", typ: u(undefined, r("Profile")) },
+        { json: "sessionId", js: "sessionId", typ: "" },
+        { json: "ticket", js: "ticket", typ: "" },
+        { json: "type", js: "type", typ: r("ClientResumeType") },
+    ], false),
+    "Profile": o([
+        { json: "avatar", js: "avatar", typ: u(undefined, "") },
+        { json: "displayColor", js: "displayColor", typ: u(undefined, "") },
+        { json: "nick", js: "nick", typ: "" },
+    ], false),
+    "ClientSessionCreate": o([
+        { json: "config", js: "config", typ: m("any") },
+        { json: "gameId", js: "gameId", typ: "" },
+        { json: "memberSlots", js: "memberSlots", typ: 0 },
+        { json: "password", js: "password", typ: u(undefined, "") },
+        { json: "profile", js: "profile", typ: r("Profile") },
+        { json: "roomName", js: "roomName", typ: "" },
+        { json: "spectatorLimit", js: "spectatorLimit", typ: u(undefined, 0) },
+        { json: "type", js: "type", typ: r("ClientSessionCreateType") },
+        { json: "version", js: "version", typ: "" },
+    ], false),
+    "ClientSessionJoin": o([
+        { json: "code", js: "code", typ: "" },
+        { json: "credentials", js: "credentials", typ: m("any") },
+        { json: "gameId", js: "gameId", typ: "" },
+        { json: "profile", js: "profile", typ: r("Profile") },
+        { json: "role", js: "role", typ: u(undefined, r("Role")) },
+        { json: "rulesHash", js: "rulesHash", typ: "" },
+        { json: "type", js: "type", typ: r("ClientSessionJoinType") },
+        { json: "version", js: "version", typ: "" },
+    ], false),
+    "ClientSessionProbe": o([
+        { json: "code", js: "code", typ: "" },
+        { json: "type", js: "type", typ: r("ClientSessionProbeType") },
+    ], false),
+    "ClientSetConfig": o([
+        { json: "config", js: "config", typ: m("any") },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientSetConfigType") },
+    ], false),
+    "ClientSetProfile": o([
+        { json: "profile", js: "profile", typ: r("Profile") },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientSetProfileType") },
+    ], false),
+    "ClientSetReady": o([
+        { json: "ready", js: "ready", typ: true },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientSetReadyType") },
+    ], false),
+    "ClientSetSeatOptions": o([
+        { json: "memberId", js: "memberId", typ: "" },
+        { json: "options", js: "options", typ: m("any") },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientSetSeatOptionsType") },
+    ], false),
+    "ClientStartGame": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientStartGameType") },
+    ], false),
+    "ClientSync": o([
+        { json: "type", js: "type", typ: r("ClientSyncType") },
+    ], false),
+    "ClientTransferHost": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "targetMemberId", js: "targetMemberId", typ: "" },
+        { json: "type", js: "type", typ: r("ClientTransferHostType") },
+    ], false),
+    "ServerChat": o([
+        { json: "chatRevision", js: "chatRevision", typ: 0 },
+        { json: "fromMemberId", js: "fromMemberId", typ: u(undefined, "") },
+        { json: "kind", js: "kind", typ: r("Kind") },
+        { json: "messageId", js: "messageId", typ: "" },
+        { json: "profile", js: "profile", typ: u(undefined, r("Profile")) },
+        { json: "sentAt", js: "sentAt", typ: 0 },
+        { json: "text", js: "text", typ: "" },
+        { json: "type", js: "type", typ: r("ClientChatType") },
+    ], false),
+    "ServerChatHistory": o([
+        { json: "chatRevision", js: "chatRevision", typ: 0 },
+        { json: "messages", js: "messages", typ: a(r("ServerChat")) },
+        { json: "type", js: "type", typ: r("ServerChatHistoryType") },
+    ], false),
+    "ServerError": o([
+        { json: "code", js: "code", typ: "" },
+        { json: "details", js: "details", typ: u(undefined, m("any")) },
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "text", js: "text", typ: "" },
+        { json: "type", js: "type", typ: r("ServerErrorType") },
+    ], false),
+    "ServerGame": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
+        { json: "fromMemberId", js: "fromMemberId", typ: u(undefined, "") },
+        { json: "gameSequence", js: "gameSequence", typ: 0 },
+        { json: "payload", js: "payload", typ: "any" },
+        { json: "type", js: "type", typ: r("ClientGameType") },
+        { json: "viewRevision", js: "viewRevision", typ: u(undefined, 0) },
+    ], false),
+    "ServerGameGranted": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
+        { json: "gameTicket", js: "gameTicket", typ: "" },
+        { json: "memberId", js: "memberId", typ: "" },
+        { json: "sessionId", js: "sessionId", typ: "" },
+        { json: "type", js: "type", typ: r("ServerGameGrantedType") },
+    ], false),
+    "ServerGameHandoff": o([
+        { json: "expiresAt", js: "expiresAt", typ: 0 },
+        { json: "handoffCode", js: "handoffCode", typ: "" },
+        { json: "type", js: "type", typ: r("ClientGameHandoffType") },
+        { json: "url", js: "url", typ: "" },
+    ], false),
+    "ServerGameList": o([
+        { json: "games", js: "games", typ: a(r("GameElement")) },
+        { json: "type", js: "type", typ: r("ServerGameListType") },
+    ], false),
+    "GameElement": o([
+        { json: "id", js: "id", typ: "" },
+        { json: "manifest", js: "manifest", typ: m("any") },
+        { json: "name", js: "name", typ: "" },
+        { json: "version", js: "version", typ: "" },
+    ], false),
+    "ServerNotice": o([
+        { json: "code", js: "code", typ: "" },
+        { json: "text", js: "text", typ: "" },
+        { json: "type", js: "type", typ: r("ServerNoticeType") },
+    ], false),
+    "ServerPong": o([
+        { json: "nonce", js: "nonce", typ: "" },
+        { json: "type", js: "type", typ: r("ServerPongType") },
+    ], false),
+    "ServerSeatGranted": o([
+        { json: "memberId", js: "memberId", typ: "" },
+        { json: "profile", js: "profile", typ: r("Profile") },
+        { json: "sessionCode", js: "sessionCode", typ: "" },
+        { json: "sessionId", js: "sessionId", typ: "" },
+        { json: "ticket", js: "ticket", typ: "" },
+        { json: "type", js: "type", typ: r("ServerSeatGrantedType") },
+    ], false),
+    "ServerSessionPreview": o([
+        { json: "code", js: "code", typ: "" },
+        { json: "config", js: "config", typ: m("any") },
+        { json: "gameId", js: "gameId", typ: "" },
+        { json: "lateJoin", js: "lateJoin", typ: r("LateJoin") },
+        { json: "manifest", js: "manifest", typ: m("any") },
+        { json: "manifestHash", js: "manifestHash", typ: "" },
+        { json: "memberSlots", js: "memberSlots", typ: 0 },
+        { json: "name", js: "name", typ: "" },
+        { json: "requiredCapabilities", js: "requiredCapabilities", typ: a("") },
+        { json: "rulesHash", js: "rulesHash", typ: "" },
+        { json: "spectatorLimit", js: "spectatorLimit", typ: 0 },
+        { json: "type", js: "type", typ: r("ServerSessionPreviewType") },
+        { json: "version", js: "version", typ: "" },
+    ], false),
+    "ServerSessionState": o([
+        { json: "authorityEpoch", js: "authorityEpoch", typ: 0 },
+        { json: "code", js: "code", typ: "" },
+        { json: "config", js: "config", typ: m("any") },
+        { json: "gameId", js: "gameId", typ: "" },
+        { json: "gameProcess", js: "gameProcess", typ: r("GameProcess") },
+        { json: "hostMemberId", js: "hostMemberId", typ: "" },
+        { json: "members", js: "members", typ: a(r("MemberElement")) },
+        { json: "memberSlots", js: "memberSlots", typ: 0 },
+        { json: "name", js: "name", typ: "" },
+        { json: "revision", js: "revision", typ: 0 },
+        { json: "rulesHash", js: "rulesHash", typ: "" },
+        { json: "sessionId", js: "sessionId", typ: "" },
+        { json: "spectatorLimit", js: "spectatorLimit", typ: 0 },
+        { json: "state", js: "state", typ: r("State") },
+        { json: "type", js: "type", typ: r("ServerSessionStateType") },
+        { json: "version", js: "version", typ: "" },
+    ], false),
+    "MemberElement": o([
+        { json: "gameConnected", js: "gameConnected", typ: true },
+        { json: "graceUntil", js: "graceUntil", typ: u(undefined, 0) },
+        { json: "memberId", js: "memberId", typ: "" },
+        { json: "options", js: "options", typ: m("any") },
+        { json: "presence", js: "presence", typ: r("Presence") },
+        { json: "profile", js: "profile", typ: r("Profile") },
+        { json: "ready", js: "ready", typ: true },
+        { json: "role", js: "role", typ: r("Role") },
+        { json: "slot", js: "slot", typ: u(undefined, 0) },
+    ], false),
+    "ServerWelcome": o([
+        { json: "protocolVersion", js: "protocolVersion", typ: 0 },
+        { json: "serverVersion", js: "serverVersion", typ: "" },
+        { json: "supported", js: "supported", typ: a("") },
+        { json: "type", js: "type", typ: r("ServerWelcomeType") },
+    ], false),
+    "ClientAddAIType": [
+        "addAi",
+    ],
+    "ClientChatType": [
+        "chat",
+    ],
+    "ClientCloseSessionType": [
+        "closeSession",
+    ],
+    "ClientGameType": [
+        "game",
+    ],
+    "ClientGameAuthType": [
+        "gameAuth",
+    ],
+    "ClientGameHandoffType": [
+        "gameHandoff",
+    ],
+    "ClientKind": [
+        "mobile",
+        "native",
+        "web",
+    ],
+    "ClientHelloType": [
+        "hello",
+    ],
+    "ClientKickType": [
+        "kick",
+    ],
+    "ClientLeaveType": [
+        "leave",
+    ],
+    "ClientListGamesType": [
+        "listGames",
+    ],
+    "ClientMoveSlotType": [
+        "moveSlot",
+    ],
+    "ClientPingType": [
+        "ping",
+    ],
+    "ClientRecoverGameType": [
+        "recoverGame",
+    ],
+    "ClientRemoveAIType": [
+        "removeAi",
+    ],
+    "ClientResumeType": [
+        "resume",
+    ],
+    "ClientSessionCreateType": [
+        "sessionCreate",
+    ],
+    "Role": [
+        "ai",
+        "player",
+        "spectator",
+    ],
+    "ClientSessionJoinType": [
+        "sessionJoin",
+    ],
+    "ClientSessionProbeType": [
+        "sessionProbe",
+    ],
+    "ClientSetConfigType": [
+        "setConfig",
+    ],
+    "ClientSetProfileType": [
+        "setProfile",
+    ],
+    "ClientSetReadyType": [
+        "setReady",
+    ],
+    "ClientSetSeatOptionsType": [
+        "setSeatOptions",
+    ],
+    "ClientStartGameType": [
+        "startGame",
+    ],
+    "ClientSyncType": [
+        "sync",
+    ],
+    "ClientTransferHostType": [
+        "transferHost",
+    ],
+    "Kind": [
+        "member",
+        "system",
+    ],
+    "ServerChatHistoryType": [
+        "chatHistory",
+    ],
+    "ServerErrorType": [
+        "error",
+    ],
+    "ServerGameGrantedType": [
+        "gameGranted",
+    ],
+    "ServerGameListType": [
+        "gameList",
+    ],
+    "ServerNoticeType": [
+        "notice",
+    ],
+    "ServerPongType": [
+        "pong",
+    ],
+    "ServerSeatGrantedType": [
+        "seatGranted",
+    ],
+    "LateJoin": [
+        "deny",
+        "player",
+        "spectator",
+    ],
+    "ServerSessionPreviewType": [
+        "sessionPreview",
+    ],
+    "GameProcess": [
+        "exited",
+        "failed",
+        "running",
+        "starting",
+        "stopped",
+    ],
+    "Presence": [
+        "grace",
+        "online",
+    ],
+    "State": [
+        "closed",
+        "closing",
+        "open",
+    ],
+    "ServerSessionStateType": [
+        "sessionState",
+    ],
+    "ServerWelcomeType": [
+        "welcome",
+    ],
+};

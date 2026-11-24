@@ -1,0 +1,21 @@
+{
+  "protocolVersion": 1,
+  "status": "draft",
+  "messages": [
+    { "type": "hello", "from": "client", "to": "supervisor", "schema": "ClientHello", "channel": "pipe", "auth": "local", "summary": "本机控制握手，区分 UI 与 Service" },
+    { "type": "serviceStart", "from": "client", "to": "supervisor", "schema": "ServiceStart", "channel": "pipe", "auth": "local", "summary": "启动 Session Service" },
+    { "type": "serviceStop", "from": "client", "to": "supervisor", "schema": "ServiceStop", "channel": "pipe", "auth": "local", "summary": "停止 Session Service" },
+    { "type": "startAuthority", "from": "client", "to": "supervisor", "schema": "StartAuthority", "channel": "pipe", "auth": "local", "summary": "按 epoch 启动 Authority 进程" },
+    { "type": "stopAuthority", "from": "client", "to": "supervisor", "schema": "StopAuthority", "channel": "pipe", "auth": "local", "summary": "停止指定会话的 Authority" },
+    { "type": "recoverAuthority", "from": "client", "to": "supervisor", "schema": "RecoverAuthority", "channel": "pipe", "auth": "local", "summary": "以新 epoch 恢复 Authority" },
+    { "type": "shutdown", "from": "client", "to": "supervisor", "schema": "Shutdown", "channel": "pipe", "auth": "local", "summary": "停止整棵进程树并退出" },
+    { "type": "diagnose", "from": "client", "to": "supervisor", "schema": "Diagnose", "channel": "pipe", "auth": "local", "summary": "请求本机诊断信息" },
+    { "type": "ping", "from": "client", "to": "supervisor", "schema": "Ping", "channel": "pipe", "auth": "local", "summary": "控制通道心跳" },
+
+    { "type": "welcome", "from": "supervisor", "to": "client", "schema": "SupervisorWelcome", "channel": "pipe", "auth": "local", "summary": "返回控制协议版本" },
+    { "type": "serviceStatus", "from": "supervisor", "to": "client", "schema": "ServiceStatus", "channel": "pipe", "auth": "local", "summary": "Service 进程状态与端口" },
+    { "type": "authorityStatus", "from": "supervisor", "to": "client", "schema": "AuthorityStatus", "channel": "pipe", "auth": "local", "summary": "Authority 进程状态与 epoch" },
+    { "type": "error", "from": "supervisor", "to": "client", "schema": "ControlError", "channel": "pipe", "auth": "local", "summary": "控制命令拒绝" },
+    { "type": "pong", "from": "supervisor", "to": "client", "schema": "Pong", "channel": "pipe", "auth": "local", "summary": "控制通道心跳响应" }
+  ]
+}
