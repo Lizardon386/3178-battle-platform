@@ -5,6 +5,8 @@
     { "path": "packages/session-core" },
     { "path": "packages/session-app" },
     { "path": "packages/session-store" },
+    { "path": "packages/session-ws" },
+    { "path": "packages/session-service" },
     { "path": "packages/core-abi" },
     { "path": "packages/pack-format" },
     { "path": "packages/protocol" },

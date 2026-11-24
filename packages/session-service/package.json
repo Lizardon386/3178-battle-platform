@@ -1,0 +1,21 @@
+{
+  "name": "@bp/session-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@bp/session-app": "*",
+    "@bp/session-core": "*",
+    "@bp/session-store": "*",
+    "@bp/session-ws": "*"
+  }
+}

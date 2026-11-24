@@ -138,6 +138,20 @@ export class SessionApplication {
     });
   }
 
+  async getSession(sessionId: string): Promise<SessionRecord | null> {
+    return this.repository.load(sessionId);
+  }
+
+  async authenticate(sessionId: string, memberId: string, token: string): Promise<Result<SessionRecord>> {
+    const session = await this.repository.load(sessionId);
+    if (!session) return err('NOROOM', '会话不存在');
+    const member = findMember(session, memberId);
+    if (!member) return err('NOSEAT', '成员不存在');
+    const ticket = findTicket(session, this.secrets.hash(token), this.clock.now());
+    if (!ticket || ticket.memberId !== memberId) return err('SEATLOST', '票据无效或已过期');
+    return ok(session);
+  }
+
   async disconnectMember(sessionId: string, memberId: string): Promise<Result<SessionRecord>> {
     const session = await this.repository.load(sessionId);
     if (!session) return err('NOROOM', '会话不存在');
