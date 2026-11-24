@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-11-24　模式：文档四档 + `docs/research` + 合并总计划（门户暂缓）　项目目录：D:\agent_workspace\3178-battle-platform　代码锚点以 `handoff/PROMPT.md` 与 git HEAD 为准（分支 `master`）　当前接盘：待接（上一写者 Claude Code；门户已按 2026-11-24 决定回退/暂缓；合并计划已落盘）
+> 最近更新：2026-11-24　模式：文档四档 + `docs/`（设计/研究/预览）+ 合并总计划（门户暂缓）　项目目录：D:\agent_workspace\3178-battle-platform　代码锚点以 `handoff/PROMPT.md` 与 git HEAD 为准（分支 `master`）　当前接盘：待接（上一写者 Claude Code；门户已按 2026-11-24 决定回退/暂缓；合并计划已落盘）
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
@@ -14,7 +14,7 @@
 | [CONTEXT.md](CONTEXT.md)（本文） | 接手 agent | 当前状态、下一步、MEMORY 提炼、坑、交接记录 |
 | [COMPACT_BACKUP.md](COMPACT_BACKUP.md) | 追溯 | 压卡搬出的历史流水与旧交接记录 |
 | [合并总计划](../plan/federated-marinating-hamming.md) | 执行 / 评审 | 运行时 WP0–WP9 + 暂缓的门户 S0–S4；原 `plan/bright-swinging-wren.md` 为附录 B |
-| [docs/research/](../docs/research/全局目标架构.md) | 目标架构 / 评审 | 总纲、SDK 方案、评审输入、UI 预览、协议 v0 设计；内部资料，不上门户 |
+| [设计/研究文档](../docs/全局目标架构.md) | 目标架构 / 评审 | 总纲、SDK 方案、评审输入、UI 预览、协议 v0 设计；均在 `docs/` 根，内部资料不上门户 |
 
 ## 2. 目标与完成定义
 
@@ -36,7 +36,7 @@
 
 ## 5. MEMORY 提炼
 
-- `docs/research/` 放调研 / 设计 / 评估类文档，过时的直接删、不做归档；`docs/` 根只放原有正式文档。
+- `docs/` 放设计 / 方案 / 指导 / 调研类文档（含 DESIGN、INTEGRATION_GUIDE、全局目标架构、UI 预览等）；过时的直接删、不做归档；不再使用 `docs/research/` 子目录。
 - 视觉硬约束：沿用原色值令牌、三套 OFL 字体、无渐变 / 无关键帧 / 无发光；全站实线；单层 1px 整圈靛紫高亮。共享令牌（琥珀 `--bp-warn` / 靛紫 `--bp-accent`）不可擅改，调整色板只替换相近邻居。
 - 昵称标签与昵称值都要突出（桌面 22px，输入值 600 字重）；平台身份资料与玩法分离，`displayColor` 不等于阵营色，默认琥珀/靛紫也参与一色一席。
 - **交付形态按设计，不拿浏览器套壳冒充 exe**：桌面是原生控件 + 托盘（D8），网页/手机共用 Web 实现；三端实现排在真实 Session Service / Supervisor 之后。
@@ -80,10 +80,11 @@ npx tsc -b                       # 类型检查
 | 客户端界面 / 宿主壳 | [app.ts](../packages/client/src/app.ts) / [cli.ts](../packages/hostd/src/cli.ts) |
 | 合并总计划 | [plan/federated-marinating-hamming.md](../plan/federated-marinating-hamming.md) |
 | 门户（暂缓，代码已回退） | [plan §3.2 / 附录 A](../plan/federated-marinating-hamming.md) |
-| 新版设计 / 预览 | [docs/research](../docs/research/新版平台与SDK设计方案.md) / [平台UI预览.html](../docs/research/平台UI预览.html) |
+| 新版设计 / 预览 | [新版平台与SDK设计方案.md](../docs/新版平台与SDK设计方案.md) / [平台UI预览.html](../docs/平台UI预览.html) |
 
 ## 9. 交接记录
 
+- 2026-11-24 Claude Code：**文档扁平化 + 计划归位**：`docs/research/` 全部内容移到 `docs/`（含 `fonts/` 与 UI 预览），删除 `research` 子目录；`.zcode/plans` 的 `plan-sess_0614...` 移入 `plan/` 并补 `scope=plan`；同步修正 docs 内相对链接与 CONTEXT/PROMPT 引用。历史时间线里的旧路径保留原样并加说明。
 - 2026-11-24 Claude Code：**门户回退/暂缓**：按用户决定暂不接入热铁盒；删除 `site/`、`tools/site/`、`dist-site/`，还原 `package.json`/`package-lock.json` 与 `.gitignore` 的 `dist-site/` 改动；合并计划保留 S0–S4 作为暂缓支线并更新决策记录。只提交 handoff 文档；运行时未动。
 - 2026-11-16 cc-haha：`--doc` 把完整实施计划迁入 `plan/bright-swinging-wren.md`（已 gitignore）；CONTEXT/PROMPT 的旧 `~/.claude/plans` 引用改为 `../plan/`；`.gitignore` 加 `plan/`。
 - 2026-11-13 Qoder：**接盘复验 + 计划评审 9 项回写 + 全文重写为 android.jar 模型**：接盘四条基线全绿（`npm test` 272/272、seam、tsc、gen-check），HEAD `debb73d`、工作树净。把「冻结前必须补的 9 个问题」回写进计划；把计划全文重写为 android.jar compile-only stub 模型（573 行）；未改实现代码。真实运行时、原生 exe、SDK 外部消费者均未实施。
