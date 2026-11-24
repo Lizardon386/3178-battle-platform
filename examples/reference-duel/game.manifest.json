@@ -1,0 +1,24 @@
+{
+  "id": "reference-duel",
+  "name": "参考对决",
+  "version": "1.0.0",
+  "requiredCapabilities": [],
+  "lateJoin": "spectator",
+  "platformRequirements": {
+    "protocolVersion": 1,
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "allowSpectate": true,
+    "soloFill": false
+  },
+  "entryPoints": {
+    "authority": "authority/index.js",
+    "web": "web/index.html"
+  },
+  "sessionConfig": {
+    "fields": []
+  },
+  "reference": {
+    "entry": "reference.json"
+  }
+}

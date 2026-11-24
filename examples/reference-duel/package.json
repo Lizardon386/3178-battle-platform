@@ -1,0 +1,14 @@
+{
+  "name": "reference-duel",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test --test-timeout=20000 test/*.test.mjs"
+  },
+  "dependencies": {
+    "@bp/authority-runtime": "*",
+    "@bp/game-sdk-stub": "*"
+  }
+}

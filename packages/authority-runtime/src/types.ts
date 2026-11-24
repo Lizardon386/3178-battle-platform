@@ -37,6 +37,11 @@ export interface Transport {
   send(message: unknown): void;
 }
 
+export interface RuntimeMember {
+  memberId: string;
+  displayName?: string;
+}
+
 export interface RuntimeOptions {
   hooks: AuthorityHooks;
   transport: Transport;
@@ -44,5 +49,6 @@ export interface RuntimeOptions {
   sessionId: string;
   epoch: number;
   roundId: string;
+  members?: RuntimeMember[];
   seed?: number;
 }

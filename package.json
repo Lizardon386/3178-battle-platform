@@ -16,7 +16,7 @@
     "portable": "node tools/packaging/build-portable.mjs",
     "pack:sdk": "node tools/packaging/pack-sdk.mjs",
     "bump:sdk": "node tools/packaging/bump-sdk.mjs",
-    "test": "npm run build && node tools/testkit/scripts/pack-test-games.mjs && node --test --test-timeout=20000 \"packages/*/test/*.test.mjs\" \"tools/*/test/*.test.mjs\""
+    "test": "npm run build && node tools/testkit/scripts/pack-test-games.mjs && node --test --test-timeout=20000 \"packages/*/test/*.test.mjs\" \"tools/*/test/*.test.mjs\" \"examples/*/test/*.test.mjs\""
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

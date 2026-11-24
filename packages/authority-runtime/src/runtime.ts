@@ -52,6 +52,7 @@ export class AuthorityRuntime {
       sessionId: this.options.sessionId,
       epoch: this.options.epoch,
       roundId: this.options.roundId,
+      members: this.options.members ?? [],
     }, restored?.state, this.context);
   }
 
