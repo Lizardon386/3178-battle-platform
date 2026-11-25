@@ -13,6 +13,7 @@ games/*.bpmap
 
 # 宿主工作记忆（本机私有，不进版本库）
 .workbuddy-ai/
+.workbuddy/
 
 # 交接指针自动生成，本机私有
 handoff/PROMPT.md
