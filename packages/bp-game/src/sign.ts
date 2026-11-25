@@ -1,13 +1,7 @@
-import { createPrivateKey, createPublicKey, sign, verify } from 'node:crypto';
-import { readPackage } from '@bp/game-package';
+import { createPrivateKey, createPublicKey, sign } from 'node:crypto';
+import { readPackage, verifyPackageSignature, type PackageSignature } from '@bp/game-package';
 
-export interface PackageSignature {
-  algorithm: 'ed25519';
-  /** base64 签名值。 */
-  value: string;
-  /** base64 SPKI DER 公钥，便于分发时自带验证材料。 */
-  publicKey: string;
-}
+export type { PackageSignature } from '@bp/game-package';
 
 const algorithm = 'ed25519';
 
@@ -21,14 +15,6 @@ export function signPackage(filePath: string, privateKeyPem: string): PackageSig
 }
 
 export function verifyPackage(filePath: string, signature: PackageSignature, publicKeyPem?: string): boolean {
-  if (signature.algorithm !== algorithm || typeof signature.value !== 'string') return false;
   const { packageHash } = readPackage(filePath);
-  try {
-    const key = publicKeyPem
-      ? createPublicKey(publicKeyPem)
-      : createPublicKey({ key: Buffer.from(signature.publicKey, 'base64'), format: 'der', type: 'spki' });
-    return verify(null, Buffer.from(packageHash, 'utf8'), key, Buffer.from(signature.value, 'base64'));
-  } catch {
-    return false;
-  }
+  return verifyPackageSignature(packageHash, signature, publicKeyPem === undefined ? [] : [publicKeyPem]);
 }

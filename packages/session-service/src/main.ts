@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { openGameRegistry } from '@bp/game-package';
 import { startService, type TunnelOptions } from './compose.js';
@@ -23,6 +24,17 @@ const gameTunnelMode = arg('game-tunnel', process.env.BP_GAME_TUNNEL);
 const gameTunnelToken = arg('game-tunnel-token', process.env.BP_GAME_TUNNEL_TOKEN);
 const gameTunnelHostname = arg('game-tunnel-hostname', process.env.BP_GAME_TUNNEL_HOSTNAME);
 const gameCloudflared = arg('game-cloudflared', process.env.BP_GAME_CLOUDFLARED);
+const trustedKeyFile = arg('trusted-key', process.env.BP_TRUSTED_KEY);
+const requireSignatures = process.argv.includes('--require-signatures')
+  || process.env.BP_REQUIRE_SIGNATURES === '1'
+  || trustedKeyFile !== undefined;
+const trustedKeys = trustedKeyFile === undefined
+  ? []
+  : [readFileSync(resolve(trustedKeyFile), 'utf8')];
+if (requireSignatures && trustedKeys.length === 0) {
+  console.error('已要求游戏包签名，但缺少 --trusted-key <公钥 PEM>');
+  process.exit(1);
+}
 
 const gameTunnel: TunnelOptions | undefined = gameTunnelMode === 'quick' || gameTunnelMode === 'named'
   ? {
@@ -39,6 +51,7 @@ const registry = gamesDir === undefined && packageFile === undefined
     ...(gamesDir === undefined ? {} : { directories: [resolve(gamesDir)] }),
     ...(packageFile === undefined ? {} : { packages: [resolve(packageFile)] }),
     cacheRoot: resolve(dataDir, 'packages'),
+    ...(requireSignatures ? { trust: { requireSignature: true, trustedKeys } } : {}),
   });
 
 startService({

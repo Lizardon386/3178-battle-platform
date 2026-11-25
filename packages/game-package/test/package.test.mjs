@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { generateKeyPairSync, sign } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -183,6 +184,45 @@ test('注册表：精确版本、最高版本、重复包与坏包', () => {
   const broken = join(tempDir(), 'broken.bpkg');
   writeFileSync(broken, 'not a package');
   assert.throws(() => openGameRegistry({ packages: [broken], cacheRoot }), /不是游戏包/);
+});
+
+test('签名信任链：强制签名时只接受可信公钥', () => {
+  const source = packageSource();
+  const outFile = join(tempDir(), 'signed.bpkg');
+  buildPackage({ root: source.dir, manifest: source.manifest, outFile });
+  const pack = readPackage(outFile);
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const publicPem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
+  const signature = {
+    algorithm: 'ed25519',
+    value: sign(null, Buffer.from(pack.packageHash, 'utf8'), privateKey).toString('base64'),
+    publicKey: publicKey.export({ type: 'spki', format: 'der' }).toString('base64'),
+  };
+  const sigFile = `${outFile}.sig`;
+  writeFileSync(sigFile, JSON.stringify(signature));
+  const cacheRoot = join(tempDir(), 'cache');
+
+  const trusted = openGameRegistry({
+    packages: [outFile],
+    cacheRoot,
+    trust: { requireSignature: true, trustedKeys: [publicPem] },
+  });
+  assert.ok(trusted.resolve('fixture-game', '1.0.0'));
+
+  const other = generateKeyPairSync('ed25519').publicKey.export({ type: 'spki', format: 'pem' }).toString();
+  assert.throws(
+    () => openGameRegistry({ packages: [outFile], cacheRoot, trust: { requireSignature: true, trustedKeys: [other] } }),
+    /签名校验失败/,
+  );
+  assert.throws(
+    () => openGameRegistry({ packages: [outFile], cacheRoot, trust: { requireSignature: true } }),
+    /没有配置可信公钥/,
+  );
+  rmSync(sigFile);
+  assert.throws(
+    () => openGameRegistry({ packages: [outFile], cacheRoot, trust: { requireSignature: true, trustedKeys: [publicPem] } }),
+    /缺少或读不到签名文件/,
+  );
 });
 
 test('注册表解析出 Authority 入口与 Web 根', () => {

@@ -1,7 +1,8 @@
-import { readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import type { GameManifest } from './manifest.js';
 import { extractPackage, PACKAGE_EXTENSION, readPackage, type LoadedPackage } from './pack.js';
+import { verifyPackageSignature, type PackageSignature } from './signature.js';
 
 export class RegistryError extends Error {
   constructor(message: string) {
@@ -154,6 +155,13 @@ export class GameRegistry {
   }
 }
 
+export interface PackageTrustOptions {
+  /** 要求每个包都有 `<file>.sig` 且由可信公钥验证通过。 */
+  requireSignature?: boolean;
+  /** PEM 或 base64 SPKI 公钥；强制签名时必填。 */
+  trustedKeys?: string[];
+}
+
 export interface OpenGameRegistryOptions {
   /** 显式列出的 `.bpkg` 文件。 */
   packages?: string[];
@@ -161,6 +169,7 @@ export interface OpenGameRegistryOptions {
   directories?: string[];
   /** 解包缓存根，通常是 `<dataDir>/packages`。 */
   cacheRoot: string;
+  trust?: PackageTrustOptions;
 }
 
 /** 读取、校验并解包所有已注册游戏；任何一个坏包都让启动失败，而不是静默跳过。 */
@@ -186,8 +195,25 @@ export function openGameRegistry(options: OpenGameRegistryOptions): GameRegistry
   const games: RegisteredGame[] = [];
   for (const file of files) {
     const pack = readPackage(file);
+    if (options.trust?.requireSignature) {
+      verifyTrust(file, pack, options.trust.trustedKeys ?? []);
+    }
     const extracted = extractPackage(pack, options.cacheRoot);
     games.push(register(pack, extracted.dir));
   }
   return new GameRegistry(games);
+}
+
+function verifyTrust(file: string, pack: LoadedPackage, trustedKeys: string[]): void {
+  if (trustedKeys.length === 0) fail(`已启用强制签名，但没有配置可信公钥：${file}`);
+  const sigFile = `${file}.sig`;
+  let signature: PackageSignature;
+  try {
+    signature = JSON.parse(readFileSync(sigFile, 'utf8')) as PackageSignature;
+  } catch {
+    fail(`缺少或读不到签名文件：${sigFile}`);
+  }
+  if (!verifyPackageSignature(pack.packageHash, signature, trustedKeys)) {
+    fail(`签名校验失败：${file}`);
+  }
 }
