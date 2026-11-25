@@ -198,7 +198,9 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
   });
 
   const { port, gamePort } = await server.start();
-  logger.info('session service listening', { port, gamePort, dataDir: options.dataDir });
+  const reconciled = await app.reconcileOrphans();
+  for (const session of reconciled) server.broadcastSessionState(session);
+  logger.info('session service listening', { port, gamePort, reconciled: reconciled.length, dataDir: options.dataDir });
 
   let publicUrl: string | null = null;
   let tunnels: TunnelManager | null = null;

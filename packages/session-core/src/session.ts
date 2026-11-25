@@ -110,7 +110,8 @@ export function resume(
   const next = clone(session);
   const target = findMember(next, input.memberId)!;
   target.presence = 'online';
-  target.graceUntil = undefined;
+  // 必须删除而不是赋 undefined：canonical JSON/WAL 不接受 undefined 属性。
+  delete target.graceUntil;
   target.connectionGeneration += 1;
   const rotated = rotateTicket(next, input.memberId, input.nextHash, input.now, input.keepPreviousMs);
   if (!rotated.ok) return rotated;

@@ -300,6 +300,27 @@ export class SessionApplication {
     return ok(next);
   }
 
+  /**
+   * 服务启动时对账：上一个服务实例留下的 running/starting 会话没有 Authority 进程，
+   * 统一标 failed，避免客户端看到“在跑但没进程”的幽灵状态。
+   */
+  async reconcileOrphans(): Promise<SessionRecord[]> {
+    const changed: SessionRecord[] = [];
+    for (const session of await this.repository.list()) {
+      if (session.gameProcess !== 'starting' && session.gameProcess !== 'running') continue;
+      const next = structuredClone(session);
+      next.gameProcess = 'failed';
+      next.revision += 1;
+      await this.repository.save(next);
+      this.logger.error('orphaned authority reconciled', {
+        sessionId: session.sessionId,
+        epoch: session.authorityEpoch,
+      });
+      changed.push(next);
+    }
+    return changed;
+  }
+
   /** 数据通道建好后请求权威补一份该成员视角；Authority 不在运行时静默跳过。 */
   async syncMember(sessionId: string, memberId: string): Promise<void> {
     const session = await this.repository.load(sessionId);

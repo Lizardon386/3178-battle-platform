@@ -20,13 +20,13 @@
 
 原目标：类 war3 的宿主制联机对战平台，房主建房、座位/观战/电脑位、Ready 闸、权限与移交、重连、落盘、局域网发现；游戏用 `.bpmap` 包导入，开发者只依赖 game-sdk。原完成定义：`npm test` / `npm run seam` / `npx tsc -b` / 外部 smoke 全绿，SDK 四包可安装。
 
-**目标架构已落地到可运行状态**：Session Service、`.bpkg` 注册表、独立游戏 origin、Authority 恢复、WPF/Supervisor 原生端、win-x64 便携包与 Inno 安装器均已实现；`npm run verify` 323 例、seam、边界、浏览器 smoke、原生 supervisor smoke、CI 安装/卸载 smoke 全绿。仍缺 color-duel 全量迁移、签名证书、真实双机/VM/Android 证据。门户继续暂缓。
+**目标架构已落地到可运行状态**：Session Service、`.bpkg` 注册表、独立游戏 origin、Authority 恢复、WPF/Supervisor 原生端、win-x64 便携包与 Inno 安装器均已实现；`npm run verify` 336 例、seam、边界、浏览器 smoke、原生 supervisor smoke、CI 安装/卸载 smoke 全绿。仍缺 color-duel 全量迁移、签名证书、真实双机/VM/Android 证据。门户继续暂缓。
 
 ## 3. 现在在哪
 
 - **2026-11-25 原生端与安装器**：`apps/BattlePlatform.{Contracts,Supervisor,Wpf}` 可构建；`bp-supervisor` 用当前用户管道 + Job Object 拉起 Node Service，`3178.exe` 有状态/启停/重连/托盘；CI 构建 `dist-win/3178`、Inno 安装器，并静默安装 → 跑安装目录里的 supervisor smoke → 静默卸载；便携目录可用 `npm run upgrade -- apply/rollback/check` 做哈希校验与备份切换（不适用于 Inno 安装目录）。
 - **2026-11-25 运行时主线**：`protocol/*` 四面 + TS/Python/C# 生成；`session-core/app/store/ws/service`；`@bp/game-package`（清单、`.bpkg`、注册表）；独立游戏 origin（`/s/<sessionId>/`、游戏 WS、handoffCode）；`@lizardon386/bp-game`（init/build/pack/inspect/doctor/sign/verify）；`reference-duel` 核心/Authority/Web UI；Python Authority 互通；`rematch` 同进程 roundId 递增开新局；`bp-game init` 生成 raw IPC 模板并通过真实服务链验证；`.bpkg.sig` 强制签名可用可信公钥校验（服务 `--trusted-key` / `--require-signatures`）；`bp-game install/uninstall/list` 管理 games 目录；`sessionCreate`/`listGames` 只接受回环地址 + 回环 Host。
-- **2026-11-25 可靠性**：Authority 崩溃→最多两次自动重启→仍失败转人工 `recoverGame`；检查点恢复；关会话停进程；修复原子写 rename 窗口与并发 `load` 的静默丢会话问题；数据通道建好自动 `sync`；Authority IPC 已改为 Windows 命名管道 / POSIX Unix socket（boot 帧用 `ipcPath`，旧 `ipcPort` 仅兼容）；C# Supervisor 单元测试 7 例（含 Service/Authority 入口缺失）。
+- **2026-11-25 可靠性**：Authority 崩溃→最多两次自动重启→仍失败转人工 `recoverGame`；检查点恢复；关会话停进程；修复原子写 rename 窗口与并发 `load` 的静默丢会话问题；数据通道建好自动 `sync`；Authority IPC 已改为 Windows 命名管道 / POSIX Unix socket（boot 帧用 `ipcPath`，旧 `ipcPort` 仅兼容）；服务启动对账遗留 running/starting 为 failed；关闭时先排空断线写入再退出；`resume` 删除 `graceUntil` 而不是赋 undefined；C# Supervisor 单元测试 7 例（含 Service/Authority 入口缺失）。
 - **测试入口**：`npm run verify`（构建引用/lock/契约/322 例/边界）、`npm run seam`、`npm run smoke:package`、`npm run smoke:web`、`npm run smoke:supervisor`、`npm run test:ui`（FlaUI，需交互桌面）、`npm run pack:win`。本机 .NET SDK 在 `dogfood-output/dotnet`（gitignored）。
 
 ## 4. 下一步
@@ -69,12 +69,13 @@
 - **Authority 错误分级**：`authorityError.fatal !== true` 只记日志，不能把会话标 failed；`startRound` 不受支持时回非 fatal UNSUPPORTED。rematch 只换 roundId 不重启进程，检查点覆盖为新局。
 - **游戏包签名**：签名对象是整包 `packageHash`，detached 文件是 `<包>.sig`；强制模式必须同时给可信公钥（`--trusted-key`），空公钥或缺失 `.sig` 都让启动失败。exe 的 Authenticode 仍无证书。
 - **本机命令隔离**：不能只看 `remoteAddress`——cloudflared 从本机连服务，隧道请求也是 127.0.0.1。必须同时检查 Host：只有回环 Host 才允许 `sessionCreate`/`listGames`；LAN 直连与公网隧道都会被拒。
+- **关闭与对账顺序**：`SessionServer.close()` 必须先 terminate 控制 socket、等 close 事件把 `disconnectMember` 排入队列并落盘，否则旧实例的宽限写入会覆盖新实例启动时的 running→failed 对账。可选字段清空用 `delete`，canonical JSON/WAL 不接受 `undefined` 属性。
 - **门户暂缓与恢复**：代码已回退，`site/`、`tools/site/` 不存在；恢复时按合并计划附录 A 重建，先确认受众与维护成本。Windows Edge `--window-size=390` 布局视口会被抬到约 500，真实窄屏必须用 CDP；热铁盒不能跑常驻服务端/客户端。
 
 ## 7. 验证命令
 
 ```bash
-npm run verify                   # 323 例 + 构建引用/lock/契约/边界
+npm run verify                   # 336 例 + 构建引用/lock/契约/边界
 npm run seam                     # 接缝闸门
 npm run smoke:package            # 仓外 tarball 构建 .bpkg
 npm run smoke:web                # 真实 Chrome/Edge 走完一局（ubuntu CI 也跑）

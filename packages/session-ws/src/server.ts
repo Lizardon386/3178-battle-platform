@@ -163,6 +163,7 @@ export class SessionServer {
   private dataWss: WebSocketServer | null = null;
   private readonly controlBindings = new Map<WebSocket, ControlBinding>();
   private readonly controlLocal = new Map<WebSocket, boolean>();
+  private readonly pendingControl = new Set<Promise<void>>();
   private readonly sessionSockets = new Map<string, Set<WebSocket>>();
   private readonly channels = new Map<string, ChannelBinding>();
   private readonly handoffs = new Map<string, PendingHandoff>();
@@ -292,8 +293,16 @@ export class SessionServer {
   }
 
   async close(): Promise<void> {
-    for (const ws of this.controlBindings.keys()) ws.terminate();
+    const controlSockets = [...this.controlBindings.keys()];
+    for (const ws of controlSockets) ws.terminate();
     for (const ws of this.dataBinding.keys()) ws.terminate();
+    // 等 close 事件把 disconnectMember 排进队列，再等这些写入落盘，
+    // 避免服务重启时旧实例的宽限写入覆盖新实例的对账结果。
+    await Promise.all(controlSockets.map((ws) => new Promise<void>((resolvePromise) => {
+      if (ws.readyState === 3) return resolvePromise();
+      ws.once('close', () => resolvePromise());
+    })));
+    await Promise.all([...this.pendingControl]);
     this.controlWss?.close();
     this.dataWss?.close();
     if (this.gameHttp) await closeServer(this.gameHttp);
@@ -320,9 +329,13 @@ export class SessionServer {
       if (!binding) return;
       this.controlBindings.delete(ws);
       this.sessionSockets.get(binding.sessionId)?.delete(ws);
-      void this.app.disconnectMember(binding.sessionId, binding.memberId).then((result) => {
+      const task = this.app.disconnectMember(binding.sessionId, binding.memberId).then((result) => {
         if (result?.ok) this.broadcastState(result.value);
+      }).catch(() => {
+        // 关闭路径不把错误抛给调用方
       });
+      this.pendingControl.add(task);
+      void task.finally(() => this.pendingControl.delete(task));
     });
   }
 
