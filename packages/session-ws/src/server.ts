@@ -391,7 +391,10 @@ export class SessionServer {
             : await this.app.closeSession(binding.sessionId, binding.memberId);
         if (!result.ok) return this.fail(ws, result.error);
         this.broadcastState(result.value);
-        if (message.type === 'sessionClose') for (const socket of this.sessionSockets.get(binding.sessionId) ?? []) socket.close(1000, 'closed');
+        if (message.type === 'sessionClose') {
+          void this.app.stopAuthority(binding.sessionId, 'session closed');
+          for (const socket of this.sessionSockets.get(binding.sessionId) ?? []) socket.close(1000, 'closed');
+        }
         return;
       }
       case 'startGame': {

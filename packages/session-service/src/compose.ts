@@ -110,6 +110,17 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
         pendingAuthority.add(task);
         void task.finally(() => pendingAuthority.delete(task));
       },
+      onExit: (sessionId, epoch, code) => {
+        const task = app.markAuthorityFailed(sessionId, epoch, `Authority 进程退出（code=${code ?? 'null'}）`)
+          .then((result) => {
+            if (result.ok) server.broadcastSessionState(result.value);
+          })
+          .catch((error) => {
+            logger.error('mark authority failed failed', { sessionId, error: String(error) });
+          });
+        pendingAuthority.add(task);
+        void task.finally(() => pendingAuthority.delete(task));
+      },
     })
     : undefined;
 

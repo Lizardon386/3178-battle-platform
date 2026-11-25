@@ -1,4 +1,6 @@
 # .bat 必须 CRLF：LF 结尾的批处理在 cmd 里会跳标签、丢行，而且用户是双击运行的人
+.gitattributes text eol=lf
+.gitignore text eol=lf
 *.[Bb][Aa][Tt] eol=crlf
 *.cmd eol=crlf
 *.sh eol=lf

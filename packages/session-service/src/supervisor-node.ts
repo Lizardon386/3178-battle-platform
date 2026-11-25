@@ -9,10 +9,13 @@ interface Entry {
   socket: net.Socket | null;
   child: ChildProcess;
   buffer: Buffer;
+  epoch: number;
 }
 
 export interface NodeSupervisorOptions {
   onMessage(sessionId: string, message: Record<string, unknown>): void;
+  /** Authority 在未被 stop 的情况下退出；调用方负责把会话标记为 failed。 */
+  onExit?(sessionId: string, epoch: number, code: number | null, signal: NodeJS.Signals | null): void;
   startTimeoutMs?: number;
 }
 
@@ -49,8 +52,16 @@ export class NodeAuthoritySupervisor implements AuthoritySupervisor {
       env: { ...process.env, ...launch.env },
       windowsHide: true,
     });
-    const entry: Entry = { server, socket: null, child, buffer: Buffer.alloc(0) };
+    const entry: Entry = { server, socket: null, child, buffer: Buffer.alloc(0), epoch: launch.epoch };
     this.entries.set(launch.sessionId, entry);
+    child.once('exit', (code, signal) => {
+      // stop() 会先从表里删除；只有“意外退出”才通知上层。
+      if (this.entries.get(launch.sessionId) !== entry) return;
+      this.entries.delete(launch.sessionId);
+      entry.socket?.destroy();
+      server.close();
+      this.options.onExit?.(launch.sessionId, launch.epoch, code, signal);
+    });
     server.on('connection', (socket) => {
       entry.socket = socket;
       socket.on('data', (chunk: Buffer) => {
