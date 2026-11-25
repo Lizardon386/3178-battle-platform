@@ -28,6 +28,9 @@
       "$ref": "#/$defs/ClientRecoverGame"
     },
     {
+      "$ref": "#/$defs/ClientRematch"
+    },
+    {
       "$ref": "#/$defs/ClientSetConfig"
     },
     {
@@ -411,6 +414,21 @@
       "properties": {
         "type": {
           "const": "recoverGame"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      }
+    },
+    "ClientRematch": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "rematch"
         },
         "requestId": {
           "$ref": "#/$defs/RequestId"

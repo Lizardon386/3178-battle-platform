@@ -112,6 +112,7 @@ const renderPayload = (payload) => {
   }
   if (payload.type === 'public') {
     const view = payload.view;
+    $('rematch').disabled = !view.finished;
     viewEl.innerHTML = '';
     const line = document.createElement('div');
     line.className = 'muted';
@@ -262,6 +263,10 @@ $('join').onclick = () => {
 
 $('start').onclick = () => send({ type: 'startGame' });
 $('recover').onclick = () => send({ type: 'recoverGame' });
+$('rematch').onclick = () => {
+  handEl.replaceChildren();
+  send({ type: 'rematch' });
+};
 $('channel').onclick = () => send({ type: 'channelOpen' });
 $('resume').onclick = () => {
   const saved = loadSeat();

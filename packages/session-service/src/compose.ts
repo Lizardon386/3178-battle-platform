@@ -94,7 +94,12 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
       return;
     }
     if (type === 'authorityError') {
-      await app.markAuthorityFailed(sessionId, Number(message.authorityEpoch), String(message.text ?? ''));
+      const epoch = Number(message.authorityEpoch);
+      if (message.fatal === true) {
+        await app.markAuthorityFailed(sessionId, epoch, String(message.text ?? ''));
+      } else {
+        logger.error('authority non-fatal error', { sessionId, epoch, code: message.code, text: message.text });
+      }
       return;
     }
     if (type === 'deliver') {

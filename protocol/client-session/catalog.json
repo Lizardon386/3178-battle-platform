@@ -76,6 +76,15 @@
       "summary": "权威失败或退出后以新 epoch 重新启动"
     },
     {
+      "type": "rematch",
+      "from": "client",
+      "to": "platform",
+      "schema": "ClientRematch",
+      "channel": "session",
+      "auth": "host",
+      "summary": "同一 Authority 进程内开始下一局，roundId 递增"
+    },
+    {
       "type": "setConfig",
       "from": "client",
       "to": "platform",

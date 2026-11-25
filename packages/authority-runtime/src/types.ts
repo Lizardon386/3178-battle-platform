@@ -21,6 +21,8 @@ export interface MemberEvent {
 
 export interface AuthorityHooks {
   start(message: Record<string, unknown>, restored: unknown, context: AuthorityContext): void | Promise<void>;
+  /** 同进程开新回合；不重新 spawn，roundId 由平台下发。 */
+  startRound?(message: Record<string, unknown>, context: AuthorityContext): void | Promise<void>;
   deliver(message: Record<string, unknown>, context: AuthorityContext): void | Promise<void>;
   sync?(message: Record<string, unknown>, context: AuthorityContext): void | Promise<void>;
   memberJoin?(message: Record<string, unknown>, context: AuthorityContext): void | Promise<void>;

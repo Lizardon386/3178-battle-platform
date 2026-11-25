@@ -76,6 +76,10 @@ namespace BattlePlatform.Protocol
         public ClientRecoverGame? ClientRecoverGame { get; set; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonPropertyName("ClientRematch")]
+        public ClientRematch? ClientRematch { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonPropertyName("ClientRemoveAI")]
         public ClientRemoveAi? ClientRemoveAi { get; set; }
 
@@ -336,6 +340,17 @@ namespace BattlePlatform.Protocol
 
         [JsonPropertyName("type")]
         public ClientRecoverGameType Type { get; set; }
+    }
+
+    public partial class ClientRematch
+    {
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonPropertyName("requestId")]
+        [JsonConverter(typeof(PurpleMinMaxLengthCheckConverter))]
+        public string? RequestId { get; set; }
+
+        [JsonPropertyName("type")]
+        public ClientRematchType Type { get; set; }
     }
 
     public partial class ClientRemoveAi
@@ -937,6 +952,8 @@ namespace BattlePlatform.Protocol
 
     public enum ClientRecoverGameType { RecoverGame };
 
+    public enum ClientRematchType { Rematch };
+
     public enum ClientRemoveAiType { RemoveAi };
 
     public enum ClientResumeType { Resume };
@@ -1023,6 +1040,7 @@ namespace BattlePlatform.Protocol
                 ClientMoveSlotTypeConverter.Singleton,
                 ClientPingTypeConverter.Singleton,
                 ClientRecoverGameTypeConverter.Singleton,
+                ClientRematchTypeConverter.Singleton,
                 ClientRemoveAiTypeConverter.Singleton,
                 ClientResumeTypeConverter.Singleton,
                 ClientSessionCreateTypeConverter.Singleton,
@@ -1560,6 +1578,33 @@ namespace BattlePlatform.Protocol
         }
 
         public static readonly ClientRecoverGameTypeConverter Singleton = new ClientRecoverGameTypeConverter();
+    }
+
+    internal class ClientRematchTypeConverter : JsonConverter<ClientRematchType>
+    {
+        public override bool CanConvert(Type t) => t == typeof(ClientRematchType);
+
+        public override ClientRematchType Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            var value = reader.GetString();
+            if (value == "rematch")
+            {
+                return ClientRematchType.Rematch;
+            }
+            throw new Exception("Cannot unmarshal type ClientRematchType");
+        }
+
+        public override void Write(Utf8JsonWriter writer, ClientRematchType value, JsonSerializerOptions options)
+        {
+            if (value == ClientRematchType.Rematch)
+            {
+                JsonSerializer.Serialize(writer, "rematch", options);
+                return;
+            }
+            throw new Exception("Cannot marshal type ClientRematchType");
+        }
+
+        public static readonly ClientRematchTypeConverter Singleton = new ClientRematchTypeConverter();
     }
 
     internal class ClientRemoveAiTypeConverter : JsonConverter<ClientRemoveAiType>

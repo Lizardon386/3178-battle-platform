@@ -200,6 +200,30 @@ export class SessionApplication {
     return this.relaunch(session, options);
   }
 
+  /** 房主在同一 Authority 进程里开下一局；roundId 递增，客户端由新视图驱动。 */
+  async rematch(sessionId: string, actorId: string): Promise<Result<SessionRecord>> {
+    const session = await this.repository.load(sessionId);
+    if (!session) return err('NOROOM', '会话不存在');
+    if (session.ownerMemberId !== actorId) return err('NOTHOST', '只有房主可以再来一局');
+    if (session.state !== 'open') return err('PHASE', '会话不可继续');
+    if (session.gameProcess !== 'running') return err('PHASE', '游戏不在运行中');
+    if (!session.currentRoundId) return err('PHASE', '没有当前回合');
+    if (!this.supervisor) return err('GAMEFAILED', '没有可用的权威启动器');
+    const match = /^round-(\d+)$/.exec(session.currentRoundId);
+    const roundId = `round-${match ? Number(match[1]) + 1 : Date.now()}`;
+    const next = structuredClone(session);
+    next.currentRoundId = roundId;
+    next.revision += 1;
+    await this.repository.save(next);
+    this.supervisor.send(sessionId, {
+      type: 'startRound',
+      authorityEpoch: session.authorityEpoch,
+      roundId,
+      members: next.members.map((member) => ({ memberId: member.memberId })),
+    });
+    return ok(next);
+  }
+
   /** 平台自动重启：不要求房主确认，只允许一次；失败后仍由房主手动 recoverGame。 */
   async recoverAuthority(
     sessionId: string,

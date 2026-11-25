@@ -22,6 +22,7 @@ export interface ProtocolTypes {
     ClientMoveSlot?:       ClientMoveSlot;
     ClientPing?:           ClientPing;
     ClientRecoverGame?:    ClientRecoverGame;
+    ClientRematch?:        ClientRematch;
     ClientRemoveAI?:       ClientRemoveAI;
     ClientResume?:         ClientResume;
     ClientSessionCreate?:  ClientSessionCreate;
@@ -148,6 +149,13 @@ export interface ClientRecoverGame {
 }
 
 export type ClientRecoverGameType = "recoverGame";
+
+export interface ClientRematch {
+    requestId?: string;
+    type:       ClientRematchType;
+}
+
+export type ClientRematchType = "rematch";
 
 export interface ClientRemoveAI {
     memberId:   string;
@@ -607,6 +615,7 @@ const typeMap: any = {
         { json: "ClientMoveSlot", js: "ClientMoveSlot", typ: u(undefined, r("ClientMoveSlot")) },
         { json: "ClientPing", js: "ClientPing", typ: u(undefined, r("ClientPing")) },
         { json: "ClientRecoverGame", js: "ClientRecoverGame", typ: u(undefined, r("ClientRecoverGame")) },
+        { json: "ClientRematch", js: "ClientRematch", typ: u(undefined, r("ClientRematch")) },
         { json: "ClientRemoveAI", js: "ClientRemoveAI", typ: u(undefined, r("ClientRemoveAI")) },
         { json: "ClientResume", js: "ClientResume", typ: u(undefined, r("ClientResume")) },
         { json: "ClientSessionCreate", js: "ClientSessionCreate", typ: u(undefined, r("ClientSessionCreate")) },
@@ -691,6 +700,10 @@ const typeMap: any = {
     "ClientRecoverGame": o([
         { json: "requestId", js: "requestId", typ: u(undefined, "") },
         { json: "type", js: "type", typ: r("ClientRecoverGameType") },
+    ], false),
+    "ClientRematch": o([
+        { json: "requestId", js: "requestId", typ: u(undefined, "") },
+        { json: "type", js: "type", typ: r("ClientRematchType") },
     ], false),
     "ClientRemoveAI": o([
         { json: "memberId", js: "memberId", typ: "" },
@@ -930,6 +943,9 @@ const typeMap: any = {
     ],
     "ClientRecoverGameType": [
         "recoverGame",
+    ],
+    "ClientRematchType": [
+        "rematch",
     ],
     "ClientRemoveAIType": [
         "removeAi",

@@ -17,6 +17,7 @@ export class AuthorityRuntime {
   private readonly transport: Transport;
   private readonly options: RuntimeOptions;
   private readonly random: () => number;
+  private roundId: string;
   private gameSequence = 0;
   private readonly viewSeqByMember = new Map<string, number>();
   private closed = false;
@@ -27,6 +28,7 @@ export class AuthorityRuntime {
     this.hooks = options.hooks;
     this.transport = options.transport;
     this.random = mulberry32(options.seed ?? 1);
+    this.roundId = options.roundId;
     this.context = {
       now: () => Date.now(),
       random: () => this.random(),
@@ -51,7 +53,7 @@ export class AuthorityRuntime {
       type: 'start',
       sessionId: this.options.sessionId,
       epoch: this.options.epoch,
-      roundId: this.options.roundId,
+      roundId: this.roundId,
       members: this.options.members ?? [],
     }, restored?.state, this.context);
   }
@@ -63,14 +65,32 @@ export class AuthorityRuntime {
       this.transport.send({ type: 'pong', nonce: message.nonce });
       return;
     }
+    if (type === 'startRound') {
+      const roundId = typeof message.roundId === 'string' ? message.roundId : '';
+      if (!roundId) {
+        this.transport.send({
+          type: 'authorityError', authorityEpoch: this.options.epoch, code: 'BADMSG', text: 'startRound 缺少 roundId', fatal: false,
+        });
+        return;
+      }
+      if (!this.hooks.startRound) {
+        this.transport.send({
+          type: 'authorityError', authorityEpoch: this.options.epoch, code: 'UNSUPPORTED', text: '游戏不支持再来一局', fatal: false,
+        });
+        return;
+      }
+      this.roundId = roundId;
+      await this.hooks.startRound(message, this.context);
+      return;
+    }
     if (this.hooksFor(type)) {
       await this.hooksFor(type)!(message, this.context);
       if (type === 'closeSession') {
         await this.checkpoint();
         this.closed = true;
         this.transport.send({
-          type: 'closeAck', authorityEpoch: this.options.epoch, roundId: this.options.roundId,
-          checkpointId: `${this.options.sessionId}:${this.options.roundId}:${this.gameSequence}`, status: 'closed',
+          type: 'closeAck', authorityEpoch: this.options.epoch, roundId: this.roundId,
+          checkpointId: `${this.options.sessionId}:${this.roundId}:${this.gameSequence}`, status: 'closed',
         });
       }
       return;
@@ -101,7 +121,7 @@ export class AuthorityRuntime {
   ready(): void {
     this.transport.send({
       type: 'authorityReady', authorityEpoch: this.options.epoch, processStatus: 'running',
-      roundId: this.options.roundId, commitSeq: this.gameSequence,
+      roundId: this.roundId, commitSeq: this.gameSequence,
     });
   }
 
@@ -114,13 +134,13 @@ export class AuthorityRuntime {
       return { ...item, viewSeq: next };
     });
     this.transport.send({
-      type: 'deliver', authorityEpoch: this.options.epoch, roundId: this.options.roundId,
+      type: 'deliver', authorityEpoch: this.options.epoch, roundId: this.roundId,
       gameSequence: this.gameSequence, items: delivered,
     });
   }
 
   roundClosed(payload: unknown): void {
-    this.transport.send({ type: 'roundClosed', authorityEpoch: this.options.epoch, roundId: this.options.roundId, payload });
+    this.transport.send({ type: 'roundClosed', authorityEpoch: this.options.epoch, roundId: this.roundId, payload });
   }
 
   fail(code: string, text: string, fatal: boolean): void {
@@ -132,14 +152,14 @@ export class AuthorityRuntime {
     const file = await writeCheckpoint(this.options.stateDir, {
       version: 1,
       sessionId: this.options.sessionId,
-      roundId: this.options.roundId,
+      roundId: this.roundId,
       epoch: this.options.epoch,
       gameSequence: this.gameSequence,
       viewSeqByMember: Object.fromEntries(this.viewSeqByMember),
       state,
     });
     this.transport.send({
-      type: 'authorityCheckpoint', authorityEpoch: this.options.epoch, roundId: this.options.roundId,
+      type: 'authorityCheckpoint', authorityEpoch: this.options.epoch, roundId: this.roundId,
       checkpointId: file.stateHash, commitSeq: this.gameSequence, viewSeqByMember: file.viewSeqByMember,
     });
     return file;

@@ -433,6 +433,14 @@ export class SessionServer {
         this.broadcastState(result.value);
         return;
       }
+      case 'rematch': {
+        const binding = this.controlBindings.get(ws);
+        if (!binding) return this.fail(ws, { code: 'NOSEAT', message: '连接未绑定成员' });
+        const result = await this.app.rematch(binding.sessionId, binding.memberId);
+        if (!result.ok) return this.fail(ws, result.error);
+        this.broadcastState(result.value);
+        return;
+      }
       case 'channelOpen': {
         const binding = this.controlBindings.get(ws);
         if (!binding) return this.fail(ws, { code: 'NOSEAT', message: '连接未绑定成员' });

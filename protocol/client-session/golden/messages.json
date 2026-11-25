@@ -419,6 +419,15 @@
     }
   },
   {
+    "name": "client-platform-rematch",
+    "from": "client",
+    "to": "platform",
+    "type": "rematch",
+    "value": {
+      "type": "rematch"
+    }
+  },
+  {
     "name": "platform-client-sessionPreview",
     "from": "platform",
     "to": "client",

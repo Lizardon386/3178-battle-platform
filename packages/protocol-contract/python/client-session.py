@@ -392,6 +392,30 @@ class ClientRecoverGame:
         return result
 
 
+class ClientRematchType(Enum):
+    REMATCH = "rematch"
+
+
+@dataclass
+class ClientRematch:
+    type: ClientRematchType
+    request_id: str | None = None
+
+    @staticmethod
+    def from_dict(obj: Any) -> 'ClientRematch':
+        assert isinstance(obj, dict)
+        type = ClientRematchType(obj.get("type"))
+        request_id = from_union([from_str, from_none], obj.get("requestId"))
+        return ClientRematch(type, request_id)
+
+    def to_dict(self) -> dict:
+        result: dict = {}
+        result["type"] = to_enum(ClientRematchType, self.type)
+        if self.request_id is not None:
+            result["requestId"] = from_union([from_str, from_none], self.request_id)
+        return result
+
+
 class ClientRemoveAIType(Enum):
     REMOVE_AI = "removeAi"
 
@@ -1334,6 +1358,7 @@ class ProtocolTypes:
     client_move_slot: ClientMoveSlot | None = None
     client_ping: ClientPing | None = None
     client_recover_game: ClientRecoverGame | None = None
+    client_rematch: ClientRematch | None = None
     client_remove_ai: ClientRemoveAI | None = None
     client_resume: ClientResume | None = None
     client_session_create: ClientSessionCreate | None = None
@@ -1376,6 +1401,7 @@ class ProtocolTypes:
         client_move_slot = from_union([ClientMoveSlot.from_dict, from_none], obj.get("ClientMoveSlot"))
         client_ping = from_union([ClientPing.from_dict, from_none], obj.get("ClientPing"))
         client_recover_game = from_union([ClientRecoverGame.from_dict, from_none], obj.get("ClientRecoverGame"))
+        client_rematch = from_union([ClientRematch.from_dict, from_none], obj.get("ClientRematch"))
         client_remove_ai = from_union([ClientRemoveAI.from_dict, from_none], obj.get("ClientRemoveAI"))
         client_resume = from_union([ClientResume.from_dict, from_none], obj.get("ClientResume"))
         client_session_create = from_union([ClientSessionCreate.from_dict, from_none], obj.get("ClientSessionCreate"))
@@ -1401,7 +1427,7 @@ class ProtocolTypes:
         server_session_preview = from_union([ServerSessionPreview.from_dict, from_none], obj.get("ServerSessionPreview"))
         server_session_state = from_union([ServerSessionState.from_dict, from_none], obj.get("ServerSessionState"))
         server_welcome = from_union([ServerWelcome.from_dict, from_none], obj.get("ServerWelcome"))
-        return ProtocolTypes(client_add_ai, client_chat, client_close_session, client_game, client_game_auth, client_game_handoff, client_hello, client_kick, client_leave, client_list_games, client_move_slot, client_ping, client_recover_game, client_remove_ai, client_resume, client_session_create, client_session_join, client_session_probe, client_set_config, client_set_profile, client_set_ready, client_set_seat_options, client_start_game, client_sync, client_transfer_host, server_chat, server_chat_history, server_error, server_game, server_game_granted, server_game_handoff, server_game_list, server_notice, server_pong, server_seat_granted, server_session_preview, server_session_state, server_welcome)
+        return ProtocolTypes(client_add_ai, client_chat, client_close_session, client_game, client_game_auth, client_game_handoff, client_hello, client_kick, client_leave, client_list_games, client_move_slot, client_ping, client_recover_game, client_rematch, client_remove_ai, client_resume, client_session_create, client_session_join, client_session_probe, client_set_config, client_set_profile, client_set_ready, client_set_seat_options, client_start_game, client_sync, client_transfer_host, server_chat, server_chat_history, server_error, server_game, server_game_granted, server_game_handoff, server_game_list, server_notice, server_pong, server_seat_granted, server_session_preview, server_session_state, server_welcome)
 
     def to_dict(self) -> dict:
         result: dict = {}
@@ -1431,6 +1457,8 @@ class ProtocolTypes:
             result["ClientPing"] = from_union([lambda x: to_class(ClientPing, x), from_none], self.client_ping)
         if self.client_recover_game is not None:
             result["ClientRecoverGame"] = from_union([lambda x: to_class(ClientRecoverGame, x), from_none], self.client_recover_game)
+        if self.client_rematch is not None:
+            result["ClientRematch"] = from_union([lambda x: to_class(ClientRematch, x), from_none], self.client_rematch)
         if self.client_remove_ai is not None:
             result["ClientRemoveAI"] = from_union([lambda x: to_class(ClientRemoveAI, x), from_none], self.client_remove_ai)
         if self.client_resume is not None:

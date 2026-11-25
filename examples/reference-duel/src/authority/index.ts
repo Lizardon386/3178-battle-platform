@@ -42,6 +42,11 @@ export function createReferenceAuthority(options: AuthorityOptions): AuthorityRu
         context.ready();
         await publish(context);
       },
+      async startRound(message, context) {
+        const roundId = String(message.roundId);
+        state = createGame(roundId, options.members.map((m) => m.memberId), context.random);
+        await publish(context);
+      },
       async deliver(message, context) {
         if (!state) return;
         const callback = message as unknown as AuthorityCallbackMessage;

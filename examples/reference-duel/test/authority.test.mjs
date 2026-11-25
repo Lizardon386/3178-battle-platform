@@ -38,4 +38,13 @@ test('Authority：启动后发送公共与私密视图，动作后按成员投�
   assert.equal(sync.items[0].to, 'm2');
   assert.equal(sync.items[0].payload.type, 'public');
   assert.equal(sync.items[1].payload.type, 'private');
+
+  await runtime.handle({ type: 'startRound', roundId: 'round-2', authorityEpoch: 1 });
+  const restart = sent.filter((m) => m.type === 'deliver').at(-1);
+  const resetPublic = restart.items.find((item) => item.to === 'all').payload.view;
+  assert.equal(resetPublic.roundId, 'round-2');
+  assert.equal(resetPublic.turnNumber, 1);
+  assert.equal(resetPublic.finished, false);
+  const checkpoint = sent.filter((m) => m.type === 'authorityCheckpoint').at(-1);
+  assert.equal(checkpoint.roundId, 'round-2');
 });
