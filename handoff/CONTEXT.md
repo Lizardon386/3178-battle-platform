@@ -64,6 +64,7 @@
 - **原子写与并发读**：`session.json` 的 rename 备份窗口会让并发 `load` 误判会话不存在，已把 `load` 与写队列串链并回退 `.bak`；新增存储改动不要绕开 `FileSessionRepository.load`。
 - **数据通道必须 sync**：晚开的游戏页/重连只有 `dataReady` 不够；`SessionServer` 在鉴权后触发 `onDataReady` → `SessionApplication.syncMember`，Authority 的 `sync` 要同时补公共与私密视图。
 - **浏览器交接与 CSP**：游戏页用 30 秒一次性 `handoffCode`（fragment，连上后 `history.replaceState` 抹掉）；游戏 origin 的 `connect-src` 要允许 `ws:`/`wss:`，否则 Chrome 可能拒绝同源 WS。
+- **WPF 可访问性**：窗口/提示用系统 `WindowBrush/WindowTextBrush/GrayTextBrush`，状态区 `AutomationProperties.LiveSetting=Polite`；改配色时不要重新写死灰值，否则高对比模式会失效。
 - **本机 .NET 与打包**：SDK 解压在 `dogfood-output/dotnet`，运行 apphost / 测试要设 `DOTNET_ROOT`；CI 用 `setup-dotnet`。`npm pack` 传包目录必须写 `./packages/...`，否则 npm 会把 `packages/bp-game` 当成 GitHub 仓库。
 - **Authority IPC 管道**：boot 帧现在传 `ipcPath`（Windows `\\.\pipe\...`、POSIX 文件 socket），Node/Python 夹具都要用 `net.connect(boot.ipcPath)` / Unix socket；POSIX 关闭时要 unlink socket 文件。C# 侧用 `NamedPipeServerStream + CurrentUserOnly`。Windows 管道读的 CancellationToken 不保证生效，测试超时用 `Task.WhenAny` 兜底。
 - **Authority 错误分级**：`authorityError.fatal !== true` 只记日志，不能把会话标 failed；`startRound` 不受支持时回非 fatal UNSUPPORTED。rematch 只换 roundId 不重启进程，检查点覆盖为新局。
