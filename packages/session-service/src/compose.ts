@@ -35,6 +35,10 @@ export interface ServiceOptions {
   onAuthorityStart?: (info: { sessionId: string; epoch: number; pid: number }) => void;
   /** 崩溃后自动重启次数；默认 2，设为 0 可关闭（测试或严格人工恢复场景）。 */
   autoRestartAttempts?: number;
+  /** 断线宽限时长；默认 30 分钟，测试可缩短。 */
+  graceMs?: number;
+  /** 宽限扫描间隔；默认 2 秒。 */
+  expireIntervalMs?: number;
   /** 管理端静态目录；默认取仓库内 packages/web-console/public。 */
   webRoot?: string;
   /** 可选公网隧道；`game` 为游戏 origin 单独一条，未配置时只监听本机/局域网。 */
@@ -165,7 +169,9 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
     })
     : undefined;
 
-  const app = new SessionApplication(repository, clock, ids, secrets, logger, supervisor);
+  const app = new SessionApplication(repository, clock, ids, secrets, logger, supervisor, {
+    ...(options.graceMs === undefined ? {} : { graceMs: options.graceMs }),
+  });
   const webRoot = options.webRoot ?? resolve(process.cwd(), 'packages/web-console/public');
   const httpServer = createManagementServer({ root: webRoot });
   let gamePublicUrl: string | null = null;
@@ -201,6 +207,18 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
   const reconciled = await app.reconcileOrphans();
   for (const session of reconciled) server.broadcastSessionState(session);
   logger.info('session service listening', { port, gamePort, reconciled: reconciled.length, dataDir: options.dataDir });
+
+  const expireTimer = setInterval(() => {
+    void app.expireAll().then((changed) => {
+      for (const session of changed) {
+        server.broadcastSessionState(session);
+        if (session.state === 'closed') void app.stopAuthority(session.sessionId, 'expired');
+      }
+    }).catch((error) => {
+      logger.error('expire sweep failed', { error: String(error) });
+    });
+  }, options.expireIntervalMs ?? 2000);
+  expireTimer.unref();
 
   let publicUrl: string | null = null;
   let tunnels: TunnelManager | null = null;
@@ -254,6 +272,7 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
     publicUrl,
     gamePublicUrl,
     close: async () => {
+      clearInterval(expireTimer);
       await tunnels?.stopAll();
       await supervisor?.stopAll();
       await Promise.all([...pendingAuthority]);

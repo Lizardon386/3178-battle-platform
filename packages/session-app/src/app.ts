@@ -64,6 +64,7 @@ export class SessionApplication {
     private readonly secrets: SecretStore,
     private readonly logger: Logger,
     private readonly supervisor?: AuthoritySupervisor,
+    private readonly options: { graceMs?: number } = {},
   ) {}
 
   async create(input: CreateInput): Promise<Result<Created>> {
@@ -368,7 +369,7 @@ export class SessionApplication {
   async disconnectMember(sessionId: string, memberId: string): Promise<Result<SessionRecord>> {
     const session = await this.repository.load(sessionId);
     if (!session) return err('NOROOM', '会话不存在');
-    const result = disconnect(session, memberId, this.clock.now(), GRACE_MS);
+    const result = disconnect(session, memberId, this.clock.now(), this.options.graceMs ?? GRACE_MS);
     if (!result.ok) return result;
     await this.repository.save(result.value);
     return result;
@@ -395,6 +396,17 @@ export class SessionApplication {
       return ok({ session: next, expired: result.value.expired });
     }
     return ok(result.value);
+  }
+
+  /** 扫描所有宽限中的成员并到期清理；返回发生变化的会话供广播。 */
+  async expireAll(): Promise<SessionRecord[]> {
+    const changed: SessionRecord[] = [];
+    for (const session of await this.repository.list()) {
+      if (!session.members.some((member) => member.presence === 'grace')) continue;
+      const result = await this.expire(session.sessionId);
+      if (result.ok && result.value.expired.length > 0) changed.push(result.value.session);
+    }
+    return changed;
   }
 
   async leaveSession(sessionId: string, memberId: string): Promise<Result<SessionRecord>> {
