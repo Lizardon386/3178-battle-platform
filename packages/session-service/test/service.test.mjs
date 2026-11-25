@@ -84,6 +84,36 @@ test('真实 WS：建房、加入、会话状态与二进制转发', async () =>
   }
 });
 
+test('隧道：配置 quick 模式后返回公网地址，关闭时停止', async () => {
+  const { EventEmitter } = await import('node:events');
+  const { PassThrough } = await import('node:stream');
+  const procs = [];
+  const spawner = {
+    start(config) {
+      const proc = new EventEmitter();
+      proc.pid = 111;
+      proc.stdout = new PassThrough();
+      proc.stderr = new PassThrough();
+      proc.onExit = (listener) => proc.once('exit', listener);
+      proc.kill = () => proc.emit('exit', 0, null);
+      procs.push(proc);
+      setTimeout(() => proc.stdout.write('https://demo-1234.trycloudflare.com\n'), 10);
+      return proc;
+    },
+  };
+  const service = await startService({
+    dataDir: await mkdtemp(join(tmpdir(), 'bp-service-')),
+    port: 0,
+    tunnel: { mode: 'quick', binaryPath: 'cloudflared', spawner },
+  });
+  try {
+    assert.equal(service.publicUrl, 'https://demo-1234.trycloudflare.com');
+    assert.equal(procs.length, 1);
+  } finally {
+    await service.close();
+  }
+});
+
 test('管理端静态页：CSP、脚本与路径穿越', async () => {
   const dataDir = await mkdtemp(join(tmpdir(), 'bp-service-'));
   const service = await startService({ dataDir, port: 0 });

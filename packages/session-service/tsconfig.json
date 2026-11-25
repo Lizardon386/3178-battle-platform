@@ -12,6 +12,7 @@
     { "path": "../session-core" },
     { "path": "../session-app" },
     { "path": "../session-store" },
-    { "path": "../session-ws" }
+    { "path": "../session-ws" },
+    { "path": "../tunnel-manager" }
   ]
 }

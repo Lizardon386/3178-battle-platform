@@ -17,6 +17,7 @@
     "@bp/session-app": "*",
     "@bp/session-core": "*",
     "@bp/session-store": "*",
-    "@bp/session-ws": "*"
+    "@bp/session-ws": "*",
+    "@bp/tunnel-manager": "*"
   }
 }

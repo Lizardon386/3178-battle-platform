@@ -6,6 +6,7 @@ import { SessionServer } from '@bp/session-ws';
 import type { Clock, IdGenerator, Logger, SecretStore } from '@bp/session-app';
 import { NodeAuthoritySupervisor } from './supervisor-node.js';
 import { createManagementServer } from './web.js';
+import { TunnelManager, type TunnelSpawner } from '@bp/tunnel-manager';
 
 export interface ServiceOptions {
   dataDir: string;
@@ -15,6 +16,14 @@ export interface ServiceOptions {
   authorityEntry?: string;
   /** 管理端静态目录；默认取仓库内 packages/web-console/public。 */
   webRoot?: string;
+  /** 可选公网隧道；未配置时只监听本机/局域网。 */
+  tunnel?: {
+    mode: 'quick' | 'named';
+    token?: string;
+    hostname?: string;
+    binaryPath?: string;
+    spawner?: TunnelSpawner;
+  };
 }
 
 const clock: Clock = { now: () => Date.now() };
@@ -39,6 +48,7 @@ const logger: Logger = {
 
 export interface RunningService {
   port: number;
+  publicUrl: string | null;
   close(): Promise<void>;
 }
 
@@ -109,9 +119,33 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
   const { port } = await server.start();
   logger.info('session service listening', { port, dataDir: options.dataDir });
 
+  let publicUrl: string | null = null;
+  let tunnels: TunnelManager | null = null;
+  if (options.tunnel) {
+    tunnels = new TunnelManager({
+      binaryPath: options.tunnel.binaryPath ?? process.env.BP_CLOUDFLARED ?? 'cloudflared',
+      ...(options.tunnel.spawner === undefined ? {} : { spawner: options.tunnel.spawner }),
+    });
+    tunnels.register('public', {
+      mode: options.tunnel.mode,
+      localPort: port,
+      ...(options.tunnel.token === undefined ? {} : { token: options.tunnel.token }),
+      ...(options.tunnel.hostname === undefined ? {} : { hostname: options.tunnel.hostname }),
+    });
+    try {
+      const status = await tunnels.start('public');
+      publicUrl = status.publicUrl;
+      logger.info('tunnel ready', { url: publicUrl });
+    } catch (error) {
+      logger.error('tunnel failed', { error: String(error) });
+    }
+  }
+
   return {
     port,
+    publicUrl,
     close: async () => {
+      await tunnels?.stopAll();
       await supervisor?.stopAll();
       await Promise.all([...pendingAuthority]);
       await server.close();
