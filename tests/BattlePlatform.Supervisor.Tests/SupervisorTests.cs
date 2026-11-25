@@ -121,6 +121,62 @@ public sealed class SupervisorTests
     }
 
     [Fact]
+    public async Task ControlServer_Rejects_Wrong_Protocol_Version()
+    {
+        var root = TempRoot();
+        var service = new SupervisorService(Options(root, Path.Combine(root, "unused.cjs")));
+        var pipeName = $"bp-test-{Guid.NewGuid():N}";
+        var server = new ControlServer(service, pipeName);
+        using var cts = new CancellationTokenSource();
+        var run = server.RunAsync(cts.Token);
+        ControlClient? client = null;
+        try
+        {
+            client = await ControlClient.ConnectAsync(pipeName, TimeSpan.FromSeconds(5));
+            await client.SendAsync(new ClientHello { Type = ClientHelloType.Hello, Version = 2, ClientKind = ClientKind.Ui });
+            var error = await Receive(client);
+            Assert.Equal("error", error.GetProperty("type").GetString());
+            Assert.Equal("BADMSG", error.GetProperty("code").GetString());
+        }
+        finally
+        {
+            if (client is not null) await client.DisposeAsync();
+            cts.Cancel();
+            try
+            {
+                await run.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            catch (OperationCanceledException)
+            {
+                // 正常停止
+            }
+            await server.DisposeAsync();
+            await service.DisposeAsync();
+            Cleanup(root);
+        }
+    }
+
+    [Fact]
+    public async Task Shutdown_Is_Idempotent()
+    {
+        var root = TempRoot();
+        try
+        {
+            var entry = WriteScript(root, "service.cjs", "console.log('BP_SERVICE_PORT=41254'); setInterval(() => {}, 1000);");
+            await using var service = new SupervisorService(Options(root, entry));
+            await service.StartServiceAsync(CancellationToken.None);
+            Assert.True(await WaitUntil(() => service.Snapshot().State == ServiceStatusState.Running, TimeSpan.FromSeconds(10)));
+            await service.ShutdownAsync(CancellationToken.None);
+            await service.ShutdownAsync(CancellationToken.None);
+            Assert.Equal(ServiceStatusState.Stopped, service.Snapshot().State);
+        }
+        finally
+        {
+            Cleanup(root);
+        }
+    }
+
+    [Fact]
     public async Task ControlServer_Roundtrip_Over_NamedPipe()
     {
         var root = TempRoot();

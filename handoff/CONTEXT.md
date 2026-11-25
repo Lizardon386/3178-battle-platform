@@ -26,7 +26,7 @@
 
 - **2026-11-25 原生端与安装器**：`apps/BattlePlatform.{Contracts,Supervisor,Wpf}` 可构建；`bp-supervisor` 用当前用户管道 + Job Object 拉起 Node Service，`3178.exe` 有状态/启停/重连/托盘；CI 构建 `dist-win/3178`、Inno 安装器，并静默安装 → 跑安装目录里的 supervisor smoke → 静默卸载；便携目录可用 `npm run upgrade -- apply/rollback/check` 做哈希校验与备份切换（不适用于 Inno 安装目录）。
 - **2026-11-25 运行时主线**：`protocol/*` 四面 + TS/Python/C# 生成；`session-core/app/store/ws/service`；`@bp/game-package`（清单、`.bpkg`、注册表）；独立游戏 origin（`/s/<sessionId>/`、游戏 WS、handoffCode）；`@lizardon386/bp-game`（init/build/pack/inspect/doctor/sign/verify）；`reference-duel` 核心/Authority/Web UI；Python Authority 互通；`rematch` 同进程 roundId 递增开新局；`bp-game init` 生成 raw IPC 模板并通过真实服务链验证；`.bpkg.sig` 强制签名可用可信公钥校验（服务 `--trusted-key` / `--require-signatures`）；`bp-game install/uninstall/list` 管理 games 目录；`sessionCreate`/`listGames` 只接受回环地址 + 回环 Host。
-- **2026-11-25 可靠性**：Authority 崩溃→最多两次自动重启→仍失败转人工 `recoverGame`；检查点恢复；关会话停进程；修复原子写 rename 窗口与并发 `load` 的静默丢会话问题；数据通道建好自动 `sync`；Authority IPC 已改为 Windows 命名管道 / POSIX Unix socket（boot 帧用 `ipcPath`，旧 `ipcPort` 仅兼容）；服务启动对账遗留 running/starting 为 failed；关闭时先排空断线写入再退出；断线宽限由定时器清理（默认 30 分钟，可配），房主到期移交给在线成员；`resume` 删除 `graceUntil` 而不是赋 undefined；C# Supervisor 单元测试 7 例（含 Service/Authority 入口缺失）。
+- **2026-11-25 可靠性**：Authority 崩溃→最多两次自动重启→仍失败转人工 `recoverGame`；检查点恢复；关会话停进程；修复原子写 rename 窗口与并发 `load` 的静默丢会话问题；数据通道建好自动 `sync`；Authority IPC 已改为 Windows 命名管道 / POSIX Unix socket（boot 帧用 `ipcPath`，旧 `ipcPort` 仅兼容）；服务启动对账遗留 running/starting 为 failed；关闭时先排空断线写入再退出；断线宽限由定时器清理（默认 30 分钟，可配），房主到期移交给在线成员；`resume` 删除 `graceUntil` 而不是赋 undefined；C# Supervisor 单元测试 9 例（含入口缺失、错误协议版本、重复 shutdown）。
 - **测试入口**：`npm run verify`（构建引用/lock/契约/322 例/边界）、`npm run seam`、`npm run smoke:package`、`npm run smoke:web`、`npm run smoke:supervisor`、`npm run test:ui`（FlaUI，需交互桌面）、`npm run pack:win`。本机 .NET SDK 在 `dogfood-output/dotnet`（gitignored）。
 
 ## 4. 下一步
@@ -81,7 +81,7 @@ npm run smoke:package            # 仓外 tarball 构建 .bpkg
 npm run smoke:web                # 真实 Chrome/Edge 走完一局（ubuntu CI 也跑）
 npm run smoke:supervisor         # C# Supervisor 经命名管道拉起 Service
 npm run test:ui                  # FlaUI 三条关键路径（需交互桌面）
-npm run test:supervisor          # C# Supervisor 7 例（Windows）
+npm run test:supervisor          # C# Supervisor 9 例（Windows）
 node packages/bp-game/dist/cli.js init <目录> --id <游戏 id>   # 生成最小可运行模板
 node packages/bp-game/dist/cli.js install <包> --games-dir <目录> [--trusted-key <PEM>]
 npm run pack:win                 # win-x64 便携目录；Inno 脚本在 tools/packaging/inno
