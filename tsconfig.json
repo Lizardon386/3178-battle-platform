@@ -18,6 +18,7 @@
     { "path": "packages/server" },
     { "path": "packages/client" },
     { "path": "packages/hostd" },
-    { "path": "tools/testkit" }
+    { "path": "tools/testkit" },
+    { "path": "examples/reference-duel" }
   ]
 }
