@@ -40,3 +40,12 @@ pre { background: #0f0f18; border: 1px solid var(--line); border-radius: 4px; pa
 .player { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 140px; }
 .player.me { border-color: var(--accent); }
 .muted { color: var(--dim); }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+@media (prefers-contrast: more) {
+  :root { --bg: #000; --panel: #0b0b10; --line: #fff; --text: #fff; --dim: #e6e6e6; }
+}
