@@ -94,7 +94,11 @@ test('游戏包注册、独立游戏 origin 与 Authority 启动', async () => {
 
     host.send(JSON.stringify({ type: 'channelOpen' }));
     const granted = await waitMessage(host, (m) => m.type === 'channelGranted');
-    assert.equal(granted.gameUrl, `http://127.0.0.1:${service.gamePort}/s/${hostSeat.sessionId}/`);
+    assert.match(granted.handoffCode, /^[0-9a-f]{48}$/);
+    assert.equal(
+      granted.gameUrl,
+      `http://127.0.0.1:${service.gamePort}/s/${hostSeat.sessionId}/#handoff=${granted.handoffCode}`,
+    );
 
     const page = await fetch(granted.gameUrl);
     assert.equal(page.status, 200);
@@ -103,7 +107,7 @@ test('游戏包注册、独立游戏 origin 与 Authority 启动', async () => {
     assert.equal(page.headers.get('x-content-type-options'), 'nosniff');
     assert.match(await page.text(), /fixture game/);
 
-    const asset = await fetch(`${granted.gameUrl}main.js`);
+    const asset = await fetch(`http://127.0.0.1:${service.gamePort}/s/${hostSeat.sessionId}/main.js`);
     assert.equal(asset.status, 200);
     assert.match(asset.headers.get('content-type') ?? '', /javascript/);
 
@@ -118,9 +122,15 @@ test('游戏包注册、独立游戏 origin 与 Authority 启动', async () => {
 
     const data = new WebSocket(`ws://127.0.0.1:${service.gamePort}/ws/data`);
     await waitOpen(data);
-    data.send(JSON.stringify({ kind: 'data', channelToken: granted.channelToken }));
+    data.send(JSON.stringify({ kind: 'data', handoffCode: granted.handoffCode }));
     await waitMessage(data, (m) => m.type === 'dataReady');
     data.close();
+
+    const reused = new WebSocket(`ws://127.0.0.1:${service.gamePort}/ws/data`);
+    await waitOpen(reused);
+    const closeCode = new Promise((resolvePromise) => reused.on('close', (code) => resolvePromise(code)));
+    reused.send(JSON.stringify({ kind: 'data', handoffCode: granted.handoffCode }));
+    assert.equal(await closeCode, 1008);
 
     const rejected = await new Promise((resolvePromise) => {
       const bad = new WebSocket(`ws://127.0.0.1:${service.gamePort}/ws/data`, { origin: 'http://evil.example' });

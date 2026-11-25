@@ -1,0 +1,23 @@
+{
+  "name": "@lizardon386/bp-game",
+  "version": "0.1.0",
+  "private": true,
+  "description": "3178 游戏构建工具：打包 Authority 与 Web 为 .bpkg，并提供检查、签名与验签",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "bp-game": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@bp/game-package": "*",
+    "esbuild": "^0.28.2"
+  }
+}

@@ -11,6 +11,7 @@
     { "path": "packages/game-sdk-stub" },
     { "path": "packages/tunnel-manager" },
     { "path": "packages/game-package" },
+    { "path": "packages/bp-game" },
     { "path": "packages/core-abi" },
     { "path": "packages/pack-format" },
     { "path": "packages/protocol" },

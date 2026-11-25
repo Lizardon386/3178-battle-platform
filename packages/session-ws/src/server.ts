@@ -75,7 +75,14 @@ interface ChannelBinding {
   channelId: string;
 }
 
+interface PendingHandoff {
+  binding: ChannelBinding;
+  expiresAt: number;
+}
+
 const AUTH_TIMEOUT_MS = 5000;
+/** 浏览器交接码：30 秒、一次性，只出现在 URL fragment 里，不进服务端日志。 */
+const HANDOFF_TTL_MS = 30_000;
 
 const sendJson = (socket: WebSocket, value: unknown): void => {
   if (socket.readyState === 1) socket.send(JSON.stringify(value));
@@ -134,6 +141,7 @@ export class SessionServer {
   private readonly controlBindings = new Map<WebSocket, ControlBinding>();
   private readonly sessionSockets = new Map<string, Set<WebSocket>>();
   private readonly channels = new Map<string, ChannelBinding>();
+  private readonly handoffs = new Map<string, PendingHandoff>();
   private readonly dataSockets = new Map<string, Set<WebSocket>>();
   private readonly dataBinding = new Map<WebSocket, ChannelBinding>();
   private gameHttp: HttpServer | null = null;
@@ -402,12 +410,20 @@ export class SessionServer {
         if (!binding) return this.fail(ws, { code: 'NOSEAT', message: '连接未绑定成员' });
         const channelId = `ch-${randomBytes(6).toString('hex')}`;
         const channelToken = randomBytes(24).toString('hex');
-        this.channels.set(channelToken, { sessionId: binding.sessionId, memberId: binding.memberId, channelId });
-        const gameUrl = this.gameUrlFor(binding);
+        const channelBinding: ChannelBinding = { sessionId: binding.sessionId, memberId: binding.memberId, channelId };
+        this.channels.set(channelToken, channelBinding);
+        const now = Date.now();
+        for (const [code, entry] of this.handoffs) {
+          if (entry.expiresAt <= now) this.handoffs.delete(code);
+        }
+        const handoffCode = randomBytes(24).toString('hex');
+        this.handoffs.set(handoffCode, { binding: channelBinding, expiresAt: now + HANDOFF_TTL_MS });
+        const gameUrl = this.gameUrlFor(binding, handoffCode);
         sendJson(ws, {
           type: 'channelGranted',
           channelId,
           channelToken,
+          handoffCode,
           ...(gameUrl === undefined ? {} : { gameUrl }),
         });
         return;
@@ -428,8 +444,14 @@ export class SessionServer {
         if (isBinary) return ws.close(1008, 'auth required');
         try {
           const message = JSON.parse(raw.toString()) as Record<string, unknown>;
-          if (message.kind !== 'data' || typeof message.channelToken !== 'string') return ws.close(1008, 'auth required');
-          const binding = this.channels.get(message.channelToken);
+          let binding: ChannelBinding | undefined;
+          if (message.kind === 'data' && typeof message.channelToken === 'string') {
+            binding = this.channels.get(message.channelToken);
+          } else if (message.kind === 'data' && typeof message.handoffCode === 'string') {
+            const pending = this.handoffs.get(message.handoffCode);
+            this.handoffs.delete(message.handoffCode);
+            if (pending && pending.expiresAt > Date.now()) binding = pending.binding;
+          }
           if (!binding) return ws.close(1008, 'invalid token');
           authed = true;
           clearTimeout(timer);
@@ -478,8 +500,8 @@ export class SessionServer {
     sendJson(ws, { type: 'error', code: error.code, text: error.message });
   }
 
-  /** 用控制连接握手时的 Host 拼游戏 origin；拿不到主机名时不猜地址。 */
-  private gameUrlFor(binding: ControlBinding): string | undefined {
+  /** 用控制连接握手时的 Host 拼游戏 origin；交接码只放 fragment。 */
+  private gameUrlFor(binding: ControlBinding, handoffCode: string): string | undefined {
     if (!this.options.gameOrigin || !this.gameHttp || !binding.host) return undefined;
     let hostname: string;
     try {
@@ -488,7 +510,7 @@ export class SessionServer {
       return undefined;
     }
     const port = this.gamePort === 80 ? '' : `:${this.gamePort}`;
-    return `http://${hostname}${port}/s/${encodeURIComponent(binding.sessionId)}/`;
+    return `http://${hostname}${port}/s/${encodeURIComponent(binding.sessionId)}/#handoff=${handoffCode}`;
   }
 
   private broadcastState(session: SessionRecord): void {

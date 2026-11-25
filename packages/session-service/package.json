@@ -20,5 +20,8 @@
     "@bp/session-store": "*",
     "@bp/session-ws": "*",
     "@bp/tunnel-manager": "*"
+  },
+  "devDependencies": {
+    "@lizardon386/bp-game": "*"
   }
 }

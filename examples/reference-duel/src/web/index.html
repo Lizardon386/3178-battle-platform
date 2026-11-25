@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>参考对决</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <h1>参考对决</h1>
+      <p id="status" class="status">连接中…</p>
+    </header>
+    <section id="players" class="players"></section>
+    <section class="board">
+      <div>
+        <h2>手牌</h2>
+        <div id="hand" class="hand"></div>
+        <button id="concede" class="concede" type="button">认输</button>
+      </div>
+      <div>
+        <h2>公开日志</h2>
+        <ol id="log" class="log"></ol>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
