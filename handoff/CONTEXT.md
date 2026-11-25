@@ -25,7 +25,7 @@
 ## 3. 现在在哪
 
 - **2026-11-25 原生端与安装器**：`apps/BattlePlatform.{Contracts,Supervisor,Wpf}` 可构建；`bp-supervisor` 用当前用户管道 + Job Object 拉起 Node Service，`3178.exe` 有状态/启停/重连/托盘；CI 构建 `dist-win/3178`、Inno 安装器，并静默安装 → 跑安装目录里的 supervisor smoke → 静默卸载；便携目录可用 `npm run upgrade -- apply/rollback/check` 做哈希校验与备份切换（不适用于 Inno 安装目录）。
-- **2026-11-25 运行时主线**：`protocol/*` 四面 + TS/Python/C# 生成；`session-core/app/store/ws/service`；`@bp/game-package`（清单、`.bpkg`、注册表）；独立游戏 origin（`/s/<sessionId>/`、游戏 WS、handoffCode）；`@lizardon386/bp-game`（init/build/pack/inspect/doctor/sign/verify）；`reference-duel` 核心/Authority/Web UI；Python Authority 互通；`rematch` 同进程 roundId 递增开新局；`bp-game init` 生成 raw IPC 模板并通过真实服务链验证；`.bpkg.sig` 强制签名可用可信公钥校验（服务 `--trusted-key` / `--require-signatures`）。
+- **2026-11-25 运行时主线**：`protocol/*` 四面 + TS/Python/C# 生成；`session-core/app/store/ws/service`；`@bp/game-package`（清单、`.bpkg`、注册表）；独立游戏 origin（`/s/<sessionId>/`、游戏 WS、handoffCode）；`@lizardon386/bp-game`（init/build/pack/inspect/doctor/sign/verify）；`reference-duel` 核心/Authority/Web UI；Python Authority 互通；`rematch` 同进程 roundId 递增开新局；`bp-game init` 生成 raw IPC 模板并通过真实服务链验证；`.bpkg.sig` 强制签名可用可信公钥校验（服务 `--trusted-key` / `--require-signatures`）；`bp-game install/uninstall/list` 管理 games 目录。
 - **2026-11-25 可靠性**：Authority 崩溃→最多两次自动重启→仍失败转人工 `recoverGame`；检查点恢复；关会话停进程；修复原子写 rename 窗口与并发 `load` 的静默丢会话问题；数据通道建好自动 `sync`；Authority IPC 已改为 Windows 命名管道 / POSIX Unix socket（boot 帧用 `ipcPath`，旧 `ipcPort` 仅兼容）；C# Supervisor 单元测试 7 例（含 Service/Authority 入口缺失）。
 - **测试入口**：`npm run verify`（构建引用/lock/契约/322 例/边界）、`npm run seam`、`npm run smoke:package`、`npm run smoke:web`、`npm run smoke:supervisor`、`npm run test:ui`（FlaUI，需交互桌面）、`npm run pack:win`。本机 .NET SDK 在 `dogfood-output/dotnet`（gitignored）。
 
@@ -81,6 +81,7 @@ npm run smoke:supervisor         # C# Supervisor 经命名管道拉起 Service
 npm run test:ui                  # FlaUI 三条关键路径（需交互桌面）
 npm run test:supervisor          # C# Supervisor 7 例（Windows）
 node packages/bp-game/dist/cli.js init <目录> --id <游戏 id>   # 生成最小可运行模板
+node packages/bp-game/dist/cli.js install <包> --games-dir <目录> [--trusted-key <PEM>]
 npm run pack:win                 # win-x64 便携目录；Inno 脚本在 tools/packaging/inno
 npm run upgrade -- check --target dist-win/3178   # 便携目录校验；apply/rollback 见脚本用法
 ```

@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { buildPackage, readPackage, validateManifest } from '@bp/game-package';
 import { buildGamePackage } from './build.js';
 import { initGame } from './init.js';
+import { installPackage, listInstalled, uninstallPackage } from './install.js';
 import { signPackage, verifyPackage, type PackageSignature } from './sign.js';
 
 const HELP = `bp-game <命令> [参数]
@@ -13,6 +14,9 @@ const HELP = `bp-game <命令> [参数]
   build <目录>      构建自包含 .bpkg（esbuild 打包 Authority + 复制 Web/参考资料）
   pack <目录>       把已构建目录直接打成 .bpkg（目录内需有 game.manifest.json）
   inspect <文件>    读取并校验 .bpkg，输出摘要
+  install <文件>    校验并安装到 --games-dir；--trusted-key 强制签名
+  uninstall <包>    从 --games-dir 删除 id@version 或文件名
+  list              列出 --games-dir 中已安装包与签名状态
   doctor <路径>     检查清单、入口与包完整性，不启动游戏
   sign <文件>       用 Ed25519 私钥为整包签名，输出 <文件>.sig
   verify <文件>     校验 .sig；--key 可指定公钥 PEM
@@ -143,6 +147,45 @@ async function main(argv: string[]): Promise<number> {
         `reference: ${summary.reference.entry}`,
         `files: ${summary.files.length}`,
       ].join('\n'), json);
+      return 0;
+    }
+    case 'install': {
+      const file = required(parsed, 1, '包文件');
+      const gamesDir = parsed.flags.get('games-dir');
+      if (!gamesDir) throw new Error('install 需要 --games-dir <目录>');
+      const keyFile = parsed.flags.get('trusted-key');
+      const trustedKeys = keyFile === undefined ? undefined : [await readFile(resolve(keyFile), 'utf8')];
+      const installed = await installPackage({
+        file,
+        gamesDir,
+        ...(trustedKeys === undefined ? {} : { trustedKeys }),
+        ...(parsed.flags.has('force') ? { force: true } : {}),
+      });
+      console.log(`BP_INSTALLED=${installed.file}`);
+      console.log(`signed=${installed.signed} valid=${installed.signatureValid}`);
+      return 0;
+    }
+    case 'uninstall': {
+      const spec = required(parsed, 1, '包 id@version 或文件名');
+      const gamesDir = parsed.flags.get('games-dir');
+      if (!gamesDir) throw new Error('uninstall 需要 --games-dir <目录>');
+      const removed = await uninstallPackage(gamesDir, spec);
+      console.log(`BP_REMOVED=${removed}`);
+      return 0;
+    }
+    case 'list': {
+      const gamesDir = parsed.flags.get('games-dir');
+      if (!gamesDir) throw new Error('list 需要 --games-dir <目录>');
+      const installed = await listInstalled(gamesDir);
+      if (json) {
+        console.log(JSON.stringify(installed, null, 2));
+      } else if (installed.length === 0) {
+        console.log('（空）');
+      } else {
+        for (const entry of installed) {
+          console.log(`${entry.id}@${entry.version}  signed=${entry.signed} valid=${entry.signatureValid}${entry.error ? `  error=${entry.error}` : ''}`);
+        }
+      }
       return 0;
     }
     case 'doctor': {
