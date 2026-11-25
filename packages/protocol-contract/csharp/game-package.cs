@@ -12,7 +12,7 @@
 #pragma warning disable CS8602
 #pragma warning disable CS8603
 
-namespace QuickType
+namespace BattlePlatform.Protocol
 {
     using System;
     using System.Collections.Generic;
@@ -212,12 +212,12 @@ namespace QuickType
 
     public partial class GamePackageManifest
     {
-        public static GamePackageManifest FromJson(string json) => JsonSerializer.Deserialize<GamePackageManifest>(json, QuickType.Converter.Settings);
+        public static GamePackageManifest FromJson(string json) => JsonSerializer.Deserialize<GamePackageManifest>(json, Converter.Settings);
     }
 
     public static class Serialize
     {
-        public static string ToJson(this GamePackageManifest self) => JsonSerializer.Serialize(self, QuickType.Converter.Settings);
+        public static string ToJson(this GamePackageManifest self) => JsonSerializer.Serialize(self, Converter.Settings);
     }
 
     internal static class Converter

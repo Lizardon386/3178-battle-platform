@@ -1,0 +1,75 @@
+<Window x:Class="BattlePlatform.Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="3178 联机平台"
+        Width="680"
+        Height="440"
+        MinWidth="560"
+        MinHeight="360"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="服务状态"
+                       FontSize="13"
+                       Foreground="#666" />
+            <TextBlock x:Name="StatusText"
+                       Text="未连接"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       AutomationProperties.AutomationId="StatusText" />
+            <TextBlock x:Name="PortsText"
+                       Text="—"
+                       Foreground="#666"
+                       AutomationProperties.AutomationId="PortsText" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,16,0,12">
+            <Button x:Name="StartButton"
+                    Content="启动服务"
+                    Padding="14,6"
+                    Margin="0,0,8,0"
+                    Click="OnStart"
+                    AutomationProperties.AutomationId="StartServiceButton" />
+            <Button x:Name="StopButton"
+                    Content="停止服务"
+                    Padding="14,6"
+                    Margin="0,0,8,0"
+                    Click="OnStop"
+                    AutomationProperties.AutomationId="StopServiceButton" />
+            <Button x:Name="ReconnectButton"
+                    Content="重连"
+                    Padding="14,6"
+                    Margin="0,0,8,0"
+                    Click="OnReconnect"
+                    AutomationProperties.AutomationId="ReconnectButton" />
+            <Button x:Name="ExitButton"
+                    Content="退出"
+                    Padding="14,6"
+                    Click="OnExit"
+                    AutomationProperties.AutomationId="ExitButton" />
+        </StackPanel>
+
+        <TextBox x:Name="LogText"
+                 Grid.Row="2"
+                 IsReadOnly="True"
+                 AcceptsReturn="True"
+                 TextWrapping="NoWrap"
+                 VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Auto"
+                 FontFamily="Consolas"
+                 FontSize="12"
+                 AutomationProperties.AutomationId="LogText" />
+
+        <TextBlock Grid.Row="3"
+                   Margin="0,10,0,0"
+                   Foreground="#666"
+                   Text="关闭窗口会收进托盘，服务继续运行；真正退出请用托盘菜单或“退出”。" />
+    </Grid>
+</Window>

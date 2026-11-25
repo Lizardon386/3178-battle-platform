@@ -37,8 +37,14 @@ function generate(surface, language, outFile) {
     ], { cwd: repoRoot, encoding: 'utf8' });
     if (result.error) throw result.error;
     if (result.status !== 0) throw new Error(`quicktype ${language} ${surface} failed:\n${result.stderr || result.stdout}`);
-    const body = fs.readFileSync(quickOut, 'utf8').trimEnd();
+    let body = fs.readFileSync(quickOut, 'utf8').trimEnd();
     const comment = language === 'python' ? '#' : '//';
+    if (language === 'csharp') {
+      // quicktype 默认 namespace 是 QuickType；C# 工程统一到 BattlePlatform.Protocol。
+      body = body
+        .replace(/^namespace QuickType$/m, 'namespace BattlePlatform.Protocol')
+        .replaceAll('QuickType.Converter', 'Converter');
+    }
     return `${comment} 由 protocol/${surface} 生成；请勿手改。\n${body}\n`;
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });

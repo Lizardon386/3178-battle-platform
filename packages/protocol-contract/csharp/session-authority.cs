@@ -12,7 +12,7 @@
 #pragma warning disable CS8602
 #pragma warning disable CS8603
 
-namespace QuickType
+namespace BattlePlatform.Protocol
 {
     using System;
     using System.Collections.Generic;
@@ -443,12 +443,12 @@ namespace QuickType
 
     public partial class ProtocolTypes
     {
-        public static ProtocolTypes FromJson(string json) => JsonSerializer.Deserialize<ProtocolTypes>(json, QuickType.Converter.Settings);
+        public static ProtocolTypes FromJson(string json) => JsonSerializer.Deserialize<ProtocolTypes>(json, Converter.Settings);
     }
 
     public static class Serialize
     {
-        public static string ToJson(this ProtocolTypes self) => JsonSerializer.Serialize(self, QuickType.Converter.Settings);
+        public static string ToJson(this ProtocolTypes self) => JsonSerializer.Serialize(self, Converter.Settings);
     }
 
     internal static class Converter
