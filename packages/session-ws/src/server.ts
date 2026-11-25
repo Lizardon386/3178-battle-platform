@@ -214,8 +214,14 @@ export class SessionServer {
         }
       });
     });
-    this.port = await listen(this.http, this.port, this.host);
-    await this.startGameOrigin();
+    try {
+      this.port = await listen(this.http, this.port, this.host);
+      await this.startGameOrigin();
+    } catch (error) {
+      // 游戏 origin 绑定失败时，管理 origin 不能留在后台。
+      await this.close();
+      throw error;
+    }
     return { port: this.port, gamePort: this.gameHttp ? this.gamePort : null };
   }
 
