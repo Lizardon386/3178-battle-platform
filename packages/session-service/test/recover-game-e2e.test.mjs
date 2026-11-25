@@ -78,6 +78,7 @@ test('Authority 崩溃后 recoverGame 用新 epoch 恢复检查点', async () =>
     registry: openGameRegistry({ packages: [outFile], cacheRoot: join(dataDir, 'packages') }),
     gameOrigin: { port: 0 },
     onAuthorityStart: (info) => spawned.push(info),
+    autoRestartAttempts: 0,
   });
   const host = await connectControl(service.port);
   const guest = await connectControl(service.port);

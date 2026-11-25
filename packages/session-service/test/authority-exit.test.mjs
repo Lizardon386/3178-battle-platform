@@ -106,6 +106,45 @@ test('Authority 意外退出：会话标记 failed 并广播', async () => {
   }
 });
 
+test('Authority 首次崩溃自动重启一次，ready 后 epoch 递增', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'bp-authority-restart-'));
+  const outFile = await createPackage(root, 'restart-game', `
+    const fs = require('node:fs');
+    const path = require('node:path');
+    fs.mkdirSync(boot.stateDir, { recursive: true });
+    const marker = path.join(boot.stateDir, 'restarted');
+    if (!fs.existsSync(marker)) {
+      fs.writeFileSync(marker, '1');
+      setTimeout(() => process.exit(5), 150);
+    }
+  `);
+  const dataDir = join(root, 'data');
+  const spawned = [];
+  const states = [];
+  const service = await startService({
+    dataDir,
+    port: 0,
+    registry: openGameRegistry({ packages: [outFile], cacheRoot: join(dataDir, 'packages') }),
+    onAuthorityStart: (info) => spawned.push(info),
+  });
+  const { host, guest } = await startSession(service, 'restart-game');
+  try {
+    host.on('message', (raw, isBinary) => {
+      if (isBinary) return;
+      const message = JSON.parse(raw.toString());
+      if (message.type === 'sessionState') states.push(message.session.gameProcess);
+    });
+    host.send(JSON.stringify({ type: 'startGame' }));
+    await waitMessage(host, (m) => m.type === 'sessionState' && m.session.gameProcess === 'running' && m.session.authorityEpoch === 2);
+    assert.equal(spawned.length, 2);
+    assert.equal(states.includes('failed'), false);
+  } finally {
+    host.close();
+    guest.close();
+    await service.close();
+  }
+});
+
 test('关闭会话会停止 Authority 进程', async () => {
   const root = await mkdtemp(join(tmpdir(), 'bp-authority-close-'));
   const outFile = await createPackage(root, 'close-game', `
