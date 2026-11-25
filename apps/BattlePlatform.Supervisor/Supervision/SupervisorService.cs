@@ -1,6 +1,5 @@
 using System.Diagnostics;
-using System.Net;
-using System.Net.Sockets;
+using System.IO.Pipes;
 using System.Security.Cryptography;
 using System.Text.Json;
 using BattlePlatform.Contracts.Control;
@@ -144,9 +143,14 @@ public sealed class SupervisorService : IAsyncDisposable
     {
         await StopAuthorityAsync(message.SessionId, "restart", cancellationToken).ConfigureAwait(false);
 
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var ipcPort = ((IPEndPoint)listener.LocalEndpoint).Port;
+        var pipeName = $"bp-authority-{Environment.ProcessId}-{Guid.NewGuid():N}";
+        var pipePath = $@"\\.\pipe\{pipeName}";
+        var pipe = new NamedPipeServerStream(
+            pipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
         var stateDir = Path.Combine(_options.DataDir, "authority", message.SessionId, message.Epoch.ToString());
         Directory.CreateDirectory(stateDir);
 
@@ -172,7 +176,7 @@ public sealed class SupervisorService : IAsyncDisposable
         }
 
         var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-        var authority = new AuthorityProcess(message.SessionId, message.Epoch, message.Entry, message.Runtime, listener, process);
+        var authority = new AuthorityProcess(message.SessionId, message.Epoch, message.Entry, message.Runtime, pipe, process);
         process.OutputDataReceived += (_, args) =>
         {
             if (args.Data is not null) Console.WriteLine($"[authority:{message.SessionId}] {args.Data}");
@@ -200,7 +204,7 @@ public sealed class SupervisorService : IAsyncDisposable
             sessionId = message.SessionId,
             epoch = message.Epoch,
             roundId = $"round-{message.Epoch}",
-            ipcPort,
+            ipcPath = pipePath,
             stateDir,
             members = Array.Empty<object>(),
             bootNonce = Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant(),
@@ -230,7 +234,7 @@ public sealed class SupervisorService : IAsyncDisposable
         authority.Cancel();
         try
         {
-            authority.Listener.Stop();
+            authority.Pipe.Dispose();
             if (!authority.Process.HasExited) authority.Process.Kill(entireProcessTree: true);
             await authority.Process.WaitForExitAsync(cancellationToken).WaitAsync(TimeSpan.FromSeconds(5), cancellationToken)
                 .ConfigureAwait(false);
@@ -345,10 +349,10 @@ public sealed class SupervisorService : IAsyncDisposable
     {
         try
         {
-            var client = await authority.Listener.AcceptTcpClientAsync(authority.Token).ConfigureAwait(false);
+            await authority.Pipe.WaitForConnectionAsync(authority.Token).ConfigureAwait(false);
             authority.State = AuthorityStatusState.Running;
             await BroadcastAsync(Snapshot(authority)).ConfigureAwait(false);
-            _ = Task.Run(() => DrainAsync(client));
+            _ = Task.Run(() => DrainAsync(authority.Pipe));
         }
         catch (OperationCanceledException)
         {
@@ -365,13 +369,12 @@ public sealed class SupervisorService : IAsyncDisposable
         }
     }
 
-    private static async Task DrainAsync(TcpClient client)
+    private static async Task DrainAsync(NamedPipeServerStream pipe)
     {
         try
         {
-            var stream = client.GetStream();
             var buffer = new byte[8192];
-            while (await stream.ReadAsync(buffer).ConfigureAwait(false) > 0)
+            while (await pipe.ReadAsync(buffer).ConfigureAwait(false) > 0)
             {
                 // Supervisor 不解释 Authority IPC，只保持连接存活。
             }
@@ -379,10 +382,6 @@ public sealed class SupervisorService : IAsyncDisposable
         catch
         {
             // 连接断开即结束。
-        }
-        finally
-        {
-            client.Dispose();
         }
     }
 
@@ -419,14 +418,14 @@ public sealed class SupervisorService : IAsyncDisposable
             long epoch,
             string entry,
             string runtime,
-            TcpListener listener,
+            NamedPipeServerStream pipe,
             Process process)
         {
             SessionId = sessionId;
             Epoch = epoch;
             Entry = entry;
             Runtime = runtime;
-            Listener = listener;
+            Pipe = pipe;
             Process = process;
             State = AuthorityStatusState.Starting;
         }
@@ -435,7 +434,7 @@ public sealed class SupervisorService : IAsyncDisposable
         public long Epoch { get; }
         public string Entry { get; }
         public string Runtime { get; }
-        public TcpListener Listener { get; }
+        public NamedPipeServerStream Pipe { get; }
         public Process Process { get; }
         public AuthorityStatusState State { get; set; }
         public long? Pid { get; set; }
@@ -459,7 +458,7 @@ public sealed class SupervisorService : IAsyncDisposable
         {
             Cancel();
             _cts.Dispose();
-            Listener.Stop();
+            Pipe.Dispose();
             Process.Dispose();
         }
     }

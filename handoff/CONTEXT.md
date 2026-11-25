@@ -26,13 +26,13 @@
 
 - **2026-11-25 原生端与安装器**：`apps/BattlePlatform.{Contracts,Supervisor,Wpf}` 可构建；`bp-supervisor` 用当前用户管道 + Job Object 拉起 Node Service，`3178.exe` 有状态/启停/重连/托盘；CI 构建 `dist-win/3178`、Inno 安装器，并静默安装 → 跑安装目录里的 supervisor smoke → 静默卸载。
 - **2026-11-25 运行时主线**：`protocol/*` 四面 + TS/Python/C# 生成；`session-core/app/store/ws/service`；`@bp/game-package`（清单、`.bpkg`、注册表）；独立游戏 origin（`/s/<sessionId>/`、游戏 WS、handoffCode）；`@lizardon386/bp-game`（build/pack/inspect/doctor/sign/verify）；`reference-duel` 核心/Authority/Web UI；Python Authority 互通。
-- **2026-11-25 可靠性**：Authority 崩溃→最多两次自动重启→仍失败转人工 `recoverGame`；检查点恢复；关会话停进程；修复原子写 rename 窗口与并发 `load` 的静默丢会话问题；数据通道建好自动 `sync`。
+- **2026-11-25 可靠性**：Authority 崩溃→最多两次自动重启→仍失败转人工 `recoverGame`；检查点恢复；关会话停进程；修复原子写 rename 窗口与并发 `load` 的静默丢会话问题；数据通道建好自动 `sync`；Authority IPC 已改为 Windows 命名管道 / POSIX Unix socket（boot 帧用 `ipcPath`，旧 `ipcPort` 仅兼容）；C# Supervisor 单元测试 5 例。
 - **测试入口**：`npm run verify`（构建引用/lock/契约/322 例/边界）、`npm run seam`、`npm run smoke:package`、`npm run smoke:web`、`npm run smoke:supervisor`、`npm run test:ui`（FlaUI，需交互桌面）、`npm run pack:win`。本机 .NET SDK 在 `dogfood-output/dotnet`（gitignored）。
 
 ## 4. 下一步
 
 1. **WP6 收口**：TS/C# 共享 reducer 与 golden；移动视口已测 320/360/390 不溢出，继续补读屏/键盘/高对比完整流程。
-2. **WP3 收口**：Authority IPC 改命名管道、完整故障矩阵、Supervisor 单元测试；确认自动重启策略是否要按 uptime 重置。
+2. **WP3 收口**：完整故障矩阵（磁盘满、权限、重复 shutdown、服务条目缺失）；确认自动重启策略是否要按 uptime 重置。Authority IPC 命名管道与 Supervisor 单元测试已完成。
 3. **WP5/WP9**：`bp-game init` 模板与 SDK 运行时注入；color-duel 全量 golden 迁移必须先拿到该仓写者/授权，平台侧只做切换准备。
 4. **WP8**：升级回滚、签名证书、双机/WSS/Android/干净 VM 验收；没有证书/设备时不要写成已完成。
 
@@ -65,6 +65,7 @@
 - **数据通道必须 sync**：晚开的游戏页/重连只有 `dataReady` 不够；`SessionServer` 在鉴权后触发 `onDataReady` → `SessionApplication.syncMember`，Authority 的 `sync` 要同时补公共与私密视图。
 - **浏览器交接与 CSP**：游戏页用 30 秒一次性 `handoffCode`（fragment，连上后 `history.replaceState` 抹掉）；游戏 origin 的 `connect-src` 要允许 `ws:`/`wss:`，否则 Chrome 可能拒绝同源 WS。
 - **本机 .NET 与打包**：SDK 解压在 `dogfood-output/dotnet`，运行 apphost / 测试要设 `DOTNET_ROOT`；CI 用 `setup-dotnet`。`npm pack` 传包目录必须写 `./packages/...`，否则 npm 会把 `packages/bp-game` 当成 GitHub 仓库。
+- **Authority IPC 管道**：boot 帧现在传 `ipcPath`（Windows `\\.\pipe\...`、POSIX 文件 socket），Node/Python 夹具都要用 `net.connect(boot.ipcPath)` / Unix socket；POSIX 关闭时要 unlink socket 文件。C# 侧用 `NamedPipeServerStream + CurrentUserOnly`。Windows 管道读的 CancellationToken 不保证生效，测试超时用 `Task.WhenAny` 兜底。
 - **门户暂缓与恢复**：代码已回退，`site/`、`tools/site/` 不存在；恢复时按合并计划附录 A 重建，先确认受众与维护成本。Windows Edge `--window-size=390` 布局视口会被抬到约 500，真实窄屏必须用 CDP；热铁盒不能跑常驻服务端/客户端。
 
 ## 7. 验证命令
@@ -76,6 +77,7 @@ npm run smoke:package            # 仓外 tarball 构建 .bpkg
 npm run smoke:web                # 真实 Chrome/Edge 走完一局（ubuntu CI 也跑）
 npm run smoke:supervisor         # C# Supervisor 经命名管道拉起 Service
 npm run test:ui                  # FlaUI 三条关键路径（需交互桌面）
+npm run test:supervisor          # C# Supervisor 5 例（Windows）
 npm run pack:win                 # win-x64 便携目录；Inno 脚本在 tools/packaging/inno
 ```
 

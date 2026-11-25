@@ -7,7 +7,10 @@ export interface BootFrame {
   sessionId: string;
   epoch: number;
   roundId: string;
-  ipcPort: number;
+  /** Windows 命名管道路径或 POSIX Unix socket 路径。 */
+  ipcPath?: string;
+  /** 仅用于兼容旧 Supervisor；新代码优先 ipcPath。 */
+  ipcPort?: number;
   stateDir: string;
   members: Array<{ memberId: string; displayName?: string }>;
   bootNonce?: string;
@@ -38,12 +41,16 @@ export interface AuthorityProcessRuntime {
   handle(message: Record<string, unknown>): Promise<void>;
 }
 
-/** 连接 Supervisor 的 IPC 端口，启动运行时并持续处理帧。 */
+/** 连接 Supervisor 的 IPC（命名管道/Unix socket 优先），启动运行时并持续处理帧。 */
 export async function runAuthorityProcess(options: {
   boot: BootFrame;
   createRuntime: (transport: Transport) => AuthorityProcessRuntime;
 }): Promise<void> {
-  const socket = net.connect(options.boot.ipcPort, '127.0.0.1');
+  const socket = options.boot.ipcPath
+    ? net.connect(options.boot.ipcPath)
+    : options.boot.ipcPort === undefined
+      ? (() => { throw new Error('BootFrame 缺少 ipcPath'); })()
+      : net.connect(options.boot.ipcPort, '127.0.0.1');
   await once(socket, 'connect');
   const transport: Transport = { send: (message) => socket.write(encodeIpcFrame(message)) };
   const runtime = options.createRuntime(transport);

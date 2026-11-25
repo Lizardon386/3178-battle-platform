@@ -14,7 +14,7 @@ process.stdin.on('data', (chunk) => {
   const index = buffer.indexOf('\\n');
   if (index < 0) return;
   const boot = JSON.parse(buffer.slice(0, index));
-  const socket = net.connect(boot.ipcPort, '127.0.0.1', () => {
+  const socket = net.connect(boot.ipcPath, () => {
     const body = Buffer.from(JSON.stringify({ type: 'authorityReady', authorityEpoch: boot.epoch }));
     const frame = Buffer.alloc(4 + body.length);
     frame.writeUInt32BE(body.length, 0);

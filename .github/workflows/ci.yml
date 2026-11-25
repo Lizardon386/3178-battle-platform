@@ -50,6 +50,9 @@ jobs:
       - name: Native supervisor smoke (win-x64)
         if: runner.os == 'Windows'
         run: npm run smoke:supervisor
+      - name: Supervisor unit tests (win)
+        if: runner.os == 'Windows'
+        run: npm run test:supervisor
       - name: Native package (win-x64)
         if: runner.os == 'Windows'
         run: npm run pack:win

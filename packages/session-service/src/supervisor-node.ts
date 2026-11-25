@@ -1,6 +1,9 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import { unlink } from 'node:fs/promises';
 import net from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { decodeIpcFrames, encodeIpcFrame } from '@bp/authority-runtime';
 import type { AuthorityLaunch, AuthoritySupervisor } from '@bp/session-app';
 
@@ -10,6 +13,7 @@ interface Entry {
   child: ChildProcess;
   buffer: Buffer;
   epoch: number;
+  pipePath: string;
 }
 
 export interface NodeSupervisorOptions {
@@ -21,7 +25,14 @@ export interface NodeSupervisorOptions {
   startTimeoutMs?: number;
 }
 
-/** 开发/测试用 Supervisor：spawn Authority 进程，用回环 TCP 承载 IPC。 */
+const pipePathFor = (): string => {
+  const token = `${process.pid}-${randomBytes(6).toString('hex')}`;
+  return process.platform === 'win32'
+    ? `\\\\.\\pipe\\bp-authority-${token}`
+    : join(tmpdir(), `bp-authority-${token}.sock`);
+};
+
+/** 开发/测试用 Supervisor：spawn Authority 进程，用命名管道/Unix socket 承载 IPC。 */
 export class NodeAuthoritySupervisor implements AuthoritySupervisor {
   private readonly entries = new Map<string, Entry>();
 
@@ -29,18 +40,20 @@ export class NodeAuthoritySupervisor implements AuthoritySupervisor {
 
   async start(launch: AuthorityLaunch): Promise<void> {
     if (this.entries.has(launch.sessionId)) throw new Error('Authority 已在运行');
+    const pipePath = pipePathFor();
     const server = net.createServer();
     await new Promise<void>((resolvePromise, rejectPromise) => {
       server.once('error', rejectPromise);
-      server.listen(0, '127.0.0.1', () => resolvePromise());
+      server.listen(pipePath, () => {
+        server.off('error', rejectPromise);
+        resolvePromise();
+      });
     });
-    const address = server.address();
-    const ipcPort = typeof address === 'object' && address ? address.port : 0;
     const boot = {
       sessionId: launch.sessionId,
       epoch: launch.epoch,
       roundId: launch.roundId,
-      ipcPort,
+      ipcPath: pipePath,
       stateDir: launch.stateDir,
       members: launch.members,
       bootNonce: randomBytes(8).toString('hex'),
@@ -55,14 +68,13 @@ export class NodeAuthoritySupervisor implements AuthoritySupervisor {
       windowsHide: true,
     });
     if (child.pid !== undefined) this.options.onSpawn?.(launch.sessionId, launch.epoch, child.pid);
-    const entry: Entry = { server, socket: null, child, buffer: Buffer.alloc(0), epoch: launch.epoch };
+    const entry: Entry = { server, socket: null, child, buffer: Buffer.alloc(0), epoch: launch.epoch, pipePath };
     this.entries.set(launch.sessionId, entry);
     child.once('exit', (code, signal) => {
       // stop() 会先从表里删除；只有“意外退出”才通知上层。
       if (this.entries.get(launch.sessionId) !== entry) return;
       this.entries.delete(launch.sessionId);
-      entry.socket?.destroy();
-      server.close();
+      this.closeEntry(entry);
       this.options.onExit?.(launch.sessionId, launch.epoch, code, signal);
     });
     server.on('connection', (socket) => {
@@ -109,12 +121,23 @@ export class NodeAuthoritySupervisor implements AuthoritySupervisor {
     const entry = this.entries.get(sessionId);
     if (!entry) return;
     this.entries.delete(sessionId);
-    entry.socket?.destroy();
     entry.child.kill();
-    await new Promise<void>((resolvePromise) => entry.server.close(() => resolvePromise()));
+    await this.closeEntry(entry);
   }
 
   async stopAll(): Promise<void> {
     for (const sessionId of [...this.entries.keys()]) await this.stop(sessionId, 'shutdown');
+  }
+
+  private async closeEntry(entry: Entry): Promise<void> {
+    entry.socket?.destroy();
+    await new Promise<void>((resolvePromise) => {
+      entry.server.close(() => resolvePromise());
+      // 未 listening 时 close 不会回调。
+      if (!entry.server.listening) resolvePromise();
+    });
+    if (process.platform !== 'win32') {
+      await unlink(entry.pipePath).catch(() => {});
+    }
   }
 }

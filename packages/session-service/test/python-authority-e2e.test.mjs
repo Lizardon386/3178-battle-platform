@@ -19,39 +19,76 @@ const pythonCommand = (() => {
 })();
 
 const PYTHON_AUTHORITY = `import json
+import os
 import socket
 import struct
 import sys
 
-def send(sock, value):
-    body = json.dumps(value).encode("utf-8")
-    sock.sendall(struct.pack(">I", len(body)) + body)
-
-def read_exact(sock, size):
-    data = b""
-    while len(data) < size:
-        chunk = sock.recv(size - len(data))
-        if not chunk:
-            return None
-        data += chunk
-    return data
-
 boot = json.loads(sys.stdin.readline())
-sock = socket.create_connection(("127.0.0.1", boot["ipcPort"]))
-send(sock, {"type": "authorityReady", "authorityEpoch": boot["epoch"]})
+ipc = boot.get("ipcPath")
+
+if ipc and os.name != "nt":
+    channel = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    channel.connect(ipc)
+
+    def channel_read(size):
+        data = b""
+        while len(data) < size:
+            chunk = channel.recv(size - len(data))
+            if not chunk:
+                return None
+            data += chunk
+        return data
+
+    def channel_write(data):
+        channel.sendall(data)
+elif ipc:
+    channel = open(ipc, "r+b", buffering=0)
+
+    def channel_read(size):
+        data = b""
+        while len(data) < size:
+            chunk = channel.read(size - len(data))
+            if not chunk:
+                return None
+            data += chunk
+        return data
+
+    def channel_write(data):
+        channel.write(data)
+else:
+    channel = socket.create_connection(("127.0.0.1", boot["ipcPort"]))
+
+    def channel_read(size):
+        data = b""
+        while len(data) < size:
+            chunk = channel.recv(size - len(data))
+            if not chunk:
+                return None
+            data += chunk
+        return data
+
+    def channel_write(data):
+        channel.sendall(data)
+
+def send(value):
+    body = json.dumps(value).encode("utf-8")
+    channel_write(struct.pack(">I", len(body)) + body)
+
+send({"type": "authorityReady", "authorityEpoch": boot["epoch"]})
 
 while True:
-    header = read_exact(sock, 4)
+    header = channel_read(4)
     if header is None:
         break
     length = struct.unpack(">I", header)[0]
-    body = read_exact(sock, length)
+    body = channel_read(length)
     if body is None:
         break
     message = json.loads(body)
     if message.get("type") == "deliver":
         member = message.get("fromMemberId")
-        send(sock, {"type": "deliver", "items": [{"to": member, "payload": {"type": "echo", "member": member}}]})
+        send({"type": "deliver", "items": [{"to": member, "payload": {"type": "echo", "member": member}}]})
 `;
 
 const MANIFEST = {
