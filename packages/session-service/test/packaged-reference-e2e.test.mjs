@@ -30,12 +30,14 @@ const waitMessage = (ws, predicate, timeoutMs = 10000) => new Promise((resolvePr
   ws.on('message', onMessage);
 });
 
-const waitFrame = (ws, predicate, timeoutMs = 10000) => new Promise((resolvePromise, reject) => {
-  const timer = setTimeout(() => reject(new Error('等待游戏帧超时')), timeoutMs);
+const waitFrame = (ws, predicate, timeoutMs = 10000, label = 'frame') => new Promise((resolvePromise, reject) => {
+  const seen = [];
+  const timer = setTimeout(() => reject(new Error(`等待游戏帧超时（${label}）：${JSON.stringify(seen)}`)), timeoutMs);
   const onMessage = (raw, isBinary) => {
     if (!isBinary) return;
     const frame = decodeFrame(raw);
     const payload = JSON.parse(frame.payload.toString());
+    seen.push({ type: payload.type, turn: payload.view?.turnNumber });
     if (!predicate(payload)) return;
     clearTimeout(timer);
     ws.off('message', onMessage);
@@ -90,8 +92,8 @@ test('打包后的 reference-duel：注册、页面、交接与真实对局', as
     const hostData = await openGameData(service.gamePort, hostChannel.handoffCode);
     const guestData = await openGameData(service.gamePort, guestChannel.handoffCode);
 
-    const hostPrivate = waitFrame(hostData.ws, (p) => p.type === 'private');
-    const guestInitial = waitFrame(guestData.ws, (p) => p.type === 'public');
+    const hostPrivate = waitFrame(hostData.ws, (p) => p.type === 'private', 10000, 'host-private');
+    const guestInitial = waitFrame(guestData.ws, (p) => p.type === 'public', 10000, 'guest-initial');
     host.send(JSON.stringify({ type: 'startGame' }));
     await waitMessage(host, (m) => m.type === 'sessionState' && m.session.gameProcess === 'running');
     const { payload: privateView } = await hostPrivate;
@@ -107,7 +109,7 @@ test('打包后的 reference-duel：注册、页面、交接与真实对局', as
     assert.equal(style.status, 200);
     assert.match(style.headers.get('content-type') ?? '', /text\/css/);
 
-    const nextTurn = waitFrame(guestData.ws, (p) => p.type === 'public' && p.view.turnNumber === 2);
+    const nextTurn = waitFrame(guestData.ws, (p) => p.type === 'public' && p.view.turnNumber === 2, 10000, 'guest-next-turn');
     const payload = Buffer.from(JSON.stringify({ action: { type: 'play', cardId: card.id } }));
     hostData.ws.send(encodeFrame({
       v: 1, channelId: hostData.channelId, to: 'all', seq: 1, mode: 'reliable', payloadBytes: payload.byteLength,

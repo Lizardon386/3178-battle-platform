@@ -156,7 +156,7 @@ export class SessionApplication {
     if (!this.supervisor) return err('GAMEFAILED', '没有可用的权威启动器');
 
     const epoch = session.authorityEpoch + 1;
-    const roundId = `round-${epoch}`;
+    const roundId = session.currentRoundId ?? `round-${epoch}`;
     const starting = structuredClone(session);
     starting.authorityEpoch = epoch;
     starting.currentRoundId = roundId;
@@ -170,7 +170,7 @@ export class SessionApplication {
         roundId,
         runtime: options.runtime ?? 'node24',
         entry: options.entry,
-        stateDir: `${options.stateRoot}/${sessionId}/${epoch}`,
+        stateDir: `${options.stateRoot}/${sessionId}/${roundId}`,
         members: starting.members.map((member) => ({
           memberId: member.memberId,
           ...(member.displayName === undefined ? {} : { displayName: member.displayName }),
@@ -185,6 +185,49 @@ export class SessionApplication {
       return err('GAMEFAILED', '游戏进程启动失败');
     }
     // 启动期间 authorityReady 可能已经把状态推进到 running；返回最新快照，避免旧 revision 覆盖。
+    return ok((await this.repository.load(sessionId)) ?? starting);
+  }
+
+  async recoverGame(
+    sessionId: string,
+    actorId: string,
+    options: { entry: string; runtime?: string; stateRoot: string },
+  ): Promise<Result<SessionRecord>> {
+    const session = await this.repository.load(sessionId);
+    if (!session) return err('NOROOM', '会话不存在');
+    if (session.ownerMemberId !== actorId) return err('NOTHOST', '只有房主可以恢复游戏');
+    if (session.gameProcess !== 'failed') return err('PHASE', '当前不需要恢复');
+    if (!session.currentRoundId) return err('PHASE', '没有可恢复的回合');
+    if (!this.supervisor) return err('GAMEFAILED', '没有可用的权威启动器');
+
+    const epoch = session.authorityEpoch + 1;
+    const roundId = session.currentRoundId;
+    const starting = structuredClone(session);
+    starting.authorityEpoch = epoch;
+    starting.gameProcess = 'starting';
+    starting.revision += 1;
+    await this.repository.save(starting);
+    try {
+      await this.supervisor.start({
+        sessionId,
+        epoch,
+        roundId,
+        runtime: options.runtime ?? 'node24',
+        entry: options.entry,
+        stateDir: `${options.stateRoot}/${sessionId}/${roundId}`,
+        members: starting.members.map((member) => ({
+          memberId: member.memberId,
+          ...(member.displayName === undefined ? {} : { displayName: member.displayName }),
+        })),
+      });
+    } catch (error) {
+      const failed = structuredClone(starting);
+      failed.gameProcess = 'failed';
+      failed.revision += 1;
+      await this.repository.save(failed);
+      this.logger.error('authority recover failed', { sessionId, epoch, error: String(error) });
+      return err('GAMEFAILED', '游戏进程恢复失败');
+    }
     return ok((await this.repository.load(sessionId)) ?? starting);
   }
 

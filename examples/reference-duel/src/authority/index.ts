@@ -16,8 +16,10 @@ export interface AuthorityOptions {
 export function createReferenceAuthority(options: AuthorityOptions): AuthorityRuntime {
   let state: GameState | null = null;
 
-  const publish = (context: AuthorityContext): void => {
+  const publish = async (context: AuthorityContext): Promise<void> => {
     if (!state) return;
+    // 先落检查点再投递：崩溃恢复时客户端看到的最后状态不会超前于磁盘。
+    await context.checkpoint();
     const items = [{ to: 'all', payload: { type: 'public', view: publicView(state) } }];
     for (const player of state.players) {
       items.push({ to: player.memberId, payload: { type: 'private', view: privateView(state, player.memberId) } });
@@ -35,12 +37,12 @@ export function createReferenceAuthority(options: AuthorityOptions): AuthorityRu
     ...(options.seed === undefined ? {} : { seed: options.seed }),
     transport: options.transport,
     hooks: {
-      start(_message, restored, context) {
+      async start(_message, restored, context) {
         state = restored ? (restored as GameState) : createGame(options.roundId, options.members.map((m) => m.memberId), context.random);
         context.ready();
-        publish(context);
+        await publish(context);
       },
-      deliver(message, context) {
+      async deliver(message, context) {
         if (!state) return;
         const callback = message as unknown as AuthorityCallbackMessage;
         const action = callback.payload as { action?: Action } | undefined;
@@ -54,7 +56,7 @@ export function createReferenceAuthority(options: AuthorityOptions): AuthorityRu
           return;
         }
         state = result.state;
-        publish(context);
+        await publish(context);
       },
       sync(message, context) {
         if (!state) return;

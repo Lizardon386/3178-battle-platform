@@ -125,7 +125,7 @@ test('关闭会话会停止 Authority 进程', async () => {
     host.send(JSON.stringify({ type: 'startGame' }));
     await waitMessage(host, (m) => m.type === 'sessionState' && m.session.gameProcess === 'running');
 
-    const pidFile = join(dataDir, 'authority', sessionId, '1', 'pid');
+    const pidFile = join(dataDir, 'authority', sessionId, 'round-1', 'pid');
     let pid = null;
     for (let index = 0; index < 100 && pid === null; index += 1) {
       try {

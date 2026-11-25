@@ -30,6 +30,8 @@ export interface ServiceOptions {
     host?: string;
     port?: number;
   };
+  /** Authority 进程 spawn 诊断（测试/日志用），不暴露给客户端。 */
+  onAuthorityStart?: (info: { sessionId: string; epoch: number; pid: number }) => void;
   /** 管理端静态目录；默认取仓库内 packages/web-console/public。 */
   webRoot?: string;
   /** 可选公网隧道；`game` 为游戏 origin 单独一条，未配置时只监听本机/局域网。 */
@@ -110,6 +112,7 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
         pendingAuthority.add(task);
         void task.finally(() => pendingAuthority.delete(task));
       },
+      onSpawn: (sessionId, epoch, pid) => options.onAuthorityStart?.({ sessionId, epoch, pid }),
       onExit: (sessionId, epoch, code) => {
         const task = app.markAuthorityFailed(sessionId, epoch, `Authority 进程退出（code=${code ?? 'null'}）`)
           .then((result) => {

@@ -48,16 +48,22 @@ export class FileSessionRepository implements SessionRepository {
   }
 
   async load(sessionId: string): Promise<SessionRecord | null> {
-    const file = join(this.dirFor(sessionId), 'session.json');
-    try {
-      const raw = await readFile(file, 'utf8');
-      const session = JSON.parse(raw) as SessionRecord;
-      if (session.schemaVersion !== 1 || session.sessionId !== sessionId) return null;
-      return session;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-      throw error;
-    }
+    // 与写队列同链：原子写会在 rename 窗口短暂移走 session.json，
+    // 并发读插进去会误判“会话不存在”，导致投递静默丢失。
+    return this.enqueue(sessionId, async () => {
+      const file = join(this.dirFor(sessionId), 'session.json');
+      for (const candidate of [file, `${file}.bak`]) {
+        try {
+          const raw = await readFile(candidate, 'utf8');
+          const session = JSON.parse(raw) as SessionRecord;
+          if (session.schemaVersion !== 1 || session.sessionId !== sessionId) return null;
+          return session;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        }
+      }
+      return null;
+    });
   }
 
   async list(): Promise<SessionRecord[]> {

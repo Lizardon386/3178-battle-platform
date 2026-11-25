@@ -16,6 +16,8 @@ export interface NodeSupervisorOptions {
   onMessage(sessionId: string, message: Record<string, unknown>): void;
   /** Authority 在未被 stop 的情况下退出；调用方负责把会话标记为 failed。 */
   onExit?(sessionId: string, epoch: number, code: number | null, signal: NodeJS.Signals | null): void;
+  /** 进程已 spawn，用于诊断与测试注入。 */
+  onSpawn?(sessionId: string, epoch: number, pid: number): void;
   startTimeoutMs?: number;
 }
 
@@ -52,6 +54,7 @@ export class NodeAuthoritySupervisor implements AuthoritySupervisor {
       env: { ...process.env, ...launch.env },
       windowsHide: true,
     });
+    if (child.pid !== undefined) this.options.onSpawn?.(launch.sessionId, launch.epoch, child.pid);
     const entry: Entry = { server, socket: null, child, buffer: Buffer.alloc(0), epoch: launch.epoch };
     this.entries.set(launch.sessionId, entry);
     child.once('exit', (code, signal) => {

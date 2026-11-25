@@ -74,6 +74,22 @@ test('文件仓库：同一会话并发保存被串行化，不互相踩 rename'
   assert.ok([1, 2, 3].includes(loaded.revision));
 });
 
+test('文件仓库：并发读写不会读到 rename 窗口里的“不存在”', async () => {
+  const dir = await temp();
+  const repository = new FileSessionRepository({ root: dir });
+  const session = createSession({
+    sessionId: 'sess-1', code: 'ABCD', gameId: 'reference-duel', gameVersion: '1.0.0',
+    ownerMemberId: 'm1', ownerTicketHash: 'h1', now: 1000,
+  });
+  await repository.save(session);
+  const writes = Array.from({ length: 40 }, (_, index) => repository.save({ ...session, revision: index + 2 }));
+  const reads = Array.from({ length: 80 }, async () => {
+    const loaded = await repository.load('sess-1');
+    assert.ok(loaded, '并发读不应返回 null');
+  });
+  await Promise.all([...writes, ...reads]);
+});
+
 test('文件仓库：非法 sessionId 拒绝路径穿越', async () => {
   const dir = await temp();
   const repository = new FileSessionRepository({ root: dir });

@@ -58,6 +58,7 @@ const renderSession = (session) => {
     members: session.members.map((m) => ({ id: m.memberId, presence: m.presence, slot: m.slot })),
   }, null, 2);
   $('start').disabled = session.gameProcess !== 'stopped';
+  $('recover').disabled = session.gameProcess !== 'failed';
 };
 
 const renderPayload = (payload) => {
@@ -202,6 +203,7 @@ $('join').onclick = () => {
 };
 
 $('start').onclick = () => send({ type: 'startGame' });
+$('recover').onclick = () => send({ type: 'recoverGame' });
 $('channel').onclick = () => send({ type: 'channelOpen' });
 
 connectControl();

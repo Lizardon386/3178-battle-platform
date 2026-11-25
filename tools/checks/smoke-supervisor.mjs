@@ -13,7 +13,8 @@ import net from 'node:net';
 import { WebSocket } from 'ws';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const DOTNET = process.env.BP_DOTNET ?? join(REPO, 'dogfood-output', 'dotnet', 'dotnet.exe');
+const LOCAL_DOTNET = join(REPO, 'dogfood-output', 'dotnet', 'dotnet.exe');
+const DOTNET = process.env.BP_DOTNET ?? (existsSync(LOCAL_DOTNET) ? LOCAL_DOTNET : 'dotnet');
 const PACKAGED = process.env.BP_PACKAGED_APP === '1';
 const EXE = process.env.BP_SUPERVISOR_EXE
   ?? (PACKAGED
@@ -33,7 +34,9 @@ function buildIfNeeded() {
       cwd: REPO,
       stdio: 'inherit',
     });
-    if (result.status !== 0) throw new Error('dotnet build 失败');
+    if (result.status !== 0) {
+      throw new Error(`dotnet build 失败：${result.error?.message ?? `exit=${result.status}`}`);
+    }
   }
 }
 

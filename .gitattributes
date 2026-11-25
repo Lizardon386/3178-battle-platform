@@ -6,6 +6,10 @@
 *.sh eol=lf
 *.py text eol=lf
 *.cs text eol=lf
+*.csproj text eol=lf
+*.xaml text eol=lf
+*.sln text eol=crlf
+*.iss text eol=crlf
 *.ps1 eol=crlf
 *.ts text eol=lf
 *.tsx text eol=lf

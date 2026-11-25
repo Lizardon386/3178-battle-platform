@@ -414,6 +414,23 @@ export class SessionServer {
         this.broadcastState(result.value);
         return;
       }
+      case 'recoverGame': {
+        const binding = this.controlBindings.get(ws);
+        if (!binding) return this.fail(ws, { code: 'NOSEAT', message: '连接未绑定成员' });
+        if (!this.options.authority) return this.fail(ws, { code: 'GAMEFAILED', message: '没有配置权威启动器' });
+        const session = await this.app.getSession(binding.sessionId);
+        if (!session) return this.fail(ws, { code: 'NOROOM', message: '会话不存在' });
+        const target = this.options.authority.resolveEntry(session);
+        if (!target) return this.fail(ws, { code: 'UNKNOWN_GAME', message: '游戏未注册' });
+        const result = await this.app.recoverGame(binding.sessionId, binding.memberId, {
+          entry: target.entry,
+          ...(target.runtime === undefined ? {} : { runtime: target.runtime }),
+          stateRoot: this.options.authority.stateRoot,
+        });
+        if (!result.ok) return this.fail(ws, result.error);
+        this.broadcastState(result.value);
+        return;
+      }
       case 'channelOpen': {
         const binding = this.controlBindings.get(ws);
         if (!binding) return this.fail(ws, { code: 'NOSEAT', message: '连接未绑定成员' });
