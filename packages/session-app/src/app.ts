@@ -21,6 +21,8 @@ export interface CreateInput {
   gameId: string;
   gameVersion: string;
   title?: string;
+  /** 明文邀请 secret：由平台哈希后落盘，不进日志。 */
+  inviteSecret?: string;
   inviteSecretHash?: string;
   metadata?: Record<string, unknown>;
 }
@@ -80,8 +82,9 @@ export class SessionApplication {
       now,
       ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
     });
-    if (input.inviteSecretHash) {
-      session.metadata = { ...(session.metadata ?? {}), inviteHash: input.inviteSecretHash };
+    const inviteHash = input.inviteSecretHash ?? (input.inviteSecret === undefined ? undefined : this.secrets.hash(input.inviteSecret));
+    if (inviteHash) {
+      session.metadata = { ...(session.metadata ?? {}), inviteHash };
     }
     await this.repository.save(session);
     const created: Created = { session, memberId, resumeToken: ticket.secret, generation: 1 };

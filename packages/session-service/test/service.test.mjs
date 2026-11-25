@@ -83,3 +83,31 @@ test('真实 WS：建房、加入、会话状态与二进制转发', async () =>
     await service.close();
   }
 });
+
+test('邀请 secret：建房时设置，加入必须携带', async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'bp-service-'));
+  const service = await startService({ dataDir, port: 0 });
+  const host = await control(service.port);
+  const guest = await control(service.port);
+  const inviteSecret = 'invite-0123456789abcdef';
+  try {
+    host.send(JSON.stringify({
+      type: 'sessionCreate', gameId: 'reference-duel', gameVersion: '1.0.0', inviteSecret,
+    }));
+    const hostSeat = await waitMessage(host, (m) => m.type === 'seatGranted');
+
+    guest.send(JSON.stringify({ type: 'sessionJoin', sessionId: hostSeat.sessionId, code: hostSeat.code }));
+    const denied = await waitMessage(guest, (m) => m.type === 'error');
+    assert.equal(denied.code, 'FORBIDDEN');
+
+    guest.send(JSON.stringify({
+      type: 'sessionJoin', sessionId: hostSeat.sessionId, code: hostSeat.code, inviteSecret,
+    }));
+    const guestSeat = await waitMessage(guest, (m) => m.type === 'seatGranted');
+    assert.ok(guestSeat.memberId);
+  } finally {
+    host.close();
+    guest.close();
+    await service.close();
+  }
+});

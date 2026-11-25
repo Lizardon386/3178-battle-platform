@@ -145,6 +145,7 @@ export class SessionServer {
           gameId: String(message.gameId ?? ''),
           gameVersion: String(message.gameVersion ?? ''),
           ...(typeof message.title === 'string' ? { title: message.title } : {}),
+          ...(typeof message.inviteSecret === 'string' ? { inviteSecret: message.inviteSecret } : {}),
         });
         if (!result.ok) return this.fail(ws, result.error);
         bind({ sessionId: result.value.session.sessionId, memberId: result.value.memberId });
