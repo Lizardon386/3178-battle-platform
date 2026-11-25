@@ -9,6 +9,14 @@ import { NodeAuthoritySupervisor } from './supervisor-node.js';
 import { createManagementServer } from './web.js';
 import { TunnelManager, type TunnelSpawner } from '@bp/tunnel-manager';
 
+export interface TunnelOptions {
+  mode: 'quick' | 'named';
+  token?: string;
+  hostname?: string;
+  binaryPath?: string;
+  spawner?: TunnelSpawner;
+}
+
 export interface ServiceOptions {
   dataDir: string;
   host?: string;
@@ -24,13 +32,9 @@ export interface ServiceOptions {
   };
   /** 管理端静态目录；默认取仓库内 packages/web-console/public。 */
   webRoot?: string;
-  /** 可选公网隧道；未配置时只监听本机/局域网。 */
-  tunnel?: {
-    mode: 'quick' | 'named';
-    token?: string;
-    hostname?: string;
-    binaryPath?: string;
-    spawner?: TunnelSpawner;
+  /** 可选公网隧道；`game` 为游戏 origin 单独一条，未配置时只监听本机/局域网。 */
+  tunnel?: TunnelOptions & {
+    game?: TunnelOptions;
   };
 }
 
@@ -57,7 +61,10 @@ const logger: Logger = {
 export interface RunningService {
   port: number;
   gamePort: number | null;
+  /** 管理 origin 的公网地址（配置隧道时）。 */
   publicUrl: string | null;
+  /** 游戏 origin 的公网地址（配置游戏隧道时）。 */
+  gamePublicUrl: string | null;
   close(): Promise<void>;
 }
 
@@ -109,6 +116,7 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
   const app = new SessionApplication(repository, clock, ids, secrets, logger, supervisor);
   const webRoot = options.webRoot ?? resolve(process.cwd(), 'packages/web-console/public');
   const httpServer = createManagementServer({ root: webRoot });
+  let gamePublicUrl: string | null = null;
   server = new SessionServer({
     app,
     httpServer,
@@ -132,7 +140,9 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
         ...(options.gameOrigin?.host === undefined ? {} : { host: options.gameOrigin.host }),
         port: options.gameOrigin?.port ?? 0,
         resolveRoot: (session) => options.registry!.resolve(session.gameId, session.gameVersion)?.web ?? null,
+        publicUrl: () => gamePublicUrl,
       },
+      gameRegistry: options.registry,
     }),
   });
 
@@ -142,22 +152,46 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
   let publicUrl: string | null = null;
   let tunnels: TunnelManager | null = null;
   if (options.tunnel) {
+    const gameTunnel = options.tunnel.game;
     tunnels = new TunnelManager({
-      binaryPath: options.tunnel.binaryPath ?? process.env.BP_CLOUDFLARED ?? 'cloudflared',
-      ...(options.tunnel.spawner === undefined ? {} : { spawner: options.tunnel.spawner }),
+      binaryPath: options.tunnel.binaryPath ?? gameTunnel?.binaryPath ?? process.env.BP_CLOUDFLARED ?? 'cloudflared',
+      ...(options.tunnel.spawner === undefined
+        ? (gameTunnel?.spawner === undefined ? {} : { spawner: gameTunnel.spawner })
+        : { spawner: options.tunnel.spawner }),
     });
-    tunnels.register('public', {
+    tunnels.register('management', {
       mode: options.tunnel.mode,
       localPort: port,
       ...(options.tunnel.token === undefined ? {} : { token: options.tunnel.token }),
       ...(options.tunnel.hostname === undefined ? {} : { hostname: options.tunnel.hostname }),
     });
+    const gameTunnelReady = gameTunnel !== undefined && gamePort !== null;
+    if (gameTunnel && gamePort === null) {
+      logger.error('game tunnel requires game origin', { hint: '配置 registry 后才会监听游戏 origin' });
+    }
+    if (gameTunnelReady) {
+      tunnels.register('game', {
+        mode: gameTunnel.mode,
+        localPort: gamePort,
+        ...(gameTunnel.token === undefined ? {} : { token: gameTunnel.token }),
+        ...(gameTunnel.hostname === undefined ? {} : { hostname: gameTunnel.hostname }),
+      });
+    }
     try {
-      const status = await tunnels.start('public');
+      const status = await tunnels.start('management');
       publicUrl = status.publicUrl;
-      logger.info('tunnel ready', { url: publicUrl });
+      logger.info('tunnel ready', { name: 'management', url: publicUrl });
     } catch (error) {
-      logger.error('tunnel failed', { error: String(error) });
+      logger.error('tunnel failed', { name: 'management', error: String(error) });
+    }
+    if (gameTunnelReady) {
+      try {
+        const status = await tunnels.start('game');
+        gamePublicUrl = status.publicUrl;
+        logger.info('tunnel ready', { name: 'game', url: gamePublicUrl });
+      } catch (error) {
+        logger.error('tunnel failed', { name: 'game', error: String(error) });
+      }
     }
   }
 
@@ -165,6 +199,7 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
     port,
     gamePort,
     publicUrl,
+    gamePublicUrl,
     close: async () => {
       await tunnels?.stopAll();
       await supervisor?.stopAll();

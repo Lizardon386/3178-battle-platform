@@ -47,6 +47,8 @@ export interface GameOriginOptions {
   port?: number;
   /** 返回该会话的静态根与 `/` 对应的入口文件名；null 表示没有可托管的 Web 游戏。 */
   resolveRoot(session: SessionRecord): { root: string; entry: string } | null;
+  /** 配置公网隧道时返回游戏 origin 的公网基地址；返回 null 时退回本机 Host + 端口。 */
+  publicUrl?: () => string | null;
 }
 
 export interface SessionServerOptions {
@@ -59,6 +61,10 @@ export interface SessionServerOptions {
     stateRoot: string;
   };
   gameOrigin?: GameOriginOptions;
+  /** 已注册游戏清单；`listGames` 只返回这个快照，不暴露包路径。 */
+  gameRegistry?: {
+    entries(): Array<{ id: string; name: string; version: string; manifest: unknown }>;
+  };
   onGameFrame?: (sessionId: string, memberId: string, payload: unknown) => void;
 }
 
@@ -428,6 +434,12 @@ export class SessionServer {
         });
         return;
       }
+      case 'listGames':
+        sendJson(ws, {
+          type: 'gameList',
+          games: (this.options.gameRegistry?.entries() ?? []).slice(0, 200),
+        });
+        return;
       case 'ping':
         sendJson(ws, { type: 'pong', nonce: message.nonce });
         return;
@@ -500,9 +512,14 @@ export class SessionServer {
     sendJson(ws, { type: 'error', code: error.code, text: error.message });
   }
 
-  /** 用控制连接握手时的 Host 拼游戏 origin；交接码只放 fragment。 */
+  /** 优先用游戏隧道公网地址；没有隧道时用控制连接握手时的 Host + 本地游戏端口。 */
   private gameUrlFor(binding: ControlBinding, handoffCode: string): string | undefined {
-    if (!this.options.gameOrigin || !this.gameHttp || !binding.host) return undefined;
+    if (!this.options.gameOrigin || !this.gameHttp) return undefined;
+    const publicUrl = this.options.gameOrigin.publicUrl?.() ?? null;
+    if (publicUrl) {
+      return `${publicUrl.replace(/\/+$/, '')}/s/${encodeURIComponent(binding.sessionId)}/#handoff=${handoffCode}`;
+    }
+    if (!binding.host) return undefined;
     let hostname: string;
     try {
       hostname = new URL(`http://${binding.host}`).hostname;

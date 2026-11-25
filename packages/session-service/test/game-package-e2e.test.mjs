@@ -86,6 +86,12 @@ test('游戏包注册、独立游戏 origin 与 Authority 启动', async () => {
   const host = await connectControl(service.port);
   const guest = await connectControl(service.port);
   try {
+    host.send(JSON.stringify({ type: 'listGames' }));
+    const games = await waitMessage(host, (m) => m.type === 'gameList');
+    assert.equal(games.games.length, 1);
+    assert.equal(games.games[0].id, 'fixture-game');
+    assert.equal(games.games[0].manifest.entryPoints.authority, 'authority.js');
+
     host.send(JSON.stringify({ type: 'sessionCreate', gameId: 'fixture-game', gameVersion: '1.0.0', title: '包链路' }));
     const hostSeat = await waitMessage(host, (m) => m.type === 'seatGranted');
     guest.send(JSON.stringify({ type: 'sessionJoin', sessionId: hostSeat.sessionId, code: hostSeat.code }));

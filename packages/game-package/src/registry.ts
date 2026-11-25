@@ -37,6 +37,13 @@ export interface GameListEntry {
   versions: string[];
 }
 
+export interface GameRegistryEntry {
+  id: string;
+  name: string;
+  version: string;
+  manifest: GameManifest;
+}
+
 function fail(message: string): never {
   throw new RegistryError(message);
 }
@@ -126,6 +133,20 @@ export class GameRegistry {
         versions: games.map((game) => game.manifest.version),
       }))
       .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  }
+
+  /** 按 id、版本排序的完整条目，供 `gameList` 一次性返回。 */
+  entries(): GameRegistryEntry[] {
+    return [...this.byKey.values()]
+      .map((game) => ({
+        id: game.manifest.id,
+        name: game.manifest.name,
+        version: game.manifest.version,
+        manifest: game.manifest,
+      }))
+      .sort((a, b) => (a.id === b.id
+        ? compareVersions(a.version, b.version)
+        : (a.id < b.id ? -1 : 1)));
   }
 
   get size(): number {

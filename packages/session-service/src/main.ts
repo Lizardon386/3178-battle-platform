@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { openGameRegistry } from '@bp/game-package';
-import { startService } from './compose.js';
+import { startService, type TunnelOptions } from './compose.js';
 
 function arg(name: string, fallback?: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -19,6 +19,19 @@ const tunnelMode = arg('tunnel', process.env.BP_TUNNEL);
 const tunnelToken = arg('tunnel-token', process.env.BP_TUNNEL_TOKEN);
 const tunnelHostname = arg('tunnel-hostname', process.env.BP_TUNNEL_HOSTNAME);
 const cloudflared = arg('cloudflared', process.env.BP_CLOUDFLARED);
+const gameTunnelMode = arg('game-tunnel', process.env.BP_GAME_TUNNEL);
+const gameTunnelToken = arg('game-tunnel-token', process.env.BP_GAME_TUNNEL_TOKEN);
+const gameTunnelHostname = arg('game-tunnel-hostname', process.env.BP_GAME_TUNNEL_HOSTNAME);
+const gameCloudflared = arg('game-cloudflared', process.env.BP_GAME_CLOUDFLARED);
+
+const gameTunnel: TunnelOptions | undefined = gameTunnelMode === 'quick' || gameTunnelMode === 'named'
+  ? {
+    mode: gameTunnelMode,
+    ...(gameTunnelToken === undefined ? {} : { token: gameTunnelToken }),
+    ...(gameTunnelHostname === undefined ? {} : { hostname: gameTunnelHostname }),
+    ...(gameCloudflared === undefined ? {} : { binaryPath: resolve(gameCloudflared) }),
+  }
+  : undefined;
 
 const registry = gamesDir === undefined && packageFile === undefined
   ? undefined
@@ -45,12 +58,14 @@ startService({
       ...(tunnelToken === undefined ? {} : { token: tunnelToken }),
       ...(tunnelHostname === undefined ? {} : { hostname: tunnelHostname }),
       ...(cloudflared === undefined ? {} : { binaryPath: resolve(cloudflared) }),
+      ...(gameTunnel === undefined ? {} : { game: gameTunnel }),
     },
   } : {}),
 }).then((service) => {
   console.log(`BP_SERVICE_PORT=${service.port}`);
   if (service.gamePort !== null) console.log(`BP_GAME_PORT=${service.gamePort}`);
   if (service.publicUrl) console.log(`BP_PUBLIC_URL=${service.publicUrl}`);
+  if (service.gamePublicUrl) console.log(`BP_GAME_PUBLIC_URL=${service.gamePublicUrl}`);
   const stop = async () => {
     await service.close();
     process.exit(0);
