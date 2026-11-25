@@ -118,6 +118,21 @@ function isSameOriginRequest(request: IncomingMessage): boolean {
   return true;
 }
 
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
+
+/** 本机控制命令只认回环地址 + 回环 Host；隧道转发时 Host 是公网域名。 */
+export function isLoopbackHost(host: string | undefined): boolean {
+  if (!host) return false;
+  const withoutPort = host.startsWith('[')
+    ? host.slice(0, host.indexOf(']') + 1)
+    : host.split(':')[0] ?? '';
+  return LOOPBACK_HOSTS.has(withoutPort.toLowerCase());
+}
+
+export function isLoopbackAddress(address: string | undefined): boolean {
+  return address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1';
+}
+
 function rejectUpgrade(socket: Duplex): void {
   socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
   socket.destroy();
@@ -147,6 +162,7 @@ export class SessionServer {
   private controlWss: WebSocketServer | null = null;
   private dataWss: WebSocketServer | null = null;
   private readonly controlBindings = new Map<WebSocket, ControlBinding>();
+  private readonly controlLocal = new Map<WebSocket, boolean>();
   private readonly sessionSockets = new Map<string, Set<WebSocket>>();
   private readonly channels = new Map<string, ChannelBinding>();
   private readonly handoffs = new Map<string, PendingHandoff>();
@@ -189,7 +205,9 @@ export class SessionServer {
       target.handleUpgrade(request, socket, head, (ws) => {
         if (target === this.controlWss) {
           const host = request.headers.host;
-          this.onControl(ws, typeof host === 'string' ? host : undefined);
+          const local = isLoopbackAddress(request.socket.remoteAddress)
+            && isLoopbackHost(typeof host === 'string' ? host : undefined);
+          this.onControl(ws, typeof host === 'string' ? host : undefined, local);
         } else {
           this.onData(ws);
         }
@@ -282,7 +300,8 @@ export class SessionServer {
     await closeServer(this.http);
   }
 
-  private onControl(ws: WebSocket, host?: string): void {
+  private onControl(ws: WebSocket, host?: string, local = false): void {
+    this.controlLocal.set(ws, local);
     let bound: ControlBinding | null = null;
     const timer = setTimeout(() => {
       if (!bound) ws.close(1008, 'auth timeout');
@@ -296,6 +315,7 @@ export class SessionServer {
     });
     ws.on('close', () => {
       clearTimeout(timer);
+      this.controlLocal.delete(ws);
       const binding = this.controlBindings.get(ws);
       if (!binding) return;
       this.controlBindings.delete(ws);
@@ -336,6 +356,9 @@ export class SessionServer {
         sendJson(ws, { type: 'welcome', protocolVersion: 1, serverVersion: '0.1.0' });
         return;
       case 'sessionCreate': {
+        if (!this.controlLocal.get(ws)) {
+          return this.fail(ws, { code: 'FORBIDDEN', message: '只能从本机回环控制台建房' });
+        }
         const result = await this.app.create({
           gameId: String(message.gameId ?? ''),
           gameVersion: String(message.gameVersion ?? ''),
@@ -465,6 +488,9 @@ export class SessionServer {
         return;
       }
       case 'listGames':
+        if (!this.controlLocal.get(ws)) {
+          return this.fail(ws, { code: 'FORBIDDEN', message: '游戏列表只对本机控制台开放' });
+        }
         sendJson(ws, {
           type: 'gameList',
           games: (this.options.gameRegistry?.entries() ?? []).slice(0, 200),
