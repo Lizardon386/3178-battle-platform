@@ -197,9 +197,30 @@ export class SessionApplication {
     if (!session) return err('NOROOM', '会话不存在');
     if (session.ownerMemberId !== actorId) return err('NOTHOST', '只有房主可以恢复游戏');
     if (session.gameProcess !== 'failed') return err('PHASE', '当前不需要恢复');
+    return this.relaunch(session, options);
+  }
+
+  /** 平台自动重启：不要求房主确认，只允许一次；失败后仍由房主手动 recoverGame。 */
+  async recoverAuthority(
+    sessionId: string,
+    options: { entry: string; runtime?: string; stateRoot: string },
+  ): Promise<Result<SessionRecord>> {
+    const session = await this.repository.load(sessionId);
+    if (!session) return err('NOROOM', '会话不存在');
+    if (session.state !== 'open') return err('PHASE', '会话不可恢复');
+    if (session.gameProcess !== 'running' && session.gameProcess !== 'starting') {
+      return err('PHASE', '游戏不在运行中');
+    }
+    return this.relaunch(session, options);
+  }
+
+  private async relaunch(
+    session: SessionRecord,
+    options: { entry: string; runtime?: string; stateRoot: string },
+  ): Promise<Result<SessionRecord>> {
     if (!session.currentRoundId) return err('PHASE', '没有可恢复的回合');
     if (!this.supervisor) return err('GAMEFAILED', '没有可用的权威启动器');
-
+    const sessionId = session.sessionId;
     const epoch = session.authorityEpoch + 1;
     const roundId = session.currentRoundId;
     const starting = structuredClone(session);

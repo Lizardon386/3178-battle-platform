@@ -85,7 +85,18 @@ async function main() {
     await game.locator('.card').first().click();
 
     await guest.waitForFunction(() => document.querySelector('#view')?.textContent?.includes('回合 2'), null, { timeout: 15000 });
-    console.log('web smoke OK：浏览器完成建房/加入/开始/出牌');
+
+    for (const width of [320, 360, 390]) {
+      const narrow = await browser.newPage({ viewport: { width, height: 800 } });
+      await narrow.goto(base);
+      await narrow.waitForFunction(() => document.querySelector('#status')?.textContent?.includes('已连接'));
+      const overflow = await narrow.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      const createVisible = await narrow.locator('#create').isVisible();
+      await narrow.close();
+      if (overflow > 1) throw new Error(`${width}px 视口出现横向滚动：${overflow}px`);
+      if (!createVisible) throw new Error(`${width}px 视口看不到建房按钮`);
+    }
+    console.log('web smoke OK：浏览器完成建房/加入/开始/出牌，320/360/390 无横向滚动');
   } finally {
     await browser.close();
     await service.close();
