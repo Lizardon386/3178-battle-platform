@@ -3,6 +3,7 @@
 *.cmd eol=crlf
 *.sh eol=lf
 *.py text eol=lf
+*.cs text eol=lf
 *.ps1 eol=crlf
 *.ts text eol=lf
 *.tsx text eol=lf
