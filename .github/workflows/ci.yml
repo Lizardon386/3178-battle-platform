@@ -86,9 +86,23 @@ jobs:
           $appDir = Join-Path $env:LOCALAPPDATA 'Programs\3178'
           Start-Process -FilePath $setup.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/CURRENTUSER' -Wait
           if (-not (Test-Path (Join-Path $appDir '3178.exe'))) { throw '安装后找不到 3178.exe' }
+          if (-not (Test-Path (Join-Path $appDir 'unins000.exe'))) { throw '安装后找不到卸载器' }
+
+          # 用户数据在安装目录之外；重装（同 AppId 升级）必须保留
+          $dataRoot = Join-Path $env:LOCALAPPDATA '3178-battle-platform\data'
+          New-Item -ItemType Directory -Force -Path $dataRoot | Out-Null
+          $marker = Join-Path $dataRoot 'upgrade-marker.txt'
+          Set-Content -Path $marker -Value 'keep-me' -Encoding utf8
+          Start-Process -FilePath $setup.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/CURRENTUSER' -Wait
+          if (-not (Test-Path (Join-Path $appDir '3178.exe'))) { throw '升级后找不到 3178.exe' }
+          if (-not (Test-Path $marker)) { throw '升级后用户数据标记丢失' }
+
           $env:BP_PACKAGED_APP = '1'
           $env:BP_SUPERVISOR_EXE = Join-Path $appDir 'bp-supervisor.exe'
           npm run smoke:supervisor
+
           $uninstaller = Join-Path $appDir 'unins000.exe'
           Start-Process -FilePath $uninstaller -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait
           if (Test-Path (Join-Path $appDir '3178.exe')) { throw '卸载后 3178.exe 仍存在' }
+          if (-not (Test-Path $marker)) { throw '卸载后用户数据标记丢失' }
+          Remove-Item -Path $marker -Force

@@ -11,6 +11,10 @@ AppPublisher=3178-battle-platform contributors
 DefaultDirName={localappdata}\Programs\3178
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
+; 同 AppId 再次安装即升级：沿用原目录、关闭占用文件的应用、不自动重启
+UsePreviousAppDir=yes
+CloseApplications=yes
+RestartApplications=no
 PrivilegesRequired=lowest
 OutputDir=..\..\..\dist-win
 OutputBaseFilename=3178-setup-{#MyAppVersion}
