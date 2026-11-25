@@ -118,7 +118,7 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
       authority: {
         resolveEntry: (session) => {
           const registered = options.registry?.resolve(session.gameId, session.gameVersion);
-          if (registered) return { entry: registered.authorityEntry };
+          if (registered) return { entry: registered.authorityEntry, runtime: registered.runtime };
           return options.authorityEntry === undefined ? null : { entry: options.authorityEntry };
         },
         stateRoot: join(options.dataDir, 'authority'),

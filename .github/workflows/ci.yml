@@ -35,3 +35,6 @@ jobs:
       - name: Seam gate
         shell: bash
         run: bash tools/checks/check-seam.sh
+      # 仓外临时工程装 tarball 并真实构建 .bpkg，防止 workspace link 掩盖打包问题
+      - name: External package smoke
+        run: npm run smoke:package

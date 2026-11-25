@@ -40,7 +40,11 @@ export class NodeAuthoritySupervisor implements AuthoritySupervisor {
       members: launch.members,
       bootNonce: randomBytes(8).toString('hex'),
     };
-    const child = spawn(process.execPath, [launch.entry], {
+    const python = launch.runtime === 'python' || launch.runtime === 'python3';
+    const command = python
+      ? (process.env.BP_PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3'))
+      : process.execPath;
+    const child = spawn(command, [launch.entry], {
       stdio: ['pipe', 'inherit', 'inherit'],
       env: { ...process.env, ...launch.env },
       windowsHide: true,
@@ -63,6 +67,10 @@ export class NodeAuthoritySupervisor implements AuthoritySupervisor {
       server.once('connection', () => {
         clearTimeout(timer);
         resolvePromise();
+      });
+      child.once('error', (error) => {
+        clearTimeout(timer);
+        rejectPromise(error);
       });
       child.once('exit', (code) => {
         clearTimeout(timer);

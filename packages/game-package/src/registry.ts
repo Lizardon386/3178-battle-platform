@@ -17,6 +17,8 @@ export interface GameWebEntry {
   entry: string;
 }
 
+export type AuthorityRuntimeKind = 'node' | 'python';
+
 export interface RegisteredGame {
   manifest: GameManifest;
   packageHash: string;
@@ -24,6 +26,8 @@ export interface RegisteredGame {
   /** 解包后的包根目录。 */
   root: string;
   authorityEntry: string;
+  /** 由 Authority 入口扩展名推断；`.py` 走 Python，其余走 Node。 */
+  runtime: AuthorityRuntimeKind;
   web: GameWebEntry | null;
 }
 
@@ -64,6 +68,7 @@ function register(pack: LoadedPackage, root: string): RegisteredGame {
     source: pack.source,
     root,
     authorityEntry,
+    runtime: authorityEntry.toLowerCase().endsWith('.py') ? 'python' : 'node',
     web,
   };
 }
