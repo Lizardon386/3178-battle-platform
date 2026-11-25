@@ -79,7 +79,7 @@ npm run verify                   # 338 例 + 构建引用/lock/契约/边界
 npm run seam                     # 接缝闸门
 npm run smoke:package            # 仓外 tarball 构建 .bpkg
 npm run smoke:web                # 真实 Chrome/Edge 走完一局（ubuntu CI 也跑）
-npm run smoke:supervisor         # C# Supervisor 经命名管道拉起 Service
+npm run smoke:supervisor         # C# Supervisor 拉起 Service、listGames 并真实开一局
 npm run test:ui                  # FlaUI 三条关键路径（需交互桌面）
 npm run test:supervisor          # C# Supervisor 9 例（Windows）
 node packages/bp-game/dist/cli.js init <目录> --id <游戏 id>   # 生成最小可运行模板

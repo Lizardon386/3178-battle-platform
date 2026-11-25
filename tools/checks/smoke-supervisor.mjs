@@ -105,6 +105,32 @@ function lineReader(socket) {
   };
 }
 
+function waitJson(ws, predicate, timeoutMs = 10000) {
+  return new Promise((resolvePromise, reject) => {
+    const timer = setTimeout(() => reject(new Error('等待控制消息超时')), timeoutMs);
+    const onMessage = (raw, isBinary) => {
+      if (isBinary) return;
+      const message = JSON.parse(raw.toString());
+      if (!predicate(message)) return;
+      clearTimeout(timer);
+      ws.off('message', onMessage);
+      resolvePromise(message);
+    };
+    ws.on('message', onMessage);
+  });
+}
+
+async function openControl(port) {
+  const ws = new WebSocket(`ws://127.0.0.1:${port}/ws/control`);
+  await new Promise((resolvePromise, reject) => {
+    ws.once('open', resolvePromise);
+    ws.once('error', reject);
+  });
+  ws.send(JSON.stringify({ type: 'hello' }));
+  await waitJson(ws, (message) => message.type === 'welcome');
+  return ws;
+}
+
 async function waitFor(reader, predicate, timeoutMs = 20000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -174,6 +200,23 @@ async function main() {
     });
     control.close();
     if (!games.some((game) => game.id === 'reference-duel')) throw new Error('listGames 没有 reference-duel');
+
+    // 再通过服务真实开一局：覆盖 C# Supervisor → Node Service → Authority 管道链路。
+    const host = await openControl(running.uiPort);
+    const guest = await openControl(running.uiPort);
+    try {
+      host.send(JSON.stringify({ type: 'sessionCreate', gameId: 'reference-duel', gameVersion: '1.0.0' }));
+      const seat = await waitJson(host, (message) => message.type === 'seatGranted');
+      guest.send(JSON.stringify({ type: 'sessionJoin', sessionId: seat.sessionId, code: seat.code }));
+      await waitJson(guest, (message) => message.type === 'seatGranted');
+      await waitJson(host, (message) => message.type === 'sessionState' && message.session.members.length === 2);
+      host.send(JSON.stringify({ type: 'startGame' }));
+      const playing = await waitJson(host, (message) => message.type === 'sessionState' && message.session.gameProcess === 'running', 15000);
+      if (!playing.session.authorityEpoch) throw new Error('开局后没有 authorityEpoch');
+    } finally {
+      host.close();
+      guest.close();
+    }
 
     reader.send({ type: 'serviceStop' });
     await waitFor(reader, (message) => message.type === 'serviceStatus' && message.state === 'stopped');
