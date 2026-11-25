@@ -3,11 +3,13 @@ import { lstat, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { buildPackage, readPackage, validateManifest } from '@bp/game-package';
 import { buildGamePackage } from './build.js';
+import { initGame } from './init.js';
 import { signPackage, verifyPackage, type PackageSignature } from './sign.js';
 
 const HELP = `bp-game <命令> [参数]
 
 命令：
+  init <目录>       生成最小可运行模板（raw IPC Authority + Web 页）
   build <目录>      构建自包含 .bpkg（esbuild 打包 Authority + 复制 Web/参考资料）
   pack <目录>       把已构建目录直接打成 .bpkg（目录内需有 game.manifest.json）
   inspect <文件>    读取并校验 .bpkg，输出摘要
@@ -25,6 +27,7 @@ const HELP = `bp-game <命令> [参数]
   --key <文件>        sign 的私钥 / verify 的公钥（PEM）
   --sig <文件>        verify 的签名文件（默认 <文件>.sig）
   --json              inspect/doctor 输出 JSON
+  --force             init 时覆盖非空目录
 `;
 
 interface Parsed {
@@ -42,7 +45,7 @@ function parseArgs(argv: string[]): Parsed {
       continue;
     }
     const name = arg.slice(2);
-    if (name === 'json' || name === 'help') {
+    if (name === 'json' || name === 'help' || name === 'force') {
       flags.set(name, 'true');
       continue;
     }
@@ -83,6 +86,18 @@ async function main(argv: string[]): Promise<number> {
   const json = parsed.flags.has('json');
 
   switch (command) {
+    case 'init': {
+      const dir = required(parsed, 1, '项目目录');
+      const result = await initGame({
+        dir,
+        ...(parsed.flags.get('id') === undefined ? {} : { id: parsed.flags.get('id')! }),
+        ...(parsed.flags.get('name') === undefined ? {} : { name: parsed.flags.get('name')! }),
+        ...(parsed.flags.has('force') ? { force: true } : {}),
+      });
+      console.log(`BP_GAME_DIR=${result.dir}`);
+      console.log(`BP_GAME_ID=${result.id}`);
+      return 0;
+    }
     case 'build': {
       const dir = required(parsed, 1, '游戏目录');
       const result = await buildGamePackage({
@@ -189,6 +204,8 @@ async function checkSources(root: string): Promise<string[]> {
   const authority = [
     join(root, 'src', 'authority', 'process.ts'),
     join(root, 'src', 'authority', 'index.ts'),
+    join(root, 'src', 'authority', 'process.js'),
+    join(root, 'src', 'authority', 'index.js'),
   ];
   const found = await Promise.all(authority.map(exists));
   if (!found.some(Boolean)) problems.push('找不到 Authority 源码（src/authority/process.ts 或 index.ts）');

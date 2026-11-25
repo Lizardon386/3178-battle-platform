@@ -73,7 +73,12 @@ export async function buildGamePackage(options: BuildGameOptions): Promise<Build
 
   const authority = options.authoritySource
     ? resolve(options.authoritySource)
-    : await firstExisting([join(root, 'src', 'authority', 'process.ts'), join(root, 'src', 'authority', 'index.ts')]);
+    : await firstExisting([
+      join(root, 'src', 'authority', 'process.ts'),
+      join(root, 'src', 'authority', 'index.ts'),
+      join(root, 'src', 'authority', 'process.js'),
+      join(root, 'src', 'authority', 'index.js'),
+    ]);
   if (!authority) {
     throw new BuildError('找不到 Authority 源码（默认找 src/authority/process.ts 或 src/authority/index.ts）');
   }
