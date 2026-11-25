@@ -30,7 +30,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: npm ci
-      - run: npm test
+      # verify = 构建引用 / lock / 生成物 / 全量测试 / 依赖边界
+      - run: npm run verify
       - name: Seam gate
         shell: bash
         run: bash tools/checks/check-seam.sh
