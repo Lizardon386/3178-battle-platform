@@ -42,6 +42,10 @@ jobs:
       # 仓外临时工程装 tarball 并真实构建 .bpkg，防止 workspace link 掩盖打包问题
       - name: External package smoke
         run: npm run smoke:package
+      # 真实 Chrome 打开管理端与游戏页；ubuntu runner 自带 Chrome
+      - name: Browser smoke (ubuntu)
+        if: runner.os == 'Linux'
+        run: npm run smoke:web
       # C# Supervisor 真实拉起 Node Service 并经命名管道访问；只在 Windows 跑
       - name: Native supervisor smoke (win-x64)
         if: runner.os == 'Windows'
@@ -55,4 +59,18 @@ jobs:
         with:
           name: 3178-win-x64
           path: dist-win/3178
+          retention-days: 14
+      # 安装器只在 CI 构建；本机未装 Inno Setup，不冒充本机验收
+      - name: Build installer (win-x64)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" tools\packaging\inno\setup.iss
+      - name: Upload installer
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3178-setup-win-x64
+          path: dist-win/3178-setup-*.exe
           retention-days: 14

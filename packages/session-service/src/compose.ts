@@ -145,6 +145,9 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
         },
         stateRoot: join(options.dataDir, 'authority'),
       },
+      onDataReady: (sessionId: string, memberId: string) => {
+        void app.syncMember(sessionId, memberId);
+      },
       onGameFrame: (sessionId: string, memberId: string, payload: unknown) => {
         void app.routeGame(sessionId, memberId, payload);
       },

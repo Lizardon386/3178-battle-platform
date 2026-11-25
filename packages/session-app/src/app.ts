@@ -255,6 +255,18 @@ export class SessionApplication {
     return ok(next);
   }
 
+  /** 数据通道建好后请求权威补一份该成员视角；Authority 不在运行时静默跳过。 */
+  async syncMember(sessionId: string, memberId: string): Promise<void> {
+    const session = await this.repository.load(sessionId);
+    if (!session || !this.supervisor) return;
+    if (session.gameProcess !== 'running' && session.gameProcess !== 'starting') return;
+    this.supervisor.send(sessionId, {
+      type: 'sync',
+      authorityEpoch: session.authorityEpoch,
+      memberId,
+    });
+  }
+
   async routeGame(sessionId: string, memberId: string, payload: unknown): Promise<Result<void>> {
     const session = await this.repository.load(sessionId);
     if (!session) return err('NOROOM', '会话不存在');

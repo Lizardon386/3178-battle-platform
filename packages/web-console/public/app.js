@@ -13,6 +13,20 @@ let code = null;
 let memberId = null;
 let channelId = null;
 let seq = 0;
+let games = [];
+
+const SEAT_KEY = 'bp.seat';
+
+const loadSeat = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem(SEAT_KEY) ?? 'null');
+  } catch {
+    return null;
+  }
+};
+
+const saveSeat = (seat) => sessionStorage.setItem(SEAT_KEY, JSON.stringify(seat));
+const clearSeat = () => sessionStorage.removeItem(SEAT_KEY);
 
 const log = (text, value) => {
   const line = value === undefined ? text : `${text} ${JSON.stringify(value, null, 2)}`;
@@ -53,12 +67,42 @@ const renderSession = (session) => {
   sessionEl.textContent = JSON.stringify({
     sessionId: session.sessionId,
     code: session.code,
+    state: session.state,
     gameProcess: session.gameProcess,
     authorityEpoch: session.authorityEpoch,
     members: session.members.map((m) => ({ id: m.memberId, presence: m.presence, slot: m.slot })),
   }, null, 2);
-  $('start').disabled = session.gameProcess !== 'stopped';
-  $('recover').disabled = session.gameProcess !== 'failed';
+  const open = session.state === 'open';
+  $('start').disabled = !open || session.gameProcess !== 'stopped';
+  $('recover').disabled = !open || session.gameProcess !== 'failed';
+  $('channel').disabled = !open;
+  $('leave').disabled = !open;
+  $('kick').disabled = !open;
+  $('close').disabled = !open;
+  if (session.state === 'closed') {
+    clearSeat();
+    setStatus('会话已关闭', 'bad');
+  }
+};
+
+const renderGames = () => {
+  const list = $('games');
+  list.replaceChildren();
+  for (const game of games) {
+    const option = document.createElement('option');
+    option.value = game.id;
+    option.label = `${game.name} · ${game.version}`;
+    list.append(option);
+  }
+  if (games.length > 0 && !$('gameId').value.trim()) {
+    $('gameId').value = games[0].id;
+    $('gameVersion').value = games[0].version;
+  }
+};
+
+const applyGameVersion = () => {
+  const selected = games.find((game) => game.id === $('gameId').value.trim());
+  if (selected) $('gameVersion').value = selected.version;
 };
 
 const renderPayload = (payload) => {
@@ -142,13 +186,27 @@ const connectControl = () => {
   control.onmessage = (event) => {
     const message = JSON.parse(event.data);
     switch (message.type) {
-      case 'welcome':
+      case 'welcome': {
         setStatus('已连接', 'ok');
+        send({ type: 'listGames' });
+        const saved = loadSeat();
+        if (saved?.sessionId && saved?.resumeToken) {
+          $('resume').disabled = false;
+          setStatus('已连接 · 有可恢复的席位', 'ok');
+        }
+        break;
+      }
+      case 'gameList':
+        games = Array.isArray(message.games) ? message.games : [];
+        renderGames();
+        log('游戏列表', games.map((game) => `${game.id}@${game.version}`));
         break;
       case 'seatGranted':
         sessionId = message.sessionId;
         code = message.code;
         memberId = message.memberId;
+        saveSeat({ sessionId, code, memberId, resumeToken: message.resumeToken });
+        $('resume').disabled = true;
         setStatus(`已入座 ${message.memberId} · 房号 ${message.code}`, 'ok');
         log('入座', { sessionId, code, memberId });
         break;
@@ -205,5 +263,23 @@ $('join').onclick = () => {
 $('start').onclick = () => send({ type: 'startGame' });
 $('recover').onclick = () => send({ type: 'recoverGame' });
 $('channel').onclick = () => send({ type: 'channelOpen' });
+$('resume').onclick = () => {
+  const saved = loadSeat();
+  if (!saved?.sessionId || !saved?.resumeToken) return;
+  send({ type: 'sessionResume', sessionId: saved.sessionId, resumeToken: saved.resumeToken });
+};
+$('leave').onclick = () => {
+  send({ type: 'sessionLeave' });
+  clearSeat();
+  data?.close();
+};
+$('kick').onclick = () => {
+  const target = prompt('要移出的成员 ID');
+  if (target) send({ type: 'memberKick', targetMemberId: target });
+};
+$('close').onclick = () => {
+  if (confirm('关闭会话并停止游戏？')) send({ type: 'sessionClose' });
+};
+$('gameId').onchange = applyGameVersion;
 
 connectControl();

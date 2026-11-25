@@ -35,7 +35,7 @@ export const GAME_CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",
-  "connect-src 'self'",
+  "connect-src 'self' ws: wss:",
   "object-src 'none'",
   "base-uri 'none'",
   "frame-ancestors 'none'",
@@ -65,6 +65,8 @@ export interface SessionServerOptions {
   gameRegistry?: {
     entries(): Array<{ id: string; name: string; version: string; manifest: unknown }>;
   };
+  /** 数据通道鉴权完成；用于向 Authority 请求该成员的 sync。 */
+  onDataReady?: (sessionId: string, memberId: string) => void;
   onGameFrame?: (sessionId: string, memberId: string, payload: unknown) => void;
 }
 
@@ -492,6 +494,7 @@ export class SessionServer {
           set.add(ws);
           this.dataSockets.set(binding.memberId, set);
           sendJson(ws, { type: 'dataReady', channelId: binding.channelId });
+          this.options.onDataReady?.(binding.sessionId, binding.memberId);
         } catch {
           ws.close(1008, 'auth required');
         }

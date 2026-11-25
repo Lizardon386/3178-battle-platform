@@ -12,7 +12,7 @@ DefaultDirName={localappdata}\Programs\3178
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
-OutputDir=..\..\dist-win
+OutputDir=..\..\..\dist-win
 OutputBaseFilename=3178-setup-{#MyAppVersion}
 Compression=lzma2
 SolidCompression=yes
@@ -22,7 +22,7 @@ WizardStyle=modern
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Files]
-Source: "..\..\dist-win\3178\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "..\..\..\dist-win\3178\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 
 [Icons]
 Name: "{userprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

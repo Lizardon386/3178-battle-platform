@@ -18,6 +18,7 @@
     "check:contract": "node packages/protocol-contract/scripts/gen-types.mjs --check",
     "smoke:package": "node tools/checks/smoke-bp-game.mjs",
     "smoke:supervisor": "node tools/checks/smoke-supervisor.mjs",
+    "smoke:web": "node tools/checks/smoke-web.mjs",
     "pack:win": "node tools/packaging/pack-win.mjs",
     "verify": "npm run check:refs && npm run check:lock && npm run check:contract && npm test && npm run boundaries",
     "portable": "node tools/packaging/build-portable.mjs",
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@types/node": "^24.0.0",
     "esbuild": "^0.28.2",
+    "playwright-core": "^1.65.0",
     "quicktype": "^26.0.0",
     "typescript": "^5.9.0"
   }

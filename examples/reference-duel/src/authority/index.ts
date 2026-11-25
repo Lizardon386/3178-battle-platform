@@ -61,7 +61,10 @@ export function createReferenceAuthority(options: AuthorityOptions): AuthorityRu
       sync(message, context) {
         if (!state) return;
         const memberId = String(message.memberId);
-        context.deliver([{ to: memberId, payload: { type: 'private', view: privateView(state, memberId) } }]);
+        context.deliver([
+          { to: memberId, payload: { type: 'public', view: publicView(state) } },
+          { to: memberId, payload: { type: 'private', view: privateView(state, memberId) } },
+        ]);
       },
       snapshot() {
         return state;

@@ -14,8 +14,9 @@
     <section>
       <h2>连接</h2>
       <div class="row">
-        <label>游戏 <input id="gameId" value="reference-duel" /></label>
+        <label>游戏 <input id="gameId" value="reference-duel" list="games" /></label>
         <label>版本 <input id="gameVersion" value="1.0.0" /></label>
+        <datalist id="games"></datalist>
       </div>
       <div class="row">
         <label>邀请 secret（可选）<input id="inviteSecret" placeholder="建房时生成/填写" /></label>
@@ -23,9 +24,15 @@
       <div class="row">
         <button id="create">建房</button>
         <button id="join">加入</button>
-        <button id="start">开始游戏</button>
+        <button id="resume" disabled>断线重连</button>
+        <button id="leave" disabled>离开</button>
+        <button id="kick" disabled>移出成员</button>
+        <button id="close" disabled>关闭会话</button>
+      </div>
+      <div class="row">
+        <button id="start" disabled>开始游戏</button>
         <button id="recover" disabled>恢复游戏</button>
-        <button id="channel">打开数据通道</button>
+        <button id="channel" disabled>打开数据通道</button>
       </div>
       <div id="status" class="status">未连接</div>
     </section>

@@ -36,5 +36,6 @@ test('Authority：启动后发送公共与私密视图，动作后按成员投�
   await runtime.handle({ type: 'sync', memberId: 'm2', authorityEpoch: 1 });
   const sync = sent.filter((m) => m.type === 'deliver').at(-1);
   assert.equal(sync.items[0].to, 'm2');
-  assert.equal(sync.items[0].payload.type, 'private');
+  assert.equal(sync.items[0].payload.type, 'public');
+  assert.equal(sync.items[1].payload.type, 'private');
 });
