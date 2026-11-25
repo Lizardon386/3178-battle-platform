@@ -74,3 +74,18 @@ jobs:
           name: 3178-setup-win-x64
           path: dist-win/3178-setup-*.exe
           retention-days: 14
+      # 静默安装 → 跑打包后的 Supervisor → 静默卸载；真实安装目录，不是解压目录
+      - name: Install/uninstall smoke
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem dist-win/3178-setup-*.exe | Select-Object -First 1
+          $appDir = Join-Path $env:LOCALAPPDATA 'Programs\3178'
+          Start-Process -FilePath $setup.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/CURRENTUSER' -Wait
+          if (-not (Test-Path (Join-Path $appDir '3178.exe'))) { throw '安装后找不到 3178.exe' }
+          $env:BP_PACKAGED_APP = '1'
+          $env:BP_SUPERVISOR_EXE = Join-Path $appDir 'bp-supervisor.exe'
+          npm run smoke:supervisor
+          $uninstaller = Join-Path $appDir 'unins000.exe'
+          Start-Process -FilePath $uninstaller -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait
+          if (Test-Path (Join-Path $appDir '3178.exe')) { throw '卸载后 3178.exe 仍存在' }

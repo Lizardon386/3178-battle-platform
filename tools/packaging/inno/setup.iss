@@ -24,6 +24,9 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 [Files]
 Source: "..\..\..\dist-win\3178\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 
+[Dirs]
+Name: "{app}\games"
+
 [Icons]
 Name: "{userprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
