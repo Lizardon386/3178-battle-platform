@@ -73,6 +73,7 @@ test('清单校验拒绝未知字段与错误默认值', () => {
     })),
     /依赖了不存在的键/,
   );
+  assert.throws(() => validateManifest(manifest({ authorityModel: 'service' })), /authorityModel/);
 });
 
 test('构建、读取、解包并复用缓存', () => {
@@ -172,6 +173,8 @@ test('注册表：精确版本、最高版本、重复包与坏包', () => {
   assert.equal(registry.size, 2);
   assert.equal(registry.resolve('fixture-game', '1.0.0').manifest.version, '1.0.0');
   assert.equal(registry.resolve('fixture-game').manifest.version, '2.0.0');
+  assert.equal(registry.resolve('fixture-game').authorityModel, 'process');
+  assert.equal(registry.resolve('fixture-game').runtime, 'node');
   assert.equal(registry.resolve('fixture-game', '9.9.9'), null);
   assert.equal(registry.resolve('missing-game'), null);
   assert.deepEqual(registry.list(), [{ id: 'fixture-game', name: '夹具游戏', versions: ['1.0.0', '2.0.0'] }]);

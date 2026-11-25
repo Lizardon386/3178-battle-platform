@@ -18,6 +18,8 @@ export interface BuildGameOptions {
   referenceSource?: string;
   outFile?: string;
   stageDir?: string;
+  /** 不指定时取清单的 authorityModel，再退回 process。 */
+  authorityModel?: 'process' | 'module';
 }
 
 export interface BuildGameResult extends BuiltPackage {
@@ -70,15 +72,24 @@ export async function buildGamePackage(options: BuildGameOptions): Promise<Build
     throw new BuildError(`读不到或解析不了清单：${manifestPath}（${String(error)}）`);
   }
   const manifest = validateManifest(parsed);
+  const authorityModel = options.authorityModel ?? manifest.authorityModel ?? 'process';
+  manifest.authorityModel = authorityModel;
 
   const authority = options.authoritySource
     ? resolve(options.authoritySource)
-    : await firstExisting([
-      join(root, 'src', 'authority', 'process.ts'),
-      join(root, 'src', 'authority', 'index.ts'),
-      join(root, 'src', 'authority', 'process.js'),
-      join(root, 'src', 'authority', 'index.js'),
-    ]);
+    : await firstExisting(authorityModel === 'module'
+      ? [
+        join(root, 'src', 'authority', 'module.ts'),
+        join(root, 'src', 'authority', 'index.ts'),
+        join(root, 'src', 'authority', 'module.js'),
+        join(root, 'src', 'authority', 'index.js'),
+      ]
+      : [
+        join(root, 'src', 'authority', 'process.ts'),
+        join(root, 'src', 'authority', 'index.ts'),
+        join(root, 'src', 'authority', 'process.js'),
+        join(root, 'src', 'authority', 'index.js'),
+      ]);
   if (!authority) {
     throw new BuildError('找不到 Authority 源码（默认找 src/authority/process.ts 或 src/authority/index.ts）');
   }
@@ -115,7 +126,7 @@ export async function buildGamePackage(options: BuildGameOptions): Promise<Build
   if (!(await exists(referenceSource))) throw new BuildError(`找不到参考资料：${referenceSource}`);
   await copyTree(referenceSource, join(stageDir, ...manifest.reference.entry.split('/')));
 
-  await copyTree(manifestPath, join(stageDir, 'game.manifest.json'));
+  await writeFile(join(stageDir, 'game.manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
   const outFile = resolve(options.outFile ?? join(root, 'dist', `${manifest.id}-${manifest.version}.bpkg`));
   const built = buildPackage({ root: stageDir, manifest, outFile });

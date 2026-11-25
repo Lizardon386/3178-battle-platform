@@ -69,11 +69,12 @@ test('Authority 崩溃后 recoverGame 用新 epoch 恢复检查点', async () =>
   const root = await mkdtemp(join(tmpdir(), 'bp-recover-'));
   const dataDir = join(root, 'data');
   const outFile = join(root, 'reference-duel.bpkg');
-  await buildGamePackage({ root: referenceRoot, outFile, stageDir: join(root, 'stage') });
+  await buildGamePackage({ root: referenceRoot, outFile, stageDir: join(root, 'stage'), authorityModel: 'module' });
 
   const spawned = [];
   const service = await startService({
     dataDir,
+    authorityRunnerPath: join(process.cwd(), 'packages', 'session-service', 'dist', 'authority-runner.js'),
     port: 0,
     registry: openGameRegistry({ packages: [outFile], cacheRoot: join(dataDir, 'packages') }),
     gameOrigin: { port: 0 },

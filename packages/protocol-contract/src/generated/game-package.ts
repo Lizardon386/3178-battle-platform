@@ -10,6 +10,7 @@
 
 export interface GamePackageManifest {
     assets?:               AssetElement[];
+    authorityModel?:       AuthorityModel;
     entryPoints:           EntryPoints;
     id:                    string;
     lateJoin?:             LateJoin;
@@ -28,6 +29,8 @@ export interface AssetElement {
     path:   string;
     sha256: string;
 }
+
+export type AuthorityModel = "process" | "module";
 
 export interface EntryPoints {
     authority: string;
@@ -251,6 +254,7 @@ function r(name: string) {
 const typeMap: any = {
     "GamePackageManifest": o([
         { json: "assets", js: "assets", typ: u(undefined, a(r("AssetElement"))) },
+        { json: "authorityModel", js: "authorityModel", typ: u(undefined, r("AuthorityModel")) },
         { json: "entryPoints", js: "entryPoints", typ: r("EntryPoints") },
         { json: "id", js: "id", typ: "" },
         { json: "lateJoin", js: "lateJoin", typ: u(undefined, r("LateJoin")) },
@@ -308,6 +312,10 @@ const typeMap: any = {
         { json: "publicKey", js: "publicKey", typ: u(undefined, "") },
         { json: "value", js: "value", typ: "" },
     ], false),
+    "AuthorityModel": [
+        "module",
+        "process",
+    ],
     "LateJoin": [
         "deny",
         "player",

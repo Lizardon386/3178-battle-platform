@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { join, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, extname, join, resolve } from 'node:path';
 import { SessionApplication } from '@bp/session-app';
 import { FileSessionRepository } from '@bp/session-store';
 import { SessionServer } from '@bp/session-ws';
@@ -39,6 +40,8 @@ export interface ServiceOptions {
   graceMs?: number;
   /** 宽限扫描间隔；默认 2 秒。 */
   expireIntervalMs?: number;
+  /** module 模型的平台 runner 入口；默认按服务入口同目录的 authority-runner.js/.cjs 推断。 */
+  authorityRunnerPath?: string;
   /** 管理端静态目录；默认取仓库内 packages/web-console/public。 */
   webRoot?: string;
   /** 可选公网隧道；`game` 为游戏 origin 单独一条，未配置时只监听本机/局域网。 */
@@ -84,9 +87,15 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
   const autoRestarts = new Map<string, number>();
   const maxAutoRestarts = options.autoRestartAttempts ?? 2;
 
-  const resolveAuthority = (session: SessionRecord): { entry: string; runtime?: string } | null => {
+  const resolveAuthority = (session: SessionRecord): { entry: string; runtime?: string; model?: 'process' | 'module' } | null => {
     const registered = options.registry?.resolve(session.gameId, session.gameVersion);
-    if (registered) return { entry: registered.authorityEntry, runtime: registered.runtime };
+    if (registered) {
+      return {
+        entry: registered.authorityEntry,
+        runtime: registered.runtime,
+        model: registered.authorityModel,
+      };
+    }
     return options.authorityEntry === undefined ? null : { entry: options.authorityEntry };
   };
 
@@ -124,8 +133,16 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
   };
 
   const pendingAuthority = new Set<Promise<void>>();
+  const serviceEntry = process.argv[1];
+  const candidateRunner = serviceEntry === undefined
+    ? undefined
+    : join(dirname(serviceEntry), extname(serviceEntry) === '.cjs' ? 'authority-runner.cjs' : 'authority-runner.js');
+  const defaultRunner = candidateRunner !== undefined && existsSync(candidateRunner) ? candidateRunner : undefined;
   const supervisor = options.authorityEntry !== undefined || options.registry !== undefined
     ? new NodeAuthoritySupervisor({
+      ...(options.authorityRunnerPath === undefined && defaultRunner === undefined
+        ? {}
+        : { runnerEntry: options.authorityRunnerPath ?? defaultRunner! }),
       onMessage: (sessionId, message) => {
         const task = handleAuthorityMessage(sessionId, message).catch((error) => {
           logger.error('authority message failed', { sessionId, error: String(error) });

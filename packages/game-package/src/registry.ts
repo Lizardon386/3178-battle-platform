@@ -29,6 +29,8 @@ export interface RegisteredGame {
   authorityEntry: string;
   /** 由 Authority 入口扩展名推断；`.py` 走 Python，其余走 Node。 */
   runtime: AuthorityRuntimeKind;
+  /** process：入口自跑；module：平台 runner 加载 createAuthority。 */
+  authorityModel: 'process' | 'module';
   web: GameWebEntry | null;
 }
 
@@ -77,6 +79,7 @@ function register(pack: LoadedPackage, root: string): RegisteredGame {
     root,
     authorityEntry,
     runtime: authorityEntry.toLowerCase().endsWith('.py') ? 'python' : 'node',
+    authorityModel: manifest.authorityModel ?? 'process',
     web,
   };
 }

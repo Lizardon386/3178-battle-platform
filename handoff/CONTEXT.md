@@ -20,12 +20,12 @@
 
 原目标：类 war3 的宿主制联机对战平台，房主建房、座位/观战/电脑位、Ready 闸、权限与移交、重连、落盘、局域网发现；游戏用 `.bpmap` 包导入，开发者只依赖 game-sdk。原完成定义：`npm test` / `npm run seam` / `npx tsc -b` / 外部 smoke 全绿，SDK 四包可安装。
 
-**目标架构已落地到可运行状态**：Session Service、`.bpkg` 注册表、独立游戏 origin、Authority 恢复、WPF/Supervisor 原生端、win-x64 便携包与 Inno 安装器均已实现；`npm run verify` 338 例、seam、边界、浏览器 smoke、原生 supervisor smoke、CI 安装/卸载 smoke 全绿。仍缺 color-duel 全量迁移、签名证书、真实双机/VM/Android 证据。门户继续暂缓。
+**目标架构已落地到可运行状态**：Session Service、`.bpkg` 注册表、独立游戏 origin、Authority 恢复、WPF/Supervisor 原生端、win-x64 便携包与 Inno 安装器均已实现；`npm run verify` 345 例、seam、边界、浏览器 smoke、原生 supervisor smoke、CI 安装/重装/卸载 smoke 全绿。仍缺 color-duel 全量迁移、签名证书、真实双机/VM/Android 证据。门户继续暂缓。
 
 ## 3. 现在在哪
 
-- **2026-11-25 原生端与安装器**：`apps/BattlePlatform.{Contracts,Supervisor,Wpf}` 可构建；`bp-supervisor` 用当前用户管道 + Job Object 拉起 Node Service，`3178.exe` 有状态/启停/重连/托盘；CI 构建 `dist-win/3178`、Inno 安装器，并静默安装 → 跑安装目录里的 supervisor smoke → 静默卸载；便携目录可用 `npm run upgrade -- apply/rollback/check` 做哈希校验与备份切换（不适用于 Inno 安装目录）。
-- **2026-11-25 运行时主线**：`protocol/*` 四面 + TS/Python/C# 生成；`session-core/app/store/ws/service`；`@bp/game-package`（清单、`.bpkg`、注册表）；独立游戏 origin（`/s/<sessionId>/`、游戏 WS、handoffCode）；`@lizardon386/bp-game`（init/build/pack/inspect/doctor/sign/verify）；`reference-duel` 核心/Authority/Web UI；Python Authority 互通；`rematch` 同进程 roundId 递增开新局；`bp-game init` 生成 raw IPC 模板并通过真实服务链验证；`.bpkg.sig` 强制签名可用可信公钥校验（服务 `--trusted-key` / `--require-signatures`）；`bp-game install/uninstall/list` 管理 games 目录；`sessionCreate`/`listGames` 只接受回环地址 + 回环 Host。
+- **2026-11-25 原生端与安装器**：`apps/BattlePlatform.{Contracts,Supervisor,Wpf}` 可构建；`bp-supervisor` 用当前用户管道 + Job Object 拉起 Node Service，`3178.exe` 有状态/启停/重连/托盘；CI 构建 `dist-win/3178`、Inno 安装器，并静默安装 → 写用户数据标记 → 同 AppId 重装 → 校验标记保留 → 跑安装目录里的 supervisor smoke → 静默卸载并再次校验数据保留；便携目录可用 `npm run upgrade -- apply/rollback/check` 做哈希校验与备份切换（不适用于 Inno 安装目录）。
+- **2026-11-25 运行时主线**：`protocol/*` 四面 + TS/Python/C# 生成；`session-core/app/store/ws/service`；`@bp/game-package`（清单、`.bpkg`、注册表）；独立游戏 origin（`/s/<sessionId>/`、游戏 WS、handoffCode）；`@lizardon386/bp-game`（init/build/pack/inspect/doctor/sign/verify，`--model process|module`）；`reference-duel` 核心/Authority/Web UI；Python Authority 互通；`rematch` 同进程 roundId 递增开新局；`bp-game init` 生成 raw IPC 模板并通过真实服务链验证；`.bpkg.sig` 强制签名可用可信公钥校验（服务 `--trusted-key` / `--require-signatures`）；`bp-game install/uninstall/list` 管理 games 目录；`sessionCreate`/`listGames` 只接受回环地址 + 回环 Host；module 模型由平台 runner 注入运行库（包内不再带 AuthorityRuntime）。
 - **2026-11-25 可靠性**：Authority 崩溃→最多两次自动重启→仍失败转人工 `recoverGame`；检查点恢复；关会话停进程；修复原子写 rename 窗口与并发 `load` 的静默丢会话问题；数据通道建好自动 `sync`；Authority IPC 已改为 Windows 命名管道 / POSIX Unix socket（boot 帧用 `ipcPath`，旧 `ipcPort` 仅兼容）；服务启动对账遗留 running/starting 为 failed；关闭时先排空断线写入再退出；断线宽限由定时器清理（默认 30 分钟，可配），房主到期移交给在线成员；`resume` 删除 `graceUntil` 而不是赋 undefined；C# Supervisor 单元测试 9 例（含入口缺失、错误协议版本、重复 shutdown）。
 - **测试入口**：`npm run verify`（构建引用/lock/契约/322 例/边界）、`npm run seam`、`npm run smoke:package`、`npm run smoke:web`、`npm run smoke:supervisor`、`npm run test:ui`（FlaUI，需交互桌面）、`npm run pack:win`。本机 .NET SDK 在 `dogfood-output/dotnet`（gitignored）。
 
@@ -33,7 +33,7 @@
 
 1. **WP6 收口**：TS/C# 共享 reducer 与 golden；移动视口已测 320/360/390 不溢出，继续补读屏/键盘/高对比完整流程。
 2. **WP3 收口**：完整故障矩阵（磁盘满、权限、重复 shutdown、服务条目缺失）；确认自动重启策略是否要按 uptime 重置。Authority IPC 命名管道与 Supervisor 单元测试已完成。
-3. **WP5/WP9**：SDK 运行时注入（init 模板与 rematch 已完成）；color-duel 全量 golden 迁移必须先拿到该仓写者/授权，平台侧只做切换准备。
+3. **WP5/WP9**：WP5 运行时注入已完成（C# Supervisor 的 startAuthority 仍只支持 process 模型）；color-duel 全量 golden 迁移必须先拿到该仓写者/授权，平台侧只做切换准备。
 4. **WP8**：Inno 安装目录的升级路径、签名证书、双机/WSS/Android/干净 VM 验收；没有证书/设备时不要写成已完成。便携目录升级/回滚已验证。
 
 ## 5. MEMORY 提炼
@@ -64,9 +64,11 @@
 - **原子写与并发读**：`session.json` 的 rename 备份窗口会让并发 `load` 误判会话不存在，已把 `load` 与写队列串链并回退 `.bak`；新增存储改动不要绕开 `FileSessionRepository.load`。
 - **数据通道必须 sync**：晚开的游戏页/重连只有 `dataReady` 不够；`SessionServer` 在鉴权后触发 `onDataReady` → `SessionApplication.syncMember`，Authority 的 `sync` 要同时补公共与私密视图。
 - **浏览器交接与 CSP**：游戏页用 30 秒一次性 `handoffCode`（fragment，连上后 `history.replaceState` 抹掉）；游戏 origin 的 `connect-src` 要允许 `ws:`/`wss:`，否则 Chrome 可能拒绝同源 WS。
+- **启动失败清理**：管理 origin 或游戏 origin 任一步绑定失败，`SessionServer.start` 必须 `close()` 已监听的 server；否则测试或重启会残留端口。启动故障测试覆盖端口占用与坏 games 目录。
 - **WPF 可访问性**：窗口/提示用系统 `WindowBrush/WindowTextBrush/GrayTextBrush`，状态区 `AutomationProperties.LiveSetting=Polite`；改配色时不要重新写死灰值，否则高对比模式会失效。
 - **本机 .NET 与打包**：SDK 解压在 `dogfood-output/dotnet`，运行 apphost / 测试要设 `DOTNET_ROOT`；CI 用 `setup-dotnet`。`npm pack` 传包目录必须写 `./packages/...`，否则 npm 会把 `packages/bp-game` 当成 GitHub 仓库。
 - **Authority IPC 管道**：boot 帧现在传 `ipcPath`（Windows `\\.\pipe\...`、POSIX 文件 socket），Node/Python 夹具都要用 `net.connect(boot.ipcPath)` / Unix socket；POSIX 关闭时要 unlink socket 文件。C# 侧用 `NamedPipeServerStream + CurrentUserOnly`。Windows 管道读的 CancellationToken 不保证生效，测试超时用 `Task.WhenAny` 兜底。
+- **module 模型**：包内只放游戏代码，`authority/index.js` 导出 `createAuthority`；平台 `authority-runner` 在独立子进程动态 import 并注入 `createRuntime`。runner 必须**先校验导出/构造 runtime，再连接 IPC**，否则 Supervisor 会先判 running 再崩。Node Supervisor 的 module/runner 校验要放在创建管道 server 之前，避免失败泄漏监听。
 - **Authority 错误分级**：`authorityError.fatal !== true` 只记日志，不能把会话标 failed；`startRound` 不受支持时回非 fatal UNSUPPORTED。rematch 只换 roundId 不重启进程，检查点覆盖为新局。
 - **游戏包签名**：签名对象是整包 `packageHash`，detached 文件是 `<包>.sig`；强制模式必须同时给可信公钥（`--trusted-key`），空公钥或缺失 `.sig` 都让启动失败。exe 的 Authenticode 仍无证书。
 - **本机命令隔离**：不能只看 `remoteAddress`——cloudflared 从本机连服务，隧道请求也是 127.0.0.1。必须同时检查 Host：只有回环 Host 才允许 `sessionCreate`/`listGames`；LAN 直连与公网隧道都会被拒。
@@ -76,7 +78,7 @@
 ## 7. 验证命令
 
 ```bash
-npm run verify                   # 338 例 + 构建引用/lock/契约/边界
+npm run verify                   # 345 例 + 构建引用/lock/契约/边界
 npm run seam                     # 接缝闸门
 npm run smoke:package            # 仓外 tarball 构建 .bpkg
 npm run smoke:web                # 真实 Chrome/Edge 走完一局（ubuntu CI 也跑）
@@ -84,6 +86,7 @@ npm run smoke:supervisor         # C# Supervisor 拉起 Service、listGames 并�
 npm run test:ui                  # FlaUI 三条关键路径（需交互桌面）
 npm run test:supervisor          # C# Supervisor 9 例（Windows）
 node packages/bp-game/dist/cli.js init <目录> --id <游戏 id>   # 生成最小可运行模板
+node packages/bp-game/dist/cli.js build <目录> --model module  # 运行库由平台 runner 注入
 node packages/bp-game/dist/cli.js install <包> --games-dir <目录> [--trusted-key <PEM>]
 npm run pack:win                 # win-x64 便携目录；Inno 脚本在 tools/packaging/inno
 npm run upgrade -- check --target dist-win/3178   # 便携目录校验；apply/rollback 见脚本用法
@@ -107,6 +110,8 @@ npm run upgrade -- check --target dist-win/3178   # 便携目录校验；apply/r
 
 ## 9. 交接记录
 
+- 2026-11-25 Claude Code：**SDK 运行时注入**：清单新增可选 `authorityModel`；`bp-game build --model module` 不再打包运行库（reference Authority 7.6KB vs process 20.2KB）；平台 `authority-runner` 独立子进程加载 `createAuthority` 并注入 `createRuntime`；reference 启动/出牌/rematch/恢复、module 缺导出/缺 runner 负例、浏览器与原生/打包 smoke 全部通过。`npm run verify` 345/345。
+- 2026-11-25 Claude Code：**故障矩阵与安装器升级**：启动端口占用/游戏端口冲突/坏 games 目录测试；`SessionServer.start` 失败清理管理端口；Inno 同 AppId 重装保留用户数据，CI 安装→标记→重装→smoke→卸载全链路通过。`npm run verify` 341/341。
 - 2026-11-25 Claude Code：**托管运行时主线落地**：新协议四面与生成物、session 内核/存储/WS/服务、`.bpkg` 注册表与独立游戏 origin、`bp-game` 构建工具、reference-duel Web UI、Python Authority 互通、Authority 崩溃自动重启与 `recoverGame`、WPF/Supervisor/Contracts、win-x64 便携包与 Inno 安装器；CI 增加浏览器 smoke、原生 supervisor smoke、安装/卸载 smoke；FlaUI 三条关键路径本机 3/3。`npm run verify` 322/322。剩余：color-duel 全量迁移（需独立游戏仓授权）、签名/VM/双机/Android、共享 reducer 与完整 a11y。
 - 2026-11-24 Claude Code：**文档扁平化 + 计划归位**：`docs/research/` 全部内容移到 `docs/`（含 `fonts/` 与 UI 预览），删除 `research` 子目录；`.zcode/plans` 的 `plan-sess_0614...` 移入 `plan/` 并补 `scope=plan`；同步修正 docs 内相对链接与 CONTEXT/PROMPT 引用。历史时间线里的旧路径保留原样并加说明。
 - 2026-11-24 Claude Code：**门户回退/暂缓**：按用户决定暂不接入热铁盒；删除 `site/`、`tools/site/`、`dist-site/`，还原 `package.json`/`package-lock.json` 与 `.gitignore` 的 `dist-site/` 改动；合并计划保留 S0–S4 作为暂缓支线并更新决策记录。只提交 handoff 文档；运行时未动。

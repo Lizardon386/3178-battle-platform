@@ -1,4 +1,8 @@
-import { AuthorityRuntime } from '@bp/authority-runtime';
+import type {
+  AuthorityModuleContext,
+  AuthorityProcessRuntime,
+  RuntimeOptions,
+} from '@bp/authority-runtime';
 import type { AuthorityContext } from '@bp/game-sdk-stub';
 import type { AuthorityCallbackMessage, GameState, Action } from './types.js';
 import { applyAction, createGame, privateView, publicView } from '../core/state.js';
@@ -10,10 +14,12 @@ export interface AuthorityOptions {
   roundId: string;
   members: Array<{ memberId: string; displayName?: string }>;
   transport: { send(message: unknown): void };
+  /** 平台注入的运行库构造器；游戏源码不直接依赖 @bp/authority-runtime。 */
+  createRuntime: (options: RuntimeOptions) => AuthorityProcessRuntime;
   seed?: number;
 }
 
-export function createReferenceAuthority(options: AuthorityOptions): AuthorityRuntime {
+export function createReferenceAuthority(options: AuthorityOptions): AuthorityProcessRuntime {
   let state: GameState | null = null;
 
   const publish = async (context: AuthorityContext): Promise<void> => {
@@ -28,7 +34,7 @@ export function createReferenceAuthority(options: AuthorityOptions): AuthorityRu
     if (state.finished) context.roundClosed({ winner: state.winner, reason: state.reason });
   };
 
-  return new AuthorityRuntime({
+  return options.createRuntime({
     stateDir: options.stateDir,
     sessionId: options.sessionId,
     epoch: options.epoch,
@@ -78,5 +84,18 @@ export function createReferenceAuthority(options: AuthorityOptions): AuthorityRu
         return Boolean(value && typeof value === 'object' && Array.isArray((value as GameState).players));
       },
     },
+  });
+}
+
+/** 模块模型入口：平台 runner 传入 boot/transport/运行库。 */
+export function createAuthority(context: AuthorityModuleContext): AuthorityProcessRuntime {
+  return createReferenceAuthority({
+    stateDir: context.boot.stateDir,
+    sessionId: context.boot.sessionId,
+    epoch: context.boot.epoch,
+    roundId: context.boot.roundId,
+    members: context.boot.members,
+    transport: context.transport,
+    createRuntime: context.createRuntime,
   });
 }

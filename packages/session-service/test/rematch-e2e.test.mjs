@@ -69,10 +69,11 @@ test('房主再来一局：同进程开 round-2，双方收到新局视图', asy
   const root = await mkdtemp(join(tmpdir(), 'bp-rematch-'));
   const dataDir = join(root, 'data');
   const outFile = join(root, 'reference-duel.bpkg');
-  await buildGamePackage({ root: referenceRoot, outFile, stageDir: join(root, 'stage') });
+  await buildGamePackage({ root: referenceRoot, outFile, stageDir: join(root, 'stage'), authorityModel: 'module' });
 
   const service = await startService({
     dataDir,
+    authorityRunnerPath: join(process.cwd(), 'packages', 'session-service', 'dist', 'authority-runner.js'),
     port: 0,
     registry: openGameRegistry({ packages: [outFile], cacheRoot: join(dataDir, 'packages') }),
     gameOrigin: { port: 0 },

@@ -45,6 +45,12 @@
         "deny"
       ]
     },
+    "authorityModel": {
+      "enum": [
+        "process",
+        "module"
+      ]
+    },
     "platformRequirements": {
       "type": "object",
       "required": [

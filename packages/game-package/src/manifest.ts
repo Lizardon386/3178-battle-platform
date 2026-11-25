@@ -20,6 +20,8 @@ const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 export type GameFieldType = 'boolean' | 'enum' | 'integer';
 export type GameRole = 'host' | 'player' | 'ai' | 'spectator';
 export type LateJoin = 'spectator' | 'player' | 'deny';
+/** process：入口自读 boot 并连接 IPC；module：入口导出 createAuthority，由平台 runner 加载。 */
+export type AuthorityModel = 'process' | 'module';
 
 export interface GameFieldOption {
   value: string;
@@ -58,6 +60,7 @@ export interface GameManifest {
   version: string;
   requiredCapabilities?: string[];
   lateJoin?: LateJoin;
+  authorityModel?: AuthorityModel;
   platformRequirements: {
     protocolVersion: 1;
     minPlayers: number;
@@ -246,6 +249,7 @@ function readManifest(value: unknown): GameManifest {
       'version',
       'requiredCapabilities',
       'lateJoin',
+      'authorityModel',
       'platformRequirements',
       'entryPoints',
       'assets',
@@ -291,6 +295,13 @@ function readManifest(value: unknown): GameManifest {
       fail('清单.lateJoin 不合法');
     }
     manifest.lateJoin = value.lateJoin;
+  }
+
+  if (value.authorityModel !== undefined) {
+    if (value.authorityModel !== 'process' && value.authorityModel !== 'module') {
+      fail('清单.authorityModel 不合法');
+    }
+    manifest.authorityModel = value.authorityModel;
   }
 
   if (!isRecord(value.platformRequirements)) fail('清单.platformRequirements 必须是对象');

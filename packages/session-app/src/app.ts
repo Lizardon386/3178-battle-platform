@@ -145,7 +145,7 @@ export class SessionApplication {
   async startGame(
     sessionId: string,
     actorId: string,
-    options: { entry: string; runtime?: string; stateRoot: string },
+    options: { entry: string; runtime?: string; model?: 'process' | 'module'; stateRoot: string },
   ): Promise<Result<SessionRecord>> {
     const session = await this.repository.load(sessionId);
     if (!session) return err('NOROOM', '会话不存在');
@@ -170,6 +170,7 @@ export class SessionApplication {
         epoch,
         roundId,
         runtime: options.runtime ?? 'node24',
+        model: options.model ?? 'process',
         entry: options.entry,
         stateDir: `${options.stateRoot}/${sessionId}/${roundId}`,
         members: starting.members.map((member) => ({
@@ -192,7 +193,7 @@ export class SessionApplication {
   async recoverGame(
     sessionId: string,
     actorId: string,
-    options: { entry: string; runtime?: string; stateRoot: string },
+    options: { entry: string; runtime?: string; model?: 'process' | 'module'; stateRoot: string },
   ): Promise<Result<SessionRecord>> {
     const session = await this.repository.load(sessionId);
     if (!session) return err('NOROOM', '会话不存在');
@@ -228,7 +229,7 @@ export class SessionApplication {
   /** 平台自动重启：不要求房主确认，只允许一次；失败后仍由房主手动 recoverGame。 */
   async recoverAuthority(
     sessionId: string,
-    options: { entry: string; runtime?: string; stateRoot: string },
+    options: { entry: string; runtime?: string; model?: 'process' | 'module'; stateRoot: string },
   ): Promise<Result<SessionRecord>> {
     const session = await this.repository.load(sessionId);
     if (!session) return err('NOROOM', '会话不存在');
@@ -241,7 +242,7 @@ export class SessionApplication {
 
   private async relaunch(
     session: SessionRecord,
-    options: { entry: string; runtime?: string; stateRoot: string },
+    options: { entry: string; runtime?: string; model?: 'process' | 'module'; stateRoot: string },
   ): Promise<Result<SessionRecord>> {
     if (!session.currentRoundId) return err('PHASE', '没有可恢复的回合');
     if (!this.supervisor) return err('GAMEFAILED', '没有可用的权威启动器');
@@ -259,6 +260,7 @@ export class SessionApplication {
         epoch,
         roundId,
         runtime: options.runtime ?? 'node24',
+        model: options.model ?? 'process',
         entry: options.entry,
         stateDir: `${options.stateRoot}/${sessionId}/${roundId}`,
         members: starting.members.map((member) => ({

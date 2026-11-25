@@ -74,6 +74,11 @@ class AssetElement:
         return result
 
 
+class AuthorityModel(Enum):
+    MODULE = "module"
+    PROCESS = "process"
+
+
 @dataclass
 class EntryPoints:
     authority: str
@@ -288,6 +293,7 @@ class GamePackageManifest:
     session_config: SessionConfig
     version: str
     assets: list[AssetElement] | None = None
+    authority_model: AuthorityModel | None = None
     late_join: LateJoin | None = None
     required_capabilities: list[str] | None = None
     rules_hash: str | None = None
@@ -304,11 +310,12 @@ class GamePackageManifest:
         session_config = SessionConfig.from_dict(obj.get("sessionConfig"))
         version = from_str(obj.get("version"))
         assets = from_union([lambda x: from_list(AssetElement.from_dict, x), from_none], obj.get("assets"))
+        authority_model = from_union([AuthorityModel, from_none], obj.get("authorityModel"))
         late_join = from_union([LateJoin, from_none], obj.get("lateJoin"))
         required_capabilities = from_union([lambda x: from_list(from_str, x), from_none], obj.get("requiredCapabilities"))
         rules_hash = from_union([from_str, from_none], obj.get("rulesHash"))
         signature = from_union([Signature.from_dict, from_none], obj.get("signature"))
-        return GamePackageManifest(entry_points, id, name, platform_requirements, reference, session_config, version, assets, late_join, required_capabilities, rules_hash, signature)
+        return GamePackageManifest(entry_points, id, name, platform_requirements, reference, session_config, version, assets, authority_model, late_join, required_capabilities, rules_hash, signature)
 
     def to_dict(self) -> dict:
         result: dict = {}
@@ -321,6 +328,8 @@ class GamePackageManifest:
         result["version"] = from_str(self.version)
         if self.assets is not None:
             result["assets"] = from_union([lambda x: from_list(lambda x: to_class(AssetElement, x), x), from_none], self.assets)
+        if self.authority_model is not None:
+            result["authorityModel"] = from_union([lambda x: to_enum(AuthorityModel, x), from_none], self.authority_model)
         if self.late_join is not None:
             result["lateJoin"] = from_union([lambda x: to_enum(LateJoin, x), from_none], self.late_join)
         if self.required_capabilities is not None:

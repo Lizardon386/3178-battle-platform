@@ -43,7 +43,7 @@ function buildIfNeeded() {
 async function buildGamePackage() {
   mkdirSync(gamesDir, { recursive: true });
   const cli = join(REPO, 'packages', 'bp-game', 'dist', 'cli.js');
-  const result = spawnSync(process.execPath, [cli, 'build', 'examples/reference-duel', '--out', join(gamesDir, 'reference-duel.bpkg')], {
+  const result = spawnSync(process.execPath, [cli, 'build', 'examples/reference-duel', '--model', 'module', '--out', join(gamesDir, 'reference-duel.bpkg')], {
     cwd: REPO,
     stdio: 'inherit',
   });

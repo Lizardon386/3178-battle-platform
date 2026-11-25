@@ -1,4 +1,4 @@
-import { readBootFrame, runAuthorityProcess } from '@bp/authority-runtime';
+import { AuthorityRuntime, readBootFrame, runAuthorityProcess } from '@bp/authority-runtime';
 import { createReferenceAuthority } from './index.js';
 
 const boot = await readBootFrame();
@@ -12,5 +12,6 @@ await runAuthorityProcess({
     roundId: boot.roundId,
     members: boot.members,
     transport,
+    createRuntime: (options) => new AuthorityRuntime(options),
   }),
 });

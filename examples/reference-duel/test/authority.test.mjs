@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { AuthorityRuntime } from '@bp/authority-runtime';
 import { createReferenceAuthority } from '../dist/authority/index.js';
 
 test('Authority：启动后发送公共与私密视图，动作后按成员投递', async () => {
@@ -15,6 +16,7 @@ test('Authority：启动后发送公共与私密视图，动作后按成员投�
     roundId: 'round-1',
     members: [{ memberId: 'm1' }, { memberId: 'm2' }],
     transport: { send: (message) => sent.push(message) },
+    createRuntime: (options) => new AuthorityRuntime(options),
     seed: 7,
   });
   await runtime.start();

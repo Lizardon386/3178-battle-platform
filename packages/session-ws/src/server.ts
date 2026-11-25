@@ -57,7 +57,7 @@ export interface SessionServerOptions {
   host?: string;
   httpServer?: HttpServer;
   authority?: {
-    resolveEntry(session: SessionRecord): { entry: string; runtime?: string } | null;
+    resolveEntry(session: SessionRecord): { entry: string; runtime?: string; model?: 'process' | 'module' } | null;
     stateRoot: string;
   };
   gameOrigin?: GameOriginOptions;
@@ -452,9 +452,14 @@ export class SessionServer {
         const result = await this.app.startGame(binding.sessionId, binding.memberId, {
           entry: target.entry,
           ...(target.runtime === undefined ? {} : { runtime: target.runtime }),
+          ...(target.model === undefined ? {} : { model: target.model }),
           stateRoot: this.options.authority.stateRoot,
         });
-        if (!result.ok) return this.fail(ws, result.error);
+        if (!result.ok) {
+          const latest = await this.app.getSession(binding.sessionId);
+          if (latest?.gameProcess === 'failed') this.broadcastState(latest);
+          return this.fail(ws, result.error);
+        }
         this.broadcastState(result.value);
         return;
       }
@@ -469,9 +474,14 @@ export class SessionServer {
         const result = await this.app.recoverGame(binding.sessionId, binding.memberId, {
           entry: target.entry,
           ...(target.runtime === undefined ? {} : { runtime: target.runtime }),
+          ...(target.model === undefined ? {} : { model: target.model }),
           stateRoot: this.options.authority.stateRoot,
         });
-        if (!result.ok) return this.fail(ws, result.error);
+        if (!result.ok) {
+          const latest = await this.app.getSession(binding.sessionId);
+          if (latest?.gameProcess === 'failed') this.broadcastState(latest);
+          return this.fail(ws, result.error);
+        }
         this.broadcastState(result.value);
         return;
       }

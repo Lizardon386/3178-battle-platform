@@ -22,6 +22,8 @@ export interface NodeSupervisorOptions {
   onExit?(sessionId: string, epoch: number, code: number | null, signal: NodeJS.Signals | null): void;
   /** 进程已 spawn，用于诊断与测试注入。 */
   onSpawn?(sessionId: string, epoch: number, pid: number): void;
+  /** module 模型的平台 runner 入口；process 模型不需要。 */
+  runnerEntry?: string;
   startTimeoutMs?: number;
 }
 
@@ -40,6 +42,10 @@ export class NodeAuthoritySupervisor implements AuthoritySupervisor {
 
   async start(launch: AuthorityLaunch): Promise<void> {
     if (this.entries.has(launch.sessionId)) throw new Error('Authority 已在运行');
+    const python = launch.runtime === 'python' || launch.runtime === 'python3';
+    const module = launch.model === 'module';
+    if (module && python) throw new Error('Python Authority 不支持 module 模型');
+    if (module && this.options.runnerEntry === undefined) throw new Error('缺少 Authority runner 入口');
     const pipePath = pipePathFor();
     const server = net.createServer();
     await new Promise<void>((resolvePromise, rejectPromise) => {
@@ -58,11 +64,11 @@ export class NodeAuthoritySupervisor implements AuthoritySupervisor {
       members: launch.members,
       bootNonce: randomBytes(8).toString('hex'),
     };
-    const python = launch.runtime === 'python' || launch.runtime === 'python3';
     const command = python
       ? (process.env.BP_PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3'))
       : process.execPath;
-    const child = spawn(command, [launch.entry], {
+    const args = module ? [this.options.runnerEntry!, launch.entry] : [launch.entry];
+    const child = spawn(command, args, {
       stdio: ['pipe', 'inherit', 'inherit'],
       env: { ...process.env, ...launch.env },
       windowsHide: true,

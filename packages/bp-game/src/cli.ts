@@ -24,6 +24,7 @@ const HELP = `bp-game <命令> [参数]
 通用参数：
   --manifest <文件>   build/pack 的清单路径
   --authority <文件>  build 的 Authority 源码入口
+  --model <模型>      process 或 module（module 由平台 runner 注入运行库）
   --web <目录>        build 的 Web 源码目录
   --reference <文件>  build 的参考资料文件
   --stage <目录>      build 的暂存目录（默认 <目录>/dist/bpkg-stage）
@@ -104,10 +105,15 @@ async function main(argv: string[]): Promise<number> {
     }
     case 'build': {
       const dir = required(parsed, 1, '游戏目录');
+      const model = parsed.flags.get('model');
+      if (model !== undefined && model !== 'process' && model !== 'module') {
+        throw new Error('--model 只支持 process 或 module');
+      }
       const result = await buildGamePackage({
         root: dir,
         ...(parsed.flags.get('manifest') === undefined ? {} : { manifestPath: parsed.flags.get('manifest')! }),
         ...(parsed.flags.get('authority') === undefined ? {} : { authoritySource: parsed.flags.get('authority')! }),
+        ...(model === undefined ? {} : { authorityModel: model }),
         ...(parsed.flags.get('web') === undefined ? {} : { webSource: parsed.flags.get('web')! }),
         ...(parsed.flags.get('reference') === undefined ? {} : { referenceSource: parsed.flags.get('reference')! }),
         ...(parsed.flags.get('stage') === undefined ? {} : { stageDir: parsed.flags.get('stage')! }),

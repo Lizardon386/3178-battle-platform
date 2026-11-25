@@ -72,10 +72,10 @@ test('打包后的 reference-duel：注册、页面、交接与真实对局', as
   const root = await mkdtemp(join(tmpdir(), 'bp-packaged-reference-'));
   const dataDir = join(root, 'data');
   const outFile = join(root, 'reference-duel.bpkg');
-  await buildGamePackage({ root: referenceRoot, outFile, stageDir: join(root, 'stage') });
+  await buildGamePackage({ root: referenceRoot, outFile, stageDir: join(root, 'stage'), authorityModel: 'module' });
 
   const registry = openGameRegistry({ packages: [outFile], cacheRoot: join(dataDir, 'packages') });
-  const service = await startService({ dataDir, port: 0, registry, gameOrigin: { port: 0 } });
+  const service = await startService({ dataDir, port: 0, registry, gameOrigin: { port: 0 }, authorityRunnerPath: join(process.cwd(), 'packages', 'session-service', 'dist', 'authority-runner.js'), });
   const host = await connectControl(service.port);
   const guest = await connectControl(service.port);
   try {

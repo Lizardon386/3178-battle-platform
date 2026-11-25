@@ -91,13 +91,30 @@ async function main() {
     external: ['bufferutil', 'utf-8-validate'],
     logLevel: 'silent',
   });
+  await esbuild({
+    entryPoints: [join(REPO, 'packages', 'session-service', 'dist', 'authority-runner.js')],
+    outfile: join(APP, 'packages', 'session-service', 'dist', 'authority-runner.cjs'),
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+    target: 'node24',
+    sourcemap: false,
+    legalComments: 'none',
+    logLevel: 'silent',
+  });
   await cp(join(REPO, 'packages', 'web-console', 'public'), join(APP, 'packages', 'web-console', 'public'), {
     recursive: true,
   });
 
   const commit = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: REPO, encoding: 'utf8' }).stdout?.trim() ?? 'unknown';
   const files = [];
-  for (const relative of ['3178.exe', 'bp-supervisor.exe', 'runtime/node.exe', 'packages/session-service/dist/main.cjs']) {
+  for (const relative of [
+    '3178.exe',
+    'bp-supervisor.exe',
+    'runtime/node.exe',
+    'packages/session-service/dist/main.cjs',
+    'packages/session-service/dist/authority-runner.cjs',
+  ]) {
     const absolute = join(APP, ...relative.split('/'));
     files.push({ path: relative, bytes: (await stat(absolute)).size, sha256: await sha256(absolute) });
   }

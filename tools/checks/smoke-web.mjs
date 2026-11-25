@@ -34,14 +34,14 @@ async function main() {
   const gamesDir = join(tempRoot, 'games');
   const dataDir = join(tempRoot, 'data');
   const cli = join(REPO, 'packages', 'bp-game', 'dist', 'cli.js');
-  const built = spawnSync(process.execPath, [cli, 'build', 'examples/reference-duel', '--out', join(gamesDir, 'reference-duel.bpkg')], {
+  const built = spawnSync(process.execPath, [cli, 'build', 'examples/reference-duel', '--model', 'module', '--out', join(gamesDir, 'reference-duel.bpkg')], {
     cwd: REPO,
     stdio: 'inherit',
   });
   if (built.status !== 0) throw new Error('构建 reference-duel 失败');
 
   const registry = openGameRegistry({ packages: [join(gamesDir, 'reference-duel.bpkg')], cacheRoot: join(dataDir, 'packages') });
-  const service = await startService({ dataDir, port: 0, registry, gameOrigin: { port: 0 } });
+  const service = await startService({ dataDir, port: 0, registry, gameOrigin: { port: 0 }, authorityRunnerPath: join(process.cwd(), 'packages', 'session-service', 'dist', 'authority-runner.js'), });
   const browser = await launchBrowser();
   const base = `http://127.0.0.1:${service.port}`;
   try {

@@ -27,6 +27,10 @@ namespace BattlePlatform.Protocol
         [JsonPropertyName("assets")]
         public AssetElement[]? Assets { get; set; }
 
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonPropertyName("authorityModel")]
+        public AuthorityModel? AuthorityModel { get; set; }
+
         [JsonPropertyName("entryPoints")]
         public EntryPoints EntryPoints { get; set; }
 
@@ -202,6 +206,8 @@ namespace BattlePlatform.Protocol
         public string Value { get; set; }
     }
 
+    public enum AuthorityModel { Module, Process };
+
     public enum LateJoin { Deny, Player, Spectator };
 
     public enum Role { Ai, Host, Player, Spectator };
@@ -226,6 +232,7 @@ namespace BattlePlatform.Protocol
         {
             Converters =
             {
+                AuthorityModelConverter.Singleton,
                 LateJoinConverter.Singleton,
                 RoleConverter.Singleton,
                 TypeEnumConverter.Singleton,
@@ -262,6 +269,40 @@ namespace BattlePlatform.Protocol
         }
 
         public static readonly PurpleMinMaxLengthCheckConverter Singleton = new PurpleMinMaxLengthCheckConverter();
+    }
+
+    internal class AuthorityModelConverter : JsonConverter<AuthorityModel>
+    {
+        public override bool CanConvert(Type t) => t == typeof(AuthorityModel);
+
+        public override AuthorityModel Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            var value = reader.GetString();
+            switch (value)
+            {
+                case "module":
+                    return AuthorityModel.Module;
+                case "process":
+                    return AuthorityModel.Process;
+            }
+            throw new Exception("Cannot unmarshal type AuthorityModel");
+        }
+
+        public override void Write(Utf8JsonWriter writer, AuthorityModel value, JsonSerializerOptions options)
+        {
+            switch (value)
+            {
+                case AuthorityModel.Module:
+                    JsonSerializer.Serialize(writer, "module", options);
+                    return;
+                case AuthorityModel.Process:
+                    JsonSerializer.Serialize(writer, "process", options);
+                    return;
+            }
+            throw new Exception("Cannot marshal type AuthorityModel");
+        }
+
+        public static readonly AuthorityModelConverter Singleton = new AuthorityModelConverter();
     }
 
     internal class LateJoinConverter : JsonConverter<LateJoin>

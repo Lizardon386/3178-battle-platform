@@ -46,6 +46,8 @@ export interface AuthorityLaunch {
   epoch: number;
   roundId: string;
   runtime: string;
+  /** process：入口自跑；module：平台 runner 加载 createAuthority。 */
+  model?: 'process' | 'module';
   entry: string;
   stateDir: string;
   members: Array<{ memberId: string; displayName?: string }>;
