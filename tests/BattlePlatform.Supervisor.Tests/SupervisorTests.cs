@@ -64,6 +64,63 @@ public sealed class SupervisorTests
     }
 
     [Fact]
+    public async Task Service_Missing_Entry_Becomes_Failed()
+    {
+        var root = TempRoot();
+        try
+        {
+            await using var service = new SupervisorService(Options(root, Path.Combine(root, "missing.cjs")));
+            await service.StartServiceAsync(CancellationToken.None);
+            Assert.True(
+                await WaitUntil(() => service.Snapshot().State == ServiceStatusState.Failed, TimeSpan.FromSeconds(10)),
+                $"缺失 Service 入口未转为 failed：{service.Snapshot().State}");
+        }
+        finally
+        {
+            Cleanup(root);
+        }
+    }
+
+    [Fact]
+    public async Task Authority_Missing_Entry_Becomes_Failed()
+    {
+        var root = TempRoot();
+        try
+        {
+            var missing = Path.Combine(root, "missing-authority.cjs");
+            var broadcasts = new List<object>();
+            await using var service = new SupervisorService(Options(root, Path.Combine(root, "unused.cjs")));
+            service.Broadcast = message =>
+            {
+                lock (broadcasts) broadcasts.Add(message);
+                return Task.CompletedTask;
+            };
+            await service.StartAuthorityAsync(new StartAuthority
+            {
+                Type = StartAuthorityType.StartAuthority,
+                SessionId = "sess-1",
+                Epoch = 1,
+                Entry = missing,
+                Runtime = "node",
+            }, CancellationToken.None);
+            Assert.True(
+                await WaitUntil(() =>
+                {
+                    lock (broadcasts)
+                    {
+                        return broadcasts.OfType<AuthorityStatus>().Any(
+                            status => status.SessionId == "sess-1" && status.State == AuthorityStatusState.Failed);
+                    }
+                }, TimeSpan.FromSeconds(10)),
+                "缺失 Authority 入口未广播 failed");
+        }
+        finally
+        {
+            Cleanup(root);
+        }
+    }
+
+    [Fact]
     public async Task ControlServer_Roundtrip_Over_NamedPipe()
     {
         var root = TempRoot();
