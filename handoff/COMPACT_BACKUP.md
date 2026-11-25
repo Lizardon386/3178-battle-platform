@@ -262,4 +262,11 @@
 - **2026-11-20 门户 S0–S2 已实现（后于 2026-11-24 回退）**：新增 `site/`、`tools/site/`、`package.json` 的 `site*` 脚本与 `marked`/`github-slugger` devDeps、`.gitignore` 的 `dist-site/`。`npm run site` 4 页 / 968.7 KB / `check-site` 0 错误；`npm test` 272/272、`npm run seam` OK；CDP 390/768/1280 无横向溢出。`dist-site/` 不入库；S3 原计划由用户注册热铁盒并上传。
 - **原 S3 下一步（已取消）**：在 <https://host.retiehe.com/> 注册、建站、选免费二级域名，把 `dist-site/` 内容上传到站点根；线上验证后把域名回填 README。2026-11-24 用户决定暂不上线，代码已回退。
 
+### 2026-11-25 运行时状态快照（压卡搬出）
+
+- **原生端与安装器**：`apps/BattlePlatform.{Contracts,Supervisor,Wpf}` 可构建；`bp-supervisor` 用当前用户管道 + Job Object 拉起 Node Service，`3178.exe` 有状态/启停/重连/托盘；CI 构建 `dist-win/3178`、Inno 安装器，并静默安装 → 写用户数据标记 → 同 AppId 重装 → 校验标记保留 → 跑安装目录里的 supervisor smoke → 静默卸载并再次校验数据保留；便携目录可用 `npm run upgrade -- apply/rollback/check` 做哈希校验与备份切换（不适用于 Inno 安装目录）。
+- **运行时主线**：`protocol/*` 四面 + TS/Python/C# 生成；`session-core/app/store/ws/service`；`@bp/game-package`（清单、`.bpkg`、注册表）；独立游戏 origin（`/s/<sessionId>/`、游戏 WS、handoffCode）；`@lizardon386/bp-game`（init/build/pack/inspect/doctor/sign/verify，`--model process|module`）；`reference-duel` 核心/Authority/Web UI；Python Authority 互通；`rematch` 同进程 roundId 递增开新局；`bp-game init` 生成 raw IPC 模板并通过真实服务链验证；`.bpkg.sig` 强制签名可用可信公钥校验（服务 `--trusted-key` / `--require-signatures`）；`bp-game install/uninstall/list` 管理 games 目录；`sessionCreate`/`listGames` 只接受回环地址 + 回环 Host；module 模型由平台 runner 注入运行库（包内不再带 AuthorityRuntime）。
+- **可靠性**：Authority 崩溃→最多两次自动重启→仍失败转人工 `recoverGame`；检查点恢复；关会话停进程；修复原子写 rename 窗口与并发 `load` 的静默丢会话问题；数据通道建好自动 `sync`；Authority IPC 已改为 Windows 命名管道 / POSIX Unix socket（boot 帧用 `ipcPath`，旧 `ipcPort` 仅兼容）；服务启动对账遗留 running/starting 为 failed；关闭时先排空断线写入再退出；断线宽限由定时器清理（默认 30 分钟，可配），房主到期移交给在线成员；`resume` 删除 `graceUntil` 而不是赋 undefined；C# Supervisor 单元测试 9 例（含入口缺失、错误协议版本、重复 shutdown）。
+- **测试入口**：`npm run verify`（345 例 + 构建引用/lock/契约/边界）、`npm run seam`、`npm run smoke:package`、`npm run smoke:web`、`npm run smoke:supervisor`、`npm run test:ui`（FlaUI，需交互桌面）、`npm run test:supervisor`、`npm run pack:win`；本机 .NET SDK 在 `dogfood-output/dotnet`（gitignored）。
+
 <!-- multi-agent-task-handoff: scope=handoff -->
