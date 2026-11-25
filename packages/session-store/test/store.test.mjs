@@ -57,6 +57,23 @@ test('文件仓库：会话保存/读取/列表与操作去重', async () => {
   assert.equal(await repository.getOperation('sess-1', 'missing'), null);
 });
 
+test('文件仓库：同一会话并发保存被串行化，不互相踩 rename', async () => {
+  const dir = await temp();
+  const repository = new FileSessionRepository({ root: dir });
+  const session = createSession({
+    sessionId: 'sess-1', code: 'ABCD', gameId: 'reference-duel', gameVersion: '1.0.0',
+    ownerMemberId: 'm1', ownerTicketHash: 'h1', now: 1000,
+  });
+  await Promise.all([
+    repository.save(session),
+    repository.save({ ...session, revision: 2 }),
+    repository.save({ ...session, revision: 3 }),
+  ]);
+  const loaded = await repository.load('sess-1');
+  assert.ok(loaded);
+  assert.ok([1, 2, 3].includes(loaded.revision));
+});
+
 test('文件仓库：非法 sessionId 拒绝路径穿越', async () => {
   const dir = await temp();
   const repository = new FileSessionRepository({ root: dir });

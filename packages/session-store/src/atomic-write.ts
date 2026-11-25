@@ -29,7 +29,12 @@ export async function atomicWriteText(file: string, text: string): Promise<void>
   try {
     if (await exists(file)) {
       await rm(backup, { force: true });
-      await rename(file, backup);
+      try {
+        await rename(file, backup);
+      } catch (error) {
+        // 另一个写入已把文件移走时，备份缺失不是错误。
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
     }
     await rename(tmp, file);
   } catch (error) {

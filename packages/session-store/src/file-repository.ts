@@ -15,6 +15,7 @@ export interface FileRepositoryOptions {
 export class FileSessionRepository implements SessionRepository {
   private readonly sessionsDir: string;
   private readonly operationsCache = new Map<string, Map<string, OperationRecord>>();
+  private readonly writeQueues = new Map<string, Promise<unknown>>();
 
   constructor(options: FileRepositoryOptions) {
     this.sessionsDir = join(options.root, 'sessions');
@@ -29,11 +30,21 @@ export class FileSessionRepository implements SessionRepository {
     return new SessionWal(join(this.dirFor(sessionId), 'session.wal'));
   }
 
-  async save(session: SessionRecord): Promise<void> {
-    const dir = this.dirFor(session.sessionId);
-    await mkdir(dir, { recursive: true });
-    await this.walFor(session.sessionId).append({ kind: 'session', body: session });
-    await atomicWriteJson(join(dir, 'session.json'), session);
+  /** 同一会话的写入串行化：WAL 追加和原子写不能交错，否则 rename 会互相踩。 */
+  private enqueue<T>(sessionId: string, task: () => Promise<T>): Promise<T> {
+    const previous = this.writeQueues.get(sessionId) ?? Promise.resolve();
+    const current = previous.then(task, task);
+    this.writeQueues.set(sessionId, current.then(() => undefined, () => undefined));
+    return current;
+  }
+
+  save(session: SessionRecord): Promise<void> {
+    return this.enqueue(session.sessionId, async () => {
+      const dir = this.dirFor(session.sessionId);
+      await mkdir(dir, { recursive: true });
+      await this.walFor(session.sessionId).append({ kind: 'session', body: session });
+      await atomicWriteJson(join(dir, 'session.json'), session);
+    });
   }
 
   async load(sessionId: string): Promise<SessionRecord | null> {
@@ -93,10 +104,12 @@ export class FileSessionRepository implements SessionRepository {
     return (await this.operations(sessionId)).get(key) ?? null;
   }
 
-  async putOperation(sessionId: string, record: OperationRecord): Promise<void> {
-    const dir = this.dirFor(sessionId);
-    await mkdir(dir, { recursive: true });
-    await appendFile(join(dir, 'operations.jsonl'), JSON.stringify(record) + '\n', 'utf8');
-    (await this.operations(sessionId)).set(record.key, record);
+  putOperation(sessionId: string, record: OperationRecord): Promise<void> {
+    return this.enqueue(sessionId, async () => {
+      const dir = this.dirFor(sessionId);
+      await mkdir(dir, { recursive: true });
+      await appendFile(join(dir, 'operations.jsonl'), JSON.stringify(record) + '\n', 'utf8');
+      (await this.operations(sessionId)).set(record.key, record);
+    });
   }
 }

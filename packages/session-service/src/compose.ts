@@ -71,9 +71,16 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
     }
   };
 
+  const pendingAuthority = new Set<Promise<void>>();
   const supervisor = options.authorityEntry
     ? new NodeAuthoritySupervisor({
-      onMessage: (sessionId, message) => { void handleAuthorityMessage(sessionId, message); },
+      onMessage: (sessionId, message) => {
+        const task = handleAuthorityMessage(sessionId, message).catch((error) => {
+          logger.error('authority message failed', { sessionId, error: String(error) });
+        });
+        pendingAuthority.add(task);
+        void task.finally(() => pendingAuthority.delete(task));
+      },
     })
     : undefined;
 
@@ -100,6 +107,7 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
     port,
     close: async () => {
       await supervisor?.stopAll();
+      await Promise.all([...pendingAuthority]);
       await server.close();
     },
   };
