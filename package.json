@@ -22,6 +22,7 @@
     "test:ui": "node tools/checks/run-ui-tests.mjs",
     "test:supervisor": "node tools/checks/run-dotnet-tests.mjs tests/BattlePlatform.Supervisor.Tests/BattlePlatform.Supervisor.Tests.csproj",
     "pack:win": "node tools/packaging/pack-win.mjs",
+    "upgrade": "node tools/packaging/upgrade.mjs",
     "verify": "npm run check:refs && npm run check:lock && npm run check:contract && npm test && npm run boundaries",
     "portable": "node tools/packaging/build-portable.mjs",
     "pack:sdk": "node tools/packaging/pack-sdk.mjs",
