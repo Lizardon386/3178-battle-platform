@@ -47,6 +47,8 @@ export function createSession(input: CreateSessionInput): SessionRecord {
     tickets: [{ hash: input.ownerTicketHash, memberId: input.ownerMemberId, generation: 1 }],
     revision: 1,
     state: 'open',
+    gameProcess: 'stopped',
+    authorityEpoch: 0,
     createdAt: input.now,
     limits: { ...DEFAULT_LIMITS, ...input.limits },
     ...(input.metadata === undefined ? {} : { metadata: input.metadata }),

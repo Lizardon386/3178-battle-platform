@@ -22,6 +22,8 @@ export interface Clock {
 
 export interface IdGenerator {
   next(prefix: string): string;
+  /** 4–8 位大写字母数字会话码。 */
+  code(): string;
 }
 
 export interface IssuedSecret {
@@ -42,10 +44,12 @@ export interface Logger {
 export interface AuthorityLaunch {
   sessionId: string;
   epoch: number;
+  roundId: string;
   runtime: string;
   entry: string;
+  stateDir: string;
+  members: Array<{ memberId: string; displayName?: string }>;
   args?: string[];
-  cwd?: string;
   env?: Record<string, string>;
 }
 
@@ -53,4 +57,5 @@ export interface AuthorityLaunch {
 export interface AuthoritySupervisor {
   start(launch: AuthorityLaunch): Promise<void>;
   stop(sessionId: string, reason: string): Promise<void>;
+  send(sessionId: string, message: Record<string, unknown>): void;
 }

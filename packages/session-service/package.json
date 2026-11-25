@@ -13,6 +13,7 @@
   },
   "files": ["dist"],
   "dependencies": {
+    "@bp/authority-runtime": "*",
     "@bp/session-app": "*",
     "@bp/session-core": "*",
     "@bp/session-store": "*",

@@ -10,6 +10,11 @@ export interface SessionServerOptions {
   port?: number;
   host?: string;
   httpServer?: HttpServer;
+  authority?: {
+    resolveEntry(session: SessionRecord): { entry: string; runtime?: string } | null;
+    stateRoot: string;
+  };
+  onGameFrame?: (sessionId: string, memberId: string, payload: unknown) => void;
 }
 
 interface ControlBinding {
@@ -31,6 +36,7 @@ const sendJson = (socket: WebSocket, value: unknown): void => {
 
 export class SessionServer {
   private readonly app: SessionApplication;
+  private readonly options: SessionServerOptions;
   private readonly host: string;
   private http: HttpServer;
   private controlWss: WebSocketServer | null = null;
@@ -43,6 +49,7 @@ export class SessionServer {
   private port: number;
 
   constructor(options: SessionServerOptions) {
+    this.options = options;
     this.app = options.app;
     this.host = options.host ?? '127.0.0.1';
     this.port = options.port ?? 0;
@@ -193,6 +200,23 @@ export class SessionServer {
         if (message.type === 'sessionClose') for (const socket of this.sessionSockets.get(binding.sessionId) ?? []) socket.close(1000, 'closed');
         return;
       }
+      case 'startGame': {
+        const binding = this.controlBindings.get(ws);
+        if (!binding) return this.fail(ws, { code: 'NOSEAT', message: '连接未绑定成员' });
+        if (!this.options.authority) return this.fail(ws, { code: 'GAMEFAILED', message: '没有配置权威启动器' });
+        const session = await this.app.getSession(binding.sessionId);
+        if (!session) return this.fail(ws, { code: 'NOROOM', message: '会话不存在' });
+        const target = this.options.authority.resolveEntry(session);
+        if (!target) return this.fail(ws, { code: 'UNKNOWN_GAME', message: '游戏未注册' });
+        const result = await this.app.startGame(binding.sessionId, binding.memberId, {
+          entry: target.entry,
+          ...(target.runtime === undefined ? {} : { runtime: target.runtime }),
+          stateRoot: this.options.authority.stateRoot,
+        });
+        if (!result.ok) return this.fail(ws, result.error);
+        this.broadcastState(result.value);
+        return;
+      }
       case 'channelOpen': {
         const binding = this.controlBindings.get(ws);
         if (!binding) return this.fail(ws, { code: 'NOSEAT', message: '连接未绑定成员' });
@@ -243,6 +267,13 @@ export class SessionServer {
         sendJson(ws, { type: 'error', code: 'BADMSG', text: error instanceof FrameError ? error.message : '坏帧' });
         return;
       }
+      if (this.options.onGameFrame) {
+        const text = frame.payload.toString('utf8');
+        let payload: unknown = text;
+        try { payload = JSON.parse(text); } catch { /* 非 JSON 保持字符串 */ }
+        this.options.onGameFrame(binding.sessionId, binding.memberId, payload);
+        return;
+      }
       const targets = frame.header.to === 'all'
         ? [...(this.dataSockets.get(binding.memberId) ?? [])].filter((socket) => socket !== ws)
         : [...(this.dataSockets.get(frame.header.to) ?? [])];
@@ -264,5 +295,27 @@ export class SessionServer {
   private broadcastState(session: SessionRecord): void {
     const payload = { type: 'sessionState', session };
     for (const socket of this.sessionSockets.get(session.sessionId) ?? []) sendJson(socket, payload);
+  }
+
+  broadcastSessionState(session: SessionRecord): void {
+    this.broadcastState(session);
+  }
+
+  /** 把权威结果发给某个成员的数据连接；每个连接用自己的 channelId 组帧。 */
+  sendToMemberGame(sessionId: string, memberId: string, payload: unknown, meta: { viewSeq?: number } = {}): void {
+    const bytes = Buffer.from(JSON.stringify(payload), 'utf8');
+    for (const socket of this.dataSockets.get(memberId) ?? []) {
+      const binding = this.dataBinding.get(socket);
+      if (!binding || binding.sessionId !== sessionId || socket.readyState !== 1) continue;
+      const frame = encodeFrame({
+        v: 1,
+        channelId: binding.channelId,
+        to: memberId,
+        seq: Math.max(1, meta.viewSeq ?? 1),
+        mode: 'reliable',
+        payloadBytes: bytes.byteLength,
+      }, bytes);
+      socket.send(frame);
+    }
   }
 }

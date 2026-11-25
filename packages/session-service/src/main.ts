@@ -9,8 +9,13 @@ function arg(name: string, fallback?: string): string | undefined {
 
 const dataDir = resolve(arg('data-dir', process.env.BP_DATA_DIR ?? resolve(process.cwd(), 'data'))!);
 const port = Number(arg('port', process.env.BP_PORT ?? '0'));
+const authorityEntry = arg('authority-entry', process.env.BP_AUTHORITY_ENTRY);
 
-startService({ dataDir, port }).then((service) => {
+startService({
+  dataDir,
+  port,
+  ...(authorityEntry === undefined ? {} : { authorityEntry: resolve(authorityEntry) }),
+}).then((service) => {
   console.log(`BP_SERVICE_PORT=${service.port}`);
   const stop = async () => {
     await service.close();

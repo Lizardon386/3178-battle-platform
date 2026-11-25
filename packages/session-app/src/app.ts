@@ -15,7 +15,7 @@ import {
   type Result,
   type SessionRecord,
 } from '@bp/session-core';
-import type { Clock, IdGenerator, Logger, SecretStore, SessionRepository } from './ports.js';
+import type { AuthoritySupervisor, Clock, IdGenerator, Logger, SecretStore, SessionRepository } from './ports.js';
 
 export interface CreateInput {
   gameId: string;
@@ -61,13 +61,13 @@ export class SessionApplication {
     private readonly ids: IdGenerator,
     private readonly secrets: SecretStore,
     private readonly logger: Logger,
-    private readonly supervisor?: { start(launch: { sessionId: string; epoch: number; runtime: string; entry: string }): Promise<void>; stop(sessionId: string, reason: string): Promise<void> },
+    private readonly supervisor?: AuthoritySupervisor,
   ) {}
 
   async create(input: CreateInput): Promise<Result<Created>> {
     const now = this.clock.now();
     const sessionId = this.ids.next('sess');
-    const code = this.ids.next('code').toUpperCase().slice(0, 6);
+    const code = this.ids.code();
     const memberId = this.ids.next('member');
     const ticket = this.secrets.issue();
     const session = createSession({
@@ -136,6 +136,95 @@ export class SessionApplication {
       resumeToken: next.secret,
       generation: member?.connectionGeneration ?? ticket.generation + 1,
     });
+  }
+
+  async startGame(
+    sessionId: string,
+    actorId: string,
+    options: { entry: string; runtime?: string; stateRoot: string },
+  ): Promise<Result<SessionRecord>> {
+    const session = await this.repository.load(sessionId);
+    if (!session) return err('NOROOM', '会话不存在');
+    if (session.ownerMemberId !== actorId) return err('NOTHOST', '只有房主可以开始游戏');
+    if (session.state !== 'open') return err('PHASE', '会话不可开始');
+    if (session.gameProcess !== 'stopped') return err('PHASE', '游戏已经开始');
+    if (session.members.length < 2) return err('NOTREADY', '至少需要两名成员');
+    if (session.members.some((member) => member.presence !== 'online')) return err('NOTREADY', '有成员不在线');
+    if (!this.supervisor) return err('GAMEFAILED', '没有可用的权威启动器');
+
+    const epoch = session.authorityEpoch + 1;
+    const roundId = `round-${epoch}`;
+    const starting = structuredClone(session);
+    starting.authorityEpoch = epoch;
+    starting.currentRoundId = roundId;
+    starting.gameProcess = 'starting';
+    starting.revision += 1;
+    await this.repository.save(starting);
+    try {
+      await this.supervisor.start({
+        sessionId,
+        epoch,
+        roundId,
+        runtime: options.runtime ?? 'node24',
+        entry: options.entry,
+        stateDir: `${options.stateRoot}/${sessionId}/${epoch}`,
+        members: starting.members.map((member) => ({
+          memberId: member.memberId,
+          ...(member.displayName === undefined ? {} : { displayName: member.displayName }),
+        })),
+      });
+    } catch (error) {
+      const failed = structuredClone(starting);
+      failed.gameProcess = 'failed';
+      failed.revision += 1;
+      await this.repository.save(failed);
+      this.logger.error('authority start failed', { sessionId, epoch, error: String(error) });
+      return err('GAMEFAILED', '游戏进程启动失败');
+    }
+    // 启动期间 authorityReady 可能已经把状态推进到 running；返回最新快照，避免旧 revision 覆盖。
+    return ok((await this.repository.load(sessionId)) ?? starting);
+  }
+
+  async markAuthorityReady(sessionId: string, epoch: number): Promise<Result<SessionRecord>> {
+    const session = await this.repository.load(sessionId);
+    if (!session) return err('NOROOM', '会话不存在');
+    if (session.authorityEpoch !== epoch) return err('STALE_EPOCH', '权威代际已过期');
+    if (session.gameProcess !== 'starting') return err('PHASE', '当前不在启动中');
+    const next = structuredClone(session);
+    next.gameProcess = 'running';
+    next.revision += 1;
+    await this.repository.save(next);
+    return ok(next);
+  }
+
+  async markAuthorityFailed(sessionId: string, epoch: number, text: string): Promise<Result<SessionRecord>> {
+    const session = await this.repository.load(sessionId);
+    if (!session) return err('NOROOM', '会话不存在');
+    if (session.authorityEpoch !== epoch) return err('STALE_EPOCH', '权威代际已过期');
+    const next = structuredClone(session);
+    next.gameProcess = 'failed';
+    next.revision += 1;
+    await this.repository.save(next);
+    this.logger.error('authority failed', { sessionId, epoch, text });
+    return ok(next);
+  }
+
+  async routeGame(sessionId: string, memberId: string, payload: unknown): Promise<Result<void>> {
+    const session = await this.repository.load(sessionId);
+    if (!session) return err('NOROOM', '会话不存在');
+    if (session.gameProcess !== 'running') return err('PHASE', '游戏尚未开始');
+    if (!this.supervisor) return err('GAMEFAILED', '没有可用的权威');
+    this.supervisor.send(sessionId, {
+      type: 'deliver',
+      authorityEpoch: session.authorityEpoch,
+      fromMemberId: memberId,
+      payload,
+    });
+    return ok(undefined);
+  }
+
+  async stopAuthority(sessionId: string, reason: string): Promise<void> {
+    if (this.supervisor) await this.supervisor.stop(sessionId, reason);
   }
 
   async getSession(sessionId: string): Promise<SessionRecord | null> {

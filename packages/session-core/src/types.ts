@@ -1,5 +1,6 @@
 export type SessionState = 'open' | 'closing' | 'closed';
 export type Presence = 'online' | 'grace';
+export type GameProcess = 'stopped' | 'starting' | 'running' | 'failed' | 'exited';
 
 export interface SessionLimits {
   maxMembers: number;
@@ -35,6 +36,9 @@ export interface SessionRecord {
   tickets: TicketRecord[];
   revision: number;
   state: SessionState;
+  gameProcess: GameProcess;
+  authorityEpoch: number;
+  currentRoundId?: string;
   createdAt: number;
   limits: SessionLimits;
   metadata?: Record<string, unknown>;
