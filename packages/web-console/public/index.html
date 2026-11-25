@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>3178 联机控制台</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main>
+    <h1>3178 联机控制台</h1>
+    <p class="hint">最小诊断界面：建房、加入、开始，并查看公共/私密视图。</p>
+
+    <section>
+      <h2>连接</h2>
+      <div class="row">
+        <label>游戏 <input id="gameId" value="reference-duel" /></label>
+        <label>版本 <input id="gameVersion" value="1.0.0" /></label>
+      </div>
+      <div class="row">
+        <label>邀请 secret（可选）<input id="inviteSecret" placeholder="建房时生成/填写" /></label>
+      </div>
+      <div class="row">
+        <button id="create">建房</button>
+        <button id="join">加入</button>
+        <button id="start">开始游戏</button>
+        <button id="channel">打开数据通道</button>
+      </div>
+      <div id="status" class="status">未连接</div>
+    </section>
+
+    <section>
+      <h2>会话</h2>
+      <pre id="session">—</pre>
+    </section>
+
+    <section>
+      <h2>游戏视图</h2>
+      <div id="view" class="view">—</div>
+      <div id="hand" class="hand"></div>
+    </section>
+
+    <section>
+      <h2>日志</h2>
+      <pre id="log"></pre>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

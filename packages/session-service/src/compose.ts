@@ -1,10 +1,11 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { SessionApplication } from '@bp/session-app';
 import { FileSessionRepository } from '@bp/session-store';
 import { SessionServer } from '@bp/session-ws';
 import type { Clock, IdGenerator, Logger, SecretStore } from '@bp/session-app';
 import { NodeAuthoritySupervisor } from './supervisor-node.js';
+import { createManagementServer } from './web.js';
 
 export interface ServiceOptions {
   dataDir: string;
@@ -12,6 +13,8 @@ export interface ServiceOptions {
   port?: number;
   /** 单个游戏 Authority 入口；没有时只提供会话能力，startGame 会失败。 */
   authorityEntry?: string;
+  /** 管理端静态目录；默认取仓库内 packages/web-console/public。 */
+  webRoot?: string;
 }
 
 const clock: Clock = { now: () => Date.now() };
@@ -85,8 +88,11 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
     : undefined;
 
   const app = new SessionApplication(repository, clock, ids, secrets, logger, supervisor);
+  const webRoot = options.webRoot ?? resolve(process.cwd(), 'packages/web-console/public');
+  const httpServer = createManagementServer({ root: webRoot });
   server = new SessionServer({
     app,
+    httpServer,
     ...(options.host === undefined ? {} : { host: options.host }),
     ...(options.port === undefined ? {} : { port: options.port }),
     ...(options.authorityEntry === undefined ? {} : {

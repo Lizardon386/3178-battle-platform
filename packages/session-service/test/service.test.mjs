@@ -84,6 +84,23 @@ test('真实 WS：建房、加入、会话状态与二进制转发', async () =>
   }
 });
 
+test('管理端静态页：CSP、脚本与路径穿越', async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'bp-service-'));
+  const service = await startService({ dataDir, port: 0 });
+  try {
+    const page = await fetch(`http://127.0.0.1:${service.port}/`);
+    assert.equal(page.status, 200);
+    assert.match(page.headers.get('content-security-policy') ?? '', /default-src 'self'/);
+    assert.match(await page.text(), /3178 联机控制台/);
+    const script = await fetch(`http://127.0.0.1:${service.port}/app.js`);
+    assert.equal(script.status, 200);
+    const escaped = await fetch(`http://127.0.0.1:${service.port}/..%2F..%2Fpackage.json`);
+    assert.equal(escaped.status, 404);
+  } finally {
+    await service.close();
+  }
+});
+
 test('邀请 secret：建房时设置，加入必须携带', async () => {
   const dataDir = await mkdtemp(join(tmpdir(), 'bp-service-'));
   const service = await startService({ dataDir, port: 0 });
