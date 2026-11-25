@@ -4,6 +4,7 @@ const statusEl = $('status');
 const sessionEl = $('session');
 const viewEl = $('view');
 const handEl = $('hand');
+const gameEl = $('game');
 
 let control = null;
 let data = null;
@@ -155,6 +156,16 @@ const connectControl = () => {
         break;
       case 'channelGranted':
         $('channel').dataset.token = message.channelToken;
+        if (message.gameUrl) {
+          gameEl.replaceChildren();
+          const link = document.createElement('a');
+          link.href = message.gameUrl;
+          link.target = '_blank';
+          link.rel = 'noreferrer';
+          link.textContent = '打开游戏页面';
+          gameEl.append(link);
+          log('游戏地址', message.gameUrl);
+        }
         connectData();
         break;
       case 'error':

@@ -1,9 +1,53 @@
-import { createServer as createHttpServer, type Server as HttpServer } from 'node:http';
+import { createServer as createHttpServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from 'node:http';
 import { randomBytes } from 'node:crypto';
+import { readFileSync, statSync } from 'node:fs';
+import { extname, join, resolve } from 'node:path';
+import type { Duplex } from 'node:stream';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { SessionApplication } from '@bp/session-app';
 import type { SessionRecord } from '@bp/session-core';
 import { decodeFrame, encodeFrame, FrameError, type FrameHeader } from './framing.js';
+
+const CONTENT_TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.ico': 'image/x-icon',
+  '.woff2': 'font/woff2',
+  '.wasm': 'application/wasm',
+  '.mp3': 'audio/mpeg',
+  '.ogg': 'audio/ogg',
+  '.wav': 'audio/wav',
+};
+
+/** 游戏 origin 的 CSP：只允许自身脚本/样式/资源，连接只回自身 WS。 */
+export const GAME_CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "frame-ancestors 'none'",
+].join('; ');
+
+export interface GameOriginOptions {
+  host?: string;
+  /** 0 表示随机端口；服务层默认给 3001。 */
+  port?: number;
+  /** 返回该会话的静态根与 `/` 对应的入口文件名；null 表示没有可托管的 Web 游戏。 */
+  resolveRoot(session: SessionRecord): { root: string; entry: string } | null;
+}
 
 export interface SessionServerOptions {
   app: SessionApplication;
@@ -14,12 +58,15 @@ export interface SessionServerOptions {
     resolveEntry(session: SessionRecord): { entry: string; runtime?: string } | null;
     stateRoot: string;
   };
+  gameOrigin?: GameOriginOptions;
   onGameFrame?: (sessionId: string, memberId: string, payload: unknown) => void;
 }
 
 interface ControlBinding {
   sessionId: string;
   memberId: string;
+  /** 建连接时的 Host 头，用来拼游戏 origin 地址。 */
+  host?: string;
 }
 
 interface ChannelBinding {
@@ -34,6 +81,49 @@ const sendJson = (socket: WebSocket, value: unknown): void => {
   if (socket.readyState === 1) socket.send(JSON.stringify(value));
 };
 
+function safeJoin(root: string, pathname: string): string | null {
+  const rootAbs = resolve(root);
+  const target = resolve(join(rootAbs, pathname.replace(/^\/+/, '')));
+  if (target !== rootAbs && !target.startsWith(`${rootAbs}/`) && !target.startsWith(`${rootAbs}\\`)) return null;
+  return target;
+}
+
+/** 浏览器来源校验：带 Origin 就必须与 Host 一致；跨站 Sec-Fetch-Site 直接拒绝。 */
+function isSameOriginRequest(request: IncomingMessage): boolean {
+  const origin = request.headers.origin;
+  if (typeof origin === 'string') {
+    try {
+      if (new URL(origin).host !== request.headers.host) return false;
+    } catch {
+      return false;
+    }
+  }
+  const site = request.headers['sec-fetch-site'];
+  if (typeof site === 'string' && site !== 'same-origin' && site !== 'none') return false;
+  return true;
+}
+
+function rejectUpgrade(socket: Duplex): void {
+  socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+  socket.destroy();
+}
+
+function listen(server: HttpServer, port: number, host: string): Promise<number> {
+  return new Promise<number>((resolvePromise, rejectPromise) => {
+    server.once('error', rejectPromise);
+    server.listen(port, host, () => {
+      server.off('error', rejectPromise);
+      const address = server.address();
+      resolvePromise(typeof address === 'object' && address ? address.port : port);
+    });
+  });
+}
+
+function closeServer(server: HttpServer): Promise<void> {
+  server.closeAllConnections?.();
+  return new Promise<void>((resolvePromise) => server.close(() => resolvePromise()));
+}
+
 export class SessionServer {
   private readonly app: SessionApplication;
   private readonly options: SessionServerOptions;
@@ -46,6 +136,8 @@ export class SessionServer {
   private readonly channels = new Map<string, ChannelBinding>();
   private readonly dataSockets = new Map<string, Set<WebSocket>>();
   private readonly dataBinding = new Map<WebSocket, ChannelBinding>();
+  private gameHttp: HttpServer | null = null;
+  private gamePort = 0;
   private port: number;
 
   constructor(options: SessionServerOptions) {
@@ -64,7 +156,7 @@ export class SessionServer {
     });
   }
 
-  async start(): Promise<{ port: number }> {
+  async start(): Promise<{ port: number; gamePort: number | null }> {
     this.controlWss = new WebSocketServer({ noServer: true });
     this.dataWss = new WebSocketServer({ noServer: true });
     this.http.on('upgrade', (request, socket, head) => {
@@ -74,18 +166,95 @@ export class SessionServer {
         socket.destroy();
         return;
       }
+      if (!isSameOriginRequest(request)) {
+        rejectUpgrade(socket);
+        return;
+      }
       target.handleUpgrade(request, socket, head, (ws) => {
-        if (target === this.controlWss) this.onControl(ws);
-        else this.onData(ws);
+        if (target === this.controlWss) {
+          const host = request.headers.host;
+          this.onControl(ws, typeof host === 'string' ? host : undefined);
+        } else {
+          this.onData(ws);
+        }
       });
     });
-    await new Promise<void>((resolvePromise, reject) => {
-      this.http.once('error', reject);
-      this.http.listen(this.port, this.host, () => resolvePromise());
+    this.port = await listen(this.http, this.port, this.host);
+    await this.startGameOrigin();
+    return { port: this.port, gamePort: this.gameHttp ? this.gamePort : null };
+  }
+
+  private async startGameOrigin(): Promise<void> {
+    const options = this.options.gameOrigin;
+    if (!options) return;
+    this.gameHttp = createHttpServer((request, response) => {
+      void this.serveGame(request, response);
     });
-    const address = this.http.address();
-    this.port = typeof address === 'object' && address ? address.port : this.port;
-    return { port: this.port };
+    this.gameHttp.on('upgrade', (request, socket, head) => {
+      const path = new URL(request.url ?? '/', 'http://localhost').pathname;
+      if (path !== '/ws/data' || !isSameOriginRequest(request)) {
+        rejectUpgrade(socket);
+        return;
+      }
+      this.dataWss!.handleUpgrade(request, socket, head, (ws) => this.onData(ws));
+    });
+    this.gamePort = await listen(this.gameHttp, options.port ?? 0, options.host ?? this.host);
+  }
+
+  /** 游戏 origin 静态页：路径带 sessionId，只服务该会话已注册游戏包的 Web 根。 */
+  private async serveGame(request: IncomingMessage, response: ServerResponse): Promise<void> {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      response.writeHead(405, { allow: 'GET, HEAD' });
+      response.end();
+      return;
+    }
+    let pathname: string;
+    try {
+      pathname = decodeURIComponent(new URL(request.url ?? '/', 'http://localhost').pathname);
+    } catch {
+      response.writeHead(400);
+      response.end();
+      return;
+    }
+    const match = /^\/s\/([^/]+)(\/.*)?$/.exec(pathname);
+    const sessionId = match?.[1];
+    if (!sessionId) {
+      response.writeHead(404);
+      response.end();
+      return;
+    }
+    const session = await this.app.getSession(sessionId);
+    const target = session && this.options.gameOrigin ? this.options.gameOrigin.resolveRoot(session) : null;
+    if (!target) {
+      response.writeHead(404);
+      response.end();
+      return;
+    }
+    const relative = match?.[2] ?? '/';
+    const file = safeJoin(target.root, relative === '/' ? `/${target.entry}` : relative);
+    if (!file) {
+      response.writeHead(404);
+      response.end();
+      return;
+    }
+    try {
+      if (!statSync(file).isFile()) throw new Error('not a file');
+      const body = readFileSync(file);
+      response.writeHead(200, {
+        'content-type': CONTENT_TYPES[extname(file).toLowerCase()] ?? 'application/octet-stream',
+        'content-security-policy': GAME_CSP,
+        'x-content-type-options': 'nosniff',
+        'referrer-policy': 'no-referrer',
+        'cross-origin-opener-policy': 'same-origin',
+        'cross-origin-resource-policy': 'same-origin',
+        'cache-control': 'no-store',
+      });
+      if (request.method === 'HEAD') response.end();
+      else response.end(body);
+    } catch {
+      response.writeHead(404);
+      response.end();
+    }
   }
 
   async close(): Promise<void> {
@@ -93,11 +262,11 @@ export class SessionServer {
     for (const ws of this.dataBinding.keys()) ws.terminate();
     this.controlWss?.close();
     this.dataWss?.close();
-    this.http.closeAllConnections?.();
-    await new Promise<void>((resolvePromise) => this.http.close(() => resolvePromise()));
+    if (this.gameHttp) await closeServer(this.gameHttp);
+    await closeServer(this.http);
   }
 
-  private onControl(ws: WebSocket): void {
+  private onControl(ws: WebSocket, host?: string): void {
     let bound: ControlBinding | null = null;
     const timer = setTimeout(() => {
       if (!bound) ws.close(1008, 'auth timeout');
@@ -107,7 +276,7 @@ export class SessionServer {
         bound = binding;
         clearTimeout(timer);
         this.bindControl(ws, binding);
-      });
+      }, host);
     });
     ws.on('close', () => {
       clearTimeout(timer);
@@ -128,7 +297,17 @@ export class SessionServer {
     this.sessionSockets.set(binding.sessionId, set);
   }
 
-  private async handleControl(ws: WebSocket, raw: string, bind: (binding: ControlBinding) => void): Promise<void> {
+  private async handleControl(
+    ws: WebSocket,
+    raw: string,
+    bind: (binding: ControlBinding) => void,
+    host?: string,
+  ): Promise<void> {
+    const seat = (sessionId: string, memberId: string): ControlBinding => ({
+      sessionId,
+      memberId,
+      ...(host === undefined ? {} : { host }),
+    });
     let message: Record<string, unknown>;
     try {
       message = JSON.parse(raw) as Record<string, unknown>;
@@ -148,7 +327,7 @@ export class SessionServer {
           ...(typeof message.inviteSecret === 'string' ? { inviteSecret: message.inviteSecret } : {}),
         });
         if (!result.ok) return this.fail(ws, result.error);
-        bind({ sessionId: result.value.session.sessionId, memberId: result.value.memberId });
+        bind(seat(result.value.session.sessionId, result.value.memberId));
         sendJson(ws, {
           type: 'seatGranted', sessionId: result.value.session.sessionId, code: result.value.session.code,
           memberId: result.value.memberId, resumeToken: result.value.resumeToken, generation: result.value.generation,
@@ -164,7 +343,7 @@ export class SessionServer {
           ...(typeof message.displayName === 'string' ? { displayName: message.displayName } : {}),
         });
         if (!result.ok) return this.fail(ws, result.error);
-        bind({ sessionId: result.value.session.sessionId, memberId: result.value.memberId });
+        bind(seat(result.value.session.sessionId, result.value.memberId));
         sendJson(ws, {
           type: 'seatGranted', sessionId: result.value.session.sessionId, code: result.value.session.code,
           memberId: result.value.memberId, resumeToken: result.value.resumeToken, generation: result.value.generation,
@@ -178,7 +357,7 @@ export class SessionServer {
           presentedToken: String(message.resumeToken ?? ''),
         });
         if (!result.ok) return this.fail(ws, result.error);
-        bind({ sessionId: result.value.session.sessionId, memberId: result.value.memberId });
+        bind(seat(result.value.session.sessionId, result.value.memberId));
         sendJson(ws, {
           type: 'seatGranted', sessionId: result.value.session.sessionId, code: result.value.session.code,
           memberId: result.value.memberId, resumeToken: result.value.resumeToken, generation: result.value.generation,
@@ -224,7 +403,13 @@ export class SessionServer {
         const channelId = `ch-${randomBytes(6).toString('hex')}`;
         const channelToken = randomBytes(24).toString('hex');
         this.channels.set(channelToken, { sessionId: binding.sessionId, memberId: binding.memberId, channelId });
-        sendJson(ws, { type: 'channelGranted', channelId, channelToken });
+        const gameUrl = this.gameUrlFor(binding);
+        sendJson(ws, {
+          type: 'channelGranted',
+          channelId,
+          channelToken,
+          ...(gameUrl === undefined ? {} : { gameUrl }),
+        });
         return;
       }
       case 'ping':
@@ -291,6 +476,19 @@ export class SessionServer {
 
   private fail(ws: WebSocket, error: { code: string; message: string }): void {
     sendJson(ws, { type: 'error', code: error.code, text: error.message });
+  }
+
+  /** 用控制连接握手时的 Host 拼游戏 origin；拿不到主机名时不猜地址。 */
+  private gameUrlFor(binding: ControlBinding): string | undefined {
+    if (!this.options.gameOrigin || !this.gameHttp || !binding.host) return undefined;
+    let hostname: string;
+    try {
+      hostname = new URL(`http://${binding.host}`).hostname;
+    } catch {
+      return undefined;
+    }
+    const port = this.gamePort === 80 ? '' : `:${this.gamePort}`;
+    return `http://${hostname}${port}/s/${encodeURIComponent(binding.sessionId)}/`;
   }
 
   private broadcastState(session: SessionRecord): void {

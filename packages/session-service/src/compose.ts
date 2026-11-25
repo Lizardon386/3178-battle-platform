@@ -4,6 +4,7 @@ import { SessionApplication } from '@bp/session-app';
 import { FileSessionRepository } from '@bp/session-store';
 import { SessionServer } from '@bp/session-ws';
 import type { Clock, IdGenerator, Logger, SecretStore } from '@bp/session-app';
+import type { GameRegistry } from '@bp/game-package';
 import { NodeAuthoritySupervisor } from './supervisor-node.js';
 import { createManagementServer } from './web.js';
 import { TunnelManager, type TunnelSpawner } from '@bp/tunnel-manager';
@@ -12,8 +13,15 @@ export interface ServiceOptions {
   dataDir: string;
   host?: string;
   port?: number;
-  /** 单个游戏 Authority 入口；没有时只提供会话能力，startGame 会失败。 */
+  /** 单个游戏 Authority 入口；没有注册表时作为开发回退。 */
   authorityEntry?: string;
+  /** `.bpkg` 注册表；按 session 的 gameId/gameVersion 解析 Authority 与 Web。 */
+  registry?: GameRegistry;
+  /** 独立游戏 origin；配置注册表时默认开启（端口 0，由调用方给正式端口）。 */
+  gameOrigin?: {
+    host?: string;
+    port?: number;
+  };
   /** 管理端静态目录；默认取仓库内 packages/web-console/public。 */
   webRoot?: string;
   /** 可选公网隧道；未配置时只监听本机/局域网。 */
@@ -48,6 +56,7 @@ const logger: Logger = {
 
 export interface RunningService {
   port: number;
+  gamePort: number | null;
   publicUrl: string | null;
   close(): Promise<void>;
 }
@@ -85,7 +94,7 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
   };
 
   const pendingAuthority = new Set<Promise<void>>();
-  const supervisor = options.authorityEntry
+  const supervisor = options.authorityEntry !== undefined || options.registry !== undefined
     ? new NodeAuthoritySupervisor({
       onMessage: (sessionId, message) => {
         const task = handleAuthorityMessage(sessionId, message).catch((error) => {
@@ -105,19 +114,30 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
     httpServer,
     ...(options.host === undefined ? {} : { host: options.host }),
     ...(options.port === undefined ? {} : { port: options.port }),
-    ...(options.authorityEntry === undefined ? {} : {
+    ...(options.authorityEntry === undefined && options.registry === undefined ? {} : {
       authority: {
-        resolveEntry: () => ({ entry: options.authorityEntry! }),
+        resolveEntry: (session) => {
+          const registered = options.registry?.resolve(session.gameId, session.gameVersion);
+          if (registered) return { entry: registered.authorityEntry };
+          return options.authorityEntry === undefined ? null : { entry: options.authorityEntry };
+        },
         stateRoot: join(options.dataDir, 'authority'),
       },
       onGameFrame: (sessionId: string, memberId: string, payload: unknown) => {
         void app.routeGame(sessionId, memberId, payload);
       },
     }),
+    ...(options.registry === undefined ? {} : {
+      gameOrigin: {
+        ...(options.gameOrigin?.host === undefined ? {} : { host: options.gameOrigin.host }),
+        port: options.gameOrigin?.port ?? 0,
+        resolveRoot: (session) => options.registry!.resolve(session.gameId, session.gameVersion)?.web ?? null,
+      },
+    }),
   });
 
-  const { port } = await server.start();
-  logger.info('session service listening', { port, dataDir: options.dataDir });
+  const { port, gamePort } = await server.start();
+  logger.info('session service listening', { port, gamePort, dataDir: options.dataDir });
 
   let publicUrl: string | null = null;
   let tunnels: TunnelManager | null = null;
@@ -143,6 +163,7 @@ export async function startService(options: ServiceOptions): Promise<RunningServ
 
   return {
     port,
+    gamePort,
     publicUrl,
     close: async () => {
       await tunnels?.stopAll();

@@ -21,6 +21,7 @@ const NEW = [
   'session-service',
   'authority-runtime',
   'tunnel-manager',
+  'game-package',
   'game-sdk',
   'game-kit',
   'bp-game',
@@ -38,6 +39,7 @@ const FORBIDDEN_IMPORTS = {
   'game-kit': [/^@bp\/(session-|authority-runtime|web-console)/],
   'web-console': [/^@bp\/(session-app|session-core|session-store|session-ws|session-service|authority-runtime)/],
   'bp-game': [/^@bp\/(session-|authority-runtime)/],
+  'game-package': [/^@bp\/(session-|authority-runtime|web-console)/],
 };
 
 const IMPORT_RE = /(?:from\s+|import\s*\(\s*|require\s*\(\s*)['"]([^'"]+)['"]/g;
