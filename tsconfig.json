@@ -9,6 +9,7 @@
     { "path": "packages/session-service" },
     { "path": "packages/authority-runtime" },
     { "path": "packages/game-sdk-stub" },
+    { "path": "packages/tunnel-manager" },
     { "path": "packages/core-abi" },
     { "path": "packages/pack-format" },
     { "path": "packages/protocol" },

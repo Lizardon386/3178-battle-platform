@@ -20,6 +20,7 @@ const NEW = [
   'session-ws',
   'session-service',
   'authority-runtime',
+  'tunnel-manager',
   'game-sdk',
   'game-kit',
   'bp-game',
