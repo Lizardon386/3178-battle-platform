@@ -1,7 +1,7 @@
 # 3178-battle-platform（3178 对战平台）· 上下文与进展
 
 > 任务交接档案，供后续 agent 跟进；改动产物后更新「现在在哪」「交接记录」。
-> 最近更新：2026-11-24　模式：文档四档 + `docs/`（设计/研究/预览）+ 合并总计划（门户暂缓）　项目目录：D:\agent_workspace\3178-battle-platform　代码锚点以 `handoff/PROMPT.md` 与 git HEAD 为准（分支 `master`）　当前接盘：待接（上一写者 Claude Code；门户已按 2026-11-24 决定回退/暂缓；合并计划已落盘）
+> 最近更新：2026-11-25　模式：托管运行时（平台 + .bpkg + 原生 exe）实施中　项目目录：D:\agent_workspace\3178-battle-platform　代码锚点以 `handoff/PROMPT.md` 与 git HEAD 为准（分支 `master`）　当前接盘：待接（上一写者 Claude Code；门户暂缓；原生安装器与 CI 产物已跑通）
 <!-- 日期要保持 README、DESIGN、INTEGRATION_GUIDE、CONTEXT 顶部同一天。 -->
 
 ## 1. 文档目录
@@ -20,19 +20,21 @@
 
 原目标：类 war3 的宿主制联机对战平台，房主建房、座位/观战/电脑位、Ready 闸、权限与移交、重连、落盘、局域网发现；游戏用 `.bpmap` 包导入，开发者只依赖 game-sdk。原完成定义：`npm test` / `npm run seam` / `npx tsc -b` / 外部 smoke 全绿，SDK 四包可安装。
 
-**当前确立的是全局目标架构与契约，不是已完成实现。** 平台与游戏运行时解耦、平台只提供联机能力、游戏全责玩法与 UI，并要 exe / 网页 / 手机多形态；真实运行时仍待落地。门户已暂缓，仅保留在合并计划中作为将来可选支线。
+**目标架构已落地到可运行状态**：Session Service、`.bpkg` 注册表、独立游戏 origin、Authority 恢复、WPF/Supervisor 原生端、win-x64 便携包与 Inno 安装器均已实现；`npm run verify` 322 例、seam、边界、浏览器 smoke、原生 supervisor smoke、CI 安装/卸载 smoke 全绿。仍缺 color-duel 全量迁移、签名证书、真实双机/VM/Android 证据。门户继续暂缓。
 
 ## 3. 现在在哪
 
-- **2026-11-24 门户回退/暂缓**：用户决定暂不接入热铁盒；已删除 `site/`、`tools/site/`、`dist-site/`，还原 `package.json`/`package-lock.json` 与 `.gitignore` 的 `dist-site/` 改动。合并计划保留 S0–S4 作为暂缓支线（`plan/federated-marinating-hamming.md`），当前不发布、不挡运行时。
-- **2026-11-20 合并总计划落盘**：`plan/federated-marinating-hamming.md` 把运行时 WP0–WP9 与门户 S0–S4 合并为唯一执行计划；原 `plan/bright-swinging-wren.md` 降为附录 B（字段级契约/故障矩阵索引）。运行时仍未实施。
-- **运行时主线未实施**：真实 Session Service / Supervisor / Authority、原生 `3178.exe`、SDK 外部消费者、reference-duel 均未落地；当前发布形态仍是 `bat + node.exe + 浏览器`。方向 C1–C8 / D1–D8 与 Industrial/Utilitarian UI 口径不变，细节见合并计划 §2 与 COMPACT_BACKUP 2026-11-20 搬出段。
+- **2026-11-25 原生端与安装器**：`apps/BattlePlatform.{Contracts,Supervisor,Wpf}` 可构建；`bp-supervisor` 用当前用户管道 + Job Object 拉起 Node Service，`3178.exe` 有状态/启停/重连/托盘；CI 构建 `dist-win/3178`、Inno 安装器，并静默安装 → 跑安装目录里的 supervisor smoke → 静默卸载。
+- **2026-11-25 运行时主线**：`protocol/*` 四面 + TS/Python/C# 生成；`session-core/app/store/ws/service`；`@bp/game-package`（清单、`.bpkg`、注册表）；独立游戏 origin（`/s/<sessionId>/`、游戏 WS、handoffCode）；`@lizardon386/bp-game`（build/pack/inspect/doctor/sign/verify）；`reference-duel` 核心/Authority/Web UI；Python Authority 互通。
+- **2026-11-25 可靠性**：Authority 崩溃→最多两次自动重启→仍失败转人工 `recoverGame`；检查点恢复；关会话停进程；修复原子写 rename 窗口与并发 `load` 的静默丢会话问题；数据通道建好自动 `sync`。
+- **测试入口**：`npm run verify`（构建引用/lock/契约/322 例/边界）、`npm run seam`、`npm run smoke:package`、`npm run smoke:web`、`npm run smoke:supervisor`、`npm run test:ui`（FlaUI，需交互桌面）、`npm run pack:win`。本机 .NET SDK 在 `dogfood-output/dotnet`（gitignored）。
 
 ## 4. 下一步
 
-1. **WP0 运行时冻结**：按合并计划 §3.1/§4.3 先做 WP0（文档回写、依赖图、`check-boundaries`），再 WP1（契约、纯内核、存储），不跳步。
-2. **G2 前完成 WP2/WP3/WP4** 的真实链路与安全负例，不跳步。
-3. **门户暂缓**：不进入当前批次；恢复时按合并计划 §3.2/附录 A 从 S0 重建，先确认受众与维护成本。
+1. **WP6 收口**：TS/C# 共享 reducer 与 golden；移动视口已测 320/360/390 不溢出，继续补读屏/键盘/高对比完整流程。
+2. **WP3 收口**：Authority IPC 改命名管道、完整故障矩阵、Supervisor 单元测试；确认自动重启策略是否要按 uptime 重置。
+3. **WP5/WP9**：`bp-game init` 模板与 SDK 运行时注入；color-duel 全量 golden 迁移必须先拿到该仓写者/授权，平台侧只做切换准备。
+4. **WP8**：升级回滚、签名证书、双机/WSS/Android/干净 VM 验收；没有证书/设备时不要写成已完成。
 
 ## 5. MEMORY 提炼
 
@@ -45,7 +47,8 @@
 - **架构一次设计完整，不接受边做边补**；计划/待定项确认不等于开工，只有明确实施指令才动仓库；新增功能落在单一模块和对应测试。
 - **SDK = android.jar 模型**：游戏侧只装单一 compile-only stub `@lizardon386/game-sdk`；core-abi / pack-format / protocol-types 框架内部、不对游戏发布；authority-host = 平台 runner；bp-game 独立构建工具、game-kit 可选。仓库现存四包是旧实现，别按它反推新设计。
 - **门户已暂缓（2026-11-24）**：热铁盒只有静态托管 + Serverless（无 npm/常驻进程/自定义端口/UDP；WS 是 `.node.js` 文本端点；KV 单值 64KB 且无事务）；不能跑服务端/客户端、不接云函数/KV/WS。代码已回退；恢复时按合并计划附录 A 重建，先确认受众与维护成本。
-- **当前发布形态是 bat + node.exe**；原生 `3178.exe` 是目标架构、未实施。门户暂缓期间不要把新架构写成已发布。
+- **当前发布形态已是原生 `3178.exe` + `bp-supervisor.exe` + 旁置 `runtime/node.exe`**；CI 产出便携目录与 Inno 安装器。签名、干净 VM、双机/Android 证据仍未做，别把未验证项写成已验收。
+- **`.bpkg` 是唯一游戏包**：旧 `.bpmap` 明确拒绝；包内入口/资产必须在文件清单内，旧 `pack-format` 只留给旧 SDK，不要接进新运行时。
 
 ## 6. 关键约束与易踩的坑
 
@@ -58,32 +61,43 @@
 - **UI 验证与高度链**：精确量多档桌面尺寸用无头 Edge + CDP `Emulation.setDeviceMetricsOverride`；旧三栏 319px 高度链已失效，真实 UI 要重新量 1256/1440/320；自绘下拉 `min-height:40px`，只写 `height` 会被顶回去。
 - **规则表单与房主面板**：`ruleConfig` 字段 key 必须小写；资料入口先过 `isValidGameReferenceEntry`，图片只走 `/games` 同源，文本一律 `textContent`；房主按钮渲染时判断「此刻合法吗」，不合法置灰写原因。
 - **预览页与新坑**：Chrome 文本 input 鼠标点击也匹配 `:focus-visible`；区域联动要排除 `[readonly]`；动态重绘后事件委托、焦点不能还给游离节点；CSS 变量优先级：内联 `style="--bp-seat:…"` 会压掉状态色；`readonly` ≠ `disabled`；跨轮状态链全链路重算。
+- **原子写与并发读**：`session.json` 的 rename 备份窗口会让并发 `load` 误判会话不存在，已把 `load` 与写队列串链并回退 `.bak`；新增存储改动不要绕开 `FileSessionRepository.load`。
+- **数据通道必须 sync**：晚开的游戏页/重连只有 `dataReady` 不够；`SessionServer` 在鉴权后触发 `onDataReady` → `SessionApplication.syncMember`，Authority 的 `sync` 要同时补公共与私密视图。
+- **浏览器交接与 CSP**：游戏页用 30 秒一次性 `handoffCode`（fragment，连上后 `history.replaceState` 抹掉）；游戏 origin 的 `connect-src` 要允许 `ws:`/`wss:`，否则 Chrome 可能拒绝同源 WS。
+- **本机 .NET 与打包**：SDK 解压在 `dogfood-output/dotnet`，运行 apphost / 测试要设 `DOTNET_ROOT`；CI 用 `setup-dotnet`。`npm pack` 传包目录必须写 `./packages/...`，否则 npm 会把 `packages/bp-game` 当成 GitHub 仓库。
 - **门户暂缓与恢复**：代码已回退，`site/`、`tools/site/` 不存在；恢复时按合并计划附录 A 重建，先确认受众与维护成本。Windows Edge `--window-size=390` 布局视口会被抬到约 500，真实窄屏必须用 CDP；热铁盒不能跑常驻服务端/客户端。
 
 ## 7. 验证命令
 
 ```bash
-npm test                         # 272 例（2026-11-20 复跑 272/272）
+npm run verify                   # 322 例 + 构建引用/lock/契约/边界
 npm run seam                     # 接缝闸门
-npx tsc -b                       # 类型检查
+npm run smoke:package            # 仓外 tarball 构建 .bpkg
+npm run smoke:web                # 真实 Chrome/Edge 走完一局（ubuntu CI 也跑）
+npm run smoke:supervisor         # C# Supervisor 经命名管道拉起 Service
+npm run test:ui                  # FlaUI 三条关键路径（需交互桌面）
+npm run pack:win                 # win-x64 便携目录；Inno 脚本在 tools/packaging/inno
 ```
 
-提交前跑 `npm test` + `npm run seam`；提交后直接 push 并核对远端 HEAD，禁止 force push。`dist-portable/` 不入库。门户已回退，`npm run site` 与 `dist-site/` 当前不存在；恢复时按合并计划附录 A。历史验证流水见 COMPACT_BACKUP 2026-11-20 搬出段。
+提交前至少跑 `npm run verify` + `npm run seam`；Windows 侧改动再跑 `smoke:supervisor`，UI 改动跑 `smoke:web` 与 `test:ui`。提交后直接 push 并核对远端 CI，禁止 force push。`dist-win/`、`apps/*/bin|obj`、`dogfood-output/` 都是本机构建产物，不入库。
 
 ## 8. 关键入口
 
 | 关注点 | 位置 |
 |---|---|
-| 游戏 ABI / 版本常量 | [packages/core-abi/src](../packages/core-abi/src/module-api.ts) |
-| 房间 / 座位 / 房主权限 | [room.ts](../packages/server/src/room.ts) / [authority.ts](../packages/server/src/authority.ts) |
-| 引擎与广播 | [engine.ts](../packages/server/src/engine.ts) / [transport.ts](../packages/server/src/transport.ts) |
-| 客户端界面 / 宿主壳 | [app.ts](../packages/client/src/app.ts) / [cli.ts](../packages/hostd/src/cli.ts) |
-| 合并总计划 | [plan/federated-marinating-hamming.md](../plan/federated-marinating-hamming.md) |
-| 门户（暂缓，代码已回退） | [plan §3.2 / 附录 A](../plan/federated-marinating-hamming.md) |
-| 新版设计 / 预览 | [新版平台与SDK设计方案.md](../docs/新版平台与SDK设计方案.md) / [平台UI预览.html](../docs/平台UI预览.html) |
+| 协议 schema / golden | [protocol/](../protocol/)（`client-session`、`session-authority`、`local-control`、`game-package`） |
+| 纯会话规则 / 用例 | [session-core](../packages/session-core/src) / [session-app](../packages/session-app/src) |
+| WS / 服务组合根 | [session-ws](../packages/session-ws/src/server.ts) / [compose.ts](../packages/session-service/src/compose.ts) |
+| `.bpkg` 与注册表 | [game-package](../packages/game-package/src) |
+| 构建工具 / SDK | [bp-game](../packages/bp-game/src) / [game-sdk-stub](../packages/game-sdk-stub/src) |
+| 原生 Supervisor / WPF | [apps/BattlePlatform.Supervisor](../apps/BattlePlatform.Supervisor) / [apps/BattlePlatform.Wpf](../apps/BattlePlatform.Wpf) |
+| 打包 / 安装器 / CI | [pack-win.mjs](../tools/packaging/pack-win.mjs) / [setup.iss](../tools/packaging/inno/setup.iss) / [ci.yml](../.github/workflows/ci.yml) |
+| 验收游戏 | [examples/reference-duel](../examples/reference-duel) |
+| 合并总计划 / 附录 B | [plan/federated-marinating-hamming.md](../plan/federated-marinating-hamming.md) / [plan/bright-swinging-wren.md](../plan/bright-swinging-wren.md) |
 
 ## 9. 交接记录
 
+- 2026-11-25 Claude Code：**托管运行时主线落地**：新协议四面与生成物、session 内核/存储/WS/服务、`.bpkg` 注册表与独立游戏 origin、`bp-game` 构建工具、reference-duel Web UI、Python Authority 互通、Authority 崩溃自动重启与 `recoverGame`、WPF/Supervisor/Contracts、win-x64 便携包与 Inno 安装器；CI 增加浏览器 smoke、原生 supervisor smoke、安装/卸载 smoke；FlaUI 三条关键路径本机 3/3。`npm run verify` 322/322。剩余：color-duel 全量迁移（需独立游戏仓授权）、签名/VM/双机/Android、共享 reducer 与完整 a11y。
 - 2026-11-24 Claude Code：**文档扁平化 + 计划归位**：`docs/research/` 全部内容移到 `docs/`（含 `fonts/` 与 UI 预览），删除 `research` 子目录；`.zcode/plans` 的 `plan-sess_0614...` 移入 `plan/` 并补 `scope=plan`；同步修正 docs 内相对链接与 CONTEXT/PROMPT 引用。历史时间线里的旧路径保留原样并加说明。
 - 2026-11-24 Claude Code：**门户回退/暂缓**：按用户决定暂不接入热铁盒；删除 `site/`、`tools/site/`、`dist-site/`，还原 `package.json`/`package-lock.json` 与 `.gitignore` 的 `dist-site/` 改动；合并计划保留 S0–S4 作为暂缓支线并更新决策记录。只提交 handoff 文档；运行时未动。
 - 2026-11-16 cc-haha：`--doc` 把完整实施计划迁入 `plan/bright-swinging-wren.md`（已 gitignore）；CONTEXT/PROMPT 的旧 `~/.claude/plans` 引用改为 `../plan/`；`.gitignore` 加 `plan/`。
